@@ -12,9 +12,11 @@ struct SidebarView: View {
 
     var body: some View {
         List {
-            Section("요약") {
+            Section(store.selectedProject == nil ? "요약 (전체)" : "요약 · \(store.displayName(for: store.selectedProject!))") {
                 let stats = store.stats
-                StatRow(title: "전체 피드백", value: "\(stats.total)건", systemImage: "tray.full")
+                StatRow(title: store.selectedProject == nil ? "전체 피드백" : "이 프로젝트",
+                        value: "\(stats.total)건", systemImage: "tray.full")
+                StatRow(title: "프로젝트 수", value: "\(store.availableProjects.count)개", systemImage: "square.grid.2x2")
                 if let avg = stats.averageRating {
                     StatRow(title: "평균 별점",
                             value: String(format: "%.2f / 5", avg),
@@ -23,6 +25,23 @@ struct SidebarView: View {
                 StatRow(title: "최근 7일", value: "\(stats.last7Days)건", systemImage: "clock")
                 if let type = store.resolvedRecordType {
                     StatRow(title: "레코드 타입", value: type, systemImage: "square.stack.3d.up")
+                }
+            }
+
+            if !store.projectCounts.isEmpty {
+                Section("프로젝트") {
+                    ProjectRow(name: "전체 프로젝트",
+                               count: store.allFeedback.count,
+                               isSelected: store.selectedProject == nil) {
+                        store.selectedProject = nil
+                    }
+                    ForEach(store.projectCounts, id: \.key) { entry in
+                        ProjectRow(name: store.displayName(for: entry.key),
+                                   count: entry.count,
+                                   isSelected: store.selectedProject == entry.key) {
+                            store.selectedProject = (store.selectedProject == entry.key) ? nil : entry.key
+                        }
+                    }
                 }
             }
 
@@ -48,8 +67,9 @@ struct SidebarView: View {
                     }
                 }
 
-                if store.selectedVersion != nil || store.minimumRating > 0 || !store.searchText.isEmpty {
+                if store.selectedProject != nil || store.selectedVersion != nil || store.minimumRating > 0 || !store.searchText.isEmpty {
                     Button {
+                        store.selectedProject = nil
                         store.selectedVersion = nil
                         store.minimumRating = 0
                         store.searchText = ""
@@ -75,6 +95,35 @@ struct SidebarView: View {
             }
         }
         .listStyle(.sidebar)
+    }
+}
+
+/// A selectable project row in the sidebar: name on the left, feedback count
+/// on the right, a checkmark when it is the active filter.
+private struct ProjectRow: View {
+    let name: String
+    let count: Int
+    let isSelected: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 8) {
+                Image(systemName: isSelected ? "largecircle.fill.circle" : "circle")
+                    .foregroundStyle(isSelected ? Color.accentColor : Color.secondary)
+                    .font(.system(size: 12))
+                Text(name)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                Spacer()
+                Text("\(count)")
+                    .foregroundStyle(.secondary)
+                    .monospacedDigit()
+            }
+            .font(.callout)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
     }
 }
 

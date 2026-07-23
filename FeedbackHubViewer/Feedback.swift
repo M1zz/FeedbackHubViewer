@@ -12,19 +12,40 @@ import Foundation
 import CloudKit
 
 struct Feedback: Identifiable, Hashable {
+    /// Shown for records that carry no project identifier (e.g. legacy
+    /// feedback submitted before LeeoKit started tagging the source app).
+    static let unclassifiedProject = "미분류"
+
     let id: String              // CKRecord.ID.recordName
     let recordType: String
+    /// Machine identifier of the source app (`appId` field — e.g. "kora").
+    /// Present on hub records; the stable key used to group by project.
+    let appId: String?
+    /// Human-readable app name (`appName` field — e.g. "KORA"). Only newer
+    /// LeeoKit records carry it; older records have only `appId`.
+    let appName: String?
     let text: String
     let rating: Int?
     let appVersion: String?
     let deviceModel: String?
     let systemVersion: String?
     let contactEmail: String?
+    /// Feedback category as submitted by LeeoKit (`type` field — e.g. bug /
+    /// feature request). `nil` when the record has no such field.
+    let feedbackType: String?
+    /// Submitting platform (`platform` field — e.g. iOS / macCatalyst).
+    let platform: String?
     let createdAt: Date?
     let modifiedAt: Date?
 
     /// Every field on the record, stringified, for the detail view.
     let allFields: [(key: String, value: String)]
+
+    // Identity is the CloudKit record name, which is globally unique. Declared
+    // explicitly because the tuple-array `allFields` blocks synthesized
+    // Hashable/Equatable conformance.
+    static func == (lhs: Feedback, rhs: Feedback) -> Bool { lhs.id == rhs.id }
+    func hash(into hasher: inout Hasher) { hasher.combine(id) }
 
     // MARK: - Construction from CKRecord
 
@@ -39,6 +60,18 @@ struct Feedback: Identifiable, Hashable {
             fields.append((key, Feedback.stringify(record[key])))
         }
         allFields = fields
+
+        appId = Feedback.firstString(
+            in: record,
+            keys: ["appId", "appID", "app_id", "bundleID", "bundleIdentifier",
+                   "appBundleID"]
+        )
+
+        appName = Feedback.firstString(
+            in: record,
+            keys: ["appName", "projectName", "project", "appTitle",
+                   "source", "sourceApp"]
+        )
 
         text = Feedback.firstString(
             in: record,
@@ -73,20 +106,34 @@ struct Feedback: Identifiable, Hashable {
             in: record,
             keys: ["email", "contactEmail", "contact", "userEmail", "mail"]
         )
+
+        feedbackType = Feedback.firstString(
+            in: record,
+            keys: ["type", "category", "kind", "feedbackType", "topic"]
+        )
+
+        platform = Feedback.firstString(
+            in: record,
+            keys: ["platform", "os", "osName", "deviceOS"]
+        )
     }
 
     /// Convenience initializer used only by SwiftUI previews / sample data.
     init(id: String, text: String, rating: Int?, appVersion: String?,
          deviceModel: String?, systemVersion: String?, contactEmail: String?,
-         createdAt: Date?) {
+         createdAt: Date?, appId: String? = nil, appName: String? = nil) {
         self.id = id
         self.recordType = "Feedback"
+        self.appId = appId
+        self.appName = appName
         self.text = text
         self.rating = rating
         self.appVersion = appVersion
         self.deviceModel = deviceModel
         self.systemVersion = systemVersion
         self.contactEmail = contactEmail
+        self.feedbackType = nil
+        self.platform = nil
         self.createdAt = createdAt
         self.modifiedAt = createdAt
         var fields: [(key: String, value: String)] = [("text", text)]
@@ -149,6 +196,25 @@ struct Feedback: Identifiable, Hashable {
     }
 
     // MARK: - Presentation helpers
+
+    /// Stable grouping key for the project: prefer the machine `appId`, fall
+    /// back to `appName`, then to the unclassified bucket. Never empty. Display
+    /// names are resolved from this key by `FeedbackStore.displayName(for:)`.
+    var projectKey: String {
+        if let id = appId?.trimmingCharacters(in: .whitespacesAndNewlines), !id.isEmpty {
+            return id
+        }
+        if let name = appName?.trimmingCharacters(in: .whitespacesAndNewlines), !name.isEmpty {
+            return name
+        }
+        return Feedback.unclassifiedProject
+    }
+
+    /// The app name carried by this record alone (no cross-record learning).
+    var recordAppName: String? {
+        let trimmed = appName?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return trimmed.isEmpty ? nil : trimmed
+    }
 
     var createdAtDisplay: String {
         guard let createdAt else { return "—" }

@@ -136,6 +136,18 @@ final class CloudKitService {
             || msg.contains("not marked queryable")
     }
 
+    /// The current iCloud account's CloudKit user record name. This is the
+    /// value you register in an admin Security Role (with read permission) on
+    /// the CloudKit Dashboard so this account can read feedback that World is
+    /// not allowed to read.
+    func currentUserRecordName() async -> String? {
+        do {
+            return try await container.userRecordID().recordName
+        } catch {
+            return nil
+        }
+    }
+
     // MARK: - Account status (for a friendlier message)
 
     func accountStatusMessage() async -> String? {

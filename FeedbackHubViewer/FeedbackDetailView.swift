@@ -9,6 +9,8 @@ import SwiftUI
 
 struct FeedbackDetailView: View {
     let feedback: Feedback
+    /// Resolved project/app name (appId → appName mapping applied by the store).
+    let projectLabel: String
 
     var body: some View {
         ScrollView {
@@ -58,6 +60,16 @@ struct FeedbackDetailView: View {
 
     private var header: some View {
         VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 8) {
+                Label(projectLabel, systemImage: "square.grid.2x2")
+                    .font(.headline)
+                if let type = feedback.feedbackType, !type.isEmpty {
+                    Text(type)
+                        .font(.caption)
+                        .padding(.horizontal, 8).padding(.vertical, 3)
+                        .background(Color.teal.opacity(0.15), in: Capsule())
+                }
+            }
             if let rating = feedback.rating {
                 HStack(spacing: 8) {
                     StarRatingView(rating: rating)

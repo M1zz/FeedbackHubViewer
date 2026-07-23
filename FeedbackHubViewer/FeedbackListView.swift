@@ -28,7 +28,8 @@ struct FeedbackListView: View {
             }
 
             ForEach(store.filteredFeedback) { feedback in
-                FeedbackRow(feedback: feedback)
+                FeedbackRow(feedback: feedback,
+                            projectLabel: store.displayName(for: feedback.projectKey))
                     .tag(feedback.id)
             }
         }
@@ -59,10 +60,12 @@ struct FeedbackListView: View {
 
 private struct FeedbackRow: View {
     let feedback: Feedback
+    let projectLabel: String
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            HStack(alignment: .top) {
+            HStack(alignment: .center, spacing: 8) {
+                Badge(text: projectLabel, systemImage: "square.grid.2x2")
                 if let rating = feedback.rating {
                     StarRatingView(rating: rating)
                 }
