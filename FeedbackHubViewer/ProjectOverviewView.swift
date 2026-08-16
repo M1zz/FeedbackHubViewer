@@ -16,16 +16,26 @@ struct ProjectOverviewView: View {
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     #endif
 
-    /// Two cards side by side even on an iPhone; wider cards elsewhere.
     #if os(macOS)
-    private let columns = [GridItem(.adaptive(minimum: 220, maximum: 320), spacing: 16)]
     private let contentSpacing: CGFloat = 16
     private let contentPadding: CGFloat = 16
     #else
-    private let columns = [GridItem(.adaptive(minimum: 165, maximum: 320), spacing: 10)]
     private let contentSpacing: CGFloat = 12
     private let contentPadding: CGFloat = 12
     #endif
+
+    /// Full-width cards on a phone, a grid everywhere else. Two-up cards on a
+    /// phone are ~190pt wide, which is not enough for an app name plus its
+    /// badges — names ended up broken mid-word ("ClipKeyb / oard").
+    private var columns: [GridItem] {
+        #if os(macOS)
+        [GridItem(.adaptive(minimum: 220, maximum: 320), spacing: 16)]
+        #else
+        isCompact
+            ? [GridItem(.flexible(), spacing: 10)]
+            : [GridItem(.adaptive(minimum: 220, maximum: 320), spacing: 10)]
+        #endif
+    }
 
     /// The compact layout has no sidebar, so the overview carries the headline
     /// numbers and a preview of the newest feedback itself.
@@ -273,11 +283,15 @@ private struct ProjectCard: View {
                     Image(systemName: summary.isUnclassified ? "questionmark.folder" : "app.dashed")
                         .font(.subheadline)
                         .foregroundStyle(summary.isUnclassified ? Color.secondary : Color.accentColor)
+                    // A bundle id can be long ("com.devkoan.CalendarSnap") and
+                    // the tail is what tells projects apart, so let it wrap
+                    // and shrink rather than truncate.
                     Text(summary.displayName)
                         .font(.subheadline.weight(.semibold))
-                        .lineLimit(2)
-                        .minimumScaleFactor(0.85)
+                        .lineLimit(3)
+                        .minimumScaleFactor(0.65)
                         .multilineTextAlignment(.leading)
+                        .fixedSize(horizontal: false, vertical: true)
                     Spacer(minLength: 2)
                     if summary.unreadCount > 0 {
                         UnreadBadge(count: summary.unreadCount)

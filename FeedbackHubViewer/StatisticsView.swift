@@ -64,7 +64,7 @@ struct ProjectStatsListView: View {
                         ProjectStatsRow(project: nil)
                     }
 
-                    Section("프로젝트별") {
+                    Section("프로젝트별 · 최근 7일") {
                         ForEach(store.allProjectKeys, id: \.self) { key in
                             ProjectStatsRow(project: key)
                         }
@@ -146,27 +146,11 @@ private struct ProjectStatsRow: View {
                 }
 
                 if usage.hasUsageData {
-                    HStack(spacing: 10) {
-                        MetricDelta(title: "활동 사용자 (7일)",
-                                    value: "\(usage.activeInstalls7)",
-                                    delta: delta(usage.activeInstallsDelta,
-                                                 hasBaseline: usage.previousActiveInstalls7 > 0 || usage.activeInstalls7 > 0),
-                                    tint: tint(usage.activeInstallsDelta, upIsGood: true))
-                        MetricDelta(title: "사용 건수 (7일)",
-                                    value: "\(usage.events7)",
-                                    delta: delta(usage.eventsDelta,
-                                                 hasBaseline: usage.previousEvents7 > 0 || usage.events7 > 0),
-                                    tint: tint(usage.eventsDelta, upIsGood: true))
-                        MetricDelta(title: "신규 설치 (7일)",
-                                    value: "\(usage.new7)",
-                                    delta: delta(usage.newDelta,
-                                                 hasBaseline: usage.previousNew7 > 0 || usage.new7 > 0),
-                                    tint: tint(usage.newDelta, upIsGood: true))
-
-                        Spacer(minLength: 0)
-
-                        Sparkline(points: usage.sparkline)
-                            .frame(width: 68, height: 26)
+                    // The three numbers come first; the sparkline is dropped
+                    // before any of them is allowed to squeeze.
+                    ViewThatFits(in: .horizontal) {
+                        metricsRow(usage, showsSparkline: true)
+                        metricsRow(usage, showsSparkline: false)
                     }
                 } else {
                     // Feedback-only project: say so instead of showing zeroes
@@ -197,6 +181,33 @@ private struct ProjectStatsRow: View {
                 } label: {
                     Label("이 프로젝트 숨기기", systemImage: "eye.slash")
                 }
+            }
+        }
+    }
+
+    private func metricsRow(_ usage: FeedbackStore.ProjectUsage, showsSparkline: Bool) -> some View {
+        HStack(spacing: 10) {
+            MetricDelta(title: "활동 사용자",
+                        value: "\(usage.activeInstalls7)",
+                        delta: delta(usage.activeInstallsDelta,
+                                     hasBaseline: usage.previousActiveInstalls7 > 0 || usage.activeInstalls7 > 0),
+                        tint: tint(usage.activeInstallsDelta, upIsGood: true))
+            MetricDelta(title: "사용 건수",
+                        value: "\(usage.events7)",
+                        delta: delta(usage.eventsDelta,
+                                     hasBaseline: usage.previousEvents7 > 0 || usage.events7 > 0),
+                        tint: tint(usage.eventsDelta, upIsGood: true))
+            MetricDelta(title: "신규 설치",
+                        value: "\(usage.new7)",
+                        delta: delta(usage.newDelta,
+                                     hasBaseline: usage.previousNew7 > 0 || usage.new7 > 0),
+                        tint: tint(usage.newDelta, upIsGood: true))
+
+            Spacer(minLength: 0)
+
+            if showsSparkline {
+                Sparkline(points: usage.sparkline)
+                    .frame(width: 68, height: 26)
             }
         }
     }
@@ -260,21 +271,26 @@ private struct MetricDelta: View {
             Text(title)
                 .font(.caption2)
                 .foregroundStyle(.secondary)
+                .fixedSize()
             HStack(spacing: 4) {
                 Text(value)
                     .font(.subheadline.weight(.semibold).monospacedDigit())
+                    .fixedSize()
                 if let delta {
                     HStack(spacing: 1) {
                         Image(systemName: DeltaArrow.symbol(for: delta))
                             .font(.system(size: 9, weight: .bold))
                         Text(delta)
                             .font(.caption2.monospacedDigit())
+                            .fixedSize()
                     }
                     .foregroundStyle(tint)
                 }
             }
-            .lineLimit(1)
         }
+        // Every part keeps its full width, so `ViewThatFits` around the row can
+        // tell whether the sparkline still has room instead of silently
+        // truncating "-7" to "…".
         .fixedSize(horizontal: true, vertical: false)
     }
 }
@@ -523,7 +539,7 @@ struct StatisticsDashboard: View {
                 }
 
                 if !summary.byKind.isEmpty {
-                    HStack(spacing: 6) {
+                    FlowLayout(spacing: 6, lineSpacing: 5) {
                         ForEach(summary.byKind, id: \.kind) { entry in
                             Text("\(entry.label) \(entry.count)")
                                 .font(.caption2)
@@ -531,8 +547,8 @@ struct StatisticsDashboard: View {
                                 .padding(.vertical, 3)
                                 .background(Color.secondary.opacity(0.12), in: Capsule())
                         }
-                        Spacer(minLength: 0)
                     }
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
 
                 if summary.byVersion.count > 1 {
@@ -615,13 +631,14 @@ struct StatisticsDashboard: View {
                 .chartYAxis { AxisMarks(position: .leading) }
                 .frame(height: trendHeight)
 
-                HStack(spacing: 12) {
+                FlowLayout(spacing: 12, lineSpacing: 4) {
                     legendDot(Color.accentColor.opacity(0.5), "사용 건수")
                     legendDot(.blue, "활동한 사용자")
                     legendDot(.green, "신규 설치")
                 }
                 .font(.caption2)
                 .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
 
                 Text("발생 시각(occurredAt) 기준입니다. 키보드처럼 나중에 소급 전송된 활동도 실제 사용일에 표시됩니다.")
                     .font(.caption2)
@@ -647,25 +664,28 @@ struct StatisticsDashboard: View {
             } else {
                 VStack(spacing: 0) {
                     ForEach(Array(events.enumerated()), id: \.element.id) { index, event in
-                        HStack(alignment: .firstTextBaseline, spacing: 8) {
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(event.name)
-                                    .font(.callout.monospaced())
-                                    .lineLimit(1)
-                                    .truncationMode(.middle)
+                        VStack(alignment: .leading, spacing: 2) {
+                            // The name wraps instead of truncating: the slice
+                            // after the colon is the interesting half, so
+                            // cutting the middle loses the answer.
+                            Text(event.name)
+                                .font(.callout.monospaced())
+                                .fixedSize(horizontal: false, vertical: true)
+                            HStack(spacing: 8) {
+                                Text("\(event.count)건")
+                                    .font(.callout.monospacedDigit().weight(.semibold))
+                                Text("설치 \(event.installs)")
+                                    .font(.caption.monospacedDigit())
+                                    .foregroundStyle(.secondary)
+                                Spacer(minLength: 4)
                                 if let last = event.lastAt {
                                     Text("마지막 \(AppFormat.relative(last))")
                                         .font(.caption2)
                                         .foregroundStyle(.tertiary)
                                 }
                             }
-                            Spacer(minLength: 8)
-                            Text("\(event.count)건")
-                                .font(.callout.monospacedDigit().weight(.semibold))
-                            Text("설치 \(event.installs)")
-                                .font(.caption2.monospacedDigit())
-                                .foregroundStyle(.secondary)
                         }
+                        .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.vertical, 6)
                         if index < events.count - 1 { Divider() }
                     }
@@ -685,17 +705,17 @@ struct StatisticsDashboard: View {
             } else {
                 VStack(spacing: 0) {
                     ForEach(Array(metrics.enumerated()), id: \.element.id) { index, metric in
-                        HStack {
+                        HStack(alignment: .firstTextBaseline, spacing: 8) {
                             Text(metric.key)
                                 .font(.callout.monospaced())
-                                .lineLimit(1)
-                                .truncationMode(.middle)
-                            Spacer(minLength: 8)
+                                .fixedSize(horizontal: false, vertical: true)
+                            Spacer(minLength: 4)
                             Text(Self.format(metric.average))
                                 .font(.callout.monospacedDigit().weight(.semibold))
                             Text("합계 \(Self.format(metric.total))")
                                 .font(.caption2.monospacedDigit())
                                 .foregroundStyle(.secondary)
+                                .layoutPriority(-1)
                         }
                         .padding(.vertical, 5)
                         if index < metrics.count - 1 { Divider() }
@@ -716,10 +736,10 @@ struct StatisticsDashboard: View {
                 VStack(spacing: 8) {
                     ForEach(shares) { share in
                         VStack(alignment: .leading, spacing: 3) {
-                            HStack {
+                            HStack(alignment: .firstTextBaseline) {
                                 Text(share.key)
                                     .font(.callout.monospaced())
-                                    .lineLimit(1)
+                                    .fixedSize(horizontal: false, vertical: true)
                                 Spacer(minLength: 8)
                                 Text("\(Int((share.ratio * 100).rounded()))% (\(share.count))")
                                     .font(.callout.monospacedDigit().weight(.semibold))
@@ -773,11 +793,10 @@ struct StatisticsDashboard: View {
         } else {
             VStack(spacing: 4) {
                 ForEach(buckets.prefix(12)) { bucket in
-                    HStack {
+                    HStack(alignment: .firstTextBaseline) {
                         Text(bucket.key)
                             .font(.callout)
-                            .lineLimit(1)
-                            .truncationMode(.middle)
+                            .fixedSize(horizontal: false, vertical: true)
                         Spacer(minLength: 8)
                         Text("\(bucket.count)")
                             .font(.callout.monospacedDigit())
@@ -853,6 +872,9 @@ struct StatisticsDashboard: View {
                         }
                 }
                 .chartXAxis(.hidden)
+                // Headroom for the trailing count, which is drawn outside the
+                // bar and would otherwise be clipped at the plot edge.
+                .chartXScale(domain: 0...Self.annotationHeadroom(ratingCounts.map(\.count).max() ?? 0))
                 .frame(height: breakdownHeight)
             }
 
@@ -866,7 +888,8 @@ struct StatisticsDashboard: View {
                         }
                 }
                 .chartXAxis(.hidden)
-                .frame(height: max(70, CGFloat(types.count) * 28))
+                .chartXScale(domain: 0...Self.annotationHeadroom(types.map(\.count).max() ?? 0))
+                .frame(height: max(90, CGFloat(types.count) * 30))
             }
         }
     }
@@ -881,6 +904,12 @@ struct StatisticsDashboard: View {
 
     private static func format(_ value: Double) -> String {
         value == value.rounded() ? String(Int(value)) : String(format: "%.1f", value)
+    }
+
+    /// Upper bound for a bar chart whose bars carry a trailing label: about
+    /// 18% past the longest bar so the label has room inside the plot.
+    private static func annotationHeadroom(_ maximum: Int) -> Double {
+        max(1, Double(maximum) * 1.18)
     }
 }
 

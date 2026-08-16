@@ -172,7 +172,9 @@ private struct FeedbackRow: View {
                 .lineLimit(snippetLineLimit)
                 .foregroundStyle(.primary)
 
-            HStack(spacing: 6) {
+            // Wraps instead of dropping badges off the right edge: on a phone
+            // an email plus a device name never fits on one line.
+            FlowLayout(spacing: 6, lineSpacing: 4) {
                 if let type = feedback.feedbackType, !type.isEmpty {
                     Badge(text: type, systemImage: "tag")
                 }
@@ -186,7 +188,7 @@ private struct FeedbackRow: View {
                     Badge(text: email, systemImage: "envelope")
                 }
             }
-            .lineLimit(1)
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(.vertical, 3)
     }
@@ -243,11 +245,18 @@ private struct Badge: View {
     let systemImage: String
 
     var body: some View {
-        Label(text, systemImage: systemImage)
-            .font(.caption2)
-            .padding(.horizontal, 6)
-            .padding(.vertical, 2)
-            .background(Color.secondary.opacity(0.12), in: Capsule())
-            .foregroundStyle(.secondary)
+        // An explicit icon + text rather than `Label`: inside a custom layout
+        // `Label` decides on its own that there is no room for the title and
+        // renders the icon alone.
+        HStack(spacing: 3) {
+            Image(systemName: systemImage)
+            Text(text)
+        }
+        .font(.caption2)
+        .fixedSize()
+        .padding(.horizontal, 6)
+        .padding(.vertical, 2)
+        .background(Color.secondary.opacity(0.12), in: Capsule())
+        .foregroundStyle(.secondary)
     }
 }

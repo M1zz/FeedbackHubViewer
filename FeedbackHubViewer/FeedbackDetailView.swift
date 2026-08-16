@@ -136,11 +136,12 @@ struct FeedbackDetailView: View {
                     Text(label)
                         .font(.caption)
                         .foregroundStyle(.secondary)
+                    // Record IDs and device names are long; wrapping keeps the
+                    // whole value readable and copyable.
                     Text(value)
                         .font(.callout)
                         .textSelection(.enabled)
-                        .lineLimit(1)
-                        .truncationMode(.middle)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
             }
         }
