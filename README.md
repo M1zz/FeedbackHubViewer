@@ -83,6 +83,13 @@ CloudKit은 어느 환경을 읽을지 **빌드에 박히는 entitlement**
   스와이프에서 "이 프로젝트 숨기기". 그 앱의 피드백·사용 통계·이벤트·크래시가 목록과 집계에서 한꺼번에
   빠집니다. **허브의 레코드는 지우지 않습니다** — 이 기기의 표시 설정(`UserDefaults`)일 뿐이고,
   사이드바(또는 통계 목록) 아래 "숨긴 프로젝트"에서 언제든 되돌립니다.
+- **알림 · 배지**: 사이드바(또는 "더 보기" 메뉴)의 **새 피드백·진단 알림** 토글을 켜면, 새로고침에서
+  전에 못 보던 레코드를 발견할 때 알림을 보내고 앱 아이콘 배지에 안 읽은 피드백 수를 표시합니다.
+  처음 켤 때 시스템 알림 권한을 요청하고, 거부돼 있으면 토글 아래에 안내가 뜹니다.
+  - 첫 실행에는 이미 쌓여 있던 레코드로 알림이 오지 않도록 조용히 기준선만 저장합니다(기기별).
+  - **앱이 떠 있는 동안** 동작합니다("자동 갱신"을 켜두면 1분마다 확인). 앱이 꺼진 상태에서도 받으려면
+    Push Notifications capability + `CKQuerySubscription`이 필요합니다(미구현).
+  - macOS는 알림 권한이 없으면 Dock 배지도 표시되지 않습니다(시스템 정책).
 - **새로고침**: 툴바의 새로고침 버튼(macOS `⌘R`), iPhone에서는 당겨서 새로고침, "자동 갱신" 토글(1분 주기).
 
 ## 4. 데이터 구조에 대한 참고 (중요)
@@ -155,6 +162,7 @@ FeedbackHubViewer/
    ├─ Usage.swift                  # UsageSnapshot / UsageEvent 모델(고정 스키마)
    ├─ CrashReport.swift            # MetricKit 진단 모델(고정 스키마)
    ├─ CrashListView.swift          # 진단 모아보기(종류·프로젝트 필터, 콜스택)
+   ├─ NotificationService.swift    # 앱 아이콘 배지 + 로컬 알림
    ├─ FeedbackStore+Usage.swift    # 사용 통계 집계(활성·신규·이벤트·지표·추이)
    ├─ CloudKitService.swift        # Public DB 조회(CKContainer) + 환경(CloudKitEnvironment)
    ├─ EnvironmentControls.swift    # 현재 환경 DEV/PROD 배지

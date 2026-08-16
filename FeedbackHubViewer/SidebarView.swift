@@ -65,6 +65,24 @@ struct SidebarView: View {
                 }
             }
 
+            Section {
+                Toggle(isOn: $store.notificationsEnabled) {
+                    Label("새 피드백·진단 알림", systemImage: "bell.badge")
+                        .font(.callout)
+                }
+                if store.notificationsEnabled && !store.notificationsAuthorized {
+                    Label("시스템 설정에서 이 앱의 알림을 허용해야 알림이 표시됩니다.",
+                          systemImage: "exclamationmark.triangle")
+                        .font(.caption)
+                        .foregroundStyle(.orange)
+                }
+            } header: {
+                Text("알림")
+            } footer: {
+                Text("새로고침(자동 갱신 포함)에서 새 레코드를 발견하면 알림을 보내고, 앱 아이콘 배지에 안 읽은 피드백 수를 표시합니다. 앱이 떠 있는 동안 동작합니다.")
+                    .font(.caption)
+            }
+
             if !store.projectCounts.isEmpty {
                 Section("프로젝트") {
                     ProjectRow(name: "전체 프로젝트",

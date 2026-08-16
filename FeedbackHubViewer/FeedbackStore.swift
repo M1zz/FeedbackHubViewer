@@ -169,6 +169,26 @@ final class FeedbackStore: ObservableObject {
     @Published var autoRefresh = false {
         didSet { autoRefresh ? startAutoRefresh() : stopAutoRefresh() }
     }
+
+    /// Post a notification when a refresh finds new feedback or diagnostics,
+    /// and keep the app icon badge on the unread count. Persisted per device.
+    @Published var notificationsEnabled = false {
+        didSet {
+            guard notificationsEnabled != oldValue else { return }
+            defaults.set(notificationsEnabled, forKey: Self.notificationsEnabledKey)
+            if notificationsEnabled {
+                Task {
+                    notificationsAuthorized = await NotificationService.requestAuthorization()
+                    refreshBadge()
+                }
+            } else {
+                NotificationService.setBadge(0)
+            }
+        }
+    }
+    /// False when the system denied notifications — the toggle stays on but the
+    /// UI can explain why nothing shows up.
+    @Published private(set) var notificationsAuthorized = true
     /// Seconds between automatic refreshes.
     let autoRefreshInterval: TimeInterval = 60
 
@@ -180,6 +200,12 @@ final class FeedbackStore: ObservableObject {
         self.defaults = defaults
         readIDs = Set(defaults.stringArray(forKey: Self.readIDsKey) ?? [])
         hiddenProjects = Set(defaults.stringArray(forKey: Self.hiddenProjectsKey) ?? [])
+        notificationsEnabled = defaults.bool(forKey: Self.notificationsEnabledKey)
+        seenFeedbackIDs = defaults.stringArray(forKey: Self.seenFeedbackIDsKey).map(Set.init)
+        seenCrashIDs = defaults.stringArray(forKey: Self.seenCrashIDsKey).map(Set.init)
+        if notificationsEnabled {
+            Task { notificationsAuthorized = await NotificationService.isAuthorized() }
+        }
     }
 
     /// Which half of the container this build reads. Fixed at build time by the
@@ -226,11 +252,61 @@ final class FeedbackStore: ObservableObject {
                     + "CloudKit Console → 컨테이너 → Security Roles에서 admin 역할에 이 값을 추가하고 피드백 레코드 타입에 read 권한을 준 뒤, Production으로 배포하세요."
             }
         }
+
+        // Only after both fetches: a notification should reflect the whole
+        // refresh, and the badge the unread count it leaves behind.
+        announceNewRecords()
+        refreshBadge()
     }
 
     private static func isPermissionError(_ error: Error) -> Bool {
         let ck = error as NSError
         return ck.domain == CKErrorDomain && ck.code == CKError.permissionFailure.rawValue
+    }
+
+    // MARK: - Notifications
+
+    private static let notificationsEnabledKey = "notificationsEnabled"
+    private static let seenFeedbackIDsKey = "seenFeedbackIDs"
+    private static let seenCrashIDsKey = "seenCrashIDs"
+
+    /// Record names seen by a previous refresh. `nil` means "never loaded on
+    /// this device": the first load seeds the set silently instead of
+    /// announcing every record that was already in the hub.
+    private var seenFeedbackIDs: Set<String>?
+    private var seenCrashIDs: Set<String>?
+
+    /// Compare what just arrived against what this device had already seen and
+    /// announce the difference. Hidden projects are excluded — a project you
+    /// hid should not interrupt you.
+    private func announceNewRecords() {
+        let feedbackIDs = Set(allFeedback.map(\.id))
+        let crashIDs = Set(allCrashes.map(\.id))
+
+        if let previous = seenFeedbackIDs {
+            let fresh = allFeedback.filter { !previous.contains($0.id) }
+            if notificationsEnabled, !fresh.isEmpty {
+                let projects = Array(Set(fresh.map { displayName(for: $0.projectKey) })).sorted()
+                NotificationService.notifyNewFeedback(count: fresh.count, projects: projects)
+            }
+        }
+        if let previous = seenCrashIDs {
+            let fresh = allCrashes.filter { !previous.contains($0.id) }
+            if notificationsEnabled, !fresh.isEmpty {
+                let projects = Array(Set(fresh.map { displayName(for: $0.projectKey) })).sorted()
+                NotificationService.notifyNewCrashes(count: fresh.count, projects: projects)
+            }
+        }
+
+        seenFeedbackIDs = feedbackIDs
+        seenCrashIDs = crashIDs
+        defaults.set(Array(feedbackIDs), forKey: Self.seenFeedbackIDsKey)
+        defaults.set(Array(crashIDs), forKey: Self.seenCrashIDsKey)
+    }
+
+    /// The app icon badge follows the unread feedback count.
+    func refreshBadge() {
+        NotificationService.setBadge(notificationsEnabled ? unreadCount : 0)
     }
 
     // MARK: - Read / unread
@@ -257,6 +333,7 @@ final class FeedbackStore: ObservableObject {
         guard !readIDs.contains(feedback.id) else { return }
         readIDs.insert(feedback.id)
         persistReadIDs()
+        refreshBadge()
     }
 
     /// Clear the badges for one project, or for everything when `project` is nil.
@@ -266,6 +343,7 @@ final class FeedbackStore: ObservableObject {
         guard !ids.isSubset(of: readIDs) else { return }
         readIDs.formUnion(ids)
         persistReadIDs()
+        refreshBadge()
     }
 
     /// Mark everything currently loaded as read *without* touching the stored
@@ -289,6 +367,7 @@ final class FeedbackStore: ObservableObject {
         guard !hiddenProjects.contains(project) else { return }
         hiddenProjects.insert(project)
         persistHiddenProjects()
+        refreshBadge()
 
         // A hidden project must not stay as the active scope, or every screen
         // ends up filtered to something that is no longer listed anywhere.
@@ -302,12 +381,14 @@ final class FeedbackStore: ObservableObject {
     func showProject(_ project: String) {
         guard hiddenProjects.remove(project) != nil else { return }
         persistHiddenProjects()
+        refreshBadge()
     }
 
     func showAllProjects() {
         guard !hiddenProjects.isEmpty else { return }
         hiddenProjects.removeAll()
         persistHiddenProjects()
+        refreshBadge()
     }
 
     /// Hidden projects that actually have records, newest data first, for the
