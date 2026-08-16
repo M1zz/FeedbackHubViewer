@@ -82,10 +82,71 @@ final class CloudKitService {
         container = CKContainer(identifier: Self.containerIdentifier)
     }
 
+    /// Usage statistics record types, written by LeeoKit's `LeeoUsageReporter`
+    /// into this same container. Fixed names — unlike feedback, there is no
+    /// guessing to do (see `Usage.swift`).
+    static let snapshotRecordType = "UsageSnapshot"
+    static let eventRecordType = "UsageEvent"
+
     struct FetchOutcome {
         var feedback: [Feedback]
         /// The record type that actually produced rows, for display.
         var resolvedRecordType: String?
+    }
+
+    struct UsageOutcome {
+        var snapshots: [UsageSnapshot] = []
+        var events: [UsageEvent] = []
+        /// Why usage data is missing or incomplete, if it is. Usage is a
+        /// separate schema with its own read permission, so it can fail while
+        /// feedback loads fine — that is worth saying rather than showing an
+        /// empty dashboard.
+        var notice: String?
+    }
+
+    /// Read the usage statistics the apps report. Each record type is fetched
+    /// independently: a missing or unreadable one leaves the other intact,
+    /// which is how the apps' own statistics screens behave.
+    ///
+    /// - Parameter eventLimit: hard cap on event records. The stream grows
+    ///   without bound, and the charts only look back so far.
+    func fetchUsage(eventLimit: Int = 5000) async throws -> UsageOutcome {
+        var outcome = UsageOutcome()
+        var problems: [String] = []
+
+        do {
+            outcome.snapshots = try await queryAll(recordType: Self.snapshotRecordType)
+                .map(UsageSnapshot.init(record:))
+        } catch {
+            problems.append(usageProblem(Self.snapshotRecordType, error))
+        }
+
+        do {
+            outcome.events = try await queryAll(recordType: Self.eventRecordType, limit: eventLimit)
+                .map(UsageEvent.init(record:))
+        } catch {
+            problems.append(usageProblem(Self.eventRecordType, error))
+        }
+
+        if !problems.isEmpty {
+            outcome.notice = problems.joined(separator: "\n")
+                + "\n\nCloudKit Console에서 UsageSnapshot·UsageEvent 스키마가 이 환경에 배포되어 있고, admin 역할에 read 권한이 있는지 확인하세요."
+        }
+        return outcome
+    }
+
+    private func usageProblem(_ type: String, _ error: Error) -> String {
+        isBenignProbeError(error)
+            ? "\(type) 레코드 타입이 이 환경에 아직 없습니다."
+            : "\(type)을(를) 읽지 못했습니다: \(Self.friendlyDescription(for: error))"
+    }
+
+    private static func friendlyDescription(for error: Error) -> String {
+        let ck = error as NSError
+        if ck.domain == CKErrorDomain, ck.code == CKError.permissionFailure.rawValue {
+            return "읽기 권한이 없습니다 (Security Roles의 admin 역할 확인)"
+        }
+        return ck.localizedDescription
     }
 
     /// Fetch all feedback from the public database.
@@ -118,23 +179,23 @@ final class CloudKitService {
 
     // MARK: - Querying
 
-    private func queryAll(recordType: String) async throws -> [CKRecord] {
+    private func queryAll(recordType: String, limit: Int? = nil) async throws -> [CKRecord] {
         let query = CKQuery(recordType: recordType, predicate: NSPredicate(value: true))
         // Prefer newest-first, but many public schemas don't mark the creation
         // timestamp as sortable — fall back to an unsorted query if so.
         query.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
         do {
-            return try await runQuery(query)
+            return try await runQuery(query, limit: limit)
         } catch {
             if isSortError(error) {
                 query.sortDescriptors = []
-                return try await runQuery(query)
+                return try await runQuery(query, limit: limit)
             }
             throw error
         }
     }
 
-    private func runQuery(_ query: CKQuery) async throws -> [CKRecord] {
+    private func runQuery(_ query: CKQuery, limit: Int? = nil) async throws -> [CKRecord] {
         var collected: [CKRecord] = []
         var cursor: CKQueryOperation.Cursor?
 
@@ -157,6 +218,9 @@ final class CloudKitService {
                 }
             }
             cursor = page.queryCursor
+            if let limit, collected.count >= limit {
+                return Array(collected.prefix(limit))
+            }
         } while cursor != nil
 
         return collected

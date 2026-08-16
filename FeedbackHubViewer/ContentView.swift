@@ -49,23 +49,39 @@ struct SplitRootView: View {
         #endif
     }
 
+    /// 개요 / 통계 are the two panes; the feedback list is pushed on top of
+    /// them (from a project card, or from the statistics dashboard).
     private var contentColumn: some View {
-        Group {
-            switch store.viewMode {
-            case .overview:
-                ProjectOverviewView()
-            case .stats:
-                StatisticsView()
-            case .list:
-                FeedbackListView(selection: $selection)
+        NavigationStack(path: $store.listPath) {
+            Group {
+                switch store.viewMode {
+                case .overview:
+                    ProjectOverviewView()
+                case .stats:
+                    StatisticsView()
+                }
             }
+            .navigationDestination(for: FeedbackStore.ListRoute.self) { route in
+                FeedbackListView(selection: $selection)
+                    .task { store.selectedProject = route.project }
+            }
+            #if os(iOS)
+            // iPad pushes inside this column the way the phone pushes inside a
+            // tab; the Mac shows the feedback itself in the detail column.
+            .navigationDestination(for: FeedbackStore.StatsRoute.self) { route in
+                StatisticsDashboard(project: route.project)
+                    .task { store.selectedProject = route.project }
+            }
+            .navigationDestination(for: Feedback.self) { feedback in
+                FeedbackDetailView(feedback: feedback,
+                                   projectLabel: store.displayName(for: feedback.projectKey))
+            }
+            // On iPad a toolbar attached to the split view itself never appears —
+            // the shared controls have to live on a column.
+            .toolbar { padToolbarContent }
+            #endif
         }
         .navigationSplitViewColumnWidth(min: 320, ideal: 460, max: 720)
-        #if os(iOS)
-        // On iPad a toolbar attached to the split view itself never appears —
-        // the shared controls have to live on a column.
-        .toolbar { padToolbarContent }
-        #endif
     }
 
     @ViewBuilder

@@ -61,9 +61,17 @@ CloudKit은 어느 환경을 읽을지 **빌드에 박히는 entitlement**
 - **검색**: 상단 검색창에서 본문·버전·기기·이메일·기타 모든 필드를 대상으로 키워드 검색.
 - **필터**: 사이드바(iPhone은 왼쪽 위 필터 버튼 → 시트)에서 프로젝트, 앱 버전, 최소 별점으로 필터링.
 - **정렬**: 최신순 / 오래된순 / 별점 높은순 / 별점 낮은순.
-- **프로젝트 개요**: 프로젝트별 카드(건수·평균 별점·최근 7일·마지막 수신). iPhone에서는 요약 스트립과
+- **프로젝트 개요**: 프로젝트별 카드(건수·안 읽음·평균 별점·최근 7일·마지막 수신). 카드를 누르면 그
+  프로젝트의 피드백 목록 → 상세로 들어갑니다(별도의 "목록" 탭은 없습니다). iPhone에서는 요약 스트립과
   최근 피드백 5건 미리보기가 함께 나옵니다.
-- **통계 대시보드**: 헤드라인 타일, 최근 30일 추이, 별점·유형·프로젝트·버전별 분포(Swift Charts).
+- **안 읽음 배지**: 상세를 연 피드백만 읽음으로 기록하고(기기별 `UserDefaults` 저장), 안 읽은 건수를
+  탭 배지·프로젝트 카드·목록 행의 점으로 표시합니다. 사이드바(또는 macOS 목록 상단 바)에서
+  "모두 읽음으로 표시"로 한 번에 지울 수 있습니다.
+- **통계**: 각 앱이 허브로 보내는 **사용 통계(UsageSnapshot / UsageEvent)를 그대로** 보여줍니다.
+  iPhone은 앱별 목록(설치·활동 사용자·사용 건수·신규 설치와 지난주 대비 증감)에서 탭하면 상세로,
+  Mac은 프로젝트 메뉴가 달린 대시보드입니다. 상세에는 사용자 타일, 지난주 대비, 기간별 추이(일·주·월·연),
+  이벤트별 건수/설치 수, 설치당 평균 지표, 플래그 비율, 버전·플랫폼·OS 분포, 피드백 요약이 들어갑니다.
+  이벤트 이름과 `metrics` 키는 앱이 보낸 원문 그대로 표시합니다(뷰어가 앱별 용어를 번역하지 않습니다).
 - **새로고침**: 툴바의 새로고침 버튼(macOS `⌘R`), iPhone에서는 당겨서 새로고침, "자동 갱신" 토글(1분 주기).
 
 ## 4. 데이터 구조에 대한 참고 (중요)
@@ -83,6 +91,26 @@ CloudKit은 어느 환경을 읽을지 **빌드에 박히는 entitlement**
   - 이메일: `email`, `contactEmail`, `contact` …
   인식하지 못한 필드도 상세 화면의 **"모든 필드"** 표에 그대로 표시되므로 데이터는 절대 누락되지 않습니다.
 
+### 4-1. 사용 통계 스키마 (추정 아님, 고정)
+
+피드백과 달리 사용 통계는 LeeoKit(`LeeoUsageReporter`)이 쓰는 **고정 스키마**라 그대로 읽습니다.
+같은 컨테이너의 Public DB이고, 앱 쪽 정책·주기는 각 앱의 `UsageReportingService`와
+`docs/USAGE_STATS_HUB.md`에 있습니다.
+
+| 레코드 타입 | 단위 | 필드 |
+|---|---|---|
+| `UsageSnapshot` | 설치 1건(레코드 이름 `usage-<installID>`, upsert) | `appId` `appName` `appVersion` `platform` `osVersion` `locale` `launchCount` `eventCount` `daysSinceInstall` `installDate` `lastActiveAt` `metrics`(JSON `[String: Double]`) |
+| `UsageEvent` | 주요 행동 1건 | `appId` `appName` `event` `appVersion` `platform` `installID` `occurredAt` |
+
+- 추이·활성 사용자는 **`occurredAt`** 으로 계산합니다. `creationDate`(서버가 쓴 시각)로 세면
+  나중에 소급 전송된 활동일이 보낸 날 하루에 뭉칩니다.
+- 활성/신규는 앱 화면과 같은 정의입니다: 최근 N일 활성 = `lastActiveAt`이 그 구간인 스냅샷,
+  최근 N일 신규 = `installDate`가 그 구간인 스냅샷, 활동한 사용자 = 구간 내 서로 다른 `installID`.
+- `metrics` 키와 이벤트 이름은 앱마다 다릅니다. 뷰어는 키를 해석하지 않고 그대로 나열하며,
+  `flag.*` · `persona.*` 키만 0/1 플래그로 보고 "사용자 비율"에 넣습니다.
+- 이벤트는 최대 5,000건까지 읽습니다(`CloudKitService.fetchUsage(eventLimit:)`).
+- 사용 통계를 못 읽어도 피드백은 정상 동작하고, 통계 화면 위에 사유가 배너로 뜹니다.
+
 ## 5. 데이터가 안 보일 때 체크리스트
 
 CloudKit Public DB는 필드가 **Queryable**로 표시돼 있어야 조회되고, 정렬하려면 **Sortable**이어야 합니다.
@@ -97,6 +125,9 @@ CloudKit Public DB는 필드가 **Queryable**로 표시돼 있어야 조회되�
 5. **권한**: LeeoKit은 World에서 read를 빼고 저장하므로, CloudKit Console → Security Roles의 admin 역할에
    내 iCloud **userRecordName**을 등록하고 피드백 레코드 타입에 read를 줘야 합니다.
    권한 오류가 나면 앱이 등록에 쓸 userRecordName을 오류 메시지와 "내 계정 ID" 메뉴에 표시합니다.
+6. **사용 통계**: `UsageSnapshot` · `UsageEvent`도 같은 admin 역할에 read가 필요하고, 해당 환경에
+   스키마가 배포돼 있어야 합니다(`UsageSnapshot`은 `recordName` Queryable, `UsageEvent`는
+   `recordName` Queryable + `createdTimestamp` Sortable). 없으면 통계 화면 상단에 사유가 표시됩니다.
 
 ## 6. 프로젝트 구성
 
@@ -106,6 +137,8 @@ FeedbackHubViewer/
 └─ FeedbackHubViewer/
    ├─ FeedbackHubViewerApp.swift   # 앱 진입점 (플랫폼별 Scene 설정)
    ├─ Feedback.swift               # 레코드 → 모델 매핑(스키마 유연)
+   ├─ Usage.swift                  # UsageSnapshot / UsageEvent 모델(고정 스키마)
+   ├─ FeedbackStore+Usage.swift    # 사용 통계 집계(활성·신규·이벤트·지표·추이)
    ├─ CloudKitService.swift        # Public DB 조회(CKContainer) + 환경(CloudKitEnvironment)
    ├─ EnvironmentControls.swift    # 현재 환경 DEV/PROD 배지
    ├─ Assets.xcassets              # 앱 아이콘 (AppIcon / AppIconProduction)
@@ -115,7 +148,7 @@ FeedbackHubViewer/
    ├─ PlatformSupport.swift        # macOS/iOS 차이 흡수(붙여넣기·리스트 스타일·날짜 포맷)
    ├─ SidebarView.swift            # 요약 + 프로젝트 선택 + 필터
    ├─ ProjectOverviewView.swift    # 프로젝트 카드 그리드(+iPhone 요약·최근 피드백)
-   ├─ StatisticsView.swift         # 통계 대시보드
+   ├─ StatisticsView.swift         # 통계(앱별 목록 + 사용 통계 대시보드)
    ├─ FeedbackListView.swift       # 목록
    ├─ FeedbackDetailView.swift     # 상세
    ├─ FeedbackHubViewer.entitlements                # macOS · Development

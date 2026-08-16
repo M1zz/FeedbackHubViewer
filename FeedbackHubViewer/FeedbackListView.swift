@@ -20,22 +20,67 @@ struct FeedbackListView: View {
                 }
             }
             .searchable(text: $store.searchText, placement: searchPlacement, prompt: "피드백 검색")
+            #if os(iOS)
             .toolbar {
-                ToolbarItem(placement: sortPlacement) {
-                    Menu {
-                        Picker("정렬", selection: $store.sortOption) {
-                            ForEach(FeedbackStore.SortOption.allCases) { option in
-                                Text(option.rawValue).tag(option)
-                            }
-                        }
-                    } label: {
-                        Label("정렬: \(store.sortOption.rawValue)", systemImage: "arrow.up.arrow.down")
-                    }
-                }
+                ToolbarItem(placement: .topBarTrailing) { sortMenu }
             }
-            .navigationTitle("피드백")
+            #else
+            // Sorting lives above the list rather than in the window toolbar:
+            // one more toolbar item pushes the stack's back button into the
+            // overflow chevron, and the way back matters more.
+            .safeAreaInset(edge: .top, spacing: 0) { macHeaderBar }
+            #endif
+            .navigationTitle(title)
             .hubNavigationSubtitle("\(store.filteredFeedback.count)건 표시 / 전체 \(store.allFeedback.count)건")
     }
+
+    /// The list is always a scoped screen now, so it is named after its scope.
+    private var title: String {
+        guard let key = store.selectedProject else { return "전체 피드백" }
+        return store.displayName(for: key)
+    }
+
+    private var sortMenu: some View {
+        Menu {
+            Picker("정렬", selection: $store.sortOption) {
+                ForEach(FeedbackStore.SortOption.allCases) { option in
+                    Text(option.rawValue).tag(option)
+                }
+            }
+        } label: {
+            Label("정렬: \(store.sortOption.rawValue)", systemImage: "arrow.up.arrow.down")
+        }
+    }
+
+    #if os(macOS)
+    private var macHeaderBar: some View {
+        HStack(spacing: 8) {
+            if store.scopedUnreadCount > 0 {
+                UnreadBadge(count: store.scopedUnreadCount)
+                Text("안 읽음")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                Button("모두 읽음") { store.markAllRead(project: store.selectedProject) }
+                    .buttonStyle(.link)
+                    .font(.callout)
+            } else {
+                Text("모두 확인했습니다")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+            }
+
+            Spacer(minLength: 8)
+
+            sortMenu
+                .menuStyle(.borderlessButton)
+                .fixedSize()
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
+        .background(.bar)
+        .overlay(alignment: .bottom) { Divider() }
+    }
+    #endif
 
     /// macOS selects a row and shows it in the detail column; iOS pushes the
     /// detail onto the navigation stack instead.
@@ -52,10 +97,7 @@ struct FeedbackListView: View {
         List {
             statusSection
             ForEach(store.filteredFeedback) { feedback in
-                NavigationLink {
-                    FeedbackDetailView(feedback: feedback,
-                                       projectLabel: store.displayName(for: feedback.projectKey))
-                } label: {
+                NavigationLink(value: feedback) {
                     row(for: feedback)
                 }
             }
@@ -82,7 +124,8 @@ struct FeedbackListView: View {
 
     private func row(for feedback: Feedback) -> some View {
         FeedbackRow(feedback: feedback,
-                    projectLabel: store.displayName(for: feedback.projectKey))
+                    projectLabel: store.displayName(for: feedback.projectKey),
+                    isUnread: store.isUnread(feedback))
     }
 
     private var searchPlacement: SearchFieldPlacement {
@@ -93,20 +136,12 @@ struct FeedbackListView: View {
         #endif
     }
 
-    private var sortPlacement: ToolbarItemPlacement {
-        #if os(macOS)
-        .automatic
-        #else
-        // The bottom bar is taken by the tab bar on iOS, so sorting lives in
-        // the navigation bar next to refresh.
-        .topBarTrailing
-        #endif
-    }
 }
 
 private struct FeedbackRow: View {
     let feedback: Feedback
     let projectLabel: String
+    let isUnread: Bool
 
     // A phone row has no detail column beside it, so it carries a little more
     // of the body text and every badge the record has.
@@ -119,6 +154,7 @@ private struct FeedbackRow: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 5) {
             HStack(alignment: .center, spacing: 6) {
+                UnreadDot(isUnread: isUnread)
                 Badge(text: projectLabel, systemImage: "square.grid.2x2")
                 if let rating = feedback.rating {
                     StarRatingView(rating: rating)
@@ -132,6 +168,7 @@ private struct FeedbackRow: View {
 
             Text(feedback.snippet)
                 .font(.callout)
+                .fontWeight(isUnread ? .semibold : .regular)
                 .lineLimit(snippetLineLimit)
                 .foregroundStyle(.primary)
 
@@ -152,6 +189,36 @@ private struct FeedbackRow: View {
             .lineLimit(1)
         }
         .padding(.vertical, 3)
+    }
+}
+
+/// The "아직 안 읽음" marker: a filled dot that keeps its space when read, so
+/// rows don't shift as they are opened.
+struct UnreadDot: View {
+    let isUnread: Bool
+    var diameter: CGFloat = 8
+
+    var body: some View {
+        Circle()
+            .fill(isUnread ? Color.accentColor : Color.clear)
+            .frame(width: diameter, height: diameter)
+            .accessibilityLabel(isUnread ? "안 읽음" : "")
+    }
+}
+
+/// A red count capsule for unread feedback, used on the project cards and the
+/// statistics rows.
+struct UnreadBadge: View {
+    let count: Int
+
+    var body: some View {
+        Text("\(count)")
+            .font(.caption2.bold().monospacedDigit())
+            .foregroundStyle(.white)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2)
+            .background(Color.red, in: Capsule())
+            .accessibilityLabel("안 읽음 \(count)건")
     }
 }
 

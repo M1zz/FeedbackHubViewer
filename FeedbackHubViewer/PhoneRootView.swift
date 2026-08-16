@@ -3,9 +3,10 @@
 //  FeedbackHubViewer
 //
 //  The iOS / iPadOS layout. A three-column split view doesn't fit a phone, so
-//  the same three panes become tabs — 개요 / 통계 / 목록 — each in its own
-//  navigation stack. The sidebar (요약 + 필터) moves into a sheet, and the
-//  feedback detail is pushed instead of shown in a third column.
+//  the two panes become tabs — 개요 / 통계 — each in its own navigation stack.
+//  The feedback list and the per-project dashboard are pushed on top of them.
+//  The sidebar (요약 + 필터) moves into a sheet, and the feedback detail is
+//  pushed instead of shown in a third column.
 //
 
 #if os(iOS)
@@ -16,30 +17,50 @@ struct PhoneRootView: View {
 
     var body: some View {
         TabView(selection: $store.viewMode) {
-            NavigationStack {
+            NavigationStack(path: $store.listPath) {
                 ProjectOverviewView()
+                    .modifier(HubDestinations())
                     .modifier(HubToolbar())
             }
             .tabItem { Label(FeedbackStore.ViewMode.overview.rawValue,
                              systemImage: FeedbackStore.ViewMode.overview.systemImage) }
+            .badge(store.unreadCount)
             .tag(FeedbackStore.ViewMode.overview)
 
-            NavigationStack {
+            NavigationStack(path: $store.statsPath) {
                 StatisticsView()
+                    .modifier(HubDestinations())
                     .modifier(HubToolbar())
             }
             .tabItem { Label(FeedbackStore.ViewMode.stats.rawValue,
                              systemImage: FeedbackStore.ViewMode.stats.systemImage) }
             .tag(FeedbackStore.ViewMode.stats)
+        }
+    }
+}
 
-            NavigationStack {
+/// Everything the two stacks can push. Registered on both roots so a route
+/// opened from 개요 and the same route opened from 통계 land on the same
+/// screen, with the app scoped to the project the route names.
+private struct HubDestinations: ViewModifier {
+    @EnvironmentObject private var store: FeedbackStore
+
+    func body(content: Content) -> some View {
+        content
+            .navigationDestination(for: FeedbackStore.ListRoute.self) { route in
                 FeedbackListView(selection: .constant(nil))
+                    .task { store.selectedProject = route.project }
                     .modifier(HubToolbar())
             }
-            .tabItem { Label(FeedbackStore.ViewMode.list.rawValue,
-                             systemImage: FeedbackStore.ViewMode.list.systemImage) }
-            .tag(FeedbackStore.ViewMode.list)
-        }
+            .navigationDestination(for: FeedbackStore.StatsRoute.self) { route in
+                StatisticsDashboard(project: route.project)
+                    .task { store.selectedProject = route.project }
+                    .modifier(HubToolbar())
+            }
+            .navigationDestination(for: Feedback.self) { feedback in
+                FeedbackDetailView(feedback: feedback,
+                                   projectLabel: store.displayName(for: feedback.projectKey))
+            }
     }
 }
 

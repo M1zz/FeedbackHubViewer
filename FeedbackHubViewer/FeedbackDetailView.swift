@@ -8,6 +8,7 @@
 import SwiftUI
 
 struct FeedbackDetailView: View {
+    @EnvironmentObject private var store: FeedbackStore
     let feedback: Feedback
     /// Resolved project/app name (appId → appName mapping applied by the store).
     let projectLabel: String
@@ -65,6 +66,9 @@ struct FeedbackDetailView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .navigationTitle("상세")
+        // Opening the detail is what counts as having seen the feedback, so the
+        // unread badge for this record clears here on both platforms.
+        .task(id: feedback.id) { store.markRead(feedback) }
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {

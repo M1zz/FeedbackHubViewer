@@ -41,6 +41,25 @@ struct SidebarView: View {
                             systemImage: "star.fill")
                 }
                 StatRow(title: "최근 7일", value: "\(stats.last7Days)건", systemImage: "clock")
+                HStack {
+                    Label("안 읽음", systemImage: "envelope.badge")
+                    Spacer()
+                    if store.scopedUnreadCount > 0 {
+                        UnreadBadge(count: store.scopedUnreadCount)
+                    } else {
+                        Text("0건").foregroundStyle(.secondary).monospacedDigit()
+                    }
+                }
+                .font(.callout)
+                if store.scopedUnreadCount > 0 {
+                    Button {
+                        store.markAllRead(project: store.selectedProject)
+                    } label: {
+                        Label(store.selectedProject == nil ? "모두 읽음으로 표시" : "이 프로젝트 모두 읽음으로 표시",
+                              systemImage: "envelope.open")
+                            .font(.callout)
+                    }
+                }
                 if let type = store.resolvedRecordType {
                     StatRow(title: "레코드 타입", value: type, systemImage: "square.stack.3d.up")
                 }

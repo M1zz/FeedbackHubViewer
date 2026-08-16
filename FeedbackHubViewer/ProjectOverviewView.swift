@@ -3,9 +3,9 @@
 //  FeedbackHubViewer
 //
 //  A grid of project cards. Each card summarizes one LeeoKit project's
-//  feedback — total count (badge), average rating, and how many arrived in the
-//  last 7 days. Tapping a card filters to that project and switches to the
-//  list view.
+//  feedback — total count (badge), unread count, average rating, and how many
+//  arrived in the last 7 days. Tapping a card pushes that project's feedback
+//  list; a row in the list pushes the feedback itself.
 //
 
 import SwiftUI
@@ -76,10 +76,7 @@ struct ProjectOverviewView: View {
 
                         LazyVGrid(columns: columns, spacing: contentSpacing) {
                             ForEach(store.projectSummaries) { summary in
-                                ProjectCard(summary: summary) {
-                                    store.selectedProject = summary.project
-                                    store.viewMode = .list
-                                }
+                                ProjectCard(summary: summary)
                             }
                         }
 
@@ -143,7 +140,11 @@ private struct HeadlineStrip: View {
             divider
             cell(value: "\(stats.last7Days)", unit: "건", label: "7일", tint: .blue)
             divider
-            cell(value: "\(store.availableProjects.count)", unit: "개", label: "프로젝트", tint: .purple)
+            if store.scopedUnreadCount > 0 {
+                cell(value: "\(store.scopedUnreadCount)", unit: "건", label: "안 읽음", tint: .red)
+            } else {
+                cell(value: "\(store.availableProjects.count)", unit: "개", label: "프로젝트", tint: .purple)
+            }
         }
         .padding(.vertical, 10)
         .frame(maxWidth: .infinity)
@@ -177,7 +178,7 @@ private struct HeadlineStrip: View {
 }
 
 /// The newest feedback, so the overview screen isn't mostly empty space on a
-/// phone. Tapping a row jumps to the list.
+/// phone. A row opens that feedback; "전체 보기" pushes the whole list.
 private struct RecentFeedbackSection: View {
     @EnvironmentObject private var store: FeedbackStore
 
@@ -189,14 +190,19 @@ private struct RecentFeedbackSection: View {
                     Label("최근 피드백", systemImage: "clock.arrow.circlepath")
                         .font(.headline)
                     Spacer()
-                    Button("전체 보기") { store.viewMode = .list }
-                        .font(.callout)
+                    NavigationLink(value: FeedbackStore.ListRoute(project: store.selectedProject)) {
+                        Text("전체 보기").font(.callout)
+                    }
                 }
 
                 VStack(spacing: 0) {
                     ForEach(Array(recent.enumerated()), id: \.element.id) { index, feedback in
-                        RecentRow(feedback: feedback,
-                                  projectLabel: store.displayName(for: feedback.projectKey))
+                        NavigationLink(value: feedback) {
+                            RecentRow(feedback: feedback,
+                                      projectLabel: store.displayName(for: feedback.projectKey),
+                                      isUnread: store.isUnread(feedback))
+                        }
+                        .buttonStyle(.plain)
                         if index < recent.count - 1 {
                             Divider().padding(.leading, 12)
                         }
@@ -212,36 +218,43 @@ private struct RecentFeedbackSection: View {
 private struct RecentRow: View {
     let feedback: Feedback
     let projectLabel: String
+    let isUnread: Bool
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 3) {
-            HStack(spacing: 6) {
-                Text(projectLabel)
-                    .font(.caption2.weight(.medium))
-                    .lineLimit(1)
-                    .foregroundStyle(.secondary)
-                if let rating = feedback.rating {
-                    StarRatingView(rating: rating)
+        HStack(alignment: .top, spacing: 8) {
+            UnreadDot(isUnread: isUnread)
+                .padding(.top, 5)
+            VStack(alignment: .leading, spacing: 3) {
+                HStack(spacing: 6) {
+                    Text(projectLabel)
+                        .font(.caption2.weight(.medium))
+                        .lineLimit(1)
+                        .foregroundStyle(.secondary)
+                    if let rating = feedback.rating {
+                        StarRatingView(rating: rating)
+                    }
+                    Spacer(minLength: 4)
+                    Text(feedback.createdAtRelative)
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                        .lineLimit(1)
                 }
-                Spacer(minLength: 4)
-                Text(feedback.createdAtRelative)
-                    .font(.caption2)
-                    .foregroundStyle(.tertiary)
-                    .lineLimit(1)
+                Text(feedback.snippet)
+                    .font(.callout)
+                    .fontWeight(isUnread ? .semibold : .regular)
+                    .lineLimit(2)
             }
-            Text(feedback.snippet)
-                .font(.callout)
-                .lineLimit(2)
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
         .frame(maxWidth: .infinity, alignment: .leading)
+        .contentShape(Rectangle())
     }
 }
 
 private struct ProjectCard: View {
+    @EnvironmentObject private var store: FeedbackStore
     let summary: FeedbackStore.ProjectSummary
-    let action: () -> Void
 
     #if os(macOS)
     private let cardPadding: CGFloat = 14
@@ -254,7 +267,7 @@ private struct ProjectCard: View {
     #endif
 
     var body: some View {
-        Button(action: action) {
+        NavigationLink(value: FeedbackStore.ListRoute(project: summary.project)) {
             VStack(alignment: .leading, spacing: innerSpacing) {
                 HStack(alignment: .top, spacing: 6) {
                     Image(systemName: summary.isUnclassified ? "questionmark.folder" : "app.dashed")
@@ -266,6 +279,9 @@ private struct ProjectCard: View {
                         .minimumScaleFactor(0.85)
                         .multilineTextAlignment(.leading)
                     Spacer(minLength: 2)
+                    if summary.unreadCount > 0 {
+                        UnreadBadge(count: summary.unreadCount)
+                    }
                     CountBadge(count: summary.count)
                 }
 
@@ -295,8 +311,17 @@ private struct ProjectCard: View {
             .contentShape(RoundedRectangle(cornerRadius: 12))
         }
         .buttonStyle(.plain)
+        .contextMenu {
+            if summary.unreadCount > 0 {
+                Button {
+                    store.markAllRead(project: summary.project)
+                } label: {
+                    Label("이 프로젝트 모두 읽음으로 표시", systemImage: "envelope.open")
+                }
+            }
+        }
         .help("\(summary.displayName) 피드백 \(summary.count)건 보기")
-        .accessibilityLabel("\(summary.displayName), 피드백 \(summary.count)건, 최근 7일 \(summary.last7Days)건")
+        .accessibilityLabel("\(summary.displayName), 피드백 \(summary.count)건, 안 읽음 \(summary.unreadCount)건, 최근 7일 \(summary.last7Days)건")
     }
 
     /// A full timestamp has room on a Mac card; a phone card gets "3일 전".

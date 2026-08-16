@@ -23,18 +23,66 @@ final class FeedbackStore: ObservableObject {
     }
 
     /// Which pane the middle column shows: a per-project overview grid or the
-    /// flat feedback list.
+    /// statistics dashboard. The feedback list is not a peer of these — it is
+    /// pushed on top of the overview (see `listPath`).
     enum ViewMode: String, CaseIterable, Identifiable {
         case overview = "개요"
         case stats = "통계"
-        case list = "목록"
         var id: String { rawValue }
         var systemImage: String {
             switch self {
             case .overview: return "square.grid.2x2"
             case .stats: return "chart.bar"
-            case .list: return "list.bullet"
             }
+        }
+    }
+
+    /// The feedback list pushed on top of the overview. `project` is the scope
+    /// the list was opened with (nil == 전체 프로젝트); the list reads the live
+    /// filters itself, so the value only identifies the pushed screen.
+    struct ListRoute: Hashable {
+        let project: String?
+    }
+
+    /// The statistics dashboard pushed on top of the per-project trend list.
+    struct StatsRoute: Hashable {
+        let project: String?
+    }
+
+    /// One day's feedback count, for the trend charts.
+    struct DayCount: Identifiable, Hashable {
+        var id: Date { date }
+        let date: Date
+        let count: Int
+    }
+
+    /// One project's headline metrics *plus* how they moved: the last 7 days
+    /// against the 7 days before that. Drives the statistics list.
+    struct ProjectTrend: Identifiable {
+        var id: String { project }
+        /// Grouping key (appId or appName); nil-project rows use the key.
+        let project: String
+        let displayName: String
+        let total: Int
+        let unreadCount: Int
+        let last7Days: Int
+        let previous7Days: Int
+        /// Average rating over the last 7 days, and over the 7 before that.
+        let recentAverageRating: Double?
+        let previousAverageRating: Double?
+        /// Average over every record, shown as the standing number.
+        let averageRating: Double?
+        let latest: Date?
+        /// Daily counts for the sparkline (oldest first).
+        let sparkline: [DayCount]
+
+        var isUnclassified: Bool { project == Feedback.unclassifiedProject }
+        /// Change in weekly volume. Positive == more feedback than last week.
+        var countDelta: Int { last7Days - previous7Days }
+        /// Change in average rating, only when both weeks have ratings.
+        var ratingDelta: Double? {
+            guard let recent = recentAverageRating, let previous = previousAverageRating else { return nil }
+            return recent - previous
         }
     }
 
@@ -49,6 +97,8 @@ final class FeedbackStore: ObservableObject {
         let averageRating: Double?
         let last7Days: Int
         let latest: Date?
+        /// Feedback in this project the user has never opened.
+        let unreadCount: Int
         /// True for the bucket holding records with no project field.
         var isUnclassified: Bool { project == Feedback.unclassifiedProject }
     }
@@ -56,6 +106,12 @@ final class FeedbackStore: ObservableObject {
     // Raw data
     @Published private(set) var allFeedback: [Feedback] = []
     @Published private(set) var resolvedRecordType: String?
+    /// Usage statistics exactly as the apps reported them (see `Usage.swift`).
+    @Published private(set) var allSnapshots: [UsageSnapshot] = []
+    @Published private(set) var allEvents: [UsageEvent] = []
+    /// Why usage data is missing, when it is. Usage has its own schema and read
+    /// permission, so it can fail on its own while feedback loads.
+    @Published var usageNotice: String?
 
     // UI state
     @Published var isLoading = false
@@ -67,7 +123,20 @@ final class FeedbackStore: ObservableObject {
     @Published var userRecordName: String?
 
     // Filters / sorting
-    @Published var viewMode: ViewMode = .overview
+    @Published var viewMode: ViewMode = .overview {
+        // Switching pane pops whatever was pushed on top of the overview, so
+        // coming back to 개요 always lands on the project grid.
+        didSet {
+            guard viewMode != oldValue else { return }
+            listPath = NavigationPath()
+            statsPath = NavigationPath()
+        }
+    }
+    /// What is pushed on top of the overview: the feedback list, and on iOS a
+    /// single feedback's detail after that.
+    @Published var listPath = NavigationPath()
+    /// What is pushed on top of the statistics list: one project's dashboard.
+    @Published var statsPath = NavigationPath()
     @Published var searchText = ""
     @Published var sortOption: SortOption = .newest
     @Published var selectedProject: String? = nil     // nil == all projects
@@ -83,6 +152,12 @@ final class FeedbackStore: ObservableObject {
 
     private let service = CloudKitService()
     private var autoRefreshTask: Task<Void, Never>?
+    private let defaults: UserDefaults
+
+    init(defaults: UserDefaults = .standard) {
+        self.defaults = defaults
+        readIDs = Set(defaults.stringArray(forKey: Self.readIDsKey) ?? [])
+    }
 
     /// Which half of the container this build reads. Fixed at build time by the
     /// iCloud entitlement — pick the scheme to change it (see README §2-1).
@@ -98,6 +173,14 @@ final class FeedbackStore: ObservableObject {
 
         noticeMessage = await service.accountStatusMessage()
         userRecordName = await service.currentUserRecordName()
+
+        // Usage statistics live in their own record types with their own read
+        // permission, so they are loaded separately and never fail the feedback
+        // load — the dashboard shows whatever came back.
+        let usage = (try? await service.fetchUsage()) ?? CloudKitService.UsageOutcome()
+        allSnapshots = usage.snapshots
+        allEvents = usage.events
+        usageNotice = usage.notice
 
         do {
             let outcome = try await service.fetchFeedback()
@@ -126,6 +209,47 @@ final class FeedbackStore: ObservableObject {
         return ck.domain == CKErrorDomain && ck.code == CKError.permissionFailure.rawValue
     }
 
+    // MARK: - Read / unread
+
+    /// Record names the user has already opened. Persisted, so a relaunch
+    /// doesn't resurface feedback that was already dealt with.
+    @Published private(set) var readIDs: Set<String> = []
+    private static let readIDsKey = "readFeedbackIDs"
+
+    func isUnread(_ feedback: Feedback) -> Bool { !readIDs.contains(feedback.id) }
+
+    /// Unread across every project — the number the tab badge shows.
+    var unreadCount: Int { countUnread(in: allFeedback) }
+
+    /// Unread inside the current project scope.
+    var scopedUnreadCount: Int { countUnread(in: scopedFeedback) }
+
+    private func countUnread(in items: [Feedback]) -> Int {
+        items.reduce(0) { $0 + (readIDs.contains($1.id) ? 0 : 1) }
+    }
+
+    /// Called when a feedback's detail is shown.
+    func markRead(_ feedback: Feedback) {
+        guard !readIDs.contains(feedback.id) else { return }
+        readIDs.insert(feedback.id)
+        persistReadIDs()
+    }
+
+    /// Clear the badges for one project, or for everything when `project` is nil.
+    func markAllRead(project: String? = nil) {
+        let targets = project.map { key in allFeedback.filter { $0.projectKey == key } } ?? allFeedback
+        let ids = Set(targets.map(\.id))
+        guard !ids.isSubset(of: readIDs) else { return }
+        readIDs.formUnion(ids)
+        persistReadIDs()
+    }
+
+    /// Mark everything currently loaded as read *without* touching the stored
+    /// set's older entries — used by the "모두 읽음" affordances.
+    private func persistReadIDs() {
+        defaults.set(Array(readIDs), forKey: Self.readIDsKey)
+    }
+
     // MARK: - Project name resolution
 
     /// Learned `appId → appName` from records that carry both. Lets records
@@ -144,6 +268,21 @@ final class FeedbackStore: ObservableObject {
             guard let id = fb.appId?.trimmingCharacters(in: .whitespaces), !id.isEmpty,
                   let name = fb.recordAppName else { continue }
             map[id] = name   // latest wins; records are fetched newest-first
+        }
+        // Usage records carry the pair too, and an app may report usage under an
+        // appId that never appears in feedback (ClipKeyboard sends
+        // "com.Ysoup.TokenMemo"). Without this those rows would be bare ids.
+        for snapshot in allSnapshots {
+            guard let id = snapshot.appId?.trimmingCharacters(in: .whitespaces), !id.isEmpty,
+                  let name = snapshot.appName?.trimmingCharacters(in: .whitespaces), !name.isEmpty,
+                  map[id] == nil else { continue }
+            map[id] = name
+        }
+        for event in allEvents {
+            guard let id = event.appId?.trimmingCharacters(in: .whitespaces), !id.isEmpty,
+                  let name = event.appName?.trimmingCharacters(in: .whitespaces), !name.isEmpty,
+                  map[id] == nil else { continue }
+            map[id] = name
         }
         learnedAppNames = map
     }
@@ -172,6 +311,10 @@ final class FeedbackStore: ObservableObject {
     var projectCounts: [(key: String, count: Int)] {
         var buckets: [String: Int] = [:]
         for fb in allFeedback { buckets[fb.projectKey, default: 0] += 1 }
+        // Apps that report usage but have no feedback yet are still projects
+        // this hub knows about — list them with a count of zero rather than
+        // hiding them from the filter.
+        for snapshot in allSnapshots { buckets[snapshot.projectKey] = buckets[snapshot.projectKey] ?? 0 }
         return buckets
             .map { (key: $0.key, count: $0.value) }
             .sorted { lhs, rhs in ordered(lhs.key, lhs.count, rhs.key, rhs.count) }
@@ -191,9 +334,77 @@ final class FeedbackStore: ObservableObject {
             let latest = items.compactMap(\.createdAt).max()
             return ProjectSummary(project: key, displayName: displayName(for: key),
                                   count: items.count, averageRating: average,
-                                  last7Days: last7, latest: latest)
+                                  last7Days: last7, latest: latest,
+                                  unreadCount: countUnread(in: items))
         }
         .sorted { ordered($0.project, $0.count, $1.project, $1.count) }
+    }
+
+    /// Per-project metrics with week-over-week movement, ordered like
+    /// `projectSummaries`. Drives the statistics list.
+    var projectTrends: [ProjectTrend] {
+        var grouped: [String: [Feedback]] = [:]
+        for fb in allFeedback { grouped[fb.projectKey, default: []].append(fb) }
+        return grouped
+            .map { key, items in trend(key: key, displayName: displayName(for: key), items: items) }
+            .sorted { ordered($0.project, $0.total, $1.project, $1.total) }
+    }
+
+    /// The same metrics across every project, for the "전체 프로젝트" row.
+    var overallTrend: ProjectTrend {
+        trend(key: "", displayName: "전체 프로젝트", items: allFeedback)
+    }
+
+    private func trend(key: String, displayName: String, items: [Feedback]) -> ProjectTrend {
+        let now = Date()
+        let weekAgo = now.addingTimeInterval(-7 * 24 * 60 * 60)
+        let twoWeeksAgo = now.addingTimeInterval(-14 * 24 * 60 * 60)
+
+        let recent = items.filter { ($0.createdAt ?? .distantPast) >= weekAgo }
+        let previous = items.filter {
+            guard let created = $0.createdAt else { return false }
+            return created >= twoWeeksAgo && created < weekAgo
+        }
+
+        return ProjectTrend(
+            project: key,
+            displayName: displayName,
+            total: items.count,
+            unreadCount: countUnread(in: items),
+            last7Days: recent.count,
+            previous7Days: previous.count,
+            recentAverageRating: Self.average(of: recent),
+            previousAverageRating: Self.average(of: previous),
+            averageRating: Self.average(of: items),
+            latest: items.compactMap(\.createdAt).max(),
+            sparkline: Self.dailyCounts(of: items, days: 14)
+        )
+    }
+
+    private static func average(of items: [Feedback]) -> Double? {
+        let ratings = items.compactMap(\.rating)
+        guard !ratings.isEmpty else { return nil }
+        return Double(ratings.reduce(0, +)) / Double(ratings.count)
+    }
+
+    /// Daily counts for `items` over the last `days` days, oldest first, with
+    /// empty days included so a chart has no gaps.
+    private static func dailyCounts(of items: [Feedback], days: Int) -> [DayCount] {
+        let cal = Calendar.current
+        let today = cal.startOfDay(for: Date())
+        guard let start = cal.date(byAdding: .day, value: -(days - 1), to: today) else { return [] }
+
+        var buckets: [Date: Int] = [:]
+        for fb in items {
+            guard let created = fb.createdAt else { continue }
+            let day = cal.startOfDay(for: created)
+            if day >= start { buckets[day, default: 0] += 1 }
+        }
+
+        return (0..<days).compactMap { offset in
+            guard let day = cal.date(byAdding: .day, value: offset, to: start) else { return nil }
+            return DayCount(date: day, count: buckets[day] ?? 0)
+        }
     }
 
     /// Shared ordering: unclassified last, then by count desc, then by name.
