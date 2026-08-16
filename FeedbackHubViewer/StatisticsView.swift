@@ -69,6 +69,26 @@ struct ProjectStatsListView: View {
                             ProjectStatsRow(project: key)
                         }
                     }
+
+                    if !store.hiddenProjectEntries.isEmpty {
+                        Section {
+                            ForEach(store.hiddenProjectEntries, id: \.key) { entry in
+                                HStack {
+                                    Label(entry.displayName, systemImage: "eye.slash")
+                                        .font(.callout)
+                                        .foregroundStyle(.secondary)
+                                        .lineLimit(1)
+                                    Spacer()
+                                    Button("다시 보기") { store.showProject(entry.key) }
+                                        .font(.callout)
+                                }
+                            }
+                        } header: {
+                            Text("숨긴 프로젝트")
+                        } footer: {
+                            Text("이 기기에서만 가려집니다. 허브의 레코드는 그대로입니다.")
+                        }
+                    }
                 }
                 .listStyle(.insetGrouped)
             }
@@ -160,6 +180,25 @@ private struct ProjectStatsRow: View {
             .padding(.vertical, 4)
         }
         .accessibilityLabel(accessibilityLabel(usage))
+        .swipeActions(edge: .trailing) {
+            if let project {
+                Button {
+                    store.hideProject(project)
+                } label: {
+                    Label("숨기기", systemImage: "eye.slash")
+                }
+                .tint(.gray)
+            }
+        }
+        .contextMenu {
+            if let project {
+                Button {
+                    store.hideProject(project)
+                } label: {
+                    Label("이 프로젝트 숨기기", systemImage: "eye.slash")
+                }
+            }
+        }
     }
 
     private var feedbackCount: Int {

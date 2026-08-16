@@ -103,14 +103,28 @@ final class FeedbackStore: ObservableObject {
         var isUnclassified: Bool { project == Feedback.unclassifiedProject }
     }
 
-    // Raw data
-    @Published private(set) var allFeedback: [Feedback] = []
+    // Raw data, exactly as fetched. The `all…` properties below are what the UI
+    // reads: the same records with hidden projects taken out.
+    @Published private(set) var fetchedFeedback: [Feedback] = []
     @Published private(set) var resolvedRecordType: String?
     /// Usage statistics exactly as the apps reported them (see `Usage.swift`).
-    @Published private(set) var allSnapshots: [UsageSnapshot] = []
-    @Published private(set) var allEvents: [UsageEvent] = []
-    /// MetricKit diagnostics (`CrashReport`), newest first.
-    @Published private(set) var allCrashes: [CrashReport] = []
+    @Published private(set) var fetchedSnapshots: [UsageSnapshot] = []
+    @Published private(set) var fetchedEvents: [UsageEvent] = []
+    /// MetricKit diagnostics (`CrashReport`).
+    @Published private(set) var fetchedCrashes: [CrashReport] = []
+
+    var allFeedback: [Feedback] {
+        hiddenProjects.isEmpty ? fetchedFeedback : fetchedFeedback.filter { !hiddenProjects.contains($0.projectKey) }
+    }
+    var allSnapshots: [UsageSnapshot] {
+        hiddenProjects.isEmpty ? fetchedSnapshots : fetchedSnapshots.filter { !hiddenProjects.contains($0.projectKey) }
+    }
+    var allEvents: [UsageEvent] {
+        hiddenProjects.isEmpty ? fetchedEvents : fetchedEvents.filter { !hiddenProjects.contains($0.projectKey) }
+    }
+    var allCrashes: [CrashReport] {
+        hiddenProjects.isEmpty ? fetchedCrashes : fetchedCrashes.filter { !hiddenProjects.contains($0.projectKey) }
+    }
     /// Why usage data is missing, when it is. Usage has its own schema and read
     /// permission, so it can fail on its own while feedback loads.
     @Published var usageNotice: String?
@@ -159,6 +173,7 @@ final class FeedbackStore: ObservableObject {
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
         readIDs = Set(defaults.stringArray(forKey: Self.readIDsKey) ?? [])
+        hiddenProjects = Set(defaults.stringArray(forKey: Self.hiddenProjectsKey) ?? [])
     }
 
     /// Which half of the container this build reads. Fixed at build time by the
@@ -180,14 +195,14 @@ final class FeedbackStore: ObservableObject {
         // permission, so they are loaded separately and never fail the feedback
         // load — the dashboard shows whatever came back.
         let usage = (try? await service.fetchUsage()) ?? CloudKitService.UsageOutcome()
-        allSnapshots = usage.snapshots
-        allEvents = usage.events
-        allCrashes = usage.crashes
+        fetchedSnapshots = usage.snapshots
+        fetchedEvents = usage.events
+        fetchedCrashes = usage.crashes
         usageNotice = usage.notice
 
         do {
             let outcome = try await service.fetchFeedback()
-            allFeedback = outcome.feedback
+            fetchedFeedback = outcome.feedback
             resolvedRecordType = outcome.resolvedRecordType
             learnAppNames(from: outcome.feedback)
             lastUpdated = Date()
@@ -253,6 +268,59 @@ final class FeedbackStore: ObservableObject {
         defaults.set(Array(readIDs), forKey: Self.readIDsKey)
     }
 
+    // MARK: - Hidden projects
+
+    /// Projects taken out of this viewer. Nothing is deleted from CloudKit —
+    /// the records stay in the hub and come back the moment the project is
+    /// shown again. Persisted per device.
+    @Published private(set) var hiddenProjects: Set<String> = []
+    private static let hiddenProjectsKey = "hiddenProjects"
+
+    func isHidden(_ project: String) -> Bool { hiddenProjects.contains(project) }
+
+    /// Hide one project's feedback, usage, events and diagnostics at once.
+    func hideProject(_ project: String) {
+        guard !hiddenProjects.contains(project) else { return }
+        hiddenProjects.insert(project)
+        persistHiddenProjects()
+
+        // A hidden project must not stay as the active scope, or every screen
+        // ends up filtered to something that is no longer listed anywhere.
+        if selectedProject == project {
+            selectedProject = nil
+            listPath = NavigationPath()
+            statsPath = NavigationPath()
+        }
+    }
+
+    func showProject(_ project: String) {
+        guard hiddenProjects.remove(project) != nil else { return }
+        persistHiddenProjects()
+    }
+
+    func showAllProjects() {
+        guard !hiddenProjects.isEmpty else { return }
+        hiddenProjects.removeAll()
+        persistHiddenProjects()
+    }
+
+    /// Hidden projects that actually have records, newest data first, for the
+    /// "숨긴 프로젝트" list. A key with nothing behind it any more is dropped.
+    var hiddenProjectEntries: [(key: String, displayName: String, records: Int)] {
+        hiddenProjects.map { key in
+            let records = fetchedFeedback.filter { $0.projectKey == key }.count
+                + fetchedSnapshots.filter { $0.projectKey == key }.count
+                + fetchedEvents.filter { $0.projectKey == key }.count
+                + fetchedCrashes.filter { $0.projectKey == key }.count
+            return (key: key, displayName: displayName(for: key), records: records)
+        }
+        .sorted { $0.displayName.localizedStandardCompare($1.displayName) == .orderedAscending }
+    }
+
+    private func persistHiddenProjects() {
+        defaults.set(Array(hiddenProjects), forKey: Self.hiddenProjectsKey)
+    }
+
     // MARK: - Project name resolution
 
     /// Learned `appId → appName` from records that carry both. Lets records
@@ -275,13 +343,13 @@ final class FeedbackStore: ObservableObject {
         // Usage records carry the pair too, and an app may report usage under an
         // appId that never appears in feedback (ClipKeyboard sends
         // "com.Ysoup.TokenMemo"). Without this those rows would be bare ids.
-        for snapshot in allSnapshots {
+        for snapshot in fetchedSnapshots {
             guard let id = snapshot.appId?.trimmingCharacters(in: .whitespaces), !id.isEmpty,
                   let name = snapshot.appName?.trimmingCharacters(in: .whitespaces), !name.isEmpty,
                   map[id] == nil else { continue }
             map[id] = name
         }
-        for event in allEvents {
+        for event in fetchedEvents {
             guard let id = event.appId?.trimmingCharacters(in: .whitespaces), !id.isEmpty,
                   let name = event.appName?.trimmingCharacters(in: .whitespaces), !name.isEmpty,
                   map[id] == nil else { continue }

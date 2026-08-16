@@ -80,7 +80,59 @@ struct SidebarView: View {
                             store.selectedProject = (store.selectedProject == entry.key) ? nil : entry.key
                             dismissIfPresented()
                         }
+                        .contextMenu {
+                            Button {
+                                store.hideProject(entry.key)
+                            } label: {
+                                Label("이 프로젝트 숨기기", systemImage: "eye.slash")
+                            }
+                        }
+                        .swipeActions(edge: .trailing) {
+                            Button {
+                                store.hideProject(entry.key)
+                            } label: {
+                                Label("숨기기", systemImage: "eye.slash")
+                            }
+                            .tint(.gray)
+                        }
                     }
+                }
+            }
+
+            if !store.hiddenProjectEntries.isEmpty {
+                Section {
+                    ForEach(store.hiddenProjectEntries, id: \.key) { entry in
+                        HStack(spacing: 8) {
+                            Image(systemName: "eye.slash")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                            Text(entry.displayName)
+                                .lineLimit(1)
+                                .truncationMode(.middle)
+                                .foregroundStyle(.secondary)
+                            Spacer()
+                            Text("\(entry.records)")
+                                .foregroundStyle(.tertiary)
+                                .monospacedDigit()
+                            Button("다시 보기") { store.showProject(entry.key) }
+                                .buttonStyle(.borderless)
+                                .font(.caption)
+                        }
+                        .font(.callout)
+                    }
+                    if store.hiddenProjectEntries.count > 1 {
+                        Button {
+                            store.showAllProjects()
+                        } label: {
+                            Label("모두 다시 보기", systemImage: "eye")
+                                .font(.callout)
+                        }
+                    }
+                } header: {
+                    Text("숨긴 프로젝트")
+                } footer: {
+                    Text("이 기기에서만 가려집니다. 허브의 레코드는 그대로 남아 있고, 다시 보기를 누르면 즉시 돌아옵니다.")
+                        .font(.caption)
                 }
             }
 

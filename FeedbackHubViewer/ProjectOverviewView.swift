@@ -319,6 +319,11 @@ private struct ProjectCard: View {
                     Label("이 프로젝트 모두 읽음으로 표시", systemImage: "envelope.open")
                 }
             }
+            Button {
+                store.hideProject(summary.project)
+            } label: {
+                Label("이 프로젝트 숨기기", systemImage: "eye.slash")
+            }
         }
         .help("\(summary.displayName) 피드백 \(summary.count)건 보기")
         .accessibilityLabel("\(summary.displayName), 피드백 \(summary.count)건, 안 읽음 \(summary.unreadCount)건, 최근 7일 \(summary.last7Days)건")
