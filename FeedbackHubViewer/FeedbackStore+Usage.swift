@@ -94,6 +94,23 @@ extension FeedbackStore {
         let count: Int
     }
 
+    /// One project's MetricKit diagnostics, rolled up.
+    struct CrashSummary {
+        let total: Int
+        let last7Days: Int
+        let previous7Days: Int
+        /// Counts by `kind` ("crash" / "hang" / "disk_write"), most first.
+        let byKind: [(kind: String, label: String, count: Int)]
+        /// Counts by app version, most first.
+        let byVersion: [DistributionBucket]
+        /// Newest first, for the recent list.
+        let recent: [CrashReport]
+        let lastAt: Date?
+
+        var isEmpty: Bool { total == 0 }
+        var delta: Int { last7Days - previous7Days }
+    }
+
     /// Chart bucket, same units the apps offer.
     enum TrendUnit: String, CaseIterable, Identifiable {
         case day, week, month, year
@@ -140,12 +157,18 @@ extension FeedbackStore {
         return allEvents.filter { $0.projectKey == project }
     }
 
-    /// Every project key that appears anywhere — feedback or usage. An app can
-    /// report usage under an id that never shows up in feedback.
+    func crashes(for project: String?) -> [CrashReport] {
+        guard let project else { return allCrashes }
+        return allCrashes.filter { $0.projectKey == project }
+    }
+
+    /// Every project key that appears anywhere — feedback, usage, or a crash.
+    /// An app can report under an id that never shows up in feedback.
     var allProjectKeys: [String] {
         var keys = Set(allFeedback.map(\.projectKey))
         keys.formUnion(allSnapshots.map(\.projectKey))
         keys.formUnion(allEvents.map(\.projectKey))
+        keys.formUnion(allCrashes.map(\.projectKey))
         return keys.sorted { lhs, rhs in
             if lhs == Feedback.unclassifiedProject { return false }
             if rhs == Feedback.unclassifiedProject { return true }
@@ -220,6 +243,48 @@ extension FeedbackStore {
             guard let day = cal.date(byAdding: .day, value: offset, to: start) else { return nil }
             return DayCount(date: day, count: buckets[day] ?? 0)
         }
+    }
+
+    // MARK: - Diagnostics
+
+    /// Diagnostics for one project, rolled up the way the apps' 안정성 screen
+    /// shows them (per version, plus the recent list with call stacks).
+    ///
+    /// Timing is the record's creation date: MetricKit hands diagnostics over
+    /// about once a day, so "최근 7일" means "arrived in the last 7 days", not
+    /// "crashed in the last 7 days".
+    func crashSummary(for project: String?) -> CrashSummary {
+        let items = crashes(for: project)
+            .sorted { ($0.receivedAt ?? .distantPast) > ($1.receivedAt ?? .distantPast) }
+        let now = Date()
+        let weekAgo = now.addingTimeInterval(-7 * 86_400)
+        let twoWeeksAgo = now.addingTimeInterval(-14 * 86_400)
+
+        var kindCounts: [String: Int] = [:]
+        var versionCounts: [String: Int] = [:]
+        for item in items {
+            kindCounts[item.kind, default: 0] += 1
+            versionCounts[item.appVersion, default: 0] += 1
+        }
+
+        let byKind = kindCounts
+            .map { (kind: $0.key, label: CrashReport.label(for: $0.key), count: $0.value) }
+            .sorted { $0.count > $1.count }
+
+        return CrashSummary(
+            total: items.count,
+            last7Days: items.filter { ($0.receivedAt ?? .distantPast) >= weekAgo }.count,
+            previous7Days: items.filter {
+                guard let at = $0.receivedAt else { return false }
+                return at >= twoWeeksAgo && at < weekAgo
+            }.count,
+            byKind: byKind,
+            byVersion: versionCounts
+                .map { DistributionBucket(key: $0.key, count: $0.value) }
+                .sorted { $0.count == $1.count ? $0.key.localizedStandardCompare($1.key) == .orderedDescending : $0.count > $1.count },
+            recent: Array(items.prefix(30)),
+            lastAt: items.first?.receivedAt
+        )
     }
 
     // MARK: - Events

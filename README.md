@@ -70,7 +70,10 @@ CloudKit은 어느 환경을 읽을지 **빌드에 박히는 entitlement**
 - **통계**: 각 앱이 허브로 보내는 **사용 통계(UsageSnapshot / UsageEvent)를 그대로** 보여줍니다.
   iPhone은 앱별 목록(설치·활동 사용자·사용 건수·신규 설치와 지난주 대비 증감)에서 탭하면 상세로,
   Mac은 프로젝트 메뉴가 달린 대시보드입니다. 상세에는 사용자 타일, 지난주 대비, 기간별 추이(일·주·월·연),
-  이벤트별 건수/설치 수, 설치당 평균 지표, 플래그 비율, 버전·플랫폼·OS 분포, 피드백 요약이 들어갑니다.
+  **안정성(크래시·진단)**, 이벤트별 건수/설치 수, 설치당 평균 지표, 플래그 비율,
+  버전·플랫폼·OS 분포, 피드백 요약이 들어갑니다. 안정성 카드는 최근 7일 진단 수와 지난주 대비,
+  종류별(크래시/멈춤/과도한 디스크 쓰기)·버전별 건수, 최근 진단 목록(콜스택 펼치기·복사)을 보여주고,
+  iPhone 통계 목록에서는 최근 7일 진단이 있는 앱에 빨간 ⚠︎ 표시가 붙습니다.
   이벤트 이름과 `metrics` 키는 앱이 보낸 원문 그대로 표시합니다(뷰어가 앱별 용어를 번역하지 않습니다).
 - **새로고침**: 툴바의 새로고침 버튼(macOS `⌘R`), iPhone에서는 당겨서 새로고침, "자동 갱신" 토글(1분 주기).
 
@@ -101,6 +104,7 @@ CloudKit은 어느 환경을 읽을지 **빌드에 박히는 entitlement**
 |---|---|---|
 | `UsageSnapshot` | 설치 1건(레코드 이름 `usage-<installID>`, upsert) | `appId` `appName` `appVersion` `platform` `osVersion` `locale` `launchCount` `eventCount` `daysSinceInstall` `installDate` `lastActiveAt` `metrics`(JSON `[String: Double]`) |
 | `UsageEvent` | 주요 행동 1건 | `appId` `appName` `event` `appVersion` `platform` `installID` `occurredAt` |
+| `CrashReport` | MetricKit 진단 1건 | `appId` `kind`(crash/hang/disk_write) `detail` `appVersion` `osVersion` `deviceType` `stack` (전부 String) |
 
 - 추이·활성 사용자는 **`occurredAt`** 으로 계산합니다. `creationDate`(서버가 쓴 시각)로 세면
   나중에 소급 전송된 활동일이 보낸 날 하루에 뭉칩니다.
@@ -108,7 +112,9 @@ CloudKit은 어느 환경을 읽을지 **빌드에 박히는 entitlement**
   최근 N일 신규 = `installDate`가 그 구간인 스냅샷, 활동한 사용자 = 구간 내 서로 다른 `installID`.
 - `metrics` 키와 이벤트 이름은 앱마다 다릅니다. 뷰어는 키를 해석하지 않고 그대로 나열하며,
   `flag.*` · `persona.*` 키만 0/1 플래그로 보고 "사용자 비율"에 넣습니다.
-- 이벤트는 최대 5,000건까지 읽습니다(`CloudKitService.fetchUsage(eventLimit:)`).
+- `CrashReport`에는 시각 필드가 없어 **레코드 생성 시각**을 씁니다. MetricKit이 하루 한 번꼴로 묶어
+  보내므로 "최근 7일"은 "그 사이에 도착한 진단"이라는 뜻입니다(크래시가 난 시점이 아님).
+- 이벤트는 최대 5,000건, 진단은 1,000건까지 읽습니다(`CloudKitService.fetchUsage(eventLimit:crashLimit:)`).
 - 사용 통계를 못 읽어도 피드백은 정상 동작하고, 통계 화면 위에 사유가 배너로 뜹니다.
 
 ## 5. 데이터가 안 보일 때 체크리스트
@@ -125,9 +131,10 @@ CloudKit Public DB는 필드가 **Queryable**로 표시돼 있어야 조회되�
 5. **권한**: LeeoKit은 World에서 read를 빼고 저장하므로, CloudKit Console → Security Roles의 admin 역할에
    내 iCloud **userRecordName**을 등록하고 피드백 레코드 타입에 read를 줘야 합니다.
    권한 오류가 나면 앱이 등록에 쓸 userRecordName을 오류 메시지와 "내 계정 ID" 메뉴에 표시합니다.
-6. **사용 통계**: `UsageSnapshot` · `UsageEvent`도 같은 admin 역할에 read가 필요하고, 해당 환경에
-   스키마가 배포돼 있어야 합니다(`UsageSnapshot`은 `recordName` Queryable, `UsageEvent`는
-   `recordName` Queryable + `createdTimestamp` Sortable). 없으면 통계 화면 상단에 사유가 표시됩니다.
+6. **사용 통계·진단**: `UsageSnapshot` · `UsageEvent` · `CrashReport`도 같은 admin 역할에 read가
+   필요하고, 해당 환경에 스키마가 배포돼 있어야 합니다(`UsageSnapshot`은 `recordName` Queryable,
+   `UsageEvent`·`CrashReport`는 `recordName` Queryable + `createdTimestamp` Sortable).
+   없으면 통계 화면 상단에 어떤 레코드 타입이 왜 안 읽혔는지 표시됩니다.
 
 ## 6. 프로젝트 구성
 
@@ -138,6 +145,7 @@ FeedbackHubViewer/
    ├─ FeedbackHubViewerApp.swift   # 앱 진입점 (플랫폼별 Scene 설정)
    ├─ Feedback.swift               # 레코드 → 모델 매핑(스키마 유연)
    ├─ Usage.swift                  # UsageSnapshot / UsageEvent 모델(고정 스키마)
+   ├─ CrashReport.swift            # MetricKit 진단 모델(고정 스키마)
    ├─ FeedbackStore+Usage.swift    # 사용 통계 집계(활성·신규·이벤트·지표·추이)
    ├─ CloudKitService.swift        # Public DB 조회(CKContainer) + 환경(CloudKitEnvironment)
    ├─ EnvironmentControls.swift    # 현재 환경 DEV/PROD 배지

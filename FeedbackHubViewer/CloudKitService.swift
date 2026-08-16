@@ -87,6 +87,8 @@ final class CloudKitService {
     /// guessing to do (see `Usage.swift`).
     static let snapshotRecordType = "UsageSnapshot"
     static let eventRecordType = "UsageEvent"
+    /// MetricKit diagnostics, uploaded by the apps' `DiagnosticsService`.
+    static let crashRecordType = "CrashReport"
 
     struct FetchOutcome {
         var feedback: [Feedback]
@@ -97,6 +99,7 @@ final class CloudKitService {
     struct UsageOutcome {
         var snapshots: [UsageSnapshot] = []
         var events: [UsageEvent] = []
+        var crashes: [CrashReport] = []
         /// Why usage data is missing or incomplete, if it is. Usage is a
         /// separate schema with its own read permission, so it can fail while
         /// feedback loads fine — that is worth saying rather than showing an
@@ -108,9 +111,11 @@ final class CloudKitService {
     /// independently: a missing or unreadable one leaves the other intact,
     /// which is how the apps' own statistics screens behave.
     ///
-    /// - Parameter eventLimit: hard cap on event records. The stream grows
-    ///   without bound, and the charts only look back so far.
-    func fetchUsage(eventLimit: Int = 5000) async throws -> UsageOutcome {
+    /// - Parameters:
+    ///   - eventLimit: hard cap on event records. The stream grows without
+    ///     bound, and the charts only look back so far.
+    ///   - crashLimit: same idea for diagnostics.
+    func fetchUsage(eventLimit: Int = 5000, crashLimit: Int = 1000) async throws -> UsageOutcome {
         var outcome = UsageOutcome()
         var problems: [String] = []
 
@@ -128,9 +133,16 @@ final class CloudKitService {
             problems.append(usageProblem(Self.eventRecordType, error))
         }
 
+        do {
+            outcome.crashes = try await queryAll(recordType: Self.crashRecordType, limit: crashLimit)
+                .map(CrashReport.init(record:))
+        } catch {
+            problems.append(usageProblem(Self.crashRecordType, error))
+        }
+
         if !problems.isEmpty {
             outcome.notice = problems.joined(separator: "\n")
-                + "\n\nCloudKit Console에서 UsageSnapshot·UsageEvent 스키마가 이 환경에 배포되어 있고, admin 역할에 read 권한이 있는지 확인하세요."
+                + "\n\nCloudKit Console에서 해당 스키마가 이 환경에 배포되어 있고, admin 역할에 read 권한이 있는지 확인하세요."
         }
         return outcome
     }

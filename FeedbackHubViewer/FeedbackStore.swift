@@ -109,6 +109,8 @@ final class FeedbackStore: ObservableObject {
     /// Usage statistics exactly as the apps reported them (see `Usage.swift`).
     @Published private(set) var allSnapshots: [UsageSnapshot] = []
     @Published private(set) var allEvents: [UsageEvent] = []
+    /// MetricKit diagnostics (`CrashReport`), newest first.
+    @Published private(set) var allCrashes: [CrashReport] = []
     /// Why usage data is missing, when it is. Usage has its own schema and read
     /// permission, so it can fail on its own while feedback loads.
     @Published var usageNotice: String?
@@ -180,6 +182,7 @@ final class FeedbackStore: ObservableObject {
         let usage = (try? await service.fetchUsage()) ?? CloudKitService.UsageOutcome()
         allSnapshots = usage.snapshots
         allEvents = usage.events
+        allCrashes = usage.crashes
         usageNotice = usage.notice
 
         do {

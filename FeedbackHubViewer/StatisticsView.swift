@@ -113,6 +113,12 @@ private struct ProjectStatsRow: View {
                         .font(.subheadline.weight(.semibold))
                         .lineLimit(1)
                     if unread > 0 { UnreadBadge(count: unread) }
+                    if crashes7 > 0 {
+                        Label("\(crashes7)", systemImage: "exclamationmark.triangle.fill")
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(.red)
+                            .accessibilityLabel("최근 7일 진단 \(crashes7)건")
+                    }
                     Spacer(minLength: 4)
                     Text(usage.installs > 0 ? "설치 \(usage.installs)" : "피드백 \(feedbackCount)건")
                         .font(.caption.monospacedDigit())
@@ -164,6 +170,11 @@ private struct ProjectStatsRow: View {
     private var unreadCount: Int {
         guard let project else { return store.unreadCount }
         return store.allFeedback.filter { $0.projectKey == project && store.isUnread($0) }.count
+    }
+
+    /// Diagnostics that arrived in the last week — worth a flag on the row.
+    private var crashes7: Int {
+        store.crashSummary(for: project).last7Days
     }
 
     private var icon: String {
@@ -316,6 +327,7 @@ struct StatisticsDashboard: View {
                         if usage.hasUsageData {
                             userTiles
                             weekOverWeek
+                            crashCard
                             trendCard
                             feedbackLink
                             eventCard
@@ -324,6 +336,7 @@ struct StatisticsDashboard: View {
                             distributionCards
                         } else {
                             noUsageCard
+                            crashCard
                             feedbackLink
                         }
 
@@ -454,6 +467,73 @@ struct StatisticsDashboard: View {
     private func deltaTint(_ value: Int) -> Color {
         if value == 0 { return .secondary }
         return value > 0 ? .green : .red
+    }
+
+    // MARK: - 안정성 (크래시 · 진단)
+
+    @ViewBuilder
+    private var crashCard: some View {
+        let summary = store.crashSummary(for: scope)
+        Card(title: "안정성 (크래시 · 진단)", systemImage: "exclamationmark.triangle") {
+            if summary.isEmpty {
+                emptyNote("올라온 진단이 없습니다. MetricKit은 크래시를 하루 한 번꼴로 묶어서 보내므로 방금 난 크래시는 바로 보이지 않습니다.")
+            } else {
+                ViewThatFits(in: .horizontal) {
+                    HStack(alignment: .top, spacing: 16) { crashCounts(summary) }
+                    VStack(alignment: .leading, spacing: 12) { crashCounts(summary) }
+                }
+
+                if !summary.byKind.isEmpty {
+                    HStack(spacing: 6) {
+                        ForEach(summary.byKind, id: \.kind) { entry in
+                            Text("\(entry.label) \(entry.count)")
+                                .font(.caption2)
+                                .padding(.horizontal, 7)
+                                .padding(.vertical, 3)
+                                .background(Color.secondary.opacity(0.12), in: Capsule())
+                        }
+                        Spacer(minLength: 0)
+                    }
+                }
+
+                if summary.byVersion.count > 1 {
+                    Divider()
+                    Text("버전별 진단 건수")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    distributionRows(summary.byVersion)
+                }
+
+                Divider()
+                Text("최근 진단")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                VStack(spacing: 0) {
+                    ForEach(Array(summary.recent.enumerated()), id: \.element.id) { index, report in
+                        CrashRow(report: report)
+                        if index < summary.recent.count - 1 { Divider() }
+                    }
+                }
+                Text("MetricKit이 보내는 익명 진단입니다. 콜스택·앱 버전·OS만 담기고 사용자 정보는 들어가지 않습니다.")
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func crashCounts(_ summary: FeedbackStore.CrashSummary) -> some View {
+        ComparisonRow(title: "최근 7일",
+                      recent: "\(summary.last7Days)건",
+                      previous: "지난주 \(summary.previous7Days)건",
+                      delta: signed(summary.delta),
+                      // More crashes is the bad direction here, unlike usage.
+                      tint: summary.delta > 0 ? .red : (summary.delta < 0 ? .green : .secondary))
+        ComparisonRow(title: "전체",
+                      recent: "\(summary.total)건",
+                      previous: summary.lastAt.map { "마지막 \(AppFormat.relative($0))" } ?? "—",
+                      delta: nil,
+                      tint: .secondary)
     }
 
     // MARK: - 기간별 추이
@@ -766,6 +846,65 @@ struct StatisticsDashboard: View {
 }
 
 // MARK: - Building blocks
+
+/// One diagnostic: what kind, where it came from, and the call stack behind a
+/// disclosure — the stack is long and only wanted when you're chasing it.
+private struct CrashRow: View {
+    let report: CrashReport
+    @State private var showsStack = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 6) {
+                Text(report.kindLabel)
+                    .font(.callout.weight(.semibold))
+                    .foregroundStyle(report.kind == "crash" ? Color.red : Color.orange)
+                Text("v\(report.appVersion)")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Spacer(minLength: 4)
+                if let receivedAt = report.receivedAt {
+                    Text(AppFormat.relative(receivedAt))
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                }
+                Button {
+                    Platform.copyToPasteboard(report.copyText)
+                } label: {
+                    Image(systemName: "doc.on.doc")
+                        .font(.caption)
+                }
+                .buttonStyle(.borderless)
+                .help("이 진단을 텍스트로 복사")
+            }
+
+            Text("\(report.deviceType) · OS \(report.osVersion)")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+
+            if report.hasDetail {
+                Text(report.detail)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            if !report.stack.isEmpty {
+                DisclosureGroup("콜스택", isExpanded: $showsStack) {
+                    ScrollView(.horizontal) {
+                        Text(report.stack)
+                            .font(.caption2.monospaced())
+                            .textSelection(.enabled)
+                            .padding(.vertical, 4)
+                    }
+                    .frame(maxHeight: 220)
+                }
+                .font(.caption)
+            }
+        }
+        .padding(.vertical, 6)
+    }
+}
 
 private struct StatTile: View {
     let title: String
