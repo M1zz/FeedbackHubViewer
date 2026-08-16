@@ -74,6 +74,10 @@ CloudKit은 어느 환경을 읽을지 **빌드에 박히는 entitlement**
   버전·플랫폼·OS 분포, 피드백 요약이 들어갑니다. 안정성 카드는 최근 7일 진단 수와 지난주 대비,
   종류별(크래시/멈춤/과도한 디스크 쓰기)·버전별 건수, 최근 진단 목록(콜스택 펼치기·복사)을 보여주고,
   iPhone 통계 목록에서는 최근 7일 진단이 있는 앱에 빨간 ⚠︎ 표시가 붙습니다.
+- **진단 모아보기**: 그 ⚠︎만 한 화면에 모읍니다. 통계 목록 위쪽의 "진단 모아보기"(또는 안정성
+  카드의 "전부 모아보기")로 들어가면 최근 7일·전체 건수와 지난주 대비, 종류 필터(크래시·멈춤·
+  과도한 디스크 쓰기), 프로젝트별 건수(탭하면 그 앱만), 전체 목록(콜스택 펼치기·개별/전체 복사)이
+  나옵니다.
   이벤트 이름과 `metrics` 키는 앱이 보낸 원문 그대로 표시합니다(뷰어가 앱별 용어를 번역하지 않습니다).
 - **프로젝트 숨기기**: 사이드바 프로젝트 행(오른쪽 클릭 또는 스와이프), 개요 카드 우클릭, 통계 목록
   스와이프에서 "이 프로젝트 숨기기". 그 앱의 피드백·사용 통계·이벤트·크래시가 목록과 집계에서 한꺼번에
@@ -150,6 +154,7 @@ FeedbackHubViewer/
    ├─ Feedback.swift               # 레코드 → 모델 매핑(스키마 유연)
    ├─ Usage.swift                  # UsageSnapshot / UsageEvent 모델(고정 스키마)
    ├─ CrashReport.swift            # MetricKit 진단 모델(고정 스키마)
+   ├─ CrashListView.swift          # 진단 모아보기(종류·프로젝트 필터, 콜스택)
    ├─ FeedbackStore+Usage.swift    # 사용 통계 집계(활성·신규·이벤트·지표·추이)
    ├─ CloudKitService.swift        # Public DB 조회(CKContainer) + 환경(CloudKitEnvironment)
    ├─ EnvironmentControls.swift    # 현재 환경 DEV/PROD 배지

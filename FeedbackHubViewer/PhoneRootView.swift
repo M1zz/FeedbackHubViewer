@@ -57,6 +57,10 @@ private struct HubDestinations: ViewModifier {
                     .task { store.selectedProject = route.project }
                     .modifier(HubToolbar())
             }
+            .navigationDestination(for: FeedbackStore.CrashRoute.self) { route in
+                CrashListView(project: route.project)
+                    .modifier(HubToolbar())
+            }
             .navigationDestination(for: Feedback.self) { feedback in
                 FeedbackDetailView(feedback: feedback,
                                    projectLabel: store.displayName(for: feedback.projectKey))

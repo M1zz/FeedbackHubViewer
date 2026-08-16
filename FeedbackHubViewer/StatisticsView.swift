@@ -64,6 +64,39 @@ struct ProjectStatsListView: View {
                         ProjectStatsRow(project: nil)
                     }
 
+                    // The red ⚠︎ on the rows below leads here: every diagnostic
+                    // from every project in one list.
+                    if !store.allCrashes.isEmpty {
+                        Section {
+                            NavigationLink(value: FeedbackStore.CrashRoute(project: nil)) {
+                                let summary = store.crashSummary(for: nil)
+                                HStack(spacing: 8) {
+                                    Image(systemName: "exclamationmark.triangle.fill")
+                                        .foregroundStyle(.red)
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text("진단 모아보기")
+                                            .font(.subheadline.weight(.semibold))
+                                        Text(summary.last7Days > 0
+                                             ? "최근 7일 \(summary.last7Days)건 · 전체 \(summary.total)건"
+                                             : "전체 \(summary.total)건")
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+                                    }
+                                    Spacer(minLength: 4)
+                                    if summary.last7Days > 0 {
+                                        Text("\(summary.last7Days)")
+                                            .font(.caption2.bold().monospacedDigit())
+                                            .foregroundStyle(.white)
+                                            .padding(.horizontal, 6)
+                                            .padding(.vertical, 2)
+                                            .background(Color.red, in: Capsule())
+                                    }
+                                }
+                                .padding(.vertical, 2)
+                            }
+                        }
+                    }
+
                     Section("프로젝트별 · 최근 7일") {
                         ForEach(store.allProjectKeys, id: \.self) { key in
                             ProjectStatsRow(project: key)
@@ -560,16 +593,23 @@ struct StatisticsDashboard: View {
                 }
 
                 Divider()
-                Text("최근 진단")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                VStack(spacing: 0) {
-                    ForEach(Array(summary.recent.enumerated()), id: \.element.id) { index, report in
-                        CrashRow(report: report)
-                        if index < summary.recent.count - 1 { Divider() }
+                HStack {
+                    Text("최근 진단")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    NavigationLink(value: FeedbackStore.CrashRoute(project: scope)) {
+                        Label("전부 모아보기", systemImage: "list.bullet.rectangle.portrait")
+                            .font(.caption)
                     }
                 }
-                Text("MetricKit이 보내는 익명 진단입니다. 콜스택·앱 버전·OS만 담기고 사용자 정보는 들어가지 않습니다.")
+                VStack(spacing: 0) {
+                    ForEach(Array(summary.recent.prefix(5).enumerated()), id: \.element.id) { index, report in
+                        CrashRow(report: report)
+                        if index < min(summary.recent.count, 5) - 1 { Divider() }
+                    }
+                }
+                Text("최근 5건입니다. 나머지와 종류별 모아보기는 위의 \"전부 모아보기\"에서 볼 수 있어요. MetricKit이 보내는 익명 진단이라 콜스택·앱 버전·OS만 담깁니다.")
                     .font(.caption2)
                     .foregroundStyle(.tertiary)
             }
@@ -914,65 +954,6 @@ struct StatisticsDashboard: View {
 }
 
 // MARK: - Building blocks
-
-/// One diagnostic: what kind, where it came from, and the call stack behind a
-/// disclosure — the stack is long and only wanted when you're chasing it.
-private struct CrashRow: View {
-    let report: CrashReport
-    @State private var showsStack = false
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            HStack(spacing: 6) {
-                Text(report.kindLabel)
-                    .font(.callout.weight(.semibold))
-                    .foregroundStyle(report.kind == "crash" ? Color.red : Color.orange)
-                Text("v\(report.appVersion)")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                Spacer(minLength: 4)
-                if let receivedAt = report.receivedAt {
-                    Text(AppFormat.relative(receivedAt))
-                        .font(.caption2)
-                        .foregroundStyle(.tertiary)
-                }
-                Button {
-                    Platform.copyToPasteboard(report.copyText)
-                } label: {
-                    Image(systemName: "doc.on.doc")
-                        .font(.caption)
-                }
-                .buttonStyle(.borderless)
-                .help("이 진단을 텍스트로 복사")
-            }
-
-            Text("\(report.deviceType) · OS \(report.osVersion)")
-                .font(.caption2)
-                .foregroundStyle(.secondary)
-
-            if report.hasDetail {
-                Text(report.detail)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-
-            if !report.stack.isEmpty {
-                DisclosureGroup("콜스택", isExpanded: $showsStack) {
-                    ScrollView(.horizontal) {
-                        Text(report.stack)
-                            .font(.caption2.monospaced())
-                            .textSelection(.enabled)
-                            .padding(.vertical, 4)
-                    }
-                    .frame(maxHeight: 220)
-                }
-                .font(.caption)
-            }
-        }
-        .padding(.vertical, 6)
-    }
-}
 
 private struct StatTile: View {
     let title: String

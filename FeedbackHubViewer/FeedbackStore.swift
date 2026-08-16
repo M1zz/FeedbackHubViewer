@@ -49,6 +49,12 @@ final class FeedbackStore: ObservableObject {
         let project: String?
     }
 
+    /// Every diagnostic in one list — what the red ⚠︎ on a project row is
+    /// about. `project` nil == 전체 프로젝트.
+    struct CrashRoute: Hashable {
+        let project: String?
+    }
+
     /// One day's feedback count, for the trend charts.
     struct DayCount: Identifiable, Hashable {
         var id: Date { date }

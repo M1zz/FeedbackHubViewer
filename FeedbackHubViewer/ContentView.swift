@@ -72,6 +72,11 @@ struct SplitRootView: View {
                 StatisticsDashboard(project: route.project)
                     .task { store.selectedProject = route.project }
             }
+            #endif
+            .navigationDestination(for: FeedbackStore.CrashRoute.self) { route in
+                CrashListView(project: route.project)
+            }
+            #if os(iOS)
             .navigationDestination(for: Feedback.self) { feedback in
                 FeedbackDetailView(feedback: feedback,
                                    projectLabel: store.displayName(for: feedback.projectKey))

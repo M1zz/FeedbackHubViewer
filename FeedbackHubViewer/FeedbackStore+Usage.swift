@@ -287,6 +287,28 @@ extension FeedbackStore {
         )
     }
 
+    /// Diagnostics for one project (nil == 전체), newest first, optionally
+    /// narrowed to one `kind`. Backs the "진단 모아보기" screen.
+    func crashReports(for project: String?, kind: String? = nil) -> [CrashReport] {
+        crashes(for: project)
+            .filter { kind == nil || $0.kind == kind }
+            .sorted { ($0.receivedAt ?? .distantPast) > ($1.receivedAt ?? .distantPast) }
+    }
+
+    /// Projects that reported diagnostics, worst first — the list behind the
+    /// red ⚠︎ marks.
+    var crashingProjects: [(key: String, displayName: String, total: Int, last7Days: Int)] {
+        allProjectKeys.compactMap { key in
+            let summary = crashSummary(for: key)
+            guard summary.total > 0 else { return nil }
+            return (key: key, displayName: displayName(for: key),
+                    total: summary.total, last7Days: summary.last7Days)
+        }
+        .sorted { lhs, rhs in
+            lhs.last7Days == rhs.last7Days ? lhs.total > rhs.total : lhs.last7Days > rhs.last7Days
+        }
+    }
+
     // MARK: - Events
 
     /// Event names for one project, most frequent first.

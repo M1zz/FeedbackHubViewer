@@ -55,6 +55,12 @@ struct CrashReport: Identifiable, Hashable {
         }
     }
 
+    /// Short form for tight places (a segmented filter), where the full label
+    /// would be truncated instead of shortened.
+    static func shortLabel(for kind: String) -> String {
+        kind == "disk_write" ? "디스크 쓰기" : label(for: kind)
+    }
+
     var hasDetail: Bool {
         !detail.isEmpty && detail != "-"
     }
