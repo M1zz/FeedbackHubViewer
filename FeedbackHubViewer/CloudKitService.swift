@@ -14,11 +14,59 @@
 import Foundation
 import CloudKit
 
+/// Which half of the CloudKit container a build reads.
+///
+/// CloudKit picks this from the `com.apple.developer.icloud-container-environment`
+/// entitlement baked into the binary, so it is fixed for a given build — the
+/// framework has no runtime switch. The `CLOUDKIT_PRODUCTION` compilation
+/// condition is set by the "Production" build configuration, which ships the
+/// Production entitlement; everything else follows the usual Debug/Release rule.
+enum CloudKitEnvironment: String {
+    case development = "Development"
+    case production = "Production"
+
+    var displayName: String {
+        switch self {
+        case .development: return "Development"
+        case .production: return "Production"
+        }
+    }
+
+    var shortLabel: String {
+        switch self {
+        case .development: return "DEV"
+        case .production: return "PROD"
+        }
+    }
+
+    /// The environment path component in a CloudKit Web Services URL.
+    var restPathComponent: String {
+        switch self {
+        case .development: return "development"
+        case .production: return "production"
+        }
+    }
+
+    static var current: CloudKitEnvironment {
+        #if CLOUDKIT_PRODUCTION
+        return .production
+        #elseif DEBUG
+        return .development
+        #else
+        // Release builds (TestFlight / App Store) always read Production.
+        return .production
+        #endif
+    }
+}
+
 @MainActor
 final class CloudKitService {
 
     /// The CloudKit container that backs the feedback data.
     static let containerIdentifier = "iCloud.com.Ysoup.FeedbackHub"
+
+    /// The environment this build reads. See `CloudKitEnvironment`.
+    static var environment: CloudKitEnvironment { .current }
 
     /// Likely names for the feedback record type. The first one that returns
     /// data wins. Reorder or add your real type name here if needed.

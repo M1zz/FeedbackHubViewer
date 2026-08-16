@@ -12,10 +12,48 @@ import SwiftUI
 
 struct ProjectOverviewView: View {
     @EnvironmentObject private var store: FeedbackStore
+    #if os(iOS)
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    #endif
 
+    /// Two cards side by side even on an iPhone; wider cards elsewhere.
+    #if os(macOS)
     private let columns = [GridItem(.adaptive(minimum: 220, maximum: 320), spacing: 16)]
+    private let contentSpacing: CGFloat = 16
+    private let contentPadding: CGFloat = 16
+    #else
+    private let columns = [GridItem(.adaptive(minimum: 165, maximum: 320), spacing: 10)]
+    private let contentSpacing: CGFloat = 12
+    private let contentPadding: CGFloat = 12
+    #endif
+
+    /// The compact layout has no sidebar, so the overview carries the headline
+    /// numbers and a preview of the newest feedback itself.
+    private var isCompact: Bool {
+        #if os(macOS)
+        return false
+        #else
+        return horizontalSizeClass == .compact
+        #endif
+    }
 
     var body: some View {
+        VStack(spacing: 0) {
+            // Pinned above the content so the environment and refresh time stay
+            // visible even when the body is an error or empty state.
+            if isCompact {
+                StatusRow()
+                    .padding(.horizontal, contentPadding)
+                    .padding(.bottom, 8)
+            }
+            content
+        }
+        .navigationTitle("프로젝트 개요")
+        .hubNavigationSubtitle("\(store.projectSummaries.count)개 프로젝트 / 전체 \(store.allFeedback.count)건")
+    }
+
+    @ViewBuilder
+    private var content: some View {
         Group {
             if store.errorMessage != nil {
                 ContentUnavailableView {
@@ -31,15 +69,25 @@ struct ProjectOverviewView: View {
                 )
             } else {
                 ScrollView {
-                    LazyVGrid(columns: columns, spacing: 16) {
-                        ForEach(store.projectSummaries) { summary in
-                            ProjectCard(summary: summary) {
-                                store.selectedProject = summary.project
-                                store.viewMode = .list
+                    VStack(alignment: .leading, spacing: contentSpacing) {
+                        if isCompact {
+                            HeadlineStrip()
+                        }
+
+                        LazyVGrid(columns: columns, spacing: contentSpacing) {
+                            ForEach(store.projectSummaries) { summary in
+                                ProjectCard(summary: summary) {
+                                    store.selectedProject = summary.project
+                                    store.viewMode = .list
+                                }
                             }
                         }
+
+                        if isCompact {
+                            RecentFeedbackSection()
+                        }
                     }
-                    .padding(16)
+                    .padding(contentPadding)
                 }
             }
         }
@@ -48,8 +96,146 @@ struct ProjectOverviewView: View {
                 ProgressView("불러오는 중…")
             }
         }
-        .navigationTitle("프로젝트 개요")
-        .navigationSubtitle("\(store.projectSummaries.count)개 프로젝트 / 전체 \(store.allFeedback.count)건")
+    }
+}
+
+/// The context line the Mac keeps in its toolbar and sidebar: which CloudKit
+/// environment is being read, which record type resolved, and when the data
+/// last came in.
+private struct StatusRow: View {
+    @EnvironmentObject private var store: FeedbackStore
+
+    var body: some View {
+        HStack(spacing: 8) {
+            EnvironmentBadge()
+            if let type = store.resolvedRecordType {
+                Text(type)
+                    .font(.caption2.monospaced())
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+            Spacer(minLength: 4)
+            if store.isLoading {
+                ProgressView().controlSize(.mini)
+            } else if let updated = store.lastUpdated {
+                Text("업데이트 \(AppFormat.time(updated))")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+        }
+    }
+}
+
+/// One dense row of the numbers the Mac shows in its sidebar: total, average
+/// rating, last 7 days, project count, and which CloudKit environment is being
+/// read.
+private struct HeadlineStrip: View {
+    @EnvironmentObject private var store: FeedbackStore
+
+    var body: some View {
+        let stats = store.stats
+        HStack(spacing: 0) {
+            cell(value: "\(stats.total)", unit: "건", label: "전체", tint: .accentColor)
+            divider
+            cell(value: stats.averageRating.map { String(format: "%.1f", $0) } ?? "—",
+                 unit: stats.averageRating == nil ? "" : "점", label: "평균", tint: .yellow)
+            divider
+            cell(value: "\(stats.last7Days)", unit: "건", label: "7일", tint: .blue)
+            divider
+            cell(value: "\(store.availableProjects.count)", unit: "개", label: "프로젝트", tint: .purple)
+        }
+        .padding(.vertical, 10)
+        .frame(maxWidth: .infinity)
+        .background(.background.secondary, in: RoundedRectangle(cornerRadius: 12))
+        .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(Color.secondary.opacity(0.15)))
+    }
+
+    private var divider: some View {
+        Divider().frame(height: 26)
+    }
+
+    private func cell(value: String, unit: String, label: String, tint: Color) -> some View {
+        VStack(spacing: 1) {
+            HStack(alignment: .firstTextBaseline, spacing: 1) {
+                Text(value)
+                    .font(.system(.title3, design: .rounded).weight(.semibold))
+                    .monospacedDigit()
+                    .foregroundStyle(tint)
+                if !unit.isEmpty {
+                    Text(unit).font(.caption2).foregroundStyle(.secondary)
+                }
+            }
+            Text(label)
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity)
+        .lineLimit(1)
+        .minimumScaleFactor(0.7)
+    }
+}
+
+/// The newest feedback, so the overview screen isn't mostly empty space on a
+/// phone. Tapping a row jumps to the list.
+private struct RecentFeedbackSection: View {
+    @EnvironmentObject private var store: FeedbackStore
+
+    var body: some View {
+        let recent = store.recentFeedback(limit: 5)
+        if !recent.isEmpty {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Label("최근 피드백", systemImage: "clock.arrow.circlepath")
+                        .font(.headline)
+                    Spacer()
+                    Button("전체 보기") { store.viewMode = .list }
+                        .font(.callout)
+                }
+
+                VStack(spacing: 0) {
+                    ForEach(Array(recent.enumerated()), id: \.element.id) { index, feedback in
+                        RecentRow(feedback: feedback,
+                                  projectLabel: store.displayName(for: feedback.projectKey))
+                        if index < recent.count - 1 {
+                            Divider().padding(.leading, 12)
+                        }
+                    }
+                }
+                .background(.background.secondary, in: RoundedRectangle(cornerRadius: 12))
+                .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(Color.secondary.opacity(0.15)))
+            }
+        }
+    }
+}
+
+private struct RecentRow: View {
+    let feedback: Feedback
+    let projectLabel: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 3) {
+            HStack(spacing: 6) {
+                Text(projectLabel)
+                    .font(.caption2.weight(.medium))
+                    .lineLimit(1)
+                    .foregroundStyle(.secondary)
+                if let rating = feedback.rating {
+                    StarRatingView(rating: rating)
+                }
+                Spacer(minLength: 4)
+                Text(feedback.createdAtRelative)
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+                    .lineLimit(1)
+            }
+            Text(feedback.snippet)
+                .font(.callout)
+                .lineLimit(2)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 
@@ -57,42 +243,50 @@ private struct ProjectCard: View {
     let summary: FeedbackStore.ProjectSummary
     let action: () -> Void
 
+    #if os(macOS)
+    private let cardPadding: CGFloat = 14
+    private let cardMinHeight: CGFloat = 130
+    private let innerSpacing: CGFloat = 12
+    #else
+    private let cardPadding: CGFloat = 11
+    private let cardMinHeight: CGFloat = 108
+    private let innerSpacing: CGFloat = 8
+    #endif
+
     var body: some View {
         Button(action: action) {
-            VStack(alignment: .leading, spacing: 12) {
-                HStack(alignment: .top) {
+            VStack(alignment: .leading, spacing: innerSpacing) {
+                HStack(alignment: .top, spacing: 6) {
                     Image(systemName: summary.isUnclassified ? "questionmark.folder" : "app.dashed")
-                        .font(.title3)
+                        .font(.subheadline)
                         .foregroundStyle(summary.isUnclassified ? Color.secondary : Color.accentColor)
                     Text(summary.displayName)
-                        .font(.headline)
+                        .font(.subheadline.weight(.semibold))
                         .lineLimit(2)
+                        .minimumScaleFactor(0.85)
                         .multilineTextAlignment(.leading)
-                    Spacer()
+                    Spacer(minLength: 2)
                     CountBadge(count: summary.count)
                 }
 
                 Divider()
 
-                HStack(spacing: 16) {
-                    Metric(systemImage: "star.fill",
-                           tint: .yellow,
-                           value: summary.averageRating.map { String(format: "%.1f", $0) } ?? "—",
-                           label: "평균")
-                    Metric(systemImage: "clock",
-                           tint: .blue,
-                           value: "\(summary.last7Days)",
-                           label: "최근 7일")
+                // Side by side when the card is wide enough (Mac, iPad), stacked
+                // when it isn't (two-up grid on an iPhone).
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: 16) { metrics }
+                    VStack(alignment: .leading, spacing: 8) { metrics }
                 }
 
                 if let latest = summary.latest {
-                    Text("마지막: \(latest.formatted(date: .abbreviated, time: .shortened))")
+                    Text(latestLabel(latest))
                         .font(.caption2)
                         .foregroundStyle(.secondary)
+                        .lineLimit(1)
                 }
             }
-            .padding(14)
-            .frame(maxWidth: .infinity, minHeight: 130, alignment: .topLeading)
+            .padding(cardPadding)
+            .frame(maxWidth: .infinity, minHeight: cardMinHeight, alignment: .topLeading)
             .background(.background.secondary, in: RoundedRectangle(cornerRadius: 12))
             .overlay(
                 RoundedRectangle(cornerRadius: 12)
@@ -102,6 +296,28 @@ private struct ProjectCard: View {
         }
         .buttonStyle(.plain)
         .help("\(summary.displayName) 피드백 \(summary.count)건 보기")
+        .accessibilityLabel("\(summary.displayName), 피드백 \(summary.count)건, 최근 7일 \(summary.last7Days)건")
+    }
+
+    /// A full timestamp has room on a Mac card; a phone card gets "3일 전".
+    private func latestLabel(_ date: Date) -> String {
+        #if os(macOS)
+        return "마지막: \(AppFormat.dateTime(date))"
+        #else
+        return "마지막 \(AppFormat.relative(date))"
+        #endif
+    }
+
+    @ViewBuilder
+    private var metrics: some View {
+        Metric(systemImage: "star.fill",
+               tint: .yellow,
+               value: summary.averageRating.map { String(format: "%.1f", $0) } ?? "—",
+               label: "평균")
+        Metric(systemImage: "clock",
+               tint: .blue,
+               value: "\(summary.last7Days)",
+               label: "최근 7일")
     }
 }
 

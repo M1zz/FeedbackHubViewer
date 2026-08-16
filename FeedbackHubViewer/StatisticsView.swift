@@ -12,6 +12,23 @@ import Charts
 struct StatisticsView: View {
     @EnvironmentObject private var store: FeedbackStore
 
+    #if os(macOS)
+    private let tileColumns = [GridItem(.adaptive(minimum: 150), spacing: 10)]
+    private let sectionSpacing: CGFloat = 20
+    private let contentPadding: CGFloat = 16
+    private let trendHeight: CGFloat = 180
+    private let breakdownHeight: CGFloat = 160
+    #else
+    // Two even columns beat an adaptive grid on a phone: four tiles land as a
+    // tidy 2×2 instead of 3 + 1 orphan.
+    private let tileColumns = [GridItem(.flexible(), spacing: 10),
+                               GridItem(.flexible(), spacing: 10)]
+    private let sectionSpacing: CGFloat = 14
+    private let contentPadding: CGFloat = 12
+    private let trendHeight: CGFloat = 150
+    private let breakdownHeight: CGFloat = 132
+    #endif
+
     var body: some View {
         Group {
             if store.errorMessage != nil {
@@ -28,18 +45,18 @@ struct StatisticsView: View {
                 )
             } else {
                 ScrollView {
-                    VStack(alignment: .leading, spacing: 20) {
+                    VStack(alignment: .leading, spacing: sectionSpacing) {
                         scopePicker
                         tiles
                         trendCard
                         ViewThatFits(in: .horizontal) {
                             HStack(alignment: .top, spacing: 16) { ratingCard; typeCard }
-                            VStack(spacing: 16) { ratingCard; typeCard }
+                            VStack(spacing: sectionSpacing) { ratingCard; typeCard }
                         }
                         projectCard
                         if !store.stats.versionCounts.isEmpty { versionCard }
                     }
-                    .padding(16)
+                    .padding(contentPadding)
                 }
             }
         }
@@ -49,7 +66,7 @@ struct StatisticsView: View {
             }
         }
         .navigationTitle("통계")
-        .navigationSubtitle(subtitle)
+        .hubNavigationSubtitle(subtitle)
     }
 
     private var subtitle: String {
@@ -62,21 +79,26 @@ struct StatisticsView: View {
     // MARK: - Project scope
 
     private var scopePicker: some View {
-        Picker("프로젝트", selection: $store.selectedProject) {
-            Text("전체 프로젝트").tag(String?.none)
-            ForEach(store.projectCounts, id: \.key) { entry in
-                Text(store.displayName(for: entry.key)).tag(String?.some(entry.key))
+        HStack(spacing: 8) {
+            Picker("프로젝트", selection: $store.selectedProject) {
+                Text("전체 프로젝트").tag(String?.none)
+                ForEach(store.projectCounts, id: \.key) { entry in
+                    Text(store.displayName(for: entry.key)).tag(String?.some(entry.key))
+                }
             }
+            .pickerStyle(.menu)
+            .fixedSize()
+
+            Spacer(minLength: 4)
+            EnvironmentBadge()
         }
-        .pickerStyle(.menu)
-        .fixedSize()
     }
 
     // MARK: - Headline tiles
 
     private var tiles: some View {
         let s = store.stats
-        return LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 12)], spacing: 12) {
+        return LazyVGrid(columns: tileColumns, spacing: 10) {
             StatTile(title: "전체 피드백", value: "\(s.total)", unit: "건",
                      systemImage: "tray.full", tint: .accentColor)
             StatTile(title: "평균 별점",
@@ -109,7 +131,7 @@ struct StatisticsView: View {
                 }
             }
             .chartYAxis { AxisMarks(position: .leading) }
-            .frame(height: 180)
+            .frame(height: trendHeight)
         }
     }
 
@@ -129,7 +151,7 @@ struct StatisticsView: View {
                     }
                 }
                 .chartXAxis(.hidden)
-                .frame(height: 160)
+                .frame(height: breakdownHeight)
             }
         }
     }
@@ -151,7 +173,7 @@ struct StatisticsView: View {
                     }
                 }
                 .chartXAxis(.hidden)
-                .frame(height: 160)
+                .frame(height: breakdownHeight)
             }
         }
     }
@@ -170,7 +192,7 @@ struct StatisticsView: View {
                 }
             }
             .chartXAxis(.hidden)
-            .frame(height: max(120, CGFloat(projects.count) * 34))
+            .frame(height: max(110, CGFloat(projects.count) * 32))
         }
     }
 
@@ -184,7 +206,7 @@ struct StatisticsView: View {
                 )
                 .foregroundStyle(Color.indigo.gradient)
             }
-            .frame(height: 160)
+            .frame(height: breakdownHeight)
         }
     }
 
@@ -192,7 +214,7 @@ struct StatisticsView: View {
         Text(text)
             .font(.callout)
             .foregroundStyle(.secondary)
-            .frame(maxWidth: .infinity, minHeight: 120)
+            .frame(maxWidth: .infinity, minHeight: breakdownHeight * 0.6)
     }
 }
 
@@ -205,24 +227,36 @@ private struct StatTile: View {
     let systemImage: String
     let tint: Color
 
+    #if os(macOS)
+    private let tilePadding: CGFloat = 14
+    private let valueFont: Font = .system(.title, design: .rounded).weight(.semibold)
+    #else
+    private let tilePadding: CGFloat = 10
+    private let valueFont: Font = .system(.title2, design: .rounded).weight(.semibold)
+    #endif
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 4) {
             Label(title, systemImage: systemImage)
-                .font(.caption)
+                .font(.caption2)
                 .foregroundStyle(.secondary)
                 .labelStyle(.titleAndIcon)
-            HStack(alignment: .firstTextBaseline, spacing: 4) {
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+            HStack(alignment: .firstTextBaseline, spacing: 3) {
                 Text(value)
-                    .font(.system(.title, design: .rounded).weight(.semibold))
+                    .font(valueFont)
                     .monospacedDigit()
                     .foregroundStyle(tint)
                 if !unit.isEmpty {
-                    Text(unit).font(.caption).foregroundStyle(.secondary)
+                    Text(unit).font(.caption2).foregroundStyle(.secondary)
                 }
             }
+            .lineLimit(1)
+            .minimumScaleFactor(0.7)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(14)
+        .padding(tilePadding)
         .background(.background.secondary, in: RoundedRectangle(cornerRadius: 12))
         .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(Color.secondary.opacity(0.15)))
     }
@@ -233,14 +267,20 @@ private struct Card<Content: View>: View {
     let systemImage: String
     @ViewBuilder let content: Content
 
+    #if os(macOS)
+    private let cardPadding: CGFloat = 16
+    #else
+    private let cardPadding: CGFloat = 12
+    #endif
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 10) {
             Label(title, systemImage: systemImage)
-                .font(.headline)
+                .font(.subheadline.weight(.semibold))
             content
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(16)
+        .padding(cardPadding)
         .background(.background.secondary, in: RoundedRectangle(cornerRadius: 12))
         .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(Color.secondary.opacity(0.15)))
     }

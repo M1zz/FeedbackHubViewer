@@ -9,11 +9,29 @@ import SwiftUI
 
 struct SidebarView: View {
     @EnvironmentObject private var store: FeedbackStore
+    #if os(iOS)
+    // On iOS this view is presented as a sheet, so picking a project should
+    // close it and reveal the filtered content underneath.
+    @Environment(\.dismiss) private var dismiss
+    #endif
+
+    /// Close the sheet on iOS; a no-op in the macOS sidebar.
+    private func dismissIfPresented() {
+        #if os(iOS)
+        dismiss()
+        #endif
+    }
 
     var body: some View {
         List {
             Section(store.selectedProject == nil ? "요약 (전체)" : "요약 · \(store.displayName(for: store.selectedProject!))") {
                 let stats = store.stats
+                HStack {
+                    Label("CloudKit 환경", systemImage: "cloud")
+                    Spacer()
+                    EnvironmentBadge()
+                }
+                .font(.callout)
                 StatRow(title: store.selectedProject == nil ? "전체 피드백" : "이 프로젝트",
                         value: "\(stats.total)건", systemImage: "tray.full")
                 StatRow(title: "프로젝트 수", value: "\(store.availableProjects.count)개", systemImage: "square.grid.2x2")
@@ -34,12 +52,14 @@ struct SidebarView: View {
                                count: store.allFeedback.count,
                                isSelected: store.selectedProject == nil) {
                         store.selectedProject = nil
+                        dismissIfPresented()
                     }
                     ForEach(store.projectCounts, id: \.key) { entry in
                         ProjectRow(name: store.displayName(for: entry.key),
                                    count: entry.count,
                                    isSelected: store.selectedProject == entry.key) {
                             store.selectedProject = (store.selectedProject == entry.key) ? nil : entry.key
+                            dismissIfPresented()
                         }
                     }
                 }
@@ -94,7 +114,7 @@ struct SidebarView: View {
                 }
             }
         }
-        .listStyle(.sidebar)
+        .hubSidebarListStyle()
     }
 }
 

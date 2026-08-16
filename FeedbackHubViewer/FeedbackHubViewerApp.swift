@@ -2,8 +2,9 @@
 //  FeedbackHubViewerApp.swift
 //  FeedbackHubViewer
 //
-//  A small macOS app that shows feedback collected in the
-//  CloudKit public database of the "iCloud.com.Ysoup.FeedbackHub" container.
+//  A small multiplatform app (macOS + iOS/iPadOS) that shows feedback collected
+//  in the CloudKit public database of the "iCloud.com.Ysoup.FeedbackHub"
+//  container.
 //
 
 import SwiftUI
@@ -14,9 +15,8 @@ struct FeedbackHubViewerApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            rootView
                 .environmentObject(store)
-                .frame(minWidth: 900, minHeight: 560)
                 .task {
                     // Load once when the window first appears.
                     if store.allFeedback.isEmpty {
@@ -24,6 +24,7 @@ struct FeedbackHubViewerApp: App {
                     }
                 }
         }
+        #if os(macOS)
         .windowToolbarStyle(.unified)
         .commands {
             CommandGroup(after: .toolbar) {
@@ -33,5 +34,16 @@ struct FeedbackHubViewerApp: App {
                 .keyboardShortcut("r", modifiers: .command)
             }
         }
+        #endif
+    }
+
+    @ViewBuilder
+    private var rootView: some View {
+        #if os(macOS)
+        ContentView()
+            .frame(minWidth: 900, minHeight: 560)
+        #else
+        ContentView()
+        #endif
     }
 }

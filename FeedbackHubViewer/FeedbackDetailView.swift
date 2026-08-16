@@ -12,6 +12,15 @@ struct FeedbackDetailView: View {
     /// Resolved project/app name (appId → appName mapping applied by the store).
     let projectLabel: String
 
+    /// Roomier on a Mac window, tighter on a phone screen.
+    #if os(macOS)
+    private let contentPadding: CGFloat = 24
+    private let fieldKeyWidth: CGFloat = 140
+    #else
+    private let contentPadding: CGFloat = 16
+    private let fieldKeyWidth: CGFloat = 110
+    #endif
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
@@ -36,7 +45,7 @@ struct FeedbackDetailView: View {
                                 Text(field.key)
                                     .font(.callout.monospaced())
                                     .foregroundStyle(.secondary)
-                                    .frame(width: 140, alignment: .leading)
+                                    .frame(width: fieldKeyWidth, alignment: .leading)
                                 Text(field.value.isEmpty ? "—" : field.value)
                                     .font(.callout)
                                     .textSelection(.enabled)
@@ -52,10 +61,32 @@ struct FeedbackDetailView: View {
                     .background(Color.secondary.opacity(0.06), in: RoundedRectangle(cornerRadius: 8))
                 }
             }
-            .padding(24)
+            .padding(contentPadding)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .navigationTitle("상세")
+        #if os(iOS)
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                ShareLink(item: shareText) {
+                    Label("공유", systemImage: "square.and.arrow.up")
+                }
+            }
+        }
+        #endif
+    }
+
+    /// Plain-text rendering of the record, for sharing/copying from a phone.
+    private var shareText: String {
+        var lines = ["[\(projectLabel)] \(feedback.createdAtDisplay)"]
+        if let rating = feedback.rating { lines.append("별점: \(rating)/5") }
+        if let type = feedback.feedbackType, !type.isEmpty { lines.append("유형: \(type)") }
+        lines.append("")
+        lines.append(feedback.text)
+        lines.append("")
+        lines.append(contentsOf: feedback.allFields.map { "\($0.key): \($0.value)" })
+        return lines.joined(separator: "\n")
     }
 
     private var header: some View {

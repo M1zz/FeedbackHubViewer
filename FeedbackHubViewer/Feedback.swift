@@ -218,10 +218,13 @@ struct Feedback: Identifiable, Hashable {
 
     var createdAtDisplay: String {
         guard let createdAt else { return "—" }
-        let f = DateFormatter()
-        f.dateStyle = .medium
-        f.timeStyle = .short
-        return f.string(from: createdAt)
+        return AppFormat.dateTime(createdAt)
+    }
+
+    /// "3주 전" — for narrow rows where the full timestamp doesn't fit.
+    var createdAtRelative: String {
+        guard let createdAt else { return "—" }
+        return AppFormat.relative(createdAt)
     }
 
     var snippet: String {

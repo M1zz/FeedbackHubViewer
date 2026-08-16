@@ -84,6 +84,11 @@ final class FeedbackStore: ObservableObject {
     private let service = CloudKitService()
     private var autoRefreshTask: Task<Void, Never>?
 
+    /// Which half of the container this build reads. Fixed at build time by the
+    /// iCloud entitlement — pick the scheme to change it (see README §2-1).
+    var environment: CloudKitEnvironment { CloudKitService.environment }
+    var environmentDescription: String { environment.displayName }
+
     // MARK: - Loading
 
     func load() async {
@@ -300,6 +305,14 @@ final class FeedbackStore: ObservableObject {
         return buckets
             .map { (type: $0.key, count: $0.value) }
             .sorted { $0.count > $1.count }
+    }
+
+    /// The newest feedback in the current project scope. Used by the compact
+    /// overview, which shows the latest items instead of leaving space empty.
+    func recentFeedback(limit: Int) -> [Feedback] {
+        Array(scopedFeedback
+            .sorted { ($0.createdAt ?? .distantPast) > ($1.createdAt ?? .distantPast) }
+            .prefix(limit))
     }
 
     /// Daily feedback counts for the last `days` days, oldest first. Days with

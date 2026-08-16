@@ -1,0 +1,122 @@
+//
+//  PhoneRootView.swift
+//  FeedbackHubViewer
+//
+//  The iOS / iPadOS layout. A three-column split view doesn't fit a phone, so
+//  the same three panes become tabs — 개요 / 통계 / 목록 — each in its own
+//  navigation stack. The sidebar (요약 + 필터) moves into a sheet, and the
+//  feedback detail is pushed instead of shown in a third column.
+//
+
+#if os(iOS)
+import SwiftUI
+
+struct PhoneRootView: View {
+    @EnvironmentObject private var store: FeedbackStore
+
+    var body: some View {
+        TabView(selection: $store.viewMode) {
+            NavigationStack {
+                ProjectOverviewView()
+                    .modifier(HubToolbar())
+            }
+            .tabItem { Label(FeedbackStore.ViewMode.overview.rawValue,
+                             systemImage: FeedbackStore.ViewMode.overview.systemImage) }
+            .tag(FeedbackStore.ViewMode.overview)
+
+            NavigationStack {
+                StatisticsView()
+                    .modifier(HubToolbar())
+            }
+            .tabItem { Label(FeedbackStore.ViewMode.stats.rawValue,
+                             systemImage: FeedbackStore.ViewMode.stats.systemImage) }
+            .tag(FeedbackStore.ViewMode.stats)
+
+            NavigationStack {
+                FeedbackListView(selection: .constant(nil))
+                    .modifier(HubToolbar())
+            }
+            .tabItem { Label(FeedbackStore.ViewMode.list.rawValue,
+                             systemImage: FeedbackStore.ViewMode.list.systemImage) }
+            .tag(FeedbackStore.ViewMode.list)
+        }
+    }
+}
+
+/// Navigation-bar items shared by every tab: filters on the left, refresh and
+/// an overflow menu on the right, plus pull-to-refresh.
+private struct HubToolbar: ViewModifier {
+    @EnvironmentObject private var store: FeedbackStore
+    @State private var showsFilters = false
+
+    private var hasActiveFilters: Bool {
+        store.selectedProject != nil
+            || store.selectedVersion != nil
+            || store.minimumRating > 0
+            || !store.searchText.isEmpty
+    }
+
+    func body(content: Content) -> some View {
+        content
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button {
+                        showsFilters = true
+                    } label: {
+                        Label("요약과 필터",
+                              systemImage: hasActiveFilters
+                                  ? "line.3.horizontal.decrease.circle.fill"
+                                  : "line.3.horizontal.decrease.circle")
+                    }
+                }
+
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        Task { await store.load() }
+                    } label: {
+                        Label("새로고침", systemImage: "arrow.clockwise")
+                    }
+                    .disabled(store.isLoading)
+                }
+
+                ToolbarItem(placement: .topBarTrailing) {
+                    Menu {
+                        Toggle(isOn: $store.autoRefresh) {
+                            Label("자동 갱신 (1분)", systemImage: "arrow.triangle.2.circlepath")
+                        }
+                        if let updated = store.lastUpdated {
+                            Section {
+                                Text("업데이트: \(AppFormat.time(updated))")
+                            }
+                        }
+                        Section {
+                            IdentityMenu()
+                        }
+                    } label: {
+                        Label("더 보기", systemImage: "ellipsis.circle")
+                    }
+                }
+            }
+            .refreshable { await store.load() }
+            .sheet(isPresented: $showsFilters) {
+                NavigationStack {
+                    SidebarView()
+                        .navigationTitle("요약 · 필터")
+                        .navigationBarTitleDisplayMode(.inline)
+                        .toolbar {
+                            ToolbarItem(placement: .confirmationAction) {
+                                Button("완료") { showsFilters = false }
+                            }
+                        }
+                }
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
+            }
+    }
+}
+
+#Preview {
+    PhoneRootView()
+        .environmentObject(FeedbackStore())
+}
+#endif
