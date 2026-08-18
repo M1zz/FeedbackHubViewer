@@ -101,7 +101,7 @@ private struct HubToolbar: ViewModifier {
                     } label: {
                         Label("새로고침", systemImage: "arrow.clockwise")
                     }
-                    .disabled(store.isLoading)
+                    .disabled(store.isRefreshing)
                 }
 
                 ToolbarItem(placement: .topBarTrailing) {

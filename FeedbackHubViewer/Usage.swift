@@ -130,3 +130,61 @@ struct UsageEvent: Identifiable, Hashable {
         occurredAt = (record["occurredAt"] as? Date) ?? record.creationDate ?? Date()
     }
 }
+
+// MARK: - Codable (disk cache)
+
+/// Usage records are written to disk verbatim so a relaunch can paint before
+/// CloudKit answers (see `FeedbackCache`). `allFields` is a tuple array, which
+/// Codable cannot synthesize for, so it travels as an array of key/value pairs.
+extension UsageSnapshot: Codable {
+    private struct CachedField: Codable {
+        let key: String
+        let value: String
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case id, appId, appName, appVersion, platform, osVersion, locale
+        case launchCount, eventCount, daysSinceInstall, installDate
+        case lastActiveAt, metrics, allFields
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(String.self, forKey: .id)
+        appId = try c.decodeIfPresent(String.self, forKey: .appId)
+        appName = try c.decodeIfPresent(String.self, forKey: .appName)
+        appVersion = try c.decode(String.self, forKey: .appVersion)
+        platform = try c.decode(String.self, forKey: .platform)
+        osVersion = try c.decode(String.self, forKey: .osVersion)
+        locale = try c.decode(String.self, forKey: .locale)
+        launchCount = try c.decode(Int.self, forKey: .launchCount)
+        eventCount = try c.decode(Int.self, forKey: .eventCount)
+        daysSinceInstall = try c.decode(Int.self, forKey: .daysSinceInstall)
+        installDate = try c.decodeIfPresent(Date.self, forKey: .installDate)
+        lastActiveAt = try c.decodeIfPresent(Date.self, forKey: .lastActiveAt)
+        metrics = try c.decode([String: Double].self, forKey: .metrics)
+        allFields = try c.decode([CachedField].self, forKey: .allFields)
+            .map { (key: $0.key, value: $0.value) }
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(id, forKey: .id)
+        try c.encodeIfPresent(appId, forKey: .appId)
+        try c.encodeIfPresent(appName, forKey: .appName)
+        try c.encode(appVersion, forKey: .appVersion)
+        try c.encode(platform, forKey: .platform)
+        try c.encode(osVersion, forKey: .osVersion)
+        try c.encode(locale, forKey: .locale)
+        try c.encode(launchCount, forKey: .launchCount)
+        try c.encode(eventCount, forKey: .eventCount)
+        try c.encode(daysSinceInstall, forKey: .daysSinceInstall)
+        try c.encodeIfPresent(installDate, forKey: .installDate)
+        try c.encodeIfPresent(lastActiveAt, forKey: .lastActiveAt)
+        try c.encode(metrics, forKey: .metrics)
+        try c.encode(allFields.map { CachedField(key: $0.key, value: $0.value) }, forKey: .allFields)
+    }
+}
+
+/// Every property is a plain value, so the cache representation is synthesized.
+extension UsageEvent: Codable {}

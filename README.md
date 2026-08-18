@@ -90,7 +90,22 @@ CloudKit은 어느 환경을 읽을지 **빌드에 박히는 entitlement**
   - **앱이 떠 있는 동안** 동작합니다("자동 갱신"을 켜두면 1분마다 확인). 앱이 꺼진 상태에서도 받으려면
     Push Notifications capability + `CKQuerySubscription`이 필요합니다(미구현).
   - macOS는 알림 권한이 없으면 Dock 배지도 표시되지 않습니다(시스템 정책).
+- **즉시 실행(로컬 캐시)**: 마지막으로 성공한 조회 결과를 기기에 저장해 두고, 다음 실행에서는 **먼저 그
+  화면을 그린 뒤** CloudKit에 "바뀐 게 있는지"를 백그라운드로 확인합니다. 실행할 때마다 로딩을 기다리지
+  않아도 되고, 확인이 끝나면 화면이 조용히 갱신됩니다(툴바에 "업데이트 확인 중…" 표시).
+  - 저장 위치는 앱 컨테이너의 `Application Support/FeedbackHubViewer/hub-<환경>.json`이며,
+    **Development/Production 캐시가 분리**됩니다. CloudKit 레코드는 건드리지 않습니다.
+  - 백그라운드 확인은 **증분**입니다. 피드백·이벤트·진단은 추가만 되고 과거 레코드가 바뀌지 않으므로,
+    최신순으로 읽다가 **이미 기기에 있는 레코드를 만나면 거기서 멈춥니다** — 스키마 설정과 무관하게
+    "저장돼 있지 않은 것만" 내려받습니다(없으면 첫 페이지 한 번으로 끝). 스키마에서 시스템
+    타임스탬프가 **Queryable**이면(아래 §5-7) 서버 쪽 날짜 필터까지 함께 걸어 더 줄입니다.
+  - `UsageSnapshot`만 예외로 매번 전부 읽습니다. 설치마다 같은 레코드를 덮어쓰는 구조라 "이미 있는
+    레코드명"이 곧 다시 읽어야 할 대상이기 때문입니다(설치 수만큼이라 양이 작습니다).
+  - 콘솔에서 레코드를 **삭제**한 경우는 증분 조회로 알 수 없으므로, 캐시가 24시간이 지났거나 직접
+    새로고침을 누르면 전체를 다시 읽어 교체합니다. "내 계정 ID" 메뉴의 **캐시 비우고 전체 다시 불러오기**로
+    언제든 강제할 수 있습니다.
 - **새로고침**: 툴바의 새로고침 버튼(macOS `⌘R`), iPhone에서는 당겨서 새로고침, "자동 갱신" 토글(1분 주기).
+  새로고침 버튼은 항상 **전체 조회**이고, 앱 실행·자동 갱신은 증분 조회입니다.
 
 ## 4. 데이터 구조에 대한 참고 (중요)
 
@@ -150,6 +165,13 @@ CloudKit Public DB는 필드가 **Queryable**로 표시돼 있어야 조회되�
    필요하고, 해당 환경에 스키마가 배포돼 있어야 합니다(`UsageSnapshot`은 `recordName` Queryable,
    `UsageEvent`·`CrashReport`는 `recordName` Queryable + `createdTimestamp` Sortable).
    없으면 통계 화면 상단에 어떤 레코드 타입이 왜 안 읽혔는지 표시됩니다.
+7. **증분 조회(선택)**: 앱 실행·자동 갱신은 "마지막 조회 이후 바뀐 것만" 읽으려고 시도합니다. 이건
+   각 레코드 타입의 시스템 타임스탬프가 **Queryable**일 때만 됩니다 — Schema → Record Types →
+   해당 타입 → Indexes에서 `createdTimestamp`(추가·삭제만 있는 `Feedback` · `UsageEvent` ·
+   `CrashReport`)와 `modifiedTimestamp`(설치마다 덮어쓰는 `UsageSnapshot`)를 **QUERYABLE**로 추가하세요.
+   지금 컨테이너는 둘 다 안 돼 있습니다. 안 돼 있어도 "이미 가진 레코드를 만나면 멈추는" 방식이
+   따로 동작하므로 새 레코드만 내려받는 건 그대로이고, 설정해 두면 서버 쪽에서 한 번 더 걸러
+   페이지 하나조차 안 받게 됩니다. 앱이 한 번 시도해 보고 알아서 넘어가므로 코드 변경은 없습니다.
 
 ## 6. 프로젝트 구성
 
@@ -167,7 +189,8 @@ FeedbackHubViewer/
    ├─ CloudKitService.swift        # Public DB 조회(CKContainer) + 환경(CloudKitEnvironment)
    ├─ EnvironmentControls.swift    # 현재 환경 DEV/PROD 배지
    ├─ Assets.xcassets              # 앱 아이콘 (AppIcon / AppIconProduction)
-   ├─ FeedbackStore.swift          # 상태/필터/정렬/통계/자동갱신
+   ├─ FeedbackStore.swift          # 상태/필터/정렬/통계/자동갱신 + 캐시 복원·증분 병합
+   ├─ FeedbackCache.swift          # 마지막 조회 결과를 디스크에 저장(환경별 JSON)
    ├─ ContentView.swift            # 레이아웃 선택 + 3열(SplitRootView) + 툴바
    ├─ PhoneRootView.swift          # iPhone 탭 레이아웃 + 공용 툴바/필터 시트
    ├─ PlatformSupport.swift        # macOS/iOS 차이 흡수(붙여넣기·리스트 스타일·날짜 포맷)

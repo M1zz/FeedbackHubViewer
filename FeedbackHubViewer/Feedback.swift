@@ -236,3 +236,60 @@ struct Feedback: Identifiable, Hashable {
         return trimmed
     }
 }
+
+// MARK: - Codable (disk cache)
+
+/// Feedback is written to disk verbatim so a relaunch can paint before CloudKit
+/// answers (see `FeedbackCache`). `allFields` is a tuple array, which Codable
+/// cannot synthesize for, so it travels as an array of key/value pairs.
+extension Feedback: Codable {
+    private struct CachedField: Codable {
+        let key: String
+        let value: String
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case id, recordType, appId, appName, text, rating, appVersion
+        case deviceModel, systemVersion, contactEmail, feedbackType, platform
+        case createdAt, modifiedAt, allFields
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(String.self, forKey: .id)
+        recordType = try c.decode(String.self, forKey: .recordType)
+        appId = try c.decodeIfPresent(String.self, forKey: .appId)
+        appName = try c.decodeIfPresent(String.self, forKey: .appName)
+        text = try c.decode(String.self, forKey: .text)
+        rating = try c.decodeIfPresent(Int.self, forKey: .rating)
+        appVersion = try c.decodeIfPresent(String.self, forKey: .appVersion)
+        deviceModel = try c.decodeIfPresent(String.self, forKey: .deviceModel)
+        systemVersion = try c.decodeIfPresent(String.self, forKey: .systemVersion)
+        contactEmail = try c.decodeIfPresent(String.self, forKey: .contactEmail)
+        feedbackType = try c.decodeIfPresent(String.self, forKey: .feedbackType)
+        platform = try c.decodeIfPresent(String.self, forKey: .platform)
+        createdAt = try c.decodeIfPresent(Date.self, forKey: .createdAt)
+        modifiedAt = try c.decodeIfPresent(Date.self, forKey: .modifiedAt)
+        allFields = try c.decode([CachedField].self, forKey: .allFields)
+            .map { (key: $0.key, value: $0.value) }
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(id, forKey: .id)
+        try c.encode(recordType, forKey: .recordType)
+        try c.encodeIfPresent(appId, forKey: .appId)
+        try c.encodeIfPresent(appName, forKey: .appName)
+        try c.encode(text, forKey: .text)
+        try c.encodeIfPresent(rating, forKey: .rating)
+        try c.encodeIfPresent(appVersion, forKey: .appVersion)
+        try c.encodeIfPresent(deviceModel, forKey: .deviceModel)
+        try c.encodeIfPresent(systemVersion, forKey: .systemVersion)
+        try c.encodeIfPresent(contactEmail, forKey: .contactEmail)
+        try c.encodeIfPresent(feedbackType, forKey: .feedbackType)
+        try c.encodeIfPresent(platform, forKey: .platform)
+        try c.encodeIfPresent(createdAt, forKey: .createdAt)
+        try c.encodeIfPresent(modifiedAt, forKey: .modifiedAt)
+        try c.encode(allFields.map { CachedField(key: $0.key, value: $0.value) }, forKey: .allFields)
+    }
+}

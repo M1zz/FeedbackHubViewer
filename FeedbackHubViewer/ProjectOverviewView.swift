@@ -65,7 +65,9 @@ struct ProjectOverviewView: View {
     @ViewBuilder
     private var content: some View {
         Group {
-            if store.errorMessage != nil {
+            // An error only takes the screen when there is nothing to show;
+            // with a cache on disk the last known numbers stay up.
+            if store.errorMessage != nil && !store.hasContent {
                 ContentUnavailableView {
                     Label("불러올 수 없습니다", systemImage: "exclamationmark.triangle")
                 } description: {
@@ -122,7 +124,7 @@ private struct StatusRow: View {
                     .lineLimit(1)
             }
             Spacer(minLength: 4)
-            if store.isLoading {
+            if store.isRefreshing {
                 ProgressView().controlSize(.mini)
             } else if let updated = store.lastUpdated {
                 Text("업데이트 \(AppFormat.time(updated))")

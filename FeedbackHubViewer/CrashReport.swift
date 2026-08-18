@@ -88,3 +88,8 @@ struct CrashReport: Identifiable, Hashable {
         receivedAt = record.creationDate
     }
 }
+
+// MARK: - Codable (disk cache)
+
+/// Every property is a plain value, so the cache representation is synthesized.
+extension CrashReport: Codable {}

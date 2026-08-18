@@ -97,14 +97,20 @@ final class CloudKitService {
     }
 
     struct UsageOutcome {
-        var snapshots: [UsageSnapshot] = []
-        var events: [UsageEvent] = []
-        var crashes: [CrashReport] = []
+        /// `nil` means "this type was not read this time" — the query failed,
+        /// so whatever the caller already had is still the best it has. An
+        /// empty array means the type was read and holds nothing.
+        var snapshots: [UsageSnapshot]?
+        var events: [UsageEvent]?
+        var crashes: [CrashReport]?
         /// Why usage data is missing or incomplete, if it is. Usage is a
         /// separate schema with its own read permission, so it can fail while
         /// feedback loads fine — that is worth saying rather than showing an
         /// empty dashboard.
         var notice: String?
+        /// Record types whose query succeeded, with the moment it ran. The
+        /// caller stores these as the watermark for the next incremental read.
+        var syncedTypes: [String: Date] = [:]
     }
 
     /// Read the usage statistics the apps report. Each record type is fetched
@@ -112,30 +118,52 @@ final class CloudKitService {
     /// which is how the apps' own statistics screens behave.
     ///
     /// - Parameters:
+    ///   - modifiedSince: per record type, only read records changed after this
+    ///     moment. Absent (the launch-with-no-cache case) reads everything.
+    ///   - known: per record type, the record names this device already holds,
+    ///     so the read can stop as soon as it reaches them. Absent reads
+    ///     everything, which is what a full refresh wants.
     ///   - eventLimit: hard cap on event records. The stream grows without
     ///     bound, and the charts only look back so far.
     ///   - crashLimit: same idea for diagnostics.
-    func fetchUsage(eventLimit: Int = 5000, crashLimit: Int = 1000) async throws -> UsageOutcome {
+    func fetchUsage(modifiedSince: [String: Date] = [:],
+                    known: [String: Set<String>] = [:],
+                    eventLimit: Int = 5000,
+                    crashLimit: Int = 1000) async -> UsageOutcome {
         var outcome = UsageOutcome()
         var problems: [String] = []
+        let startedAt = Date()
 
         do {
-            outcome.snapshots = try await queryAll(recordType: Self.snapshotRecordType)
+            // The one upserted type: a snapshot is rewritten in place every
+            // time an install reports again, so its creation date says nothing.
+            outcome.snapshots = try await queryAll(recordType: Self.snapshotRecordType,
+                                                   modifiedSince: modifiedSince[Self.snapshotRecordType],
+                                                   shape: .upserted)
                 .map(UsageSnapshot.init(record:))
+            outcome.syncedTypes[Self.snapshotRecordType] = startedAt
         } catch {
             problems.append(usageProblem(Self.snapshotRecordType, error))
         }
 
         do {
-            outcome.events = try await queryAll(recordType: Self.eventRecordType, limit: eventLimit)
+            outcome.events = try await queryAll(recordType: Self.eventRecordType,
+                                                limit: eventLimit,
+                                                modifiedSince: modifiedSince[Self.eventRecordType],
+                                                known: known[Self.eventRecordType])
                 .map(UsageEvent.init(record:))
+            outcome.syncedTypes[Self.eventRecordType] = startedAt
         } catch {
             problems.append(usageProblem(Self.eventRecordType, error))
         }
 
         do {
-            outcome.crashes = try await queryAll(recordType: Self.crashRecordType, limit: crashLimit)
+            outcome.crashes = try await queryAll(recordType: Self.crashRecordType,
+                                                 limit: crashLimit,
+                                                 modifiedSince: modifiedSince[Self.crashRecordType],
+                                                 known: known[Self.crashRecordType])
                 .map(CrashReport.init(record:))
+            outcome.syncedTypes[Self.crashRecordType] = startedAt
         } catch {
             problems.append(usageProblem(Self.crashRecordType, error))
         }
@@ -161,13 +189,39 @@ final class CloudKitService {
         return ck.localizedDescription
     }
 
-    /// Fetch all feedback from the public database.
-    func fetchFeedback() async throws -> FetchOutcome {
+    /// Fetch feedback from the public database.
+    ///
+    /// - Parameters:
+    ///   - modifiedSince: only read records changed after this moment — what an
+    ///     incremental refresh asks for. `nil` reads everything.
+    ///   - knownRecordType: the type a previous run resolved. Trying it first
+    ///     skips probing the whole candidate list on every launch; if it yields
+    ///     nothing on a full read, the probe still runs.
+    ///   - known: record names this device already holds, so the read can stop
+    ///     as soon as it reaches them.
+    func fetchFeedback(modifiedSince: Date? = nil,
+                       knownRecordType: String? = nil,
+                       known: Set<String>? = nil) async throws -> FetchOutcome {
         var lastError: Error?
 
-        for type in candidateRecordTypes {
+        if let knownRecordType {
             do {
-                let records = try await queryAll(recordType: type)
+                let records = try await queryAll(recordType: knownRecordType,
+                                                 modifiedSince: modifiedSince, known: known)
+                // On an incremental read "nothing came back" is the normal
+                // answer and says nothing about the type being wrong.
+                if !records.isEmpty || modifiedSince != nil || known != nil {
+                    return FetchOutcome(feedback: records.map(Feedback.init(record:)),
+                                        resolvedRecordType: knownRecordType)
+                }
+            } catch {
+                lastError = error
+            }
+        }
+
+        for type in candidateRecordTypes where type != knownRecordType {
+            do {
+                let records = try await queryAll(recordType: type, modifiedSince: modifiedSince, known: known)
                 if !records.isEmpty {
                     let items = records.map(Feedback.init(record:))
                     return FetchOutcome(feedback: items, resolvedRecordType: type)
@@ -186,30 +240,163 @@ final class CloudKitService {
         if let lastError, !isBenignProbeError(lastError) {
             throw lastError
         }
-        return FetchOutcome(feedback: [], resolvedRecordType: nil)
+        return FetchOutcome(feedback: [], resolvedRecordType: knownRecordType)
     }
 
     // MARK: - Querying
 
-    private func queryAll(recordType: String, limit: Int? = nil) async throws -> [CKRecord] {
-        let query = CKQuery(recordType: recordType, predicate: NSPredicate(value: true))
+    /// How a record type changes, which decides what an incremental read is
+    /// allowed to filter on.
+    enum ChangeShape {
+        /// Records are only ever appended — feedback, events, diagnostics. The
+        /// creation date is then just as good a filter as the modification
+        /// date, and public schemas index it far more often.
+        case appendOnly
+        /// Records are rewritten in place (one usage snapshot per install), so
+        /// only a modification-date filter notices an update.
+        case upserted
+    }
+
+    /// The timestamp an incremental read filters on. The raw values are what
+    /// gets written to the cache file, so they must stay stable.
+    enum FilterField: String {
+        case creation = "creationDate"
+        case modification = "modificationDate"
+        /// Recorded when neither is queryable in this container.
+        case none = ""
+
+        var key: String? { self == .none ? nil : rawValue }
+    }
+
+    /// Which timestamp this container actually lets us filter each record type
+    /// on. CloudKit only indexes the system timestamps when the schema says so
+    /// (`___createTime` / `___modTime` marked Queryable in the console), and
+    /// there is no way to ask other than trying. Learned once per launch so the
+    /// refresh that runs every minute doesn't re-probe.
+    private var learnedFilterField: [String: FilterField] = [:]
+
+    /// What has been learned so far, in a form the cache file can hold, so the
+    /// next launch doesn't repeat probes that already came back refused.
+    var incrementalFilterFields: [String: String] {
+        learnedFilterField.mapValues(\.rawValue)
+    }
+
+    func restoreIncrementalFilterFields(_ fields: [String: String]) {
+        learnedFilterField = fields.compactMapValues(FilterField.init(rawValue:))
+    }
+
+    /// Ask the container again. A schema can gain a queryable index long after
+    /// this app first asked, so a full refresh re-probes rather than trusting
+    /// an answer from an earlier day.
+    func forgetIncrementalFilterFields() {
+        learnedFilterField = [:]
+    }
+
+    /// Run one record type's query, reading as little as the container allows.
+    ///
+    /// Two independent narrowings are attempted, because either can be
+    /// unavailable:
+    ///
+    ///  - a server-side `creationDate`/`modificationDate` filter, which only
+    ///    works when the schema marks that system timestamp Queryable;
+    ///  - stopping at the first record `known` already holds, which needs
+    ///    nothing from the schema beyond the newest-first sort.
+    ///
+    /// Two things public schemas commonly refuse are absorbed rather than
+    /// reported: that sort, and that filter. Either one falls back to the
+    /// broader query — a full result is always a valid answer, since the caller
+    /// merges by record name.
+    ///
+    /// - Parameter known: record names already stored on this device. Only
+    ///   meaningful for `.appendOnly` types: an upserted record keeps its name
+    ///   while its contents change, so stopping at it would skip the update.
+    private func queryAll(recordType: String,
+                          limit: Int? = nil,
+                          modifiedSince: Date? = nil,
+                          shape: ChangeShape = .appendOnly,
+                          known: Set<String>? = nil) async throws -> [CKRecord] {
+        let boundary = shape == .appendOnly ? known : nil
+
+        guard let modifiedSince else {
+            return try await runFiltered(recordType: recordType, limit: limit,
+                                         field: .none, since: nil, known: boundary)
+        }
+
+        for field in filterCandidates(for: recordType, shape: shape) {
+            do {
+                let records = try await runFiltered(recordType: recordType, limit: limit,
+                                                    field: field, since: modifiedSince, known: boundary)
+                learnedFilterField[recordType] = field
+                return records
+            } catch {
+                guard isFilterError(error) else { throw error }
+                continue
+            }
+        }
+
+        learnedFilterField[recordType] = FilterField.none
+        return try await runFiltered(recordType: recordType, limit: limit,
+                                     field: .none, since: nil, known: boundary)
+    }
+
+    /// What is worth trying for this record type, narrowed to one entry (or
+    /// none) as soon as the container has answered once.
+    private func filterCandidates(for recordType: String, shape: ChangeShape) -> [FilterField] {
+        if let learned = learnedFilterField[recordType] {
+            return learned.key == nil ? [] : [learned]
+        }
+        switch shape {
+        case .appendOnly: return [.creation, .modification]
+        case .upserted: return [.modification]
+        }
+    }
+
+    private func runFiltered(recordType: String,
+                             limit: Int?,
+                             field: FilterField,
+                             since: Date?,
+                             known: Set<String>?) async throws -> [CKRecord] {
+        let predicate: NSPredicate
+        if let key = field.key, let since {
+            predicate = NSPredicate(format: "%K > %@", key, since as NSDate)
+        } else {
+            predicate = NSPredicate(value: true)
+        }
+        let query = CKQuery(recordType: recordType, predicate: predicate)
         // Prefer newest-first, but many public schemas don't mark the creation
         // timestamp as sortable — fall back to an unsorted query if so.
         query.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
         do {
-            return try await runQuery(query, limit: limit)
+            return try await runQuery(query, limit: limit, stoppingAtKnown: known)
         } catch {
             if isSortError(error) {
                 query.sortDescriptors = []
+                // Unordered, there is no boundary to stop at: a known record can
+                // sit anywhere in the results, so the whole type is read.
                 return try await runQuery(query, limit: limit)
             }
             throw error
         }
     }
 
-    private func runQuery(_ query: CKQuery, limit: Int? = nil) async throws -> [CKRecord] {
+    /// How many already-stored records in a row end the read. Records written
+    /// in one batch can share a creation timestamp, and the order between those
+    /// is not guaranteed to repeat, so a short run — rather than the very first
+    /// one — is what marks the boundary.
+    private static let knownRunToStop = 5
+
+    /// - Parameter known: record names this device already holds. The query is
+    ///   ordered newest-first and these record types are only ever appended to,
+    ///   so a run of already-stored records is the boundary: everything past it
+    ///   is older and already stored. Paging stops there, which is what keeps a
+    ///   launch from re-reading the whole hub. Records the caller already has
+    ///   are not collected, so an empty result means "nothing new".
+    private func runQuery(_ query: CKQuery,
+                          limit: Int? = nil,
+                          stoppingAtKnown known: Set<String>? = nil) async throws -> [CKRecord] {
         var collected: [CKRecord] = []
         var cursor: CKQueryOperation.Cursor?
+        var knownRun = 0
 
         repeat {
             let page: (matchResults: [(CKRecord.ID, Result<CKRecord, Error>)],
@@ -225,9 +412,14 @@ final class CloudKitService {
                                                   resultsLimit: CKQueryOperation.maximumResults)
             }
             for (_, result) in page.matchResults {
-                if case .success(let record) = result {
-                    collected.append(record)
+                guard case .success(let record) = result else { continue }
+                if let known, known.contains(record.recordID.recordName) {
+                    knownRun += 1
+                    if knownRun >= Self.knownRunToStop { return collected }
+                    continue
                 }
+                knownRun = 0
+                collected.append(record)
             }
             cursor = page.queryCursor
             if let limit, collected.count >= limit {
@@ -246,6 +438,18 @@ final class CloudKitService {
         return ck.domain == CKErrorDomain
             && ck.code == CKError.invalidArguments.rawValue
             && ck.localizedDescription.lowercased().contains("sort")
+    }
+
+    /// The schema won't let us filter on `modificationDate` (not marked
+    /// queryable in this container). The incremental read then degrades to a
+    /// full one instead of reporting a failure.
+    private func isFilterError(_ error: Error) -> Bool {
+        let ck = error as NSError
+        guard ck.domain == CKErrorDomain,
+              ck.code == CKError.invalidArguments.rawValue else { return false }
+        // "Field '___modTime' is not marked queryable" is what the server says.
+        let msg = ck.localizedDescription.lowercased()
+        return msg.contains("queryable") || msg.contains("modtime") || msg.contains("createtime")
     }
 
     /// Errors that just mean "this record type doesn't exist here" — safe to

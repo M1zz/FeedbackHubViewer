@@ -136,7 +136,21 @@ final class FeedbackStore: ObservableObject {
     @Published var usageNotice: String?
 
     // UI state
-    @Published var isLoading = false
+
+    /// A network refresh is in flight. The screen keeps showing whatever the
+    /// cache painted while this is true — only the small toolbar indicator and
+    /// the refresh button react to it.
+    @Published private(set) var isRefreshing = false
+    /// True only while a refresh is running with nothing to show yet: the
+    /// condition the full-screen "불러오는 중…" spinners key off. With a cache on
+    /// disk this is false from the first frame.
+    var isLoading: Bool { isRefreshing && !hasContent }
+    /// Whether there is anything on screen at all, from cache or from the
+    /// network. Errors and empty states defer to it.
+    var hasContent: Bool {
+        !fetchedFeedback.isEmpty || !fetchedSnapshots.isEmpty
+            || !fetchedEvents.isEmpty || !fetchedCrashes.isEmpty
+    }
     @Published var errorMessage: String?
     @Published var noticeMessage: String?
     @Published var lastUpdated: Date?
@@ -215,10 +229,68 @@ final class FeedbackStore: ObservableObject {
 
     // MARK: - Loading
 
+    /// How much of the hub a refresh reads.
+    enum RefreshMode {
+        /// Read everything and replace what is held. What the refresh button
+        /// does, and what the first launch of the day does — an incremental
+        /// read never notices records that were *deleted* in the console.
+        case full
+        /// Read only what changed since the last successful read of each record
+        /// type and merge it in. What a launch on top of a warm cache does.
+        case incremental
+    }
+
+    /// Record type key for the feedback watermark. Feedback's real type name is
+    /// discovered at runtime, so the watermark is filed under a fixed key.
+    private static let feedbackSyncKey = "feedback"
+    /// Clocks on this device and in CloudKit are not exactly in step, so an
+    /// incremental read looks slightly further back than the last one ran.
+    /// Re-reading a handful of records is free — they merge by record name.
+    private static let syncOverlap: TimeInterval = 5 * 60
+
+    /// Hard caps on the two record types that grow without bound. Applied after
+    /// merging, so an incremental read can't grow the cache forever.
+    private static let eventLimit = 5000
+    private static let crashLimit = 1000
+
+    /// When each record type was last read successfully. Persisted with the
+    /// cache; drives the incremental queries.
+    private var watermarks: [String: Date] = [:]
+    private var startupTask: Task<Void, Never>?
+
+    /// Called once when the app's window appears. Paints the cache first, then
+    /// checks CloudKit for what changed — on its own task, so the check outlives
+    /// the view that kicked it off and never holds up the first frame.
+    func start() {
+        guard startupTask == nil else { return }
+        startupTask = Task { [weak self] in
+            guard let self else { return }
+            let restored = await self.restoreFromCache()
+            await self.load(mode: restored ? .incremental : .full)
+        }
+    }
+
+    /// Read everything again — the refresh button, ⌘R, and pull-to-refresh.
     func load() async {
-        isLoading = true
+        await load(mode: .full)
+    }
+
+    func load(mode: RefreshMode) async {
+        guard !isRefreshing else { return }
+        isRefreshing = true
         errorMessage = nil
-        defer { isLoading = false }
+        defer { isRefreshing = false }
+
+        // An incremental read is only meaningful on top of data we already
+        // have, and only until the cache is old enough that a deletion in the
+        // console would have gone unnoticed for too long.
+        let isIncremental = mode == .incremental && hasContent
+            && (lastUpdated.map { Date().timeIntervalSince($0) < FeedbackCache.fullRefreshInterval } ?? false)
+        if !isIncremental { service.forgetIncrementalFilterFields() }
+        let since: (String) -> Date? = { [watermarks] key in
+            guard isIncremental else { return nil }
+            return watermarks[key]?.addingTimeInterval(-Self.syncOverlap)
+        }
 
         noticeMessage = await service.accountStatusMessage()
         userRecordName = await service.currentUserRecordName()
@@ -226,19 +298,38 @@ final class FeedbackStore: ObservableObject {
         // Usage statistics live in their own record types with their own read
         // permission, so they are loaded separately and never fail the feedback
         // load — the dashboard shows whatever came back.
-        let usage = (try? await service.fetchUsage()) ?? CloudKitService.UsageOutcome()
-        fetchedSnapshots = usage.snapshots
-        fetchedEvents = usage.events
-        fetchedCrashes = usage.crashes
-        usageNotice = usage.notice
+        var usageSince: [String: Date] = [:]
+        for type in [CloudKitService.snapshotRecordType,
+                     CloudKitService.eventRecordType,
+                     CloudKitService.crashRecordType] {
+            usageSince[type] = since(type)
+        }
+        // Events and diagnostics are only ever added to, so telling the service
+        // what is already stored lets it stop reading as soon as it reaches it.
+        // Snapshots are left out on purpose: each install rewrites its own
+        // record, so a name we already have is exactly what we need to re-read.
+        var usageKnown: [String: Set<String>] = [:]
+        if isIncremental {
+            usageKnown[CloudKitService.eventRecordType] = Set(fetchedEvents.map(\.id))
+            usageKnown[CloudKitService.crashRecordType] = Set(fetchedCrashes.map(\.id))
+        }
+        let usage = await service.fetchUsage(modifiedSince: usageSince, known: usageKnown)
+        var changed = apply(usage, incremental: isIncremental)
 
         do {
-            let outcome = try await service.fetchFeedback()
-            fetchedFeedback = outcome.feedback
+            let startedAt = Date()
+            let outcome = try await service.fetchFeedback(modifiedSince: since(Self.feedbackSyncKey),
+                                                          knownRecordType: resolvedRecordType,
+                                                          known: isIncremental ? Set(fetchedFeedback.map(\.id)) : nil)
+            fetchedFeedback = isIncremental
+                ? Self.merged(outcome.feedback, into: fetchedFeedback, newestFirst: { ($0.createdAt ?? .distantPast) > ($1.createdAt ?? .distantPast) })
+                : outcome.feedback
             resolvedRecordType = outcome.resolvedRecordType
-            learnAppNames(from: outcome.feedback)
+            watermarks[Self.feedbackSyncKey] = startedAt
+            changed = changed || !isIncremental || !outcome.feedback.isEmpty
+            learnAppNames(from: fetchedFeedback)
             lastUpdated = Date()
-            if outcome.feedback.isEmpty && errorMessage == nil {
+            if fetchedFeedback.isEmpty && errorMessage == nil {
                 noticeMessage = noticeMessage ?? "표시할 피드백이 없습니다. 레코드 타입 이름이 다르거나(코드의 candidateRecordTypes 확인), CloudKit 대시보드에서 필드가 Queryable로 설정되지 않았을 수 있습니다."
             }
         } catch {
@@ -257,6 +348,125 @@ final class FeedbackStore: ObservableObject {
         // refresh, and the badge the unread count it leaves behind.
         announceNewRecords()
         refreshBadge()
+        // An incremental check that found nothing has nothing to write, and the
+        // auto-refresh runs every minute — no point rewriting megabytes of JSON
+        // to say the same thing.
+        if changed { persistCache() }
+    }
+
+    /// Fold a usage read into what is held. A record type the read could not
+    /// touch (`nil`) keeps whatever the cache had — a permission blip must not
+    /// blank out yesterday's numbers.
+    /// Returns whether anything actually moved, so an empty check can skip the
+    /// disk write that would otherwise follow it.
+    @discardableResult
+    private func apply(_ usage: CloudKitService.UsageOutcome, incremental: Bool) -> Bool {
+        var changed = !incremental
+        if let snapshots = usage.snapshots {
+            // Snapshots are the one type read in full every time, so "came
+            // back non-empty" says nothing. Compare contents instead, or the
+            // cache would be re-encoded once a minute for no reason.
+            let before = Self.fingerprint(fetchedSnapshots)
+            fetchedSnapshots = incremental
+                ? Self.merged(snapshots, into: fetchedSnapshots,
+                              newestFirst: { ($0.lastActiveAt ?? .distantPast) > ($1.lastActiveAt ?? .distantPast) })
+                : snapshots
+            changed = changed || Self.fingerprint(fetchedSnapshots) != before
+        }
+        if let events = usage.events {
+            let all = incremental
+                ? Self.merged(events, into: fetchedEvents, newestFirst: { $0.occurredAt > $1.occurredAt })
+                : events
+            fetchedEvents = Array(all.prefix(Self.eventLimit))
+        }
+        if let crashes = usage.crashes {
+            let all = incremental
+                ? Self.merged(crashes, into: fetchedCrashes,
+                              newestFirst: { ($0.receivedAt ?? .distantPast) > ($1.receivedAt ?? .distantPast) })
+                : crashes
+            fetchedCrashes = Array(all.prefix(Self.crashLimit))
+        }
+        usageNotice = usage.notice
+        watermarks.merge(usage.syncedTypes) { _, new in new }
+        // Events and diagnostics stop reading at what this device already has,
+        // so anything that came back is genuinely new.
+        changed = changed
+            || !(usage.events?.isEmpty ?? true)
+            || !(usage.crashes?.isEmpty ?? true)
+        return changed
+    }
+
+    /// A cheap stand-in for "did any install's numbers move". Coarse on
+    /// purpose: a miss only means the cache file is a beat behind, and the next
+    /// launch re-reads every snapshot anyway.
+    private static func fingerprint(_ snapshots: [UsageSnapshot]) -> Int {
+        var hasher = Hasher()
+        for snapshot in snapshots.sorted(by: { $0.id < $1.id }) {
+            hasher.combine(snapshot.id)
+            hasher.combine(snapshot.launchCount)
+            hasher.combine(snapshot.eventCount)
+            hasher.combine(snapshot.daysSinceInstall)
+            hasher.combine(snapshot.lastActiveAt)
+            hasher.combine(snapshot.appVersion)
+            hasher.combine(snapshot.metrics.count)
+        }
+        return hasher.finalize()
+    }
+
+    /// Merge freshly-read records into the ones already held, newest first. A
+    /// record that came back again replaces the copy we had (usage snapshots
+    /// are upserted in place), and everything else is kept.
+    private static func merged<T: Identifiable>(_ incoming: [T],
+                                                into existing: [T],
+                                                newestFirst: (T, T) -> Bool) -> [T] where T.ID == String {
+        guard !incoming.isEmpty else { return existing }
+        var byID = Dictionary(existing.map { ($0.id, $0) }, uniquingKeysWith: { _, latest in latest })
+        for item in incoming { byID[item.id] = item }
+        return byID.values.sorted(by: newestFirst)
+    }
+
+    // MARK: - Disk cache
+
+    /// Paint what the last session saw. Returns whether anything was restored,
+    /// which decides if the refresh that follows can be incremental.
+    @discardableResult
+    private func restoreFromCache() async -> Bool {
+        guard let cached = await FeedbackCache.shared.load(), !cached.isEmpty else { return false }
+        // A refresh that already finished is newer than the file by definition.
+        guard !hasContent else { return false }
+
+        fetchedFeedback = cached.feedback
+        fetchedSnapshots = cached.snapshots
+        fetchedEvents = cached.events
+        fetchedCrashes = cached.crashes
+        resolvedRecordType = cached.resolvedRecordType
+        watermarks = cached.watermarks
+        service.restoreIncrementalFilterFields(cached.filterFields)
+        lastUpdated = cached.savedAt
+        learnAppNames(from: cached.feedback)
+        refreshBadge()
+        return true
+    }
+
+    /// Write what is held back to disk. Fire-and-forget: the encode happens on
+    /// the cache actor, off the main thread.
+    private func persistCache() {
+        let hub = CachedHub(savedAt: lastUpdated ?? Date(),
+                            watermarks: watermarks,
+                            resolvedRecordType: resolvedRecordType,
+                            filterFields: service.incrementalFilterFields,
+                            feedback: fetchedFeedback,
+                            snapshots: fetchedSnapshots,
+                            events: fetchedEvents,
+                            crashes: fetchedCrashes)
+        Task { await FeedbackCache.shared.save(hub) }
+    }
+
+    /// Throw the cache away and read everything again from CloudKit.
+    func resetCacheAndReload() async {
+        await FeedbackCache.shared.clear()
+        watermarks = [:]
+        await load(mode: .full)
     }
 
     private static func isPermissionError(_ error: Error) -> Bool {
@@ -713,7 +923,7 @@ final class FeedbackStore: ObservableObject {
             while !Task.isCancelled {
                 try? await Task.sleep(nanoseconds: UInt64(self.autoRefreshInterval * 1_000_000_000))
                 if Task.isCancelled { break }
-                await self.load()
+                await self.load(mode: .incremental)
             }
         }
     }

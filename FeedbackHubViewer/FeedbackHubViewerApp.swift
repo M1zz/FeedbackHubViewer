@@ -18,10 +18,9 @@ struct FeedbackHubViewerApp: App {
             rootView
                 .environmentObject(store)
                 .task {
-                    // Load once when the window first appears.
-                    if store.allFeedback.isEmpty {
-                        await store.load()
-                    }
+                    // Paint the cached hub, then check CloudKit for changes on
+                    // a task the store owns — the window never waits for it.
+                    store.start()
                 }
         }
         #if os(macOS)

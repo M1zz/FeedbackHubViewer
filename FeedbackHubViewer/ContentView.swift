@@ -122,7 +122,7 @@ struct SplitRootView: View {
         } label: {
             Label("새로고침", systemImage: "arrow.clockwise")
         }
-        .disabled(store.isLoading)
+        .disabled(store.isRefreshing)
         .help("지금 새로고침")
     }
 
@@ -130,7 +130,13 @@ struct SplitRootView: View {
     @ToolbarContentBuilder
     private var macToolbarContent: some ToolbarContent {
         ToolbarItem(placement: .status) {
-            if let updated = store.lastUpdated {
+            // The cached hub is already on screen by now, so a refresh says so
+            // in passing rather than replacing the window with a spinner.
+            if store.isRefreshing {
+                Text("업데이트 확인 중…")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            } else if let updated = store.lastUpdated {
                 Text("업데이트: \(AppFormat.time(updated))")
                     .font(.caption)
                     .foregroundStyle(.secondary)
@@ -215,6 +221,17 @@ struct IdentityMenu: View {
                 Text("CloudKit Console → Security Roles의 admin 역할에 이 값을 등록하고 피드백 레코드 타입에 read 권한을 준 뒤 Production으로 배포하세요.")
             } else {
                 Text("iCloud 계정을 확인할 수 없습니다. 이 \(Platform.deviceNoun)에 iCloud 로그인이 되어 있는지 확인하세요.")
+            }
+
+            // The saved hub is what makes a launch instant; this is the way
+            // back to a clean read when it looks stale or wrong.
+            Section("저장된 데이터") {
+                Button {
+                    Task { await store.resetCacheAndReload() }
+                } label: {
+                    Label("캐시 비우고 전체 다시 불러오기", systemImage: "arrow.clockwise.circle")
+                }
+                .disabled(store.isRefreshing)
             }
         } label: {
             Label("내 계정 ID", systemImage: "person.crop.circle.badge.questionmark")
