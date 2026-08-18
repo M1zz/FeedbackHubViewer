@@ -105,6 +105,8 @@ final class FeedbackStore: ObservableObject {
         let latest: Date?
         /// Feedback in this project the user has never opened.
         let unreadCount: Int
+        /// Feedback in this project still waiting on a 반영/반영 안 함 decision.
+        let pendingCount: Int
         /// True for the bucket holding records with no project field.
         var isUnclassified: Bool { project == Feedback.unclassifiedProject }
     }
@@ -178,6 +180,15 @@ final class FeedbackStore: ObservableObject {
     @Published var selectedProject: String? = nil     // nil == all projects
     @Published var selectedVersion: String? = nil     // nil == all versions
     @Published var minimumRating: Int = 0             // 0 == any rating
+    /// Which triage decisions the list shows (see `FeedbackTriage.swift`).
+    /// Defaults to 확인 필요: deciding a feedback takes it out of the list, and
+    /// the "처리한 피드백 보기" switch at the bottom of the list brings it back.
+    @Published var statusFilter: FeedbackStatusFilter = .pending {
+        didSet {
+            guard statusFilter != oldValue else { return }
+            defaults.set(statusFilter.rawValue, forKey: Self.statusFilterKey)
+        }
+    }
 
     // Auto refresh
     @Published var autoRefresh = false {
@@ -213,6 +224,9 @@ final class FeedbackStore: ObservableObject {
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
         readIDs = Set(defaults.stringArray(forKey: Self.readIDsKey) ?? [])
+        triage = Self.decodeTriage(defaults.data(forKey: Self.triageKey))
+        statusFilter = defaults.string(forKey: Self.statusFilterKey)
+            .flatMap(FeedbackStatusFilter.init(rawValue:)) ?? .pending
         hiddenProjects = Set(defaults.stringArray(forKey: Self.hiddenProjectsKey) ?? [])
         notificationsEnabled = defaults.bool(forKey: Self.notificationsEnabledKey)
         seenFeedbackIDs = defaults.stringArray(forKey: Self.seenFeedbackIDsKey).map(Set.init)
@@ -562,6 +576,94 @@ final class FeedbackStore: ObservableObject {
         defaults.set(Array(readIDs), forKey: Self.readIDsKey)
     }
 
+    // MARK: - 처리 상태 (triage)
+
+    /// Record name → what was decided about it. Persisted per device: the hub's
+    /// records are read-only to this viewer, so the decision is ours to keep
+    /// (see `FeedbackTriage.swift`).
+    @Published private(set) var triage: [String: FeedbackTriageEntry] = [:]
+    private static let triageKey = "feedbackTriage"
+    private static let statusFilterKey = "feedbackStatusFilter"
+
+    func status(of feedback: Feedback) -> FeedbackStatus {
+        triage[feedback.id]?.status ?? .pending
+    }
+
+    func note(for feedback: Feedback) -> String {
+        triage[feedback.id]?.note ?? ""
+    }
+
+    func decidedAt(for feedback: Feedback) -> Date? {
+        guard let entry = triage[feedback.id], entry.status.isHandled else { return nil }
+        return entry.decidedAt
+    }
+
+    func isHandled(_ feedback: Feedback) -> Bool { status(of: feedback).isHandled }
+
+    /// Record the decision. Deciding also counts as having read the feedback —
+    /// leaving it bold in the list after acting on it would be nonsense.
+    /// `note` nil keeps whatever memo is already stored.
+    func setStatus(_ status: FeedbackStatus, note: String? = nil, for feedback: Feedback) {
+        apply(status: status, note: note, to: feedback.id)
+        persistTriage()
+        markRead(feedback)
+    }
+
+    /// Change several records at once — the list's multi-selection actions.
+    func setStatus(_ status: FeedbackStatus, forIDs ids: Set<String>) {
+        guard !ids.isEmpty else { return }
+        for id in ids { apply(status: status, note: nil, to: id) }
+        persistTriage()
+        let targets = allFeedback.filter { ids.contains($0.id) }
+        readIDs.formUnion(targets.map(\.id))
+        persistReadIDs()
+        refreshBadge()
+    }
+
+    /// Store or update the memo without changing the decision.
+    func setNote(_ note: String, for feedback: Feedback) {
+        apply(status: status(of: feedback), note: note, to: feedback.id)
+        persistTriage()
+    }
+
+    /// Decide every feedback currently listed — "표시된 항목 모두 처리".
+    func setStatusForFiltered(_ status: FeedbackStatus) {
+        setStatus(status, forIDs: Set(filteredFeedback.map(\.id)))
+    }
+
+    private func apply(status: FeedbackStatus, note: String?, to id: String) {
+        let existing = triage[id]
+        let entry = FeedbackTriageEntry(status: status,
+                                        note: note ?? existing?.note ?? "",
+                                        decidedAt: Date())
+        // A record back at 확인 필요 with no memo left is simply not tracked, so
+        // the stored set stays as small as the decisions actually made.
+        triage[id] = entry.isEmpty ? nil : entry
+    }
+
+    /// Still waiting on a decision, across every project.
+    var pendingCount: Int { countPending(in: allFeedback) }
+    /// Still waiting on a decision inside the current project scope.
+    var scopedPendingCount: Int { countPending(in: scopedFeedback) }
+    /// Already decided inside the current project scope.
+    var scopedHandledCount: Int { scopedFeedback.count - scopedPendingCount }
+
+    func countPending(in items: [Feedback]) -> Int {
+        items.reduce(0) { $0 + (triage[$1.id]?.status.isHandled == true ? 0 : 1) }
+    }
+
+    private func persistTriage() {
+        guard let data = try? JSONEncoder().encode(triage) else { return }
+        defaults.set(data, forKey: Self.triageKey)
+    }
+
+    private static func decodeTriage(_ data: Data?) -> [String: FeedbackTriageEntry] {
+        guard let data,
+              let decoded = try? JSONDecoder().decode([String: FeedbackTriageEntry].self, from: data)
+        else { return [:] }
+        return decoded
+    }
+
     // MARK: - Hidden projects
 
     /// Projects taken out of this viewer. Nothing is deleted from CloudKit —
@@ -703,7 +805,8 @@ final class FeedbackStore: ObservableObject {
             return ProjectSummary(project: key, displayName: displayName(for: key),
                                   count: items.count, averageRating: average,
                                   last7Days: last7, latest: latest,
-                                  unreadCount: countUnread(in: items))
+                                  unreadCount: countUnread(in: items),
+                                  pendingCount: countPending(in: items))
         }
         .sorted { ordered($0.project, $0.count, $1.project, $1.count) }
     }
@@ -799,6 +902,10 @@ final class FeedbackStore: ObservableObject {
 
     var filteredFeedback: [Feedback] {
         var items = scopedFeedback
+
+        if statusFilter != .all {
+            items = items.filter { statusFilter.accepts(status(of: $0)) }
+        }
 
         if let version = selectedVersion {
             items = items.filter { $0.appVersion == version }

@@ -152,8 +152,13 @@ private struct HeadlineStrip: View {
             divider
             cell(value: "\(stats.last7Days)", unit: "건", label: "7일", tint: .blue)
             divider
+            // One slot, three things worth knowing — in the order they matter:
+            // what hasn't been opened, what hasn't been decided, then the shape
+            // of the hub when both are clear.
             if store.scopedUnreadCount > 0 {
                 cell(value: "\(store.scopedUnreadCount)", unit: "건", label: "안 읽음", tint: .red)
+            } else if store.scopedPendingCount > 0 {
+                cell(value: "\(store.scopedPendingCount)", unit: "건", label: "확인 필요", tint: .orange)
             } else {
                 cell(value: "\(store.availableProjects.count)", unit: "개", label: "프로젝트", tint: .purple)
             }
@@ -212,7 +217,8 @@ private struct RecentFeedbackSection: View {
                         NavigationLink(value: feedback) {
                             RecentRow(feedback: feedback,
                                       projectLabel: store.displayName(for: feedback.projectKey),
-                                      isUnread: store.isUnread(feedback))
+                                      isUnread: store.isUnread(feedback),
+                                      status: store.status(of: feedback))
                         }
                         .buttonStyle(.plain)
                         if index < recent.count - 1 {
@@ -231,6 +237,7 @@ private struct RecentRow: View {
     let feedback: Feedback
     let projectLabel: String
     let isUnread: Bool
+    let status: FeedbackStatus
 
     var body: some View {
         HStack(alignment: .top, spacing: 8) {
@@ -245,6 +252,7 @@ private struct RecentRow: View {
                     if let rating = feedback.rating {
                         StarRatingView(rating: rating)
                     }
+                    StatusChip(status: status, showsLabel: false)
                     Spacer(minLength: 4)
                     Text(feedback.createdAtRelative)
                         .font(.caption2)
@@ -254,6 +262,7 @@ private struct RecentRow: View {
                 Text(feedback.snippet)
                     .font(.callout)
                     .fontWeight(isUnread ? .semibold : .regular)
+                    .foregroundStyle(status.isHandled ? .secondary : .primary)
                     .lineLimit(2)
             }
         }
@@ -295,8 +304,13 @@ private struct ProjectCard: View {
                         .multilineTextAlignment(.leading)
                         .fixedSize(horizontal: false, vertical: true)
                     Spacer(minLength: 2)
+                    // Unread first: it is the stronger call to action. Once
+                    // everything has been opened, what is left undecided takes
+                    // the slot.
                     if summary.unreadCount > 0 {
                         UnreadBadge(count: summary.unreadCount)
+                    } else if summary.pendingCount > 0 {
+                        PendingBadge(count: summary.pendingCount)
                     }
                     CountBadge(count: summary.count)
                 }
@@ -342,7 +356,7 @@ private struct ProjectCard: View {
             }
         }
         .help("\(summary.displayName) 피드백 \(summary.count)건 보기")
-        .accessibilityLabel("\(summary.displayName), 피드백 \(summary.count)건, 안 읽음 \(summary.unreadCount)건, 최근 7일 \(summary.last7Days)건")
+        .accessibilityLabel("\(summary.displayName), 피드백 \(summary.count)건, 안 읽음 \(summary.unreadCount)건, 확인 필요 \(summary.pendingCount)건, 최근 7일 \(summary.last7Days)건")
     }
 
     /// A full timestamp has room on a Mac card; a phone card gets "3일 전".
