@@ -2,335 +2,27 @@
 //  StatisticsView.swift
 //  FeedbackHubViewer
 //
-//  The 통계 pane. It shows the usage statistics the apps themselves report into
-//  the hub (UsageSnapshot / UsageEvent — see `Usage.swift`), computed the way
-//  the apps' own statistics screens compute them, plus a feedback summary at
-//  the end. Event names and `metrics` keys are shown as the app sent them; the
-//  viewer doesn't translate another app's vocabulary.
+//  The 통계 section of a project screen — usage only. Diagnostics used to have
+//  a card here too; they are their own section now (`CrashListView`), and a
+//  screen that repeats the neighbouring section is a screen you have to read
+//  twice to know where anything lives. It shows the usage statistics the apps
+//  themselves report into the hub (UsageSnapshot / UsageEvent — see
+//  `Usage.swift`), computed the way the apps' own statistics screens compute
+//  them, plus a feedback summary at the end. Event names and `metrics` keys are
+//  shown as the app sent them; the viewer doesn't translate another app's
+//  vocabulary.
 //
-//  On iOS it opens on a per-project list and pushes `StatisticsDashboard` for
-//  the project that is tapped. On macOS the dashboard is the pane and the
-//  project is picked from a menu.
+//  The project it describes is chosen one level up (`ProjectSectionView`), so
+//  this screen has no scope picker and no title of its own.
 //
 
 import SwiftUI
 import Charts
 
-struct StatisticsView: View {
-    @EnvironmentObject private var store: FeedbackStore
-
-    var body: some View {
-        #if os(macOS)
-        StatisticsDashboard(project: store.selectedProject, showsScopePicker: true)
-        #else
-        ProjectStatsListView()
-        #endif
-    }
-}
-
-// MARK: - Per-project list (iOS)
-
-#if os(iOS)
-/// The statistics root on iOS: one row per project with its headline usage
-/// numbers and how they moved against the previous week.
-struct ProjectStatsListView: View {
-    @EnvironmentObject private var store: FeedbackStore
-
-    var body: some View {
-        Group {
-            if store.errorMessage != nil && store.allFeedback.isEmpty && !store.hasUsageData {
-                ContentUnavailableView {
-                    Label("불러올 수 없습니다", systemImage: "exclamationmark.triangle")
-                } description: {
-                    Text(store.errorMessage ?? "")
-                }
-            } else if store.allProjectKeys.isEmpty && !store.isLoading {
-                ContentUnavailableView(
-                    "표시할 통계가 없습니다",
-                    systemImage: "chart.bar",
-                    description: Text(store.noticeMessage ?? "아직 수집된 데이터가 없습니다.")
-                )
-            } else {
-                List {
-                    if let notice = store.usageNotice {
-                        Section {
-                            Label(notice, systemImage: "exclamationmark.triangle")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-
-                    Section {
-                        ProjectStatsRow(project: nil)
-                    }
-
-                    // The red ⚠︎ on the rows below leads here: every diagnostic
-                    // from every project in one list.
-                    if !store.allCrashes.isEmpty {
-                        Section {
-                            NavigationLink(value: FeedbackStore.CrashRoute(project: nil)) {
-                                let summary = store.crashSummary(for: nil)
-                                HStack(spacing: 8) {
-                                    Image(systemName: "exclamationmark.triangle.fill")
-                                        .foregroundStyle(.red)
-                                    VStack(alignment: .leading, spacing: 2) {
-                                        Text("진단 모아보기")
-                                            .font(.subheadline.weight(.semibold))
-                                        Text(summary.last7Days > 0
-                                             ? "최근 7일 \(summary.last7Days)건 · 전체 \(summary.total)건"
-                                             : "전체 \(summary.total)건")
-                                            .font(.caption)
-                                            .foregroundStyle(.secondary)
-                                    }
-                                    Spacer(minLength: 4)
-                                    if summary.last7Days > 0 {
-                                        Text("\(summary.last7Days)")
-                                            .font(.caption2.bold().monospacedDigit())
-                                            .foregroundStyle(.white)
-                                            .padding(.horizontal, 6)
-                                            .padding(.vertical, 2)
-                                            .background(Color.red, in: Capsule())
-                                    }
-                                }
-                                .padding(.vertical, 2)
-                            }
-                        }
-                    }
-
-                    Section("프로젝트별 · 최근 7일") {
-                        ForEach(store.allProjectKeys, id: \.self) { key in
-                            ProjectStatsRow(project: key)
-                        }
-                    }
-
-                    if !store.hiddenProjectEntries.isEmpty {
-                        Section {
-                            ForEach(store.hiddenProjectEntries, id: \.key) { entry in
-                                HStack {
-                                    Label(entry.displayName, systemImage: "eye.slash")
-                                        .font(.callout)
-                                        .foregroundStyle(.secondary)
-                                        .lineLimit(1)
-                                    Spacer()
-                                    Button("다시 보기") { store.showProject(entry.key) }
-                                        .font(.callout)
-                                }
-                            }
-                        } header: {
-                            Text("숨긴 프로젝트")
-                        } footer: {
-                            Text("이 기기에서만 가려집니다. 허브의 레코드는 그대로입니다.")
-                        }
-                    }
-                }
-                .listStyle(.insetGrouped)
-            }
-        }
-        .overlay {
-            if store.isLoading && store.allFeedback.isEmpty && !store.hasUsageData {
-                ProgressView("불러오는 중…")
-            }
-        }
-        .navigationTitle("통계")
-        .hubNavigationSubtitle(subtitle)
-    }
-
-    private var subtitle: String {
-        let usage = store.overallUsage
-        guard usage.installs > 0 else {
-            return "앱이 보낸 사용 통계 없음 · \(store.allProjectKeys.count)개 프로젝트"
-        }
-        return "설치 \(usage.installs) · 7일 활성 \(usage.active7) · \(store.allProjectKeys.count)개 프로젝트"
-    }
-}
-
-/// One project's line: the numbers the app reports, and the week-over-week
-/// movement. Projects that report no usage fall back to their feedback counts,
-/// so a feedback-only app still has a row.
-private struct ProjectStatsRow: View {
-    @EnvironmentObject private var store: FeedbackStore
-    /// nil == 전체 프로젝트.
-    let project: String?
-
-    var body: some View {
-        let usage = store.usage(for: project)
-        let unread = unreadCount
-
-        NavigationLink(value: FeedbackStore.StatsRoute(project: project)) {
-            VStack(alignment: .leading, spacing: 8) {
-                HStack(spacing: 6) {
-                    Image(systemName: icon)
-                        .font(.caption)
-                        .foregroundStyle(iconTint)
-                    Text(usage.displayName)
-                        .font(.subheadline.weight(.semibold))
-                        .lineLimit(1)
-                    if unread > 0 { UnreadBadge(count: unread) }
-                    if crashes7 > 0 {
-                        Label("\(crashes7)", systemImage: "exclamationmark.triangle.fill")
-                            .font(.caption2.weight(.semibold))
-                            .foregroundStyle(.red)
-                            .accessibilityLabel("최근 7일 진단 \(crashes7)건")
-                    }
-                    Spacer(minLength: 4)
-                    Text(usage.installs > 0 ? "설치 \(usage.installs)" : "피드백 \(feedbackCount)건")
-                        .font(.caption.monospacedDigit())
-                        .foregroundStyle(.secondary)
-                }
-
-                if usage.hasUsageData {
-                    // The three numbers come first; the sparkline is dropped
-                    // before any of them is allowed to squeeze.
-                    ViewThatFits(in: .horizontal) {
-                        metricsRow(usage, showsSparkline: true)
-                        metricsRow(usage, showsSparkline: false)
-                    }
-                } else {
-                    // Feedback-only project: say so instead of showing zeroes
-                    // that look like a collapse in usage.
-                    Text("이 앱은 아직 사용 통계를 보내지 않습니다 · 피드백 \(feedbackCount)건")
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-            }
-            .padding(.vertical, 4)
-        }
-        .accessibilityLabel(accessibilityLabel(usage))
-        .swipeActions(edge: .trailing) {
-            if let project {
-                Button {
-                    store.hideProject(project)
-                } label: {
-                    Label("숨기기", systemImage: "eye.slash")
-                }
-                .tint(.gray)
-            }
-        }
-        .contextMenu {
-            if let project {
-                Button {
-                    store.hideProject(project)
-                } label: {
-                    Label("이 프로젝트 숨기기", systemImage: "eye.slash")
-                }
-            }
-        }
-    }
-
-    private func metricsRow(_ usage: FeedbackStore.ProjectUsage, showsSparkline: Bool) -> some View {
-        HStack(spacing: 10) {
-            MetricDelta(title: "활동 사용자",
-                        value: "\(usage.activeInstalls7)",
-                        delta: delta(usage.activeInstallsDelta,
-                                     hasBaseline: usage.previousActiveInstalls7 > 0 || usage.activeInstalls7 > 0),
-                        tint: tint(usage.activeInstallsDelta, upIsGood: true))
-            MetricDelta(title: "사용 건수",
-                        value: "\(usage.events7)",
-                        delta: delta(usage.eventsDelta,
-                                     hasBaseline: usage.previousEvents7 > 0 || usage.events7 > 0),
-                        tint: tint(usage.eventsDelta, upIsGood: true))
-            MetricDelta(title: "신규 설치",
-                        value: "\(usage.new7)",
-                        delta: delta(usage.newDelta,
-                                     hasBaseline: usage.previousNew7 > 0 || usage.new7 > 0),
-                        tint: tint(usage.newDelta, upIsGood: true))
-
-            Spacer(minLength: 0)
-
-            if showsSparkline {
-                Sparkline(points: usage.sparkline)
-                    .frame(width: 68, height: 26)
-            }
-        }
-    }
-
-    private var feedbackCount: Int {
-        guard let project else { return store.allFeedback.count }
-        return store.allFeedback.filter { $0.projectKey == project }.count
-    }
-
-    private var unreadCount: Int {
-        guard let project else { return store.unreadCount }
-        return store.allFeedback.filter { $0.projectKey == project && store.isUnread($0) }.count
-    }
-
-    /// Diagnostics that arrived in the last week — worth a flag on the row.
-    private var crashes7: Int {
-        store.crashSummary(for: project).last7Days
-    }
-
-    private var icon: String {
-        if project == nil { return "square.grid.3x3" }
-        return project == Feedback.unclassifiedProject ? "questionmark.folder" : "app.dashed"
-    }
-
-    private var iconTint: Color {
-        if project == nil { return .purple }
-        return project == Feedback.unclassifiedProject ? .secondary : .accentColor
-    }
-
-    /// "+5" / "-2" / "±0", or nil when there is nothing to compare against.
-    private func delta(_ value: Int, hasBaseline: Bool) -> String? {
-        guard hasBaseline else { return nil }
-        if value == 0 { return "±0" }
-        return value > 0 ? "+\(value)" : "\(value)"
-    }
-
-    private func tint(_ value: Int, upIsGood: Bool) -> Color {
-        if value == 0 { return .secondary }
-        let good = upIsGood ? value > 0 : value < 0
-        return good ? .green : .red
-    }
-
-    private func accessibilityLabel(_ usage: FeedbackStore.ProjectUsage) -> String {
-        guard usage.hasUsageData else {
-            return "\(usage.displayName), 피드백 \(feedbackCount)건, 사용 통계 없음"
-        }
-        return "\(usage.displayName), 설치 \(usage.installs), 최근 7일 활동 사용자 \(usage.activeInstalls7), 지난주 대비 \(usage.activeInstallsDelta)"
-    }
-}
-
-/// A headline number with the arrow showing which way it moved.
-private struct MetricDelta: View {
-    let title: String
-    let value: String
-    /// Already-formatted change, or nil when there is nothing to compare.
-    let delta: String?
-    let tint: Color
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(title)
-                .font(.caption2)
-                .foregroundStyle(.secondary)
-                .fixedSize()
-            HStack(spacing: 4) {
-                Text(value)
-                    .font(.subheadline.weight(.semibold).monospacedDigit())
-                    .fixedSize()
-                if let delta {
-                    HStack(spacing: 1) {
-                        Image(systemName: DeltaArrow.symbol(for: delta))
-                            .font(.system(size: 9, weight: .bold))
-                        Text(delta)
-                            .font(.caption2.monospacedDigit())
-                            .fixedSize()
-                    }
-                    .foregroundStyle(tint)
-                }
-            }
-        }
-        // Every part keeps its full width, so `ViewThatFits` around the row can
-        // tell whether the sparkline still has room instead of silently
-        // truncating "-7" to "…".
-        .fixedSize(horizontal: true, vertical: false)
-    }
-}
-
-/// A 14-day event sparkline. Deliberately axis-free: it shows the shape of the
-/// last two weeks, not exact values.
-private struct Sparkline: View {
+/// A 14-day event sparkline. Deliberately axis-free: it shows the shape of
+/// the last two weeks, not exact values. Used by the project cards and the
+/// dashboard alike.
+struct Sparkline: View {
     let points: [FeedbackStore.DayCount]
 
     var body: some View {
@@ -350,7 +42,7 @@ private struct Sparkline: View {
         .accessibilityHidden(true)
     }
 }
-#endif
+
 
 enum DeltaArrow {
     static func symbol(for delta: String) -> String {
@@ -364,13 +56,12 @@ enum DeltaArrow {
 
 struct StatisticsDashboard: View {
     @EnvironmentObject private var store: FeedbackStore
-    /// The scope this screen was opened with (nil == 전체 프로젝트).
+    /// The scope this section was opened with (nil == 전체 프로젝트).
     let project: String?
-    /// macOS picks the project from a menu on the dashboard itself; on iOS the
-    /// project was already chosen in the list that pushed this screen.
-    var showsScopePicker = false
 
     @State private var trendUnit: FeedbackStore.TrendUnit = .day
+    /// How many individual events the 사용 내역 card is showing.
+    @State private var eventLogLimit = 20
 
     #if os(macOS)
     private let tileColumns = [GridItem(.adaptive(minimum: 150), spacing: 10)]
@@ -389,8 +80,8 @@ struct StatisticsDashboard: View {
     private let breakdownHeight: CGFloat = 132
     #endif
 
-    /// The scope the numbers are computed for. On macOS the menu drives it.
-    private var scope: String? { showsScopePicker ? store.selectedProject : project }
+    /// The scope the numbers are computed for.
+    private var scope: String? { project }
 
     var body: some View {
         Group {
@@ -409,26 +100,25 @@ struct StatisticsDashboard: View {
             } else {
                 ScrollView {
                     VStack(alignment: .leading, spacing: sectionSpacing) {
-                        if showsScopePicker { scopePicker }
                         if let notice = store.usageNotice { usageNotice(notice) }
 
                         if usage.hasUsageData {
                             userTiles
+                            specCards
                             weekOverWeek
-                            crashCard
                             trendCard
-                            feedbackLink
                             eventCard
+                            eventLogCard
                             metricsCard
                             flagCard
                             distributionCards
                         } else {
                             noUsageCard
-                            crashCard
-                            feedbackLink
+                            specCards
                         }
 
                         feedbackCard
+                        specGapCard
                     }
                     .padding(contentPadding)
                 }
@@ -439,46 +129,83 @@ struct StatisticsDashboard: View {
                 ProgressView("불러오는 중…")
             }
         }
-        .navigationTitle(title)
-        .hubNavigationSubtitle(subtitle)
     }
 
     private var usage: FeedbackStore.ProjectUsage { store.usage(for: scope) }
 
-    private var title: String {
-        // The Mac pane keeps its own name; the pushed iOS screen is named after
-        // the project it was opened for.
-        guard !showsScopePicker, let key = scope else { return "통계" }
-        return store.displayName(for: key)
+    // MARK: - 앱별 스펙
+
+    /// 이 프로젝트의 통계 스펙 — 앱이 자기 화면에서 쓰는 어휘와 해석(`Specs/*.json`).
+    /// 전체 프로젝트 범위에서는 앱마다 뜻이 달라 합칠 수 없으므로 쓰지 않는다.
+    private var spec: ProjectStatsSpec? {
+        guard let scope else { return nil }
+        return ProjectStatsSpecCatalog.spec(for: scope)
     }
 
-    private var subtitle: String {
-        let usage = usage
-        if usage.hasUsageData {
-            return "설치 \(usage.installs) · 7일 활성 \(usage.active7) · 이벤트 \(usage.totalEvents)"
-        }
-        if let key = scope {
-            return "프로젝트: \(store.displayName(for: key)) · 피드백 \(store.scopedFeedback.count)건"
-        }
-        return "전체 피드백 \(store.allFeedback.count)건 / \(store.allProjectKeys.count)개 프로젝트"
+    private var scopedMetrics: [[String: Double]] {
+        store.snapshots(for: scope).map(\.metrics)
     }
 
-    // MARK: - Scope
-
-    private var scopePicker: some View {
-        HStack(spacing: 8) {
-            Picker("프로젝트", selection: $store.selectedProject) {
-                Text("전체 프로젝트").tag(String?.none)
-                ForEach(store.allProjectKeys, id: \.self) { key in
-                    Text(store.displayName(for: key)).tag(String?.some(key))
+    /// 앱 자신의 통계 화면이 보여주는 것과 같은 카드들.
+    @ViewBuilder
+    private var specCards: some View {
+        if let spec {
+            ForEach(spec.insights(for: scopedMetrics)) { insight in
+                switch insight {
+                case .tiles(let title, let note, let items):
+                    Card(title: title, systemImage: "star.circle") {
+                        LazyVGrid(columns: tileColumns, spacing: 10) {
+                            ForEach(items) { item in
+                                SpecTile(label: item.label, value: item.value, hint: item.hint)
+                            }
+                        }
+                        if let note { footnote(note) }
+                    }
+                case .bars(let title, let note, let rows):
+                    Card(title: title, systemImage: "chart.bar") {
+                        VStack(spacing: 8) {
+                            ForEach(rows) { row in
+                                SpecBar(label: row.label, value: row.value,
+                                        ratio: row.ratio, hint: row.hint)
+                            }
+                        }
+                        if let note { footnote(note) }
+                    }
                 }
             }
-            .pickerStyle(.menu)
-            .fixedSize()
-
-            Spacer(minLength: 4)
-            EnvironmentBadge()
         }
+    }
+
+    /// 스펙이 아직 이름을 붙이지 않은 지표·이벤트. 앱이 새 값을 보내기 시작했다는 뜻이고,
+    /// 여기 뜨면 그 앱 리포의 `docs/usage-spec.json`에 라벨을 더할 차례다.
+    @ViewBuilder
+    private var specGapCard: some View {
+        if let spec {
+            let metrics = spec.unknownMetricKeys(in: scopedMetrics)
+            let events = spec.unknownEventNames(in: store.events(for: scope).map(\.name))
+            if !metrics.isEmpty || !events.isEmpty {
+                Card(title: "스펙에 없는 지표", systemImage: "questionmark.circle") {
+                    if !metrics.isEmpty {
+                        Text("지표: " + metrics.joined(separator: ", "))
+                            .font(.callout.monospaced())
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    if !events.isEmpty {
+                        Text("이벤트: " + events.joined(separator: ", "))
+                            .font(.callout.monospaced())
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    footnote("이 앱이 보내기 시작했는데 스펙에는 아직 이름이 없는 값이에요. 값은 위 카드에 키 원문 그대로 나옵니다. \(spec.appName ?? spec.appId) 리포의 docs/usage-spec.json에 라벨을 적고 scripts/sync-stats-specs.sh를 돌리면 사라져요.")
+                }
+            }
+        }
+    }
+
+    private func footnote(_ text: String) -> some View {
+        Text(text)
+            .font(.caption2)
+            .foregroundStyle(.tertiary)
+            .fixedSize(horizontal: false, vertical: true)
     }
 
     private func usageNotice(_ text: String) -> some View {
@@ -555,80 +282,6 @@ struct StatisticsDashboard: View {
     private func deltaTint(_ value: Int) -> Color {
         if value == 0 { return .secondary }
         return value > 0 ? .green : .red
-    }
-
-    // MARK: - 안정성 (크래시 · 진단)
-
-    @ViewBuilder
-    private var crashCard: some View {
-        let summary = store.crashSummary(for: scope)
-        Card(title: "안정성 (크래시 · 진단)", systemImage: "exclamationmark.triangle") {
-            if summary.isEmpty {
-                emptyNote("올라온 진단이 없습니다. MetricKit은 크래시를 하루 한 번꼴로 묶어서 보내므로 방금 난 크래시는 바로 보이지 않습니다.")
-            } else {
-                ViewThatFits(in: .horizontal) {
-                    HStack(alignment: .top, spacing: 16) { crashCounts(summary) }
-                    VStack(alignment: .leading, spacing: 12) { crashCounts(summary) }
-                }
-
-                if !summary.byKind.isEmpty {
-                    FlowLayout(spacing: 6, lineSpacing: 5) {
-                        ForEach(summary.byKind, id: \.kind) { entry in
-                            Text("\(entry.label) \(entry.count)")
-                                .font(.caption2)
-                                .padding(.horizontal, 7)
-                                .padding(.vertical, 3)
-                                .background(Color.secondary.opacity(0.12), in: Capsule())
-                        }
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                }
-
-                if summary.byVersion.count > 1 {
-                    Divider()
-                    Text("버전별 진단 건수")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    distributionRows(summary.byVersion)
-                }
-
-                Divider()
-                HStack {
-                    Text("최근 진단")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    Spacer()
-                    NavigationLink(value: FeedbackStore.CrashRoute(project: scope)) {
-                        Label("전부 모아보기", systemImage: "list.bullet.rectangle.portrait")
-                            .font(.caption)
-                    }
-                }
-                VStack(spacing: 0) {
-                    ForEach(Array(summary.recent.prefix(5).enumerated()), id: \.element.id) { index, report in
-                        CrashRow(report: report)
-                        if index < min(summary.recent.count, 5) - 1 { Divider() }
-                    }
-                }
-                Text("최근 5건입니다. 나머지와 종류별 모아보기는 위의 \"전부 모아보기\"에서 볼 수 있어요. MetricKit이 보내는 익명 진단이라 콜스택·앱 버전·OS만 담깁니다.")
-                    .font(.caption2)
-                    .foregroundStyle(.tertiary)
-            }
-        }
-    }
-
-    @ViewBuilder
-    private func crashCounts(_ summary: FeedbackStore.CrashSummary) -> some View {
-        ComparisonRow(title: "최근 7일",
-                      recent: "\(summary.last7Days)건",
-                      previous: "지난주 \(summary.previous7Days)건",
-                      delta: signed(summary.delta),
-                      // More crashes is the bad direction here, unlike usage.
-                      tint: summary.delta > 0 ? .red : (summary.delta < 0 ? .green : .secondary))
-        ComparisonRow(title: "전체",
-                      recent: "\(summary.total)건",
-                      previous: summary.lastAt.map { "마지막 \(AppFormat.relative($0))" } ?? "—",
-                      delta: nil,
-                      tint: .secondary)
     }
 
     // MARK: - 기간별 추이
@@ -708,8 +361,8 @@ struct StatisticsDashboard: View {
                             // The name wraps instead of truncating: the slice
                             // after the colon is the interesting half, so
                             // cutting the middle loses the answer.
-                            Text(event.name)
-                                .font(.callout.monospaced())
+                            Text(spec?.label(forEvent: event.name) ?? event.name)
+                                .font(.callout)
                                 .fixedSize(horizontal: false, vertical: true)
                             HStack(spacing: 8) {
                                 Text("\(event.count)건")
@@ -737,6 +390,89 @@ struct StatisticsDashboard: View {
         }
     }
 
+    /// The events themselves, one line each. "최근 7일 사용 50건" is a number you
+    /// cannot check anywhere else: the card above counts them by name, the
+    /// chart draws them by day, and neither lets you look at the 50.
+    private var eventLogCard: some View {
+        let all = store.events(for: scope).sorted { $0.occurredAt > $1.occurredAt }
+        let shown = Array(all.prefix(eventLogLimit))
+
+        return Card(title: "사용 내역", systemImage: "clock.arrow.circlepath") {
+            if all.isEmpty {
+                emptyNote("아직 기록된 이벤트가 없습니다.")
+            } else {
+                Text("최근 7일 \(usage.events7)건 · 전체 \(all.count)건")
+                    .font(.callout.monospacedDigit())
+                    .foregroundStyle(.secondary)
+
+                VStack(spacing: 0) {
+                    ForEach(Array(shown.enumerated()), id: \.element.id) { index, event in
+                        eventLogRow(event)
+                        if index < shown.count - 1 { Divider() }
+                    }
+                }
+
+                if all.count > shown.count {
+                    Button {
+                        eventLogLimit += 50
+                    } label: {
+                        Label("더 보기 (남은 \(all.count - shown.count)건)", systemImage: "chevron.down")
+                            .font(.callout)
+                    }
+                    .buttonStyle(.borderless)
+                } else if eventLogLimit > 20 {
+                    Button {
+                        eventLogLimit = 20
+                    } label: {
+                        Label("접기", systemImage: "chevron.up")
+                            .font(.callout)
+                    }
+                    .buttonStyle(.borderless)
+                }
+
+                Text("발생 시각(occurredAt) 기준 최신순입니다. 설치 ID는 앱이 보낸 익명 식별자의 앞부분이라, 같은 값이면 같은 기기입니다.")
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+            }
+        }
+    }
+
+    private func eventLogRow(_ event: UsageEvent) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Text(spec?.label(forEvent: event.name) ?? event.name)
+                    .font(.callout)
+                    .fixedSize(horizontal: false, vertical: true)
+                Spacer(minLength: 4)
+                Text(AppFormat.dateTime(event.occurredAt))
+                    .font(.caption.monospacedDigit())
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+            HStack(spacing: 6) {
+                if scope == nil {
+                    Text(store.displayName(for: event.projectKey))
+                        .font(.caption2)
+                        .padding(.horizontal, 6).padding(.vertical, 2)
+                        .background(Color.secondary.opacity(0.12), in: Capsule())
+                }
+                Text("설치 \(Self.shortInstall(event.installID)) · v\(event.appVersion) · \(event.platform)")
+                    .font(.caption2.monospacedDigit())
+                    .foregroundStyle(.tertiary)
+                    .lineLimit(1)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.vertical, 6)
+    }
+
+    /// Enough of the anonymous install id to tell installs apart, not so much
+    /// that it takes the row.
+    private static func shortInstall(_ id: String?) -> String {
+        guard let id, !id.isEmpty else { return "—" }
+        return String(id.prefix(8))
+    }
+
     private var metricsCard: some View {
         let metrics = store.metricAverages(for: scope)
         return Card(title: "설치당 평균 지표", systemImage: "number") {
@@ -746,8 +482,8 @@ struct StatisticsDashboard: View {
                 VStack(spacing: 0) {
                     ForEach(Array(metrics.enumerated()), id: \.element.id) { index, metric in
                         HStack(alignment: .firstTextBaseline, spacing: 8) {
-                            Text(metric.key)
-                                .font(.callout.monospaced())
+                            Text(spec?.label(forMetric: metric.key) ?? metric.key)
+                                .font(.callout)
                                 .fixedSize(horizontal: false, vertical: true)
                             Spacer(minLength: 4)
                             Text(Self.format(metric.average))
@@ -777,8 +513,8 @@ struct StatisticsDashboard: View {
                     ForEach(shares) { share in
                         VStack(alignment: .leading, spacing: 3) {
                             HStack(alignment: .firstTextBaseline) {
-                                Text(share.key)
-                                    .font(.callout.monospaced())
+                                Text(spec?.label(forMetric: share.key) ?? share.key)
+                                    .font(.callout)
                                     .fixedSize(horizontal: false, vertical: true)
                                 Spacer(minLength: 8)
                                 Text("\(Int((share.ratio * 100).rounded()))% (\(share.count))")
@@ -848,30 +584,6 @@ struct StatisticsDashboard: View {
     }
 
     // MARK: - 피드백
-
-    /// Straight from the numbers into the feedback they came from.
-    private var feedbackLink: some View {
-        NavigationLink(value: FeedbackStore.ListRoute(project: scope)) {
-            HStack {
-                Label("피드백 목록 보기", systemImage: "list.bullet")
-                    .font(.callout.weight(.medium))
-                Spacer()
-                if scopedUnread > 0 {
-                    UnreadBadge(count: scopedUnread)
-                }
-                Image(systemName: "chevron.right")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.tertiary)
-            }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 11)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(.background.secondary, in: RoundedRectangle(cornerRadius: 12))
-            .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(Color.secondary.opacity(0.15)))
-            .contentShape(RoundedRectangle(cornerRadius: 12))
-        }
-        .buttonStyle(.plain)
-    }
 
     private var scopedUnread: Int {
         let items = scope.map { key in store.allFeedback.filter { $0.projectKey == key } } ?? store.allFeedback
@@ -1030,6 +742,74 @@ private struct ComparisonRow: View {
         }
         .lineLimit(1)
         .minimumScaleFactor(0.8)
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+/// 스펙이 만든 숫자 하나.
+private struct SpecTile: View {
+    let label: String
+    let value: String
+    var hint: String?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text(label)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .lineLimit(2)
+                .fixedSize(horizontal: false, vertical: true)
+            Text(value)
+                .font(.system(.title3, design: .rounded).weight(.semibold))
+                .monospacedDigit()
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+            if let hint {
+                Text(hint)
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(10)
+        .background(.background.secondary, in: RoundedRectangle(cornerRadius: 10))
+    }
+}
+
+/// 스펙이 만든 막대 한 줄 — 분포·비중·무리 크기가 전부 이 모양이다.
+private struct SpecBar: View {
+    let label: String
+    let value: String
+    let ratio: Double
+    var hint: String?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 3) {
+            HStack(alignment: .firstTextBaseline) {
+                Text(label)
+                    .font(.callout)
+                    .fixedSize(horizontal: false, vertical: true)
+                Spacer(minLength: 8)
+                Text(value)
+                    .font(.callout.monospacedDigit().weight(.semibold))
+            }
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    Capsule().fill(Color.secondary.opacity(0.12))
+                    Capsule()
+                        .fill(Color.accentColor)
+                        .frame(width: max(2, geo.size.width * min(1, max(0, ratio))))
+                }
+            }
+            .frame(height: 6)
+            if let hint {
+                Text(hint)
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 }

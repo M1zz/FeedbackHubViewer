@@ -27,11 +27,14 @@ struct FeedbackDetailView: View {
             VStack(alignment: .leading, spacing: 20) {
                 header
 
+                bigHandledButton
+
                 Divider()
 
                 if !feedback.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                     section(title: "내용") {
                         Text(feedback.text)
+                            .font(.title3)
                             .textSelection(.enabled)
                             .frame(maxWidth: .infinity, alignment: .leading)
                     }
@@ -67,18 +70,55 @@ struct FeedbackDetailView: View {
         }
         .navigationTitle("상세")
         // Opening the detail is what counts as having seen the feedback, so the
-        // unread badge for this record clears here on both platforms.
+        // unread badge for this record clears here on both platforms. 확인함 is
+        // a separate, deliberate act — see the toolbar button below.
         .task(id: feedback.id) { store.markRead(feedback) }
-        #if os(iOS)
-        .navigationBarTitleDisplayMode(.inline)
         .toolbar {
+            ToolbarItem(placement: .primaryAction) { handledButton }
+            #if os(iOS)
             ToolbarItem(placement: .topBarTrailing) {
                 ShareLink(item: shareText) {
                     Label("공유", systemImage: "square.and.arrow.up")
                 }
             }
+            #endif
         }
+        #if os(iOS)
+        .navigationBarTitleDisplayMode(.inline)
         #endif
+    }
+
+    /// The same action as the toolbar button, spelled out full width. This is
+    /// the one thing you do after reading a piece of feedback, so it should not
+    /// be a 20pt glyph in the corner.
+    private var bigHandledButton: some View {
+        let handled = store.isHandled(feedback)
+        return Button {
+            store.setHandled(feedback, !handled)
+        } label: {
+            Label(handled ? "확인 표시 해제하고 목록에 다시 보이기"
+                          : "확인함으로 표시하고 목록에서 감추기",
+                  systemImage: handled ? "arrow.uturn.backward" : "checkmark.circle.fill")
+                .font(.headline)
+                .padding(.vertical, 10)
+                .frame(maxWidth: .infinity)
+        }
+        .buttonStyle(.borderedProminent)
+        .tint(handled ? .gray : .green)
+    }
+
+    /// Marking is what takes the feedback out of the list; it is stored on this
+    /// device, so it survives relaunches and never touches the hub's records.
+    private var handledButton: some View {
+        let handled = store.isHandled(feedback)
+        return Button {
+            store.setHandled(feedback, !handled)
+        } label: {
+            Label(handled ? "확인 해제" : "확인함",
+                  systemImage: handled ? "checkmark.circle.fill" : "checkmark.circle")
+        }
+        .help(handled ? "확인 표시를 지우고 목록에 다시 보이게 합니다"
+                      : "확인한 피드백으로 표시하고 목록에서 감춥니다")
     }
 
     /// Plain-text rendering of the record, for sharing/copying from a phone.
@@ -97,12 +137,19 @@ struct FeedbackDetailView: View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 8) {
                 Label(projectLabel, systemImage: "square.grid.2x2")
-                    .font(.headline)
+                    .font(.title3.weight(.semibold))
                 if let type = feedback.feedbackType, !type.isEmpty {
                     Text(type)
-                        .font(.caption)
-                        .padding(.horizontal, 8).padding(.vertical, 3)
+                        .font(.subheadline)
+                        .padding(.horizontal, 10).padding(.vertical, 4)
                         .background(Color.teal.opacity(0.15), in: Capsule())
+                }
+                if store.isHandled(feedback) {
+                    Label("확인함", systemImage: "checkmark.circle.fill")
+                        .font(.subheadline.weight(.semibold))
+                        .padding(.horizontal, 10).padding(.vertical, 4)
+                        .background(Color.green.opacity(0.15), in: Capsule())
+                        .foregroundStyle(.green)
                 }
             }
             if let rating = feedback.rating {
@@ -114,7 +161,7 @@ struct FeedbackDetailView: View {
                 }
             }
             Text(feedback.createdAtDisplay)
-                .font(.subheadline)
+                .font(.body)
                 .foregroundStyle(.secondary)
         }
     }
@@ -134,12 +181,12 @@ struct FeedbackDetailView: View {
             ForEach(items, id: \.0) { label, value in
                 VStack(alignment: .leading, spacing: 2) {
                     Text(label)
-                        .font(.caption)
+                        .font(.subheadline)
                         .foregroundStyle(.secondary)
                     // Record IDs and device names are long; wrapping keeps the
                     // whole value readable and copyable.
                     Text(value)
-                        .font(.callout)
+                        .font(.body)
                         .textSelection(.enabled)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -151,7 +198,7 @@ struct FeedbackDetailView: View {
     private func section<Content: View>(title: String, @ViewBuilder content: () -> Content) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             Text(title)
-                .font(.headline)
+                .font(.title3.weight(.semibold))
             content()
         }
     }

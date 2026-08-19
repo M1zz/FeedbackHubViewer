@@ -28,8 +28,9 @@ struct ContentView: View {
     }
 }
 
-/// Three-column layout: filters + stats on the left, the feedback list in the
-/// middle, the selected item's detail on the right.
+/// Three columns, one per level of the hierarchy: which project on the left,
+/// that project's 피드백 · 통계 · 진단 in the middle, and the selected feedback
+/// on the right.
 struct SplitRootView: View {
     @EnvironmentObject private var store: FeedbackStore
     @State private var selection: Feedback.ID?
@@ -38,45 +39,29 @@ struct SplitRootView: View {
         NavigationSplitView {
             SidebarView()
                 .navigationSplitViewColumnWidth(min: 240, ideal: 280, max: 340)
-                .navigationTitle("Feedback Hub")
+                .navigationTitle("프로젝트")
         } content: {
             contentColumn
         } detail: {
             detailColumn
         }
+        // The project screen sits beside the project list here rather than on
+        // top of it, so cross-screen links re-scope the column instead of
+        // pushing (see `FeedbackStore.open(project:section:)`).
+        .task { store.usesStackNavigation = false }
         #if os(macOS)
         .toolbar { macToolbarContent }
         #endif
     }
 
-    /// 개요 / 통계 are the two panes; the feedback list is pushed on top of
-    /// them (from a project card, or from the statistics dashboard).
+    /// The selected project's screen. Which project it is comes from the
+    /// sidebar; which of its three sections is showing comes from the store.
     private var contentColumn: some View {
-        NavigationStack(path: $store.listPath) {
-            Group {
-                switch store.viewMode {
-                case .overview:
-                    ProjectOverviewView()
-                case .stats:
-                    StatisticsView()
-                }
-            }
-            .navigationDestination(for: FeedbackStore.ListRoute.self) { route in
-                FeedbackListView(selection: $selection)
-                    .task { store.selectedProject = route.project }
-            }
+        NavigationStack(path: $store.path) {
+            ProjectSectionView(project: store.selectedProject, selection: $selection)
             #if os(iOS)
-            // iPad pushes inside this column the way the phone pushes inside a
-            // tab; the Mac shows the feedback itself in the detail column.
-            .navigationDestination(for: FeedbackStore.StatsRoute.self) { route in
-                StatisticsDashboard(project: route.project)
-                    .task { store.selectedProject = route.project }
-            }
-            #endif
-            .navigationDestination(for: FeedbackStore.CrashRoute.self) { route in
-                CrashListView(project: route.project)
-            }
-            #if os(iOS)
+            // iPad pushes the detail inside this column when the third column
+            // is collapsed; the Mac always has the detail column.
             .navigationDestination(for: Feedback.self) { feedback in
                 FeedbackDetailView(feedback: feedback,
                                    projectLabel: store.displayName(for: feedback.projectKey))
@@ -86,7 +71,7 @@ struct SplitRootView: View {
             .toolbar { padToolbarContent }
             #endif
         }
-        .navigationSplitViewColumnWidth(min: 320, ideal: 460, max: 720)
+        .navigationSplitViewColumnWidth(min: 340, ideal: 480, max: 760)
     }
 
     @ViewBuilder
@@ -101,19 +86,6 @@ struct SplitRootView: View {
                 description: Text("목록에서 항목을 선택하면 전체 내용이 여기에 표시됩니다.")
             )
         }
-    }
-
-    /// The view-mode switch, shared by both platforms' toolbars.
-    private var modePicker: some View {
-        Picker("보기", selection: $store.viewMode) {
-            ForEach(FeedbackStore.ViewMode.allCases) { mode in
-                Label(mode.rawValue, systemImage: mode.systemImage).tag(mode)
-            }
-        }
-        #if os(iOS)
-        .pickerStyle(.segmented)
-        #endif
-        .help("프로젝트 개요·통계·목록 전환")
     }
 
     private var refreshButton: some View {
@@ -143,13 +115,17 @@ struct SplitRootView: View {
             }
         }
 
-        ToolbarItem(placement: .principal) { modePicker }
-
         ToolbarItem(placement: .primaryAction) {
             IdentityMenu()
         }
 
         ToolbarItemGroup(placement: .primaryAction) {
+            Toggle(isOn: $store.notificationsEnabled) {
+                Label("알림", systemImage: "bell.badge")
+            }
+            .help("새 피드백·진단이 들어오면 알리고, 앱 아이콘에 안 읽은 수를 표시합니다")
+            .toggleStyle(.button)
+
             Toggle(isOn: $store.autoRefresh) {
                 Label("자동 갱신", systemImage: "arrow.triangle.2.circlepath")
             }
@@ -162,14 +138,6 @@ struct SplitRootView: View {
     #else
     @ToolbarContentBuilder
     private var padToolbarContent: some ToolbarContent {
-        // Leading, not principal: a principal item makes iOS draw the
-        // title/subtitle twice next to the large title.
-        ToolbarItem(placement: .topBarLeading) {
-            // A fixed width: inside a navigation bar the segmented control
-            // otherwise collapses to a few unreadable pixels.
-            modePicker.frame(width: 176)
-        }
-
         ToolbarItem(placement: .topBarTrailing) { refreshButton }
 
         ToolbarItem(placement: .topBarTrailing) {
@@ -221,6 +189,12 @@ struct IdentityMenu: View {
                 Text("CloudKit Console → Security Roles의 admin 역할에 이 값을 등록하고 피드백 레코드 타입에 read 권한을 준 뒤 Production으로 배포하세요.")
             } else {
                 Text("iCloud 계정을 확인할 수 없습니다. 이 \(Platform.deviceNoun)에 iCloud 로그인이 되어 있는지 확인하세요.")
+            }
+
+            if store.notificationsEnabled && !store.notificationsAuthorized {
+                Section("알림") {
+                    Text("시스템 설정에서 이 앱의 알림을 허용해야 알림이 표시됩니다.")
+                }
             }
 
             // The saved hub is what makes a launch instant; this is the way

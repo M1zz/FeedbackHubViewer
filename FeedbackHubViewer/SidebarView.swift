@@ -2,117 +2,66 @@
 //  SidebarView.swift
 //  FeedbackHubViewer
 //
-//  The left column: summary statistics and filters (version, minimum rating).
+//  The left column: the project list, and nothing else. Projects are the top
+//  level of the app — 피드백 · 통계 · 진단 all live *inside* the project that is
+//  picked here (see `ProjectSectionView`). Summary numbers, filters and
+//  settings used to share this list; they now sit on the screen they belong to.
 //
 
 import SwiftUI
 
 struct SidebarView: View {
     @EnvironmentObject private var store: FeedbackStore
-    #if os(iOS)
-    // On iOS this view is presented as a sheet, so picking a project should
-    // close it and reveal the filtered content underneath.
-    @Environment(\.dismiss) private var dismiss
-    #endif
-
-    /// Close the sheet on iOS; a no-op in the macOS sidebar.
-    private func dismissIfPresented() {
-        #if os(iOS)
-        dismiss()
-        #endif
-    }
 
     var body: some View {
-        List {
-            Section(store.selectedProject == nil ? "요약 (전체)" : "요약 · \(store.displayName(for: store.selectedProject!))") {
-                let stats = store.stats
-                HStack {
-                    Label("CloudKit 환경", systemImage: "cloud")
-                    Spacer()
-                    EnvironmentBadge()
-                }
-                .font(.callout)
-                StatRow(title: store.selectedProject == nil ? "전체 피드백" : "이 프로젝트",
-                        value: "\(stats.total)건", systemImage: "tray.full")
-                StatRow(title: "프로젝트 수", value: "\(store.availableProjects.count)개", systemImage: "square.grid.2x2")
-                if let avg = stats.averageRating {
-                    StatRow(title: "평균 별점",
-                            value: String(format: "%.2f / 5", avg),
-                            systemImage: "star.fill")
-                }
-                StatRow(title: "최근 7일", value: "\(stats.last7Days)건", systemImage: "clock")
-                HStack {
-                    Label("안 읽음", systemImage: "envelope.badge")
-                    Spacer()
-                    if store.scopedUnreadCount > 0 {
-                        UnreadBadge(count: store.scopedUnreadCount)
-                    } else {
-                        Text("0건").foregroundStyle(.secondary).monospacedDigit()
-                    }
-                }
-                .font(.callout)
-                if store.scopedUnreadCount > 0 {
-                    Button {
-                        store.markAllRead(project: store.selectedProject)
-                    } label: {
-                        Label(store.selectedProject == nil ? "모두 읽음으로 표시" : "이 프로젝트 모두 읽음으로 표시",
-                              systemImage: "envelope.open")
-                            .font(.callout)
-                    }
-                }
-                if let type = store.resolvedRecordType {
-                    StatRow(title: "레코드 타입", value: type, systemImage: "square.stack.3d.up")
-                }
-            }
+        // One pass for the whole list: each row's numbers and its sparkline
+        // come out of the same map the ordering uses.
+        let traffic = store.trafficByProject
 
-            Section {
-                Toggle(isOn: $store.notificationsEnabled) {
-                    Label("새 피드백·진단 알림", systemImage: "bell.badge")
-                        .font(.callout)
+        return List {
+            Section("프로젝트") {
+                ProjectRow(name: "전체 프로젝트",
+                           systemImage: "square.grid.3x3",
+                           tint: .purple,
+                           count: store.allFeedback.count,
+                           unread: store.unreadCount,
+                           crashes7: store.crashSummary(for: nil).last7Days,
+                           traffic: store.overallTraffic,
+                           isSelected: store.selectedProject == nil) {
+                    store.selectedProject = nil
                 }
-                if store.notificationsEnabled && !store.notificationsAuthorized {
-                    Label("시스템 설정에서 이 앱의 알림을 허용해야 알림이 표시됩니다.",
-                          systemImage: "exclamationmark.triangle")
-                        .font(.caption)
-                        .foregroundStyle(.orange)
-                }
-            } header: {
-                Text("알림")
-            } footer: {
-                Text("새로고침(자동 갱신 포함)에서 새 레코드를 발견하면 알림을 보내고, 앱 아이콘 배지에 안 읽은 피드백 수를 표시합니다. 앱이 떠 있는 동안 동작합니다.")
-                    .font(.caption)
-            }
 
-            if !store.projectCounts.isEmpty {
-                Section("프로젝트") {
-                    ProjectRow(name: "전체 프로젝트",
-                               count: store.allFeedback.count,
-                               isSelected: store.selectedProject == nil) {
-                        store.selectedProject = nil
-                        dismissIfPresented()
+                ForEach(store.projectCounts, id: \.key) { entry in
+                    ProjectRow(name: store.displayName(for: entry.key),
+                               systemImage: entry.key == Feedback.unclassifiedProject
+                                   ? "questionmark.folder" : "app.dashed",
+                               tint: entry.key == Feedback.unclassifiedProject ? .secondary : .accentColor,
+                               count: entry.count,
+                               unread: store.unreadCount(for: entry.key),
+                               crashes7: store.crashSummary(for: entry.key).last7Days,
+                               traffic: traffic[entry.key] ?? .none,
+                               isSelected: store.selectedProject == entry.key) {
+                        store.selectedProject = entry.key
                     }
-                    ForEach(store.projectCounts, id: \.key) { entry in
-                        ProjectRow(name: store.displayName(for: entry.key),
-                                   count: entry.count,
-                                   isSelected: store.selectedProject == entry.key) {
-                            store.selectedProject = (store.selectedProject == entry.key) ? nil : entry.key
-                            dismissIfPresented()
+                    .contextMenu {
+                        Button {
+                            store.markAllRead(project: entry.key)
+                        } label: {
+                            Label("모두 읽음으로 표시", systemImage: "envelope.open")
                         }
-                        .contextMenu {
-                            Button {
-                                store.hideProject(entry.key)
-                            } label: {
-                                Label("이 프로젝트 숨기기", systemImage: "eye.slash")
-                            }
+                        Button {
+                            store.hideProject(entry.key)
+                        } label: {
+                            Label("이 프로젝트 숨기기", systemImage: "eye.slash")
                         }
-                        .swipeActions(edge: .trailing) {
-                            Button {
-                                store.hideProject(entry.key)
-                            } label: {
-                                Label("숨기기", systemImage: "eye.slash")
-                            }
-                            .tint(.gray)
+                    }
+                    .swipeActions(edge: .trailing) {
+                        Button {
+                            store.hideProject(entry.key)
+                        } label: {
+                            Label("숨기기", systemImage: "eye.slash")
                         }
+                        .tint(.gray)
                     }
                 }
             }
@@ -153,52 +102,20 @@ struct SidebarView: View {
                 }
             }
 
-            if store.stats.averageRating != nil {
-                Section("별점 분포") {
-                    RatingDistributionView(counts: store.stats.ratingCounts,
-                                           total: store.stats.total)
+            Section {
+                HStack {
+                    Label("CloudKit 환경", systemImage: "cloud")
+                    Spacer()
+                    EnvironmentBadge()
                 }
-            }
-
-            Section("필터") {
-                Picker("앱 버전", selection: $store.selectedVersion) {
-                    Text("전체 버전").tag(String?.none)
-                    ForEach(store.availableVersions, id: \.self) { version in
-                        Text("v\(version)").tag(String?.some(version))
+                .font(.callout)
+                if let type = store.resolvedRecordType {
+                    HStack {
+                        Label("레코드 타입", systemImage: "square.stack.3d.up")
+                        Spacer()
+                        Text(type).foregroundStyle(.secondary)
                     }
-                }
-
-                Picker("최소 별점", selection: $store.minimumRating) {
-                    Text("전체").tag(0)
-                    ForEach((1...5).reversed(), id: \.self) { r in
-                        Text("\(r)점 이상").tag(r)
-                    }
-                }
-
-                if store.selectedProject != nil || store.selectedVersion != nil || store.minimumRating > 0 || !store.searchText.isEmpty {
-                    Button {
-                        store.selectedProject = nil
-                        store.selectedVersion = nil
-                        store.minimumRating = 0
-                        store.searchText = ""
-                    } label: {
-                        Label("필터 초기화", systemImage: "xmark.circle")
-                    }
-                }
-            }
-
-            if !store.stats.versionCounts.isEmpty {
-                Section("버전별 건수") {
-                    ForEach(store.stats.versionCounts.prefix(12), id: \.version) { entry in
-                        HStack {
-                            Text("v\(entry.version)")
-                            Spacer()
-                            Text("\(entry.count)")
-                                .foregroundStyle(.secondary)
-                                .monospacedDigit()
-                        }
-                        .font(.callout)
-                    }
+                    .font(.callout)
                 }
             }
         }
@@ -206,88 +123,76 @@ struct SidebarView: View {
     }
 }
 
-/// A selectable project row in the sidebar: name on the left, feedback count
-/// on the right, a checkmark when it is the active filter.
+/// A selectable project row. Two lines, plain words: a row of coloured badges
+/// says "3" twice and leaves you to guess which 3 is which.
 private struct ProjectRow: View {
     let name: String
+    let systemImage: String
+    let tint: Color
     let count: Int
+    let unread: Int
+    let crashes7: Int
+    /// This week's usage — what the list is ordered by, and the 14-day shape
+    /// behind it.
+    var traffic: FeedbackStore.Traffic = .none
     let isSelected: Bool
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 8) {
-                Image(systemName: isSelected ? "largecircle.fill.circle" : "circle")
-                    .foregroundStyle(isSelected ? Color.accentColor : Color.secondary)
-                    .font(.system(size: 12))
-                Text(name)
-                    .lineLimit(2)
-                    .fixedSize(horizontal: false, vertical: true)
-                Spacer()
-                Text("\(count)")
-                    .foregroundStyle(.secondary)
-                    .monospacedDigit()
+            HStack(spacing: 10) {
+                Image(systemName: systemImage)
+                    .font(.body)
+                    .foregroundStyle(isSelected ? Color.accentColor : tint)
+                    .frame(width: 22)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(name)
+                        .font(.body)
+                        .fontWeight(isSelected ? .semibold : .regular)
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
+                    // 목록이 7일 사용량 순이라 그 숫자는 늘 보이고, 손봐야 할 것
+                    // (안 읽음·진단)은 그 옆에 빨갛게 붙는다.
+                    HStack(spacing: 6) {
+                        if traffic.events7 > 0 {
+                            Text("7일 사용 \(traffic.events7)건")
+                                .foregroundStyle(.secondary)
+                        }
+                        if unread > 0 {
+                            Text("안 읽음 \(unread)")
+                                .foregroundStyle(.red)
+                        }
+                        if crashes7 > 0 {
+                            Text("진단 \(crashes7)")
+                                .foregroundStyle(.red)
+                        }
+                    }
+                    .font(.subheadline.monospacedDigit())
+                    .lineLimit(1)
+                }
+
+                Spacer(minLength: 4)
+
+                VStack(alignment: .trailing, spacing: 3) {
+                    Text("\(count)건")
+                        .font(.body.monospacedDigit())
+                        .foregroundStyle(.secondary)
+                    if traffic.totalEvents > 0 {
+                        // The same 14-day shape the phone cards draw: how much
+                        // this app is actually being used, at a glance.
+                        Sparkline(points: traffic.sparkline)
+                            .frame(width: 58, height: 18)
+                    }
+                }
             }
-            .font(.callout)
+            .padding(.vertical, 4)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .listRowBackground(isSelected ? Color.accentColor.opacity(0.12) : Color.clear)
+        .accessibilityAddTraits(isSelected ? [.isSelected] : [])
+        .accessibilityLabel("\(name), 피드백 \(count)건, 안 읽음 \(unread)건")
     }
-}
 
-private struct StatRow: View {
-    let title: String
-    let value: String
-    let systemImage: String
-
-    var body: some View {
-        HStack {
-            Label(title, systemImage: systemImage)
-            Spacer()
-            Text(value)
-                .foregroundStyle(.secondary)
-                .monospacedDigit()
-        }
-        .font(.callout)
-    }
-}
-
-private struct RatingDistributionView: View {
-    let counts: [(rating: Int, count: Int)]
-    let total: Int
-
-    private var maxCount: Int { max(counts.map(\.count).max() ?? 1, 1) }
-
-    var body: some View {
-        VStack(spacing: 6) {
-            ForEach(counts, id: \.rating) { entry in
-                HStack(spacing: 8) {
-                    HStack(spacing: 1) {
-                        Text("\(entry.rating)")
-                            .font(.caption.monospacedDigit())
-                        Image(systemName: "star.fill")
-                            .font(.system(size: 8))
-                            .foregroundStyle(.yellow)
-                    }
-                    .frame(width: 24, alignment: .leading)
-
-                    GeometryReader { geo in
-                        ZStack(alignment: .leading) {
-                            Capsule().fill(Color.secondary.opacity(0.12))
-                            Capsule()
-                                .fill(Color.accentColor)
-                                .frame(width: max(2, geo.size.width * CGFloat(entry.count) / CGFloat(maxCount)))
-                        }
-                    }
-                    .frame(height: 10)
-
-                    Text("\(entry.count)")
-                        .font(.caption.monospacedDigit())
-                        .foregroundStyle(.secondary)
-                        .frame(width: 28, alignment: .trailing)
-                }
-            }
-        }
-        .padding(.vertical, 4)
-    }
 }
