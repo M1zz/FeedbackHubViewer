@@ -31,13 +31,12 @@ struct FeedbackDetailView: View {
             VStack(alignment: .leading, spacing: 20) {
                 header
 
-                Divider()
-
                 triageSection
 
                 if !feedback.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                     section(title: "내용") {
                         Text(feedback.text)
+                            .font(.title3)
                             .textSelection(.enabled)
                             .frame(maxWidth: .infinity, alignment: .leading)
                     }
@@ -82,16 +81,34 @@ struct FeedbackDetailView: View {
             guard draft != store.note(for: feedback) else { return }
             store.setNote(draft, for: feedback)
         }
-        #if os(iOS)
-        .navigationBarTitleDisplayMode(.inline)
         .toolbar {
+            ToolbarItem(placement: .primaryAction) { triageButton }
+            #if os(iOS)
             ToolbarItem(placement: .topBarTrailing) {
                 ShareLink(item: shareText) {
                     Label("공유", systemImage: "square.and.arrow.up")
                 }
             }
+            #endif
         }
+        #if os(iOS)
+        .navigationBarTitleDisplayMode(.inline)
         #endif
+    }
+
+    /// The quick way to decide without scrolling back to the 처리 칸. 반영 안 함
+    /// stays in that section — a toolbar has room for the common case only. The
+    /// decision is stored on this device and never touches the hub's records.
+    private var triageButton: some View {
+        let status = store.status(of: feedback)
+        return Button {
+            store.setStatus(status.isHandled ? .pending : .applied, for: feedback)
+        } label: {
+            Label(status.isHandled ? FeedbackStatus.pending.label : FeedbackStatus.applied.label,
+                  systemImage: status.isHandled ? status.systemImage : "circle")
+        }
+        .help(status.isHandled ? "확인 필요로 되돌리고 목록에 다시 보이게 합니다"
+                               : "반영함으로 표시하고 목록에서 감춥니다")
     }
 
     /// Plain-text rendering of the record, for sharing/copying from a phone.
@@ -177,11 +194,11 @@ struct FeedbackDetailView: View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 8) {
                 Label(projectLabel, systemImage: "square.grid.2x2")
-                    .font(.headline)
+                    .font(.title3.weight(.semibold))
                 if let type = feedback.feedbackType, !type.isEmpty {
                     Text(type)
-                        .font(.caption)
-                        .padding(.horizontal, 8).padding(.vertical, 3)
+                        .font(.subheadline)
+                        .padding(.horizontal, 10).padding(.vertical, 4)
                         .background(Color.teal.opacity(0.15), in: Capsule())
                 }
                 StatusChip(status: store.status(of: feedback))
@@ -195,7 +212,7 @@ struct FeedbackDetailView: View {
                 }
             }
             Text(feedback.createdAtDisplay)
-                .font(.subheadline)
+                .font(.body)
                 .foregroundStyle(.secondary)
         }
     }
@@ -215,12 +232,12 @@ struct FeedbackDetailView: View {
             ForEach(items, id: \.0) { label, value in
                 VStack(alignment: .leading, spacing: 2) {
                     Text(label)
-                        .font(.caption)
+                        .font(.subheadline)
                         .foregroundStyle(.secondary)
                     // Record IDs and device names are long; wrapping keeps the
                     // whole value readable and copyable.
                     Text(value)
-                        .font(.callout)
+                        .font(.body)
                         .textSelection(.enabled)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -232,7 +249,7 @@ struct FeedbackDetailView: View {
     private func section<Content: View>(title: String, @ViewBuilder content: () -> Content) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             Text(title)
-                .font(.headline)
+                .font(.title3.weight(.semibold))
             content()
         }
     }

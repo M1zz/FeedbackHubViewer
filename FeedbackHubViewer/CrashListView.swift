@@ -2,9 +2,10 @@
 //  CrashListView.swift
 //  FeedbackHubViewer
 //
-//  Every diagnostic in one place — what the red ⚠︎ on a statistics row is
-//  about. Reports arrive from MetricKit (see `CrashReport.swift`), so the
-//  timestamps are when the hub received them, not when the crash happened.
+//  The 진단 section of a project screen — every diagnostic the project sent, or
+//  every project's when the scope is 전체. Reports arrive from MetricKit (see
+//  `CrashReport.swift`), so the timestamps are when the hub received them, not
+//  when the crash happened. The title belongs to `ProjectSectionView`.
 //
 
 import SwiftUI
@@ -44,7 +45,9 @@ struct CrashListView: View {
                     if project == nil && store.crashingProjects.count > 1 {
                         Section("프로젝트별") {
                             ForEach(store.crashingProjects, id: \.key) { entry in
-                                NavigationLink(value: FeedbackStore.CrashRoute(project: entry.key)) {
+                                Button {
+                                    store.open(project: entry.key, section: .crashes)
+                                } label: {
                                     HStack {
                                         Text(entry.displayName)
                                             .font(.callout)
@@ -58,27 +61,54 @@ struct CrashListView: View {
                                         Text("\(entry.total)건")
                                             .font(.callout.monospacedDigit())
                                             .foregroundStyle(.secondary)
+                                        Image(systemName: "chevron.right")
+                                            .font(.caption2.weight(.semibold))
+                                            .foregroundStyle(.tertiary)
                                     }
+                                    .contentShape(Rectangle())
                                 }
+                                .buttonStyle(.plain)
                             }
                         }
                     }
 
-                    Section {
-                        ForEach(reports) { report in
-                            CrashRow(report: report, projectLabel: projectLabel(for: report))
+                    // Diagnostics are read by version: "이 버전에서 무엇이
+                    // 깨지고 있나". A flat newest-first list mixes releases
+                    // together and hides that a version stopped crashing.
+                    ForEach(versionGroups(of: reports), id: \.version) { group in
+                        Section {
+                            ForEach(group.reports) { report in
+                                CrashRow(report: report,
+                                         projectLabel: projectLabel(for: report),
+                                         showsVersion: false)
+                            }
+                        } header: {
+                            HStack(spacing: 8) {
+                                Text("v\(group.version)")
+                                    .font(.headline)
+                                Spacer(minLength: 4)
+                                if group.last7Days > 0 {
+                                    Text("최근 7일 \(group.last7Days)건")
+                                        .font(.subheadline.weight(.semibold))
+                                        .foregroundStyle(.red)
+                                }
+                                Text("\(group.reports.count)건")
+                                    .font(.subheadline.monospacedDigit())
+                                    .foregroundStyle(.secondary)
+                            }
+                            .textCase(nil)
                         }
-                    } header: {
-                        Text(kind.isEmpty ? "진단 \(reports.count)건" : "\(CrashReport.label(for: kind)) \(reports.count)건")
-                    } footer: {
-                        Text("최신순입니다. 시각은 허브에 도착한 때이고, 콜스택·앱 버전·OS만 담깁니다.")
+                    }
+
+                    Section {
+                        Text("버전별로 묶고, 각 묶음은 최신순입니다. 시각은 허브에 도착한 때이고, 콜스택·앱 버전·OS만 담깁니다.")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
                     }
                 }
                 .hubListStyle()
             }
         }
-        .navigationTitle(title)
-        .hubNavigationSubtitle(subtitle(summary))
         #if os(iOS)
         // On macOS the copy button lives in the header row instead: one more
         // window-toolbar item pushes the stack's back button into the overflow.
@@ -96,18 +126,26 @@ struct CrashListView: View {
         #endif
     }
 
+    /// One section per app version, newest version first. Versions sort
+    /// naturally ("v10" after "v9"), and reports with no version land last.
+    private func versionGroups(of reports: [CrashReport]) -> [(version: String, reports: [CrashReport], last7Days: Int)] {
+        let weekAgo = Date().addingTimeInterval(-7 * 86_400)
+        return Dictionary(grouping: reports, by: \.appVersion)
+            .map { version, items in
+                (version: version,
+                 reports: items.sorted { ($0.receivedAt ?? .distantPast) > ($1.receivedAt ?? .distantPast) },
+                 last7Days: items.filter { ($0.receivedAt ?? .distantPast) >= weekAgo }.count)
+            }
+            .sorted { lhs, rhs in
+                let unknown = "—"
+                if lhs.version == unknown { return false }
+                if rhs.version == unknown { return true }
+                return lhs.version.localizedStandardCompare(rhs.version) == .orderedDescending
+            }
+    }
+
     static func copyText(of reports: [CrashReport]) -> String {
         reports.map(\.copyText).joined(separator: "\n\n———\n\n")
-    }
-
-    private var title: String {
-        guard let project else { return "진단 모아보기" }
-        return store.displayName(for: project)
-    }
-
-    private func subtitle(_ summary: FeedbackStore.CrashSummary) -> String {
-        guard !summary.isEmpty else { return "진단 없음" }
-        return "전체 \(summary.total)건 · 최근 7일 \(summary.last7Days)건"
     }
 
     private func projectLabel(for report: CrashReport) -> String? {
@@ -208,6 +246,8 @@ struct CrashRow: View {
     let report: CrashReport
     /// Shown when the list mixes projects.
     var projectLabel: String? = nil
+    /// Off when the rows are already grouped under a version header.
+    var showsVersion = true
     @State private var showsStack = false
 
     var body: some View {
@@ -216,9 +256,11 @@ struct CrashRow: View {
                 Text(report.kindLabel)
                     .font(.callout.weight(.semibold))
                     .foregroundStyle(report.kind == "crash" ? Color.red : Color.orange)
-                Text("v\(report.appVersion)")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                if showsVersion {
+                    Text("v\(report.appVersion)")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
                 Spacer(minLength: 4)
                 if let receivedAt = report.receivedAt {
                     Text(AppFormat.relative(receivedAt))

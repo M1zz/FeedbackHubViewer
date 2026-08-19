@@ -1,0 +1,146 @@
+{
+  "$comment": [
+    "FeedbackHubViewer가 이 앱의 통계를 '앱 화면과 같은 말'로 그리기 위한 스펙이다.",
+    "원본은 이 파일이고, 뷰어는 scripts/sync-stats-specs.sh 로 복사해 간다.",
+    "지표(metrics 키)나 이벤트를 추가하면 여기 라벨도 같이 적을 것 —",
+    "적지 않으면 뷰어는 키 원문을 보여주고 '스펙에 없는 지표'로 표시한다(사라지지는 않는다).",
+    "경계값(무료 한도 10개 등)은 이 앱의 정책이라 여기 숫자로 적는다. 뷰어 코드는 안 고친다."
+  ],
+  "specVersion": 1,
+  "appId": "com.Ysoup.TokenMemo",
+  "appName": "ClipKeyboard",
+
+  "metricLabels": {
+    "shortcuts": { "label": "단축어 수" },
+    "combos": { "label": "콤보 단축어" },
+    "templates": { "label": "템플릿 단축어" },
+    "images": { "label": "이미지 단축어" },
+    "texts": { "label": "텍스트 단축어" },
+    "favorites": { "label": "즐겨찾기" },
+    "uses": { "label": "앱에서 꺼내 쓴 횟수" },
+    "keyboardUses": { "label": "키보드 입력 횟수" },
+    "timeSavedMin": { "label": "절약한 시간", "unit": "분" },
+    "categories": { "label": "카테고리 수" },
+    "unusedShortcuts": { "label": "한 번도 안 쓴 단축어" },
+    "topUses": { "label": "가장 많이 쓴 단축어의 사용 횟수", "excludeFromAverages": true },
+    "clips": { "label": "클립보드 기록 수" },
+    "flag.keyboardActive": { "label": "키보드를 켠 설치", "excludeFromAverages": true },
+    "flag.syncOn": { "label": "동기화를 켠 설치", "excludeFromAverages": true },
+    "flag.isPro": { "label": "Pro 사용자", "excludeFromAverages": true }
+  },
+  "metricPrefixLabels": {
+    "persona.": "고른 페르소나"
+  },
+
+  "eventLabels": {
+    "app_open": "앱을 연 횟수",
+    "keyboard_active_day": "키보드만 쓴 날",
+    "memo_created": "단축어를 만듦",
+    "keyboard_used": "키보드로 입력함",
+    "bulk_imported": "한꺼번에 가져옴",
+    "onboarding_completed": "처음 안내를 끝냄",
+    "paywall_view": "페이월을 봄",
+    "paywall_cta_tapped": "구매 버튼을 누름",
+    "paywall_purchase": "구매함",
+    "paywall_dismissed": "페이월을 닫음",
+    "purchase_cancelled": "결제를 취소함",
+    "purchase_failed": "결제가 실패함",
+    "trial_started": "체험을 시작함",
+    "offer_code_redeemed": "오퍼 코드를 씀",
+    "pro_nudge_shown": "Pro 권유를 봄",
+    "pro_nudge_tapped": "Pro 권유를 누름"
+  },
+
+  "tileGroups": [
+    {
+      "title": "키보드 사용량",
+      "note": "키보드를 켠 비율이 이 앱에서 가장 중요한 숫자예요. 앱만 깔고 키보드를 안 켰다면 핵심 가치를 아직 못 받은 거예요.",
+      "tiles": [
+        { "label": "키보드를 켠 사용자", "kind": "installsWithMetric", "metric": "flag.keyboardActive" },
+        { "label": "키보드 입력 횟수", "kind": "sum", "metric": "keyboardUses" },
+        { "label": "켠 사용자당 평균 입력", "kind": "sumPerMatchingInstall", "metric": "keyboardUses", "condition": "flag.keyboardActive", "format": "decimal1" },
+        { "label": "절약한 시간 합계", "kind": "sum", "metric": "timeSavedMin", "unit": "분" },
+        { "label": "Pro 사용자", "kind": "installsWithMetric", "metric": "flag.isPro" },
+        { "label": "동기화를 켠 사용자", "kind": "installsWithMetric", "metric": "flag.syncOn" }
+      ]
+    }
+  ],
+
+  "distributions": [
+    {
+      "title": "단축어 개수 분포",
+      "metric": "shortcuts",
+      "note": "몇 개를 쓰는 사람이 몇 명인지예요. 무료 한도(10개) 앞뒤를 촘촘히 끊었어요. 9개는 따로 세요 — 한 칸 남은 사람이라 할인 제안이 닿는 무리이고, 1~3개에 몰려 있으면 만들다 마는 거예요.",
+      "buckets": [
+        { "label": "0개", "from": 0, "to": 0 },
+        { "label": "1~3", "from": 1, "to": 3 },
+        { "label": "4~6", "from": 4, "to": 6 },
+        { "label": "7~8", "from": 7, "to": 8 },
+        { "label": "9개", "from": 9, "to": 9 },
+        { "label": "10~19", "from": 10, "to": 19 },
+        { "label": "20개 이상", "from": 20 }
+      ]
+    }
+  ],
+
+  "shares": [
+    {
+      "title": "단축어 종류",
+      "note": "한 단축어는 한 종류로만 세요(콤보 > 템플릿 > 이미지 > 텍스트 순). 텍스트 수치는 4.4.3부터 모여서, 그 전 기록이 섞이면 실제보다 낮게 보일 수 있어요.",
+      "parts": [
+        { "label": "텍스트", "metric": "texts" },
+        { "label": "템플릿", "metric": "templates" },
+        { "label": "콤보", "metric": "combos" },
+        { "label": "이미지", "metric": "images" }
+      ]
+    }
+  ],
+
+  "segments": {
+    "title": "사용 유형",
+    "note": "한 사람은 한 무리에만 들어가요(합이 전체와 같아요). 위에서부터 걸리는 첫 무리로 정해져요. '만들고 안 쓴 사람'이 크면 키보드를 켜는 데까지 못 간 거고, '쌓아만 두는 사람'이 크면 만드는 것보다 꺼내 쓰는 게 어려운 거예요.",
+    "rules": [
+      {
+        "name": "아직 안 만든 사람",
+        "hint": "첫 단축어까지 못 갔어요. 여기가 막히면 그 뒤는 전부 안 일어나요.",
+        "when": [{ "metric": "shortcuts", "lt": 1 }]
+      },
+      {
+        "name": "만들고 안 쓴 사람",
+        "hint": "만들었는데 쓸 자리를 못 찾았어요. 키보드를 켜는 데까지 데려가야 해요.",
+        "when": [{ "sum": ["uses", "keyboardUses"], "lt": 1 }]
+      },
+      {
+        "name": "많이 쓰는 사람",
+        "hint": "이 앱이 하루에 박혀 있는 사람들이에요. 리뷰와 입소문이 여기서 나와요.",
+        "when": [{ "sum": ["uses", "keyboardUses"], "gte": 50 }]
+      },
+      {
+        "name": "하나만 계속 쓰는 사람",
+        "hint": "한 가지 일에 딱 맞게 쓰고 있어요. 두 번째 쓸모를 알려주면 늘어나요.",
+        "when": [
+          { "metric": "shortcuts", "lte": 3 },
+          { "sum": ["uses", "keyboardUses"], "gte": 10 }
+        ]
+      },
+      {
+        "name": "쌓아만 두는 사람",
+        "hint": "만드는 건 쉬운데 꺼내 쓰는 게 어려운 거예요. 찾기와 순서를 봐야 해요.",
+        "when": [
+          { "metric": "shortcuts", "gte": 8 },
+          { "ratio": ["unusedShortcuts", "shortcuts"], "gte": 0.7 }
+        ]
+      },
+      {
+        "name": "꾸준히 쓰는 사람",
+        "hint": "자리를 잡았어요. 한도에 닿으면 결제로 이어지는 무리예요.",
+        "when": [{ "sum": ["uses", "keyboardUses"], "gte": 5 }]
+      },
+      {
+        "name": "이제 막 써 보는 사람",
+        "hint": "아직 판단 중이에요. 이 무리가 어디로 가는지가 다음 버전의 답이에요.",
+        "when": []
+      }
+    ]
+  }
+}

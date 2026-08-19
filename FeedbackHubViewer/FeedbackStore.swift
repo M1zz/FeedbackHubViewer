@@ -22,37 +22,34 @@ final class FeedbackStore: ObservableObject {
         var id: String { rawValue }
     }
 
-    /// Which pane the middle column shows: a per-project overview grid or the
-    /// statistics dashboard. The feedback list is not a peer of these — it is
-    /// pushed on top of the overview (see `listPath`).
-    enum ViewMode: String, CaseIterable, Identifiable {
-        case overview = "개요"
+    /// What one project's screen shows. The project is the outer level of the
+    /// app — these are the three things you can look at *inside* it, and they
+    /// are peers of each other, never of the project.
+    enum ProjectSection: String, CaseIterable, Identifiable {
+        case feedback = "피드백"
         case stats = "통계"
+        case crashes = "진단"
         var id: String { rawValue }
         var systemImage: String {
             switch self {
-            case .overview: return "square.grid.2x2"
+            case .feedback: return "text.bubble"
             case .stats: return "chart.bar"
+            case .crashes: return "exclamationmark.triangle"
             }
         }
     }
 
-    /// The feedback list pushed on top of the overview. `project` is the scope
-    /// the list was opened with (nil == 전체 프로젝트); the list reads the live
-    /// filters itself, so the value only identifies the pushed screen.
-    struct ListRoute: Hashable {
+    /// One project's screen, pushed on top of the project list. `project` nil
+    /// == 전체 프로젝트. `section` is the tab to land on; nil keeps whichever
+    /// section was open last.
+    struct ProjectRoute: Hashable {
         let project: String?
-    }
+        let section: ProjectSection?
 
-    /// The statistics dashboard pushed on top of the per-project trend list.
-    struct StatsRoute: Hashable {
-        let project: String?
-    }
-
-    /// Every diagnostic in one list — what the red ⚠︎ on a project row is
-    /// about. `project` nil == 전체 프로젝트.
-    struct CrashRoute: Hashable {
-        let project: String?
+        init(project: String?, section: ProjectSection? = nil) {
+            self.project = project
+            self.section = section
+        }
     }
 
     /// One day's feedback count, for the trend charts.
@@ -60,36 +57,6 @@ final class FeedbackStore: ObservableObject {
         var id: Date { date }
         let date: Date
         let count: Int
-    }
-
-    /// One project's headline metrics *plus* how they moved: the last 7 days
-    /// against the 7 days before that. Drives the statistics list.
-    struct ProjectTrend: Identifiable {
-        var id: String { project }
-        /// Grouping key (appId or appName); nil-project rows use the key.
-        let project: String
-        let displayName: String
-        let total: Int
-        let unreadCount: Int
-        let last7Days: Int
-        let previous7Days: Int
-        /// Average rating over the last 7 days, and over the 7 before that.
-        let recentAverageRating: Double?
-        let previousAverageRating: Double?
-        /// Average over every record, shown as the standing number.
-        let averageRating: Double?
-        let latest: Date?
-        /// Daily counts for the sparkline (oldest first).
-        let sparkline: [DayCount]
-
-        var isUnclassified: Bool { project == Feedback.unclassifiedProject }
-        /// Change in weekly volume. Positive == more feedback than last week.
-        var countDelta: Int { last7Days - previous7Days }
-        /// Change in average rating, only when both weeks have ratings.
-        var ratingDelta: Double? {
-            guard let recent = recentAverageRating, let previous = previousAverageRating else { return nil }
-            return recent - previous
-        }
     }
 
     /// One project's rolled-up numbers, for the overview cards.
@@ -160,21 +127,31 @@ final class FeedbackStore: ObservableObject {
     /// admin Security Role so it can read feedback. Shown in the toolbar.
     @Published var userRecordName: String?
 
-    // Filters / sorting
-    @Published var viewMode: ViewMode = .overview {
-        // Switching pane pops whatever was pushed on top of the overview, so
-        // coming back to 개요 always lands on the project grid.
-        didSet {
-            guard viewMode != oldValue else { return }
-            listPath = NavigationPath()
-            statsPath = NavigationPath()
+    // Navigation
+
+    /// Which of the selected project's three sections is on screen.
+    @Published var projectSection: ProjectSection = .feedback
+    /// What is pushed on top of the project list: a project's screen, and on
+    /// iOS a single feedback's detail after that.
+    @Published var path = NavigationPath()
+    /// True on the layout where the project screen is *pushed* (iPhone) rather
+    /// than shown beside the project list (Mac, iPad). Set by the root view;
+    /// `open(project:section:)` needs it to know whether to push or to swap
+    /// what the content column is scoped to.
+    var usesStackNavigation = false
+
+    /// Go to one project's screen — the single way every cross-screen link
+    /// moves, so pushing (iPhone) and re-scoping the column (Mac/iPad) don't
+    /// have to be spelled out at each call site.
+    func open(project: String?, section: ProjectSection? = nil) {
+        selectedProject = project
+        if let section { projectSection = section }
+        if usesStackNavigation {
+            path.append(ProjectRoute(project: project, section: section))
         }
     }
-    /// What is pushed on top of the overview: the feedback list, and on iOS a
-    /// single feedback's detail after that.
-    @Published var listPath = NavigationPath()
-    /// What is pushed on top of the statistics list: one project's dashboard.
-    @Published var statsPath = NavigationPath()
+
+    // Filters / sorting
     @Published var searchText = ""
     @Published var sortOption: SortOption = .newest
     @Published var selectedProject: String? = nil     // nil == all projects
@@ -548,6 +525,12 @@ final class FeedbackStore: ObservableObject {
     /// Unread inside the current project scope.
     var scopedUnreadCount: Int { countUnread(in: scopedFeedback) }
 
+    /// Unread inside one project (nil == 전체) — what the project rows show.
+    func unreadCount(for project: String?) -> Int {
+        guard let project else { return unreadCount }
+        return countUnread(in: allFeedback.filter { $0.projectKey == project })
+    }
+
     private func countUnread(in items: [Feedback]) -> Int {
         items.reduce(0) { $0 + (readIDs.contains($1.id) ? 0 : 1) }
     }
@@ -685,8 +668,7 @@ final class FeedbackStore: ObservableObject {
         // ends up filtered to something that is no longer listed anywhere.
         if selectedProject == project {
             selectedProject = nil
-            listPath = NavigationPath()
-            statsPath = NavigationPath()
+            path = NavigationPath()
         }
     }
 
@@ -780,22 +762,28 @@ final class FeedbackStore: ObservableObject {
     /// the grouping identity (appId); resolve its label with `displayName(for:)`.
     var projectCounts: [(key: String, count: Int)] {
         var buckets: [String: Int] = [:]
+        // Every project the hub knows about, not just the ones that have sent
+        // feedback: an app that only reports usage or only crashed is still an
+        // app of yours, and leaving it out of the list makes its data
+        // unreachable. Those come in with a feedback count of zero.
+        for key in allProjectKeys { buckets[key] = 0 }
         for fb in allFeedback { buckets[fb.projectKey, default: 0] += 1 }
-        // Apps that report usage but have no feedback yet are still projects
-        // this hub knows about — list them with a count of zero rather than
-        // hiding them from the filter.
-        for snapshot in allSnapshots { buckets[snapshot.projectKey] = buckets[snapshot.projectKey] ?? 0 }
+        let traffic = trafficByProject
         return buckets
             .map { (key: $0.key, count: $0.value) }
-            .sorted { lhs, rhs in ordered(lhs.key, lhs.count, rhs.key, rhs.count) }
+            .sorted { lhs, rhs in ordered(lhs.key, lhs.count, rhs.key, rhs.count, traffic: traffic) }
     }
 
     /// Per-project rolled-up numbers for the overview grid, ordered the same
     /// way as `projectCounts` (most feedback first, "미분류" last).
     var projectSummaries: [ProjectSummary] {
         let weekAgo = Date().addingTimeInterval(-7 * 24 * 60 * 60)
+        // Seeded with every known project (see `projectCounts`) so an app that
+        // has usage or diagnostics but no feedback yet still gets a card.
         var grouped: [String: [Feedback]] = [:]
+        for key in allProjectKeys { grouped[key] = [] }
         for fb in allFeedback { grouped[fb.projectKey, default: []].append(fb) }
+        let traffic = trafficByProject
 
         return grouped.map { key, items in
             let ratings = items.compactMap(\.rating)
@@ -808,80 +796,112 @@ final class FeedbackStore: ObservableObject {
                                   unreadCount: countUnread(in: items),
                                   pendingCount: countPending(in: items))
         }
-        .sorted { ordered($0.project, $0.count, $1.project, $1.count) }
+        .sorted { ordered($0.project, $0.count, $1.project, $1.count, traffic: traffic) }
     }
 
-    /// Per-project metrics with week-over-week movement, ordered like
-    /// `projectSummaries`. Drives the statistics list.
-    var projectTrends: [ProjectTrend] {
-        var grouped: [String: [Feedback]] = [:]
-        for fb in allFeedback { grouped[fb.projectKey, default: []].append(fb) }
-        return grouped
-            .map { key, items in trend(key: key, displayName: displayName(for: key), items: items) }
-            .sorted { ordered($0.project, $0.total, $1.project, $1.total) }
+    /// How busy a project is right now. "트래픽" here is the apps' own
+    /// vocabulary: 사용 건수 = events in the last 7 days, 활동 사용자 = distinct
+    /// installs behind them, 설치 = UsageSnapshot records.
+    struct Traffic {
+        let events7: Int
+        let activeInstalls7: Int
+        let installs: Int
+        let totalEvents: Int
+        /// Daily event counts for the last 14 days (oldest first) — the shape
+        /// behind the number, drawn as a sparkline on every project row.
+        let sparkline: [DayCount]
+
+        var hasUsageData: Bool { installs > 0 || totalEvents > 0 }
+
+        static let none = Traffic(events7: 0, activeInstalls7: 0, installs: 0,
+                                  totalEvents: 0, sparkline: [])
     }
 
-    /// The same metrics across every project, for the "전체 프로젝트" row.
-    var overallTrend: ProjectTrend {
-        trend(key: "", displayName: "전체 프로젝트", items: allFeedback)
-    }
+    /// Traffic per project in one pass. The lists sort against this map rather
+    /// than calling `usage(for:)` inside a comparison, which would re-aggregate
+    /// every record for every comparison.
+    var trafficByProject: [String: Traffic] {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+        let days = 14
+        guard let sparklineStart = calendar.date(byAdding: .day, value: -(days - 1), to: today) else { return [:] }
+        let weekAgo = Date().addingTimeInterval(-7 * 86_400)
 
-    private func trend(key: String, displayName: String, items: [Feedback]) -> ProjectTrend {
-        let now = Date()
-        let weekAgo = now.addingTimeInterval(-7 * 24 * 60 * 60)
-        let twoWeeksAgo = now.addingTimeInterval(-14 * 24 * 60 * 60)
+        var events7: [String: Int] = [:]
+        var totals: [String: Int] = [:]
+        var actives: [String: Set<String>] = [:]
+        var installs: [String: Int] = [:]
+        var daily: [String: [Date: Int]] = [:]
 
-        let recent = items.filter { ($0.createdAt ?? .distantPast) >= weekAgo }
-        let previous = items.filter {
-            guard let created = $0.createdAt else { return false }
-            return created >= twoWeeksAgo && created < weekAgo
+        for event in allEvents {
+            let key = event.projectKey
+            totals[key, default: 0] += 1
+            if event.occurredAt >= weekAgo {
+                events7[key, default: 0] += 1
+                if let id = event.installID { actives[key, default: []].insert(id) }
+            }
+            if event.occurredAt >= sparklineStart {
+                let day = calendar.startOfDay(for: event.occurredAt)
+                daily[key, default: [:]][day, default: 0] += 1
+            }
+        }
+        for snapshot in allSnapshots {
+            installs[snapshot.projectKey, default: 0] += 1
         }
 
-        return ProjectTrend(
-            project: key,
-            displayName: displayName,
-            total: items.count,
-            unreadCount: countUnread(in: items),
-            last7Days: recent.count,
-            previous7Days: previous.count,
-            recentAverageRating: Self.average(of: recent),
-            previousAverageRating: Self.average(of: previous),
-            averageRating: Self.average(of: items),
-            latest: items.compactMap(\.createdAt).max(),
-            sparkline: Self.dailyCounts(of: items, days: 14)
-        )
-    }
-
-    private static func average(of items: [Feedback]) -> Double? {
-        let ratings = items.compactMap(\.rating)
-        guard !ratings.isEmpty else { return nil }
-        return Double(ratings.reduce(0, +)) / Double(ratings.count)
-    }
-
-    /// Daily counts for `items` over the last `days` days, oldest first, with
-    /// empty days included so a chart has no gaps.
-    private static func dailyCounts(of items: [Feedback], days: Int) -> [DayCount] {
-        let cal = Calendar.current
-        let today = cal.startOfDay(for: Date())
-        guard let start = cal.date(byAdding: .day, value: -(days - 1), to: today) else { return [] }
-
-        var buckets: [Date: Int] = [:]
-        for fb in items {
-            guard let created = fb.createdAt else { continue }
-            let day = cal.startOfDay(for: created)
-            if day >= start { buckets[day, default: 0] += 1 }
+        let axis: [Date] = (0..<days).compactMap {
+            calendar.date(byAdding: .day, value: $0 - (days - 1), to: today)
         }
 
-        return (0..<days).compactMap { offset in
-            guard let day = cal.date(byAdding: .day, value: offset, to: start) else { return nil }
-            return DayCount(date: day, count: buckets[day] ?? 0)
+        var result: [String: Traffic] = [:]
+        for key in Set(totals.keys).union(installs.keys) {
+            let buckets = daily[key] ?? [:]
+            result[key] = Traffic(events7: events7[key] ?? 0,
+                                  activeInstalls7: actives[key]?.count ?? 0,
+                                  installs: installs[key] ?? 0,
+                                  totalEvents: totals[key] ?? 0,
+                                  sparkline: axis.map { DayCount(date: $0, count: buckets[$0] ?? 0) })
         }
+        return result
     }
 
-    /// Shared ordering: unclassified last, then by count desc, then by name.
-    private func ordered(_ k1: String, _ c1: Int, _ k2: String, _ c2: Int) -> Bool {
+    func traffic(for project: String) -> Traffic {
+        trafficByProject[project] ?? .none
+    }
+
+    /// Every project's traffic added together — the 전체 프로젝트 row's shape.
+    var overallTraffic: Traffic {
+        let all = Array(trafficByProject.values)
+        guard let axis = all.first?.sparkline else { return .none }
+        var summed = axis.map { DayCount(date: $0.date, count: 0) }
+        for traffic in all {
+            for (index, point) in traffic.sparkline.enumerated() where index < summed.count {
+                summed[index] = DayCount(date: summed[index].date,
+                                         count: summed[index].count + point.count)
+            }
+        }
+        return Traffic(events7: all.reduce(0) { $0 + $1.events7 },
+                       // Installs are anonymous per app, so "활동 사용자" only
+                       // adds up as a sum of each app's own count.
+                       activeInstalls7: all.reduce(0) { $0 + $1.activeInstalls7 },
+                       installs: all.reduce(0) { $0 + $1.installs },
+                       totalEvents: all.reduce(0) { $0 + $1.totalEvents },
+                       sparkline: summed)
+    }
+
+    /// Busiest app first. Which app is being *used* the most is what decides
+    /// where to look first, so traffic leads and the feedback count only
+    /// breaks ties. 미분류 always sits at the bottom.
+    private func ordered(_ k1: String, _ c1: Int, _ k2: String, _ c2: Int,
+                         traffic: [String: Traffic]) -> Bool {
         if k1 == Feedback.unclassifiedProject { return false }
         if k2 == Feedback.unclassifiedProject { return true }
+
+        let t1 = traffic[k1] ?? .none
+        let t2 = traffic[k2] ?? .none
+        if t1.events7 != t2.events7 { return t1.events7 > t2.events7 }
+        if t1.activeInstalls7 != t2.activeInstalls7 { return t1.activeInstalls7 > t2.activeInstalls7 }
+        if t1.installs != t2.installs { return t1.installs > t2.installs }
         if c1 != c2 { return c1 > c2 }
         return displayName(for: k1).localizedStandardCompare(displayName(for: k2)) == .orderedAscending
     }
@@ -950,8 +970,14 @@ final class FeedbackStore: ObservableObject {
         var last7Days: Int
     }
 
-    var stats: Stats {
-        let source = scopedFeedback
+    /// Stats for the current scope; `stats(for:)` computes any scope.
+    var stats: Stats { stats(for: selectedProject) }
+    /// Stats across every visible project, whatever the current scope is —
+    /// what the 전체 프로젝트 card shows.
+    var overallStats: Stats { stats(for: nil) }
+
+    func stats(for project: String?) -> Stats {
+        let source = project.map { key in allFeedback.filter { $0.projectKey == key } } ?? allFeedback
         let total = source.count
 
         let ratings = source.compactMap { $0.rating }
@@ -996,7 +1022,9 @@ final class FeedbackStore: ObservableObject {
     /// The newest feedback in the current project scope. Used by the compact
     /// overview, which shows the latest items instead of leaving space empty.
     func recentFeedback(limit: Int) -> [Feedback] {
-        Array(scopedFeedback
+        // 이미 처리한 건은 빼고 보여준다 — 화면의 요점은 남은 일이다.
+        let source = scopedFeedback.filter { !status(of: $0).isHandled }
+        return Array(source
             .sorted { ($0.createdAt ?? .distantPast) > ($1.createdAt ?? .distantPast) }
             .prefix(limit))
     }
