@@ -41,6 +41,9 @@
     "timer_start": "타이머를 시작함",
     "timer_complete": "타이머를 완주함",
     "presentation_start": "발표 모드를 시작함",
+    "timer_cancelled": "타이머를 도중에 껐음",
+    "preset_saved": "프리셋을 저장함",
+    "onboarding_shown": "처음 안내를 봄",
     "onboarding_completed": "처음 안내를 끝냄",
     "onboarding_skipped": "처음 안내를 건너뜀",
     "feedback_nudge_shown": "피드백 권유를 봄",
@@ -56,6 +59,8 @@
     "premium_trial_exhausted": "체험을 다 씀",
     "paywall_shown": "페이월을 봄",
     "paywall_dismissed": "페이월을 닫음",
+    "purchase_started": "결제를 시작함",
+    "purchase_failed": "결제가 실패함",
     "paywall_converted": "페이월에서 결제함"
   },
 
@@ -204,5 +209,43 @@
         "when": []
       }
     ]
-  }
+  },
+  "funnels": [
+    {
+      "title": "결제 퍼널",
+      "basis": "installs",
+      "note": "무료 한도(알림 1개)에 부딪힌 사람이 결제까지 가는 길이에요. 한 사람은 한 번만 세고, 슬라이스(:general, :presentationMode …)는 한 단계로 합칩니다.",
+      "steps": [
+        {
+          "label": "유료 기능을 건드림",
+          "event": "premium_feature_used",
+          "hint": "발표 모드·기록·무제한 사전알림. 결제 후보 전체의 크기예요."
+        },
+        { "label": "페이월을 봄", "event": "paywall_shown" },
+        {
+          "label": "결제를 시작함",
+          "event": "purchase_started",
+          "hint": "여기서 크게 새면 페이월 문구나 가격이 문제예요."
+        },
+        {
+          "label": "결제를 마침",
+          "anyOf": ["paywall_converted", "purchase_completed"],
+          "hint": "이 칸이 '보내지 않음'이면 아무도 결제를 안 한 게 아니라 앱이 결제 성공 이벤트를 안 보내는 거예요. 결제 실패(purchase_failed)만 오고 있어요."
+        }
+      ]
+    },
+    {
+      "title": "첫 가치 경험",
+      "basis": "installs",
+      "note": "결제 이전에 첫 성공이 먼저예요. 세그먼트의 '가치 경험 전'이 여기서 새는 사람들입니다.",
+      "steps": [
+        { "label": "타이머를 시작함", "event": "timer_start" },
+        {
+          "label": "끝까지 완주함",
+          "event": "timer_complete",
+          "hint": "완주가 없으면 한도를 조여도 결제는 늘지 않아요."
+        }
+      ]
+    }
+  ]
 }

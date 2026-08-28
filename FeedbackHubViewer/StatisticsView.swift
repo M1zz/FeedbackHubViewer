@@ -150,7 +150,10 @@ struct StatisticsDashboard: View {
     @ViewBuilder
     private var specCards: some View {
         if let spec {
-            ForEach(spec.insights(for: scopedMetrics)) { insight in
+            // 퍼널만 입력이 다르다: 설치에 남은 상태(`metrics`)가 아니라 일어난 일
+            // (이벤트 집계)을 읽는다. 이름별로 이미 접혀 있는 값이라 원본을 훑지 않는다.
+            ForEach(spec.insights(for: scopedMetrics)
+                    + spec.funnelInsights(for: store.eventTallies(for: scope))) { insight in
                 switch insight {
                 case .tiles(let title, let note, let items):
                     Card(title: title, systemImage: "star.circle") {
@@ -171,6 +174,21 @@ struct StatisticsDashboard: View {
                         }
                         if let note { footnote(note) }
                     }
+                case .funnel(let title, let note, let steps):
+                    Card(title: title, systemImage: "arrow.down.right.circle") {
+                        VStack(spacing: 8) {
+                            ForEach(steps) { step in
+                                SpecFunnelStep(step: step)
+                            }
+                        }
+                        if let note { footnote(note) }
+                        if steps.contains(where: \.exceedsPrevious) {
+                            footnote("주황 칸은 앞 단계보다 수가 많아요. 퍼널이 성립하려면 각 칸이 앞 칸에 포함돼야 하는데, 이벤트 이름만으로는 '앞을 거쳐서 왔다'를 강제할 수 없어요 — 그 자리는 다른 경로로도 닿습니다. 경로를 구분하려면 앱이 이벤트에 슬라이스를 붙여 보내야 해요.")
+                        }
+                        if steps.contains(where: \.isMissing) {
+                            footnote("회색 칸은 그 이벤트가 이 앱에서 **한 번도 도착한 적이 없다**는 뜻이에요. 아무도 거기까지 못 간 게 아니라 앱이 그 이벤트를 아직 안 보내는 거라, 스펙이 아니라 앱을 고쳐야 답이 나옵니다.")
+                        }
+                    }
                 }
             }
         }
@@ -182,7 +200,9 @@ struct StatisticsDashboard: View {
     private var specGapCard: some View {
         if let spec {
             let metrics = spec.unknownMetricKeys(in: scopedMetrics)
-            let events = spec.unknownEventNames(in: store.events(for: scope).map(\.name))
+            // 이름별로 이미 접혀 있는 집계에서 뽑는다: 이벤트 원본을 매번 훑으면
+            // 이 카드 하나 때문에 전체 레코드를 프레임마다 다시 읽게 된다.
+            let events = spec.unknownEventNames(in: store.eventStats(for: scope).map(\.name))
             if !metrics.isEmpty || !events.isEmpty {
                 Card(title: "스펙에 없는 지표", systemImage: "questionmark.circle") {
                     if !metrics.isEmpty {
@@ -394,7 +414,7 @@ struct StatisticsDashboard: View {
     /// cannot check anywhere else: the card above counts them by name, the
     /// chart draws them by day, and neither lets you look at the 50.
     private var eventLogCard: some View {
-        let all = store.events(for: scope).sorted { $0.occurredAt > $1.occurredAt }
+        let all = store.eventLog(for: scope)
         let shown = Array(all.prefix(eventLogLimit))
 
         return Card(title: "사용 내역", systemImage: "clock.arrow.circlepath") {
@@ -778,6 +798,62 @@ private struct SpecTile: View {
 }
 
 /// 스펙이 만든 막대 한 줄 — 분포·비중·무리 크기가 전부 이 모양이다.
+/// 퍼널 한 칸. 막대 길이는 첫 단계 대비이고, 오른쪽 작은 숫자는 바로 앞 단계 대비다 —
+/// 어디서 새는지는 전체 전환율이 아니라 단계 사이의 낙차가 말해 준다.
+private struct SpecFunnelStep: View {
+    let step: ProjectStatsSpec.Insight.Step
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 3) {
+            HStack(alignment: .firstTextBaseline) {
+                Text(step.label)
+                    .font(.callout)
+                    .foregroundStyle(step.isMissing ? AnyShapeStyle(.secondary) : AnyShapeStyle(.primary))
+                    .fixedSize(horizontal: false, vertical: true)
+                Spacer(minLength: 8)
+                if step.isMissing {
+                    Text("보내지 않음")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                } else {
+                    Text("\(step.count)")
+                        .font(.callout.monospacedDigit().weight(.semibold))
+                    if step.exceedsPrevious {
+                        // 전환율인 척하지 않는다: 앞 단계를 거치지 않고도 닿는
+                        // 자리라는 뜻이고, 퍼센트로 적으면 거짓말이 된다.
+                        Label("앞 단계 밖에서도 옴", systemImage: "arrow.turn.up.right")
+                            .font(.caption)
+                            .foregroundStyle(.orange)
+                    } else if let previous = step.fromPrevious {
+                        Text(Self.percent(previous))
+                            .font(.caption.monospacedDigit())
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    Capsule().fill(Color.secondary.opacity(0.12))
+                    Capsule()
+                        .fill(step.isMissing ? Color.secondary.opacity(0.25) : Color.accentColor)
+                        .frame(width: max(2, geo.size.width * min(1, max(0, step.ratio))))
+                }
+            }
+            .frame(height: 6)
+            if let hint = step.hint {
+                Text(hint)
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
+
+    private static func percent(_ ratio: Double) -> String {
+        "→ " + String(format: "%.0f%%", (ratio * 100).rounded())
+    }
+}
+
 private struct SpecBar: View {
     let label: String
     let value: String

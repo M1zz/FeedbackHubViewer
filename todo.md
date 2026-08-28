@@ -1,6 +1,9 @@
 # todo
 
 ## 완료
+- [x] 통계 집계를 새로고침마다 한 번만 계산(`FeedbackStore.Derived`): 프로젝트별 레코드 묶음·트래픽·
+      요약·진단 롤업·이벤트/지표/추이를 캐시하고, 받아온 레코드·숨김·읽음/확인·앱 이름이 바뀔 때만 폐기.
+      카드마다 전체 레코드를 다시 훑던 O(프로젝트 수 × 레코드 수) 렌더 비용 제거
 - [x] 앱별 통계 스펙(JSON): 각 앱 리포의 docs/usage-spec.json → scripts/sync-stats-specs.sh →
       뷰어 Specs/. ClipKeyboard·두번알림의 라벨·핵심 지표·분포·세그먼트를 앱 화면 그대로 재현
 - [x] 스펙에 없는 지표·이벤트를 통계 화면에 모아 알림(드리프트를 눈에 보이게)
@@ -25,11 +28,31 @@
 - [x] 시스템 타임스탬프가 Queryable이 아니면 전체 조회로 자동 폴백, 그 결과를 캐시에 기억
 - [x] 24시간 지난 캐시·수동 새로고침은 전체 재조회(콘솔에서 삭제된 레코드 반영)
 - [x] "캐시 비우고 전체 다시 불러오기" 메뉴
+- [x] 이벤트를 도착 시점에 일 단위로 합산(`UsageRollups`) → `rollups-<환경>.json`으로 분리 저장.
+      주/월/연은 일 버킷 합, 활동 사용자는 일별 installID 집합의 합집합. 합산은 몇 번 해도 같고
+      (날짜마다 이미 센 레코드명 보관, 180일 뒤 정리), 로우 이벤트는 최근 90일치만 남김.
+      화면의 모든 사용량 숫자가 롤업에서 나오므로 비용이 이벤트 수가 아니라 하루 수에 비례
+- [x] `UsageEvent`는 전체 조회에서도 이미 가진 것에서 멈춤(합산된 날을 되돌릴 수 없으므로
+      전체 재조회가 가장 비싸고 얻는 게 없음. 재구축은 "캐시 비우고 전체 다시 불러오기")
+- [x] 무효화 세분화: 읽음·확인 → 안 읽음 수만, 앱 이름 → 이름 쓰는 것만, 새 이벤트 → 사용량만.
+      자동 갱신이 못 찾았으면 대입 자체를 생략(같은 값 대입도 `didSet`으로 집계를 통째로 버림)
+
+- [x] 앱별 결제 퍼널(`funnels` 절): 이벤트 기본형으로 단계를 적고 슬라이스는 합침, 기본은 설치 수
+      (합집합이라 중복 안 됨). 전 기간 롤업에서 바로 나와 원본을 안 훑음.
+      "보내지 않음"(이벤트 미전송)과 "앞 단계 밖에서도 옴"(포함 관계 아님)을 화면에 드러냄
+- [x] 두번알림 스펙에 빠진 이벤트 라벨 5개 보충
+      (onboarding_shown · timer_cancelled · preset_saved · purchase_started · purchase_failed)
+- [x] sync-stats-specs.sh의 ClipKeyboard 경로 수정 (docs/ → docs/engineering/)
 
 ## 남은 것
+- [ ] **두번알림에 결제 성공 이벤트가 없음**: `purchase_started`·`purchase_failed`는 오는데 완료가
+      안 옴(스펙의 `paywall_converted`가 "보내지 않음"으로 뜸). 앱에서 보내야 퍼널 마지막 칸이 채워짐
+- [ ] (선택) ClipKeyboard `paywall_view`에 출처 슬라이스(`:nudge_slots_left` 등)를 붙이면
+      Pro 넛지 퍼널을 결제까지 이을 수 있음. 지금은 포함 관계가 아니라 2단계에서 끊어 둠
+- [ ] `com.Ysoup.LeaveWise`가 `paywall_view`를 보내는데 스펙이 없음 — 붙일지 결정
 - [ ] 새 앱을 붙일 때: 그 앱 리포에 docs/usage-spec.json 추가 → sync-stats-specs.sh의 SPECS에 한 줄
 - [ ] (선택) 커밋 전 `./scripts/sync-stats-specs.sh --check`를 훅/CI에 걸어 스펙 드리프트 차단
-- [ ] (선택) 퍼널·리텐션·코호트까지 스펙으로 표현(지금은 핵심 지표·분포·세그먼트까지)
+- [ ] (선택) 리텐션·코호트까지 스펙으로 표현(퍼널까지는 됨)
 - [ ] (선택) CloudKit Console에서 `createdTimestamp`(Feedback·UsageEvent·CrashReport) /
       `modifiedTimestamp`(UsageSnapshot)를 QUERYABLE 인덱스로 추가 → 서버 쪽 날짜 필터까지 사용
       (없어도 새 레코드만 받습니다. README §5-7 참고, 코드 변경 없이 앱이 자동 감지)

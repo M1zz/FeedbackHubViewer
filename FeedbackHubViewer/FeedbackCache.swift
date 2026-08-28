@@ -34,6 +34,13 @@ struct CachedHub: Codable {
 
     var feedback: [Feedback] = []
     var snapshots: [UsageSnapshot] = []
+    /// Only the recent window (`FeedbackStore.rawEventRetentionDays`). Older
+    /// events are not dropped from the hub — they were summed into
+    /// `UsageRollups` when they arrived, and every number on screen reads that.
+    /// What is kept here is what the 사용 내역 list needs to show individual
+    /// events. The shape is unchanged from earlier versions on purpose: a cache
+    /// written before rollups existed still decodes, and its events are folded
+    /// into the rollups on the next launch.
     var events: [UsageEvent] = []
     var crashes: [CrashReport] = []
 
@@ -87,6 +94,58 @@ actor FeedbackCache {
 
     func save(_ hub: CachedHub) {
         guard let fileURL, let data = try? JSONEncoder().encode(hub) else { return }
+        try? data.write(to: fileURL, options: .atomic)
+    }
+
+    func clear() {
+        guard let fileURL else { return }
+        try? FileManager.default.removeItem(at: fileURL)
+    }
+}
+
+/// Reads and writes `UsageRollups`, in its own file next to the record cache.
+///
+/// Separate on purpose: the rollups are what every screen actually reads, and
+/// they are small and stable, while `hub.json` carries whole records and is
+/// rewritten whenever any of them moves. Splitting them means a refresh that
+/// only added a few events rewrites the small file, and a launch can decode the
+/// numbers without waiting on the records.
+actor RollupCache {
+
+    static let shared = RollupCache()
+
+    private let environment: CloudKitEnvironment
+    private var directoryIsReady = false
+
+    init(environment: CloudKitEnvironment = .current) {
+        self.environment = environment
+    }
+
+    private var fileURL: URL? {
+        guard let base = try? FileManager.default.url(for: .applicationSupportDirectory,
+                                                      in: .userDomainMask,
+                                                      appropriateFor: nil,
+                                                      create: true) else { return nil }
+        let directory = base.appendingPathComponent("FeedbackHubViewer", isDirectory: true)
+        if !directoryIsReady {
+            try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+            directoryIsReady = true
+        }
+        return directory.appendingPathComponent("rollups-\(environment.restPathComponent).json")
+    }
+
+    func load() -> UsageRollups? {
+        guard let fileURL, let data = try? Data(contentsOf: fileURL) else { return nil }
+        guard let rollups = try? JSONDecoder().decode(UsageRollups.self, from: data),
+              rollups.version == UsageRollups.currentVersion else {
+            try? FileManager.default.removeItem(at: fileURL)
+            return nil
+        }
+        return rollups
+    }
+
+    func save(_ rollups: UsageRollups) {
+        guard let fileURL, let data = try? JSONEncoder().encode(rollups) else { return }
         try? data.write(to: fileURL, options: .atomic)
     }
 

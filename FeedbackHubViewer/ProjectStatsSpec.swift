@@ -45,6 +45,8 @@ struct ProjectStatsSpec: Decodable {
     var derived: [DerivedSpec] = []
     /// 설치 하나하나를 무리로 나누는 규칙.
     var segments: SegmentSpec?
+    /// 이벤트를 순서대로 세워 단계별로 몇이 남는지 본다(페이월 → 결제).
+    var funnels: [FunnelSpec] = []
 
     static let supportedVersion = 1
 
@@ -53,7 +55,7 @@ struct ProjectStatsSpec: Decodable {
     // 절은 빈 값으로 읽어야 한다.
     enum CodingKeys: String, CodingKey {
         case specVersion, appId, appName, metricLabels, metricPrefixLabels
-        case eventLabels, tileGroups, distributions, shares, derived, segments
+        case eventLabels, tileGroups, distributions, shares, derived, segments, funnels
     }
 
     init(from decoder: Decoder) throws {
@@ -69,6 +71,7 @@ struct ProjectStatsSpec: Decodable {
         shares = try c.decodeIfPresent([ShareSpec].self, forKey: .shares) ?? []
         derived = try c.decodeIfPresent([DerivedSpec].self, forKey: .derived) ?? []
         segments = try c.decodeIfPresent(SegmentSpec.self, forKey: .segments)
+        funnels = try c.decodeIfPresent([FunnelSpec].self, forKey: .funnels) ?? []
     }
 
     struct MetricLabel: Decodable {
@@ -185,6 +188,36 @@ struct ProjectStatsSpec: Decodable {
         }
     }
 
+    /// 이벤트를 순서대로 세운 퍼널. 다른 절과 달리 스냅샷 `metrics`가 아니라
+    /// **이벤트 집계**를 읽는다 — 결제는 설치에 남는 상태가 아니라 일어난 일이다.
+    ///
+    /// 단계는 이벤트의 **기본형**으로 적는다. 앱이 슬라이스를 붙여 보내면
+    /// (`paywall_cta_tapped:buy`, `:memo`) 같은 기본형끼리 합쳐서 한 단계로 센다.
+    struct FunnelSpec: Decodable {
+        let title: String
+        var note: String?
+        /// 무엇을 셀지. 기본은 `installs` — "몇 명이 여기까지 왔나"가 전환율이고,
+        /// 건수는 한 사람이 페이월을 열 번 봐도 열로 세어 비율을 부풀린다.
+        var basis: Basis?
+        let steps: [Step]
+
+        enum Basis: String, Decodable { case installs, events }
+
+        struct Step: Decodable {
+            let label: String
+            /// 이벤트 기본형 하나.
+            var event: String?
+            /// 여러 이름을 한 단계로 묶을 때(`purchase_cancelled` + `purchase_failed`).
+            var anyOf: [String]?
+            var hint: String?
+
+            var names: [String] {
+                if let anyOf, !anyOf.isEmpty { return anyOf }
+                return event.map { [$0] } ?? []
+            }
+        }
+    }
+
     /// 값 하나를 읽어 비교하는 조건. 값은 지표 키 하나, 여러 키의 합, 두 키의 비율,
     /// 또는 `derived`가 정의한 이름이다.
     struct Condition: Decodable {
@@ -210,10 +243,12 @@ extension ProjectStatsSpec {
     enum Insight: Identifiable {
         case tiles(title: String, note: String?, items: [Tile])
         case bars(title: String, note: String?, rows: [Bar])
+        case funnel(title: String, note: String?, steps: [Step])
 
         var id: String {
             switch self {
-            case .tiles(let title, _, _), .bars(let title, _, _): return title
+            case .tiles(let title, _, _), .bars(let title, _, _), .funnel(let title, _, _):
+                return title
             }
         }
 
@@ -229,6 +264,27 @@ extension ProjectStatsSpec {
             let value: String
             /// 0~1. 막대 길이.
             let ratio: Double
+            var hint: String?
+            var id: String { label }
+        }
+
+        /// 퍼널 한 칸.
+        struct Step: Identifiable {
+            let label: String
+            let count: Int
+            /// 첫 단계 대비 0~1 — 막대 길이이자 전체 전환율. 첫 단계는 1.
+            let ratio: Double
+            /// 바로 앞 단계 대비. 첫 단계는 nil.
+            let fromPrevious: Double?
+            /// 이 단계의 이벤트가 **한 건도 도착한 적이 없다**. 0건과는 다른 말이다:
+            /// 아무도 결제를 안 한 게 아니라 앱이 그 이벤트를 안 보내고 있다는 뜻이고,
+            /// 스펙이 아니라 앱을 고쳐야 한다.
+            let isMissing: Bool
+            /// 앞 단계보다 **많다**. 퍼널이 성립하려면 각 단계가 앞 단계의 부분집합이어야
+            /// 하는데, 이벤트 이름만으로는 "앞을 거쳐서 왔다"를 강제할 수 없다
+            /// (페이월은 넛지 말고 다른 데서도 열린다). 그래서 전환율인 척하지 않고
+            /// 포함 관계가 아니라는 사실을 그대로 드러낸다.
+            let exceedsPrevious: Bool
             var hint: String?
             var id: String { label }
         }
@@ -306,6 +362,52 @@ extension ProjectStatsSpec {
         return result
     }
 
+    /// 이벤트 퍼널. 스냅샷이 아니라 이벤트 집계를 받는다 — `tallies`의 키는 앱이 보낸
+    /// 이름 원문(슬라이스 포함)이고, 값은 전 기간 합계다(`UsageRollups.eventTotals`).
+    ///
+    /// 슬라이스는 여기서 합친다. `paywall_cta_tapped:buy`와 `:memo`는 "버튼을 누른
+    /// 사람"이라는 한 단계이고, 설치 수를 셀 때는 두 집합의 **합집합**이어야 한다 —
+    /// 둘 다 누른 사람을 두 명으로 세면 전환율이 100%를 넘는다.
+    func funnelInsights(for tallies: [String: UsageNameTotal]) -> [Insight] {
+        funnels.compactMap { funnel in
+            let basis = funnel.basis ?? .installs
+            var steps: [Insight.Step] = []
+            var first: Int?
+            var previous: Int?
+
+            for step in funnel.steps {
+                let wanted = Set(step.names)
+                let matching = tallies.filter { wanted.contains(Self.eventBase($0.key)) }
+                let count: Int
+                switch basis {
+                case .events:
+                    count = matching.values.reduce(0) { $0 + $1.count }
+                case .installs:
+                    var installs: Set<String> = []
+                    for total in matching.values { installs.formUnion(total.installs) }
+                    count = installs.count
+                }
+
+                let base = first ?? count
+                if first == nil { first = count }
+                steps.append(Insight.Step(
+                    label: step.label,
+                    count: count,
+                    ratio: base > 0 ? min(1, Double(count) / Double(base)) : 0,
+                    fromPrevious: previous.map { $0 > 0 ? Double(count) / Double($0) : 0 },
+                    // 도착한 적이 아예 없는 것과 0건은 다른 말이다: 앞은 앱이 그
+                    // 이벤트를 안 보낸다는 뜻이라 스펙이 아니라 앱을 고쳐야 한다.
+                    isMissing: matching.isEmpty,
+                    exceedsPrevious: previous.map { count > $0 } ?? false,
+                    hint: step.hint))
+                previous = count
+            }
+
+            guard !steps.isEmpty else { return nil }
+            return .funnel(title: funnel.title, note: funnel.note, steps: steps)
+        }
+    }
+
     /// 스펙이 이름을 붙이지 않은 지표 키 — 앱이 새 지표를 보내기 시작했다는 신호다.
     func unknownMetricKeys(in snapshots: [[String: Double]]) -> [String] {
         var keys = Set<String>()
@@ -351,7 +453,7 @@ extension ProjectStatsSpec {
         metricLabels[key]?.excludeFromAverages ?? false
     }
 
-    private static func eventBase(_ raw: String) -> String {
+    static func eventBase(_ raw: String) -> String {
         String(raw.split(separator: ":", maxSplits: 1, omittingEmptySubsequences: false)[0])
     }
 

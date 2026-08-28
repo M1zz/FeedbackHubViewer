@@ -16,7 +16,7 @@ WORKSPACE="$(cd .. && pwd)"
 DEST="FeedbackHubViewer/Specs"
 
 SPECS=(
-  "$WORKSPACE/ClipKeyboard/docs/usage-spec.json|clipkeyboard.usage-spec.json"
+  "$WORKSPACE/ClipKeyboard/docs/engineering/usage-spec.json|clipkeyboard.usage-spec.json"
   "$WORKSPACE/Rereminder/docs/usage-spec.json|rereminder.usage-spec.json"
 )
 

@@ -16,6 +16,19 @@
 //  Nothing here interprets an app's own vocabulary: event names and `metrics`
 //  keys are passed through as the app sent them.
 //
+//  Where the numbers come from: anything counted per *install* is read from the
+//  `UsageSnapshot` records, which are re-read whole on every refresh and are
+//  bounded by how many installs an app has. Anything counted per *event* is
+//  read from `UsageRollups` — the day buckets each event was summed into when
+//  it first arrived — and never from the raw stream, which is unbounded. The
+//  raw events this device still holds back only the 사용 내역 list, which shows
+//  events one at a time and so genuinely needs them.
+//
+//  One consequence worth knowing: an event-based "최근 7일" is seven whole days
+//  (today and the six before it), not a rolling `now − 7 × 86,400`. Snapshot-
+//  based windows (`active7`, `new7`) are still rolling, because a snapshot
+//  carries its own timestamp rather than living in a bucket.
+//
 
 import Foundation
 
@@ -144,41 +157,93 @@ extension FeedbackStore {
         let newInstalls: Int
     }
 
+    // MARK: - Cache keys
+
+    /// What `distribution(for:by:)` was asked for. The keypath identifies the
+    /// snapshot field, so the four distributions on the stats screen each get
+    /// their own entry.
+    struct DistributionKey: Hashable {
+        let project: String?
+        let field: KeyPath<UsageSnapshot, String>
+    }
+
+    /// What `trend(for:unit:calendar:)` was asked for.
+    struct TrendKey: Hashable {
+        let project: String?
+        let unit: TrendUnit
+        let calendar: Calendar
+    }
+
     // MARK: - Scoping
+
+    /// Visible snapshots grouped by project, built in one pass — the three
+    /// `…(for:)` accessors below are called from inside list rows, where a
+    /// filter over the whole array turns into O(프로젝트 수 × 레코드 수).
+    var snapshotsByProject: [String: [UsageSnapshot]] {
+        if let cached = derived.snapshotsByProject { return cached }
+        let value = Dictionary(grouping: allSnapshots, by: \.projectKey)
+        derived.snapshotsByProject = value
+        return value
+    }
+
+    var eventsByProject: [String: [UsageEvent]] {
+        if let cached = derived.eventsByProject { return cached }
+        let value = Dictionary(grouping: allEvents, by: \.projectKey)
+        derived.eventsByProject = value
+        return value
+    }
+
+    var crashesByProject: [String: [CrashReport]] {
+        if let cached = derived.crashesByProject { return cached }
+        let value = Dictionary(grouping: allCrashes, by: \.projectKey)
+        derived.crashesByProject = value
+        return value
+    }
 
     /// Usage records for one project, or all of them when `project` is nil.
     func snapshots(for project: String?) -> [UsageSnapshot] {
         guard let project else { return allSnapshots }
-        return allSnapshots.filter { $0.projectKey == project }
+        return snapshotsByProject[project] ?? []
     }
 
+    /// The individual events this device still holds — the last
+    /// `FeedbackStore.rawEventRetentionDays` days, not the whole history. Only
+    /// `eventLog(for:)` should want these; every *number* comes from `rollups`,
+    /// which goes all the way back.
     func events(for project: String?) -> [UsageEvent] {
         guard let project else { return allEvents }
-        return allEvents.filter { $0.projectKey == project }
+        return eventsByProject[project] ?? []
     }
 
     func crashes(for project: String?) -> [CrashReport] {
         guard let project else { return allCrashes }
-        return allCrashes.filter { $0.projectKey == project }
+        return crashesByProject[project] ?? []
     }
 
     /// Every project key that appears anywhere — feedback, usage, or a crash.
     /// An app can report under an id that never shows up in feedback.
     var allProjectKeys: [String] {
+        if let cached = derived.projectKeys { return cached }
         var keys = Set(allFeedback.map(\.projectKey))
         keys.formUnion(allSnapshots.map(\.projectKey))
-        keys.formUnion(allEvents.map(\.projectKey))
+        // From the rollups, not the raw events: an app whose events have all
+        // aged out of the retained window is still an app of yours, and its
+        // history is still on file.
+        keys.formUnion(rollups.projectKeys.subtracting(hiddenProjects))
         keys.formUnion(allCrashes.map(\.projectKey))
-        return keys.sorted { lhs, rhs in
+        let installs = snapshotsByProject.mapValues(\.count)
+        let value = keys.sorted { lhs, rhs in
             if lhs == Feedback.unclassifiedProject { return false }
             if rhs == Feedback.unclassifiedProject { return true }
-            let l = snapshots(for: lhs).count, r = snapshots(for: rhs).count
+            let l = installs[lhs] ?? 0, r = installs[rhs] ?? 0
             if l != r { return l > r }
             return displayName(for: lhs).localizedStandardCompare(displayName(for: rhs)) == .orderedAscending
         }
+        derived.projectKeys = value
+        return value
     }
 
-    var hasUsageData: Bool { !allSnapshots.isEmpty || !allEvents.isEmpty }
+    var hasUsageData: Bool { !allSnapshots.isEmpty || !rollups.isEmpty }
 
     // MARK: - Per-project rollup
 
@@ -192,21 +257,21 @@ extension FeedbackStore {
     var overallUsage: ProjectUsage { usage(for: nil) }
 
     func usage(for project: String?) -> ProjectUsage {
+        if let cached = derived.usage[project] { return cached }
         let snaps = snapshots(for: project)
-        let evts = events(for: project)
         let now = Date()
         let weekAgo = now.addingTimeInterval(-7 * 86_400)
         let twoWeeksAgo = now.addingTimeInterval(-14 * 86_400)
         let monthAgo = now.addingTimeInterval(-30 * 86_400)
 
-        let recentEvents = evts.filter { $0.occurredAt >= weekAgo }
-        let previousEvents = evts.filter { $0.occurredAt >= twoWeeksAgo && $0.occurredAt < weekAgo }
+        // The event side of this comes from the day buckets, so it stays
+        // correct however far back the hub goes and costs nothing to read.
+        let days = rollups.days(for: project, excluding: hiddenProjects)
+        let thisWeek = UsageRollups.window(days, keys: UsageRollups.windowKeys(days: 7))
+        let lastWeek = UsageRollups.window(days, keys: UsageRollups.windowKeys(days: 7, endingDaysAgo: 7))
+        let totalEvents = days.values.reduce(0) { $0 + $1.events }
 
-        func distinctInstalls(_ items: [UsageEvent]) -> Int {
-            Set(items.compactMap(\.installID)).count
-        }
-
-        return ProjectUsage(
+        let value = ProjectUsage(
             project: project ?? "",
             displayName: project.map { displayName(for: $0) } ?? "전체 프로젝트",
             installs: snaps.count,
@@ -219,30 +284,18 @@ extension FeedbackStore {
             }.count,
             totalLaunches: snaps.reduce(0) { $0 + $1.launchCount },
             totalSignificantEvents: snaps.reduce(0) { $0 + $1.eventCount },
-            activeInstalls7: distinctInstalls(recentEvents),
-            previousActiveInstalls7: distinctInstalls(previousEvents),
-            events7: recentEvents.count,
-            previousEvents7: previousEvents.count,
-            totalEvents: evts.count,
+            activeInstalls7: thisWeek.installs,
+            previousActiveInstalls7: lastWeek.installs,
+            events7: thisWeek.events,
+            previousEvents7: lastWeek.events,
+            totalEvents: totalEvents,
             lastActiveAt: snaps.compactMap(\.lastActiveAt).max(),
-            sparkline: Self.dailyEventCounts(evts, days: 14)
+            sparkline: UsageRollups.recentDayKeys(14).map {
+                DayCount(date: $0.date, count: days[$0.key]?.events ?? 0)
+            }
         )
-    }
-
-    private static func dailyEventCounts(_ events: [UsageEvent], days: Int) -> [DayCount] {
-        let cal = Calendar.current
-        let today = cal.startOfDay(for: Date())
-        guard let start = cal.date(byAdding: .day, value: -(days - 1), to: today) else { return [] }
-
-        var buckets: [Date: Int] = [:]
-        for event in events {
-            let day = cal.startOfDay(for: event.occurredAt)
-            if day >= start { buckets[day, default: 0] += 1 }
-        }
-        return (0..<days).compactMap { offset in
-            guard let day = cal.date(byAdding: .day, value: offset, to: start) else { return nil }
-            return DayCount(date: day, count: buckets[day] ?? 0)
-        }
+        derived.usage[project] = value
+        return value
     }
 
     // MARK: - Diagnostics
@@ -254,6 +307,7 @@ extension FeedbackStore {
     /// about once a day, so "최근 7일" means "arrived in the last 7 days", not
     /// "crashed in the last 7 days".
     func crashSummary(for project: String?) -> CrashSummary {
+        if let cached = derived.crashSummary[project] { return cached }
         let items = crashes(for: project)
             .sorted { ($0.receivedAt ?? .distantPast) > ($1.receivedAt ?? .distantPast) }
         let now = Date()
@@ -271,7 +325,7 @@ extension FeedbackStore {
             .map { (kind: $0.key, label: CrashReport.label(for: $0.key), count: $0.value) }
             .sorted { $0.count > $1.count }
 
-        return CrashSummary(
+        let value = CrashSummary(
             total: items.count,
             last7Days: items.filter { ($0.receivedAt ?? .distantPast) >= weekAgo }.count,
             previous7Days: items.filter {
@@ -285,6 +339,8 @@ extension FeedbackStore {
             recent: Array(items.prefix(30)),
             lastAt: items.first?.receivedAt
         )
+        derived.crashSummary[project] = value
+        return value
     }
 
     /// Diagnostics for one project (nil == 전체), newest first, optionally
@@ -298,7 +354,8 @@ extension FeedbackStore {
     /// Projects that reported diagnostics, worst first — the list behind the
     /// red ⚠︎ marks.
     var crashingProjects: [(key: String, displayName: String, total: Int, last7Days: Int)] {
-        allProjectKeys.compactMap { key in
+        if let cached = derived.crashingProjects { return cached }
+        let value: [(key: String, displayName: String, total: Int, last7Days: Int)] = allProjectKeys.compactMap { key in
             let summary = crashSummary(for: key)
             guard summary.total > 0 else { return nil }
             return (key: key, displayName: displayName(for: key),
@@ -307,24 +364,49 @@ extension FeedbackStore {
         .sorted { lhs, rhs in
             lhs.last7Days == rhs.last7Days ? lhs.total > rhs.total : lhs.last7Days > rhs.last7Days
         }
+        derived.crashingProjects = value
+        return value
     }
 
     // MARK: - Events
 
-    /// Event names for one project, most frequent first.
+    /// Event names for one project, most frequent first. All-time, from the
+    /// running totals kept alongside the day buckets — so a name that stopped
+    /// firing months ago still shows the count it earned.
     func eventStats(for project: String?) -> [EventStat] {
-        var buckets: [String: (count: Int, installs: Set<String>, lastAt: Date?)] = [:]
-        for event in events(for: project) {
-            var entry = buckets[event.name] ?? (0, [], nil)
-            entry.count += 1
-            if let install = event.installID { entry.installs.insert(install) }
-            if (entry.lastAt ?? .distantPast) < event.occurredAt { entry.lastAt = event.occurredAt }
-            buckets[event.name] = entry
-        }
-        return buckets
+        if let cached = derived.eventStats[project] { return cached }
+        let value: [EventStat] = rollups.totals(for: project, excluding: hiddenProjects)
             .map { EventStat(name: $0.key, count: $0.value.count,
                              installs: $0.value.installs.count, lastAt: $0.value.lastAt) }
             .sorted { $0.count > $1.count }
+        derived.eventStats[project] = value
+        return value
+    }
+
+    /// Event names with the install sets behind them, all-time. `eventStats`
+    /// only carries counts, and a funnel cannot be built from counts: a step
+    /// written as `paywall_cta_tapped` has to union the install sets of every
+    /// slice (`:buy`, `:memo`), and summing them would count someone who tapped
+    /// both as two people.
+    func eventTallies(for project: String?) -> [String: UsageNameTotal] {
+        if let cached = derived.eventTallies[project] { return cached }
+        let value = rollups.totals(for: project, excluding: hiddenProjects)
+        derived.eventTallies[project] = value
+        return value
+    }
+
+    /// The events themselves, newest first — what the 사용 내역 card lists. The
+    /// one place raw records are still needed, and the reason a window of them
+    /// is retained (`FeedbackStore.rawEventRetentionDays`); everything older is
+    /// present as counts, not as individual lines.
+    ///
+    /// Sorted here rather than in the view, which re-ran the whole sort every
+    /// time the card redrew (including on every "더 보기" tap).
+    func eventLog(for project: String?) -> [UsageEvent] {
+        if let cached = derived.eventLog[project] { return cached }
+        let value = events(for: project).sorted { $0.occurredAt > $1.occurredAt }
+        derived.eventLog[project] = value
+        return value
     }
 
     // MARK: - Metrics reported by the app
@@ -336,6 +418,7 @@ extension FeedbackStore {
     /// Numeric metrics, averaged over the installs that reported them — the
     /// same "설치당 평균" the apps show.
     func metricAverages(for project: String?) -> [MetricAverage] {
+        if let cached = derived.metricAverages[project] { return cached }
         var sums: [String: (total: Double, count: Int)] = [:]
         for snapshot in snapshots(for: project) {
             for (key, value) in snapshot.metrics where !Self.isFlag(key) {
@@ -343,38 +426,50 @@ extension FeedbackStore {
                 sums[key] = (current.total + value, current.count + 1)
             }
         }
-        return sums
+        let value: [MetricAverage] = sums
             .map { MetricAverage(key: $0.key,
                                  average: $0.value.count > 0 ? $0.value.total / Double($0.value.count) : 0,
                                  total: $0.value.total,
                                  samples: $0.value.count) }
             .sorted { $0.key < $1.key }
+        derived.metricAverages[project] = value
+        return value
     }
 
     /// 0/1 flags as a share of this project's installs.
     func flagShares(for project: String?) -> [FlagShare] {
+        if let cached = derived.flagShares[project] { return cached }
         let snaps = snapshots(for: project)
-        guard !snaps.isEmpty else { return [] }
+        guard !snaps.isEmpty else {
+            derived.flagShares[project] = []
+            return []
+        }
         var counts: [String: Int] = [:]
         for snapshot in snaps {
             for (key, value) in snapshot.metrics where Self.isFlag(key) && value >= 1 {
                 counts[key, default: 0] += 1
             }
         }
-        return counts
+        let value: [FlagShare] = counts
             .map { FlagShare(key: $0.key, count: $0.value, ratio: Double($0.value) / Double(snaps.count)) }
             .sorted { $0.count > $1.count }
+        derived.flagShares[project] = value
+        return value
     }
 
     /// Install counts by one snapshot field (version, platform, OS, locale).
     func distribution(for project: String?, by field: KeyPath<UsageSnapshot, String>) -> [DistributionBucket] {
+        let cacheKey = DistributionKey(project: project, field: field)
+        if let cached = derived.distribution[cacheKey] { return cached }
         var counts: [String: Int] = [:]
         for snapshot in snapshots(for: project) {
             counts[snapshot[keyPath: field], default: 0] += 1
         }
-        return counts
+        let value: [DistributionBucket] = counts
             .map { DistributionBucket(key: $0.key, count: $0.value) }
             .sorted { $0.count == $1.count ? $0.key.localizedStandardCompare($1.key) == .orderedDescending : $0.count > $1.count }
+        derived.distribution[cacheKey] = value
+        return value
     }
 
     // MARK: - Trend
@@ -383,18 +478,23 @@ extension FeedbackStore {
     /// gaps. Built from `occurredAt`, never the record's creation date:
     /// backfilled days would otherwise all land on the day they were uploaded.
     func trend(for project: String?, unit: TrendUnit, calendar: Calendar = .current) -> [TrendPoint] {
+        let cacheKey = TrendKey(project: project, unit: unit, calendar: calendar)
+        if let cached = derived.trend[cacheKey] { return cached }
+
         func bucketStart(_ date: Date) -> Date? {
             calendar.dateInterval(of: unit.component, for: date)?.start
         }
 
+        // Weeks, months and years are day buckets added up — and 활동 사용자 is
+        // the *union* of their install sets, never the sum, because one install
+        // active on Monday and Tuesday is one user.
         var eventCounts: [Date: Int] = [:]
         var installsByBucket: [Date: Set<String>] = [:]
-        for event in events(for: project) {
-            guard let start = bucketStart(event.occurredAt) else { continue }
-            eventCounts[start, default: 0] += 1
-            if let install = event.installID {
-                installsByBucket[start, default: []].insert(install)
-            }
+        for (day, bucket) in rollups.days(for: project, excluding: hiddenProjects) {
+            guard let date = UsageRollups.date(fromDayKey: day, calendar: calendar),
+                  let start = bucketStart(date) else { continue }
+            eventCounts[start, default: 0] += bucket.events
+            installsByBucket[start, default: []].formUnion(bucket.installs)
         }
 
         var newInstalls: [Date: Int] = [:]
@@ -404,7 +504,10 @@ extension FeedbackStore {
         }
 
         let starts = Set(eventCounts.keys).union(installsByBucket.keys).union(newInstalls.keys)
-        guard let first = starts.min(), let today = bucketStart(Date()) else { return [] }
+        guard let first = starts.min(), let today = bucketStart(Date()) else {
+            derived.trend[cacheKey] = []
+            return []
+        }
         let last = max(starts.max() ?? today, today)
 
         var points: [TrendPoint] = []
@@ -418,6 +521,7 @@ extension FeedbackStore {
             guard let next = calendar.date(byAdding: unit.component, value: 1, to: cursor) else { break }
             cursor = next
         }
+        derived.trend[cacheKey] = points
         return points
     }
 }

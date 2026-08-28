@@ -77,27 +77,168 @@ final class FeedbackStore: ObservableObject {
     }
 
     // Raw data, exactly as fetched. The `all…` properties below are what the UI
-    // reads: the same records with hidden projects taken out.
-    @Published private(set) var fetchedFeedback: [Feedback] = []
+    // reads: the same records with hidden projects taken out. Each of these
+    // drops the derived-value cache, because every number on screen is rolled
+    // up from them (see `Derived`).
+    @Published private(set) var fetchedFeedback: [Feedback] = [] { didSet { invalidateDerived() } }
     @Published private(set) var resolvedRecordType: String?
     /// Usage statistics exactly as the apps reported them (see `Usage.swift`).
-    @Published private(set) var fetchedSnapshots: [UsageSnapshot] = []
-    @Published private(set) var fetchedEvents: [UsageEvent] = []
+    @Published private(set) var fetchedSnapshots: [UsageSnapshot] = [] { didSet { invalidateDerived() } }
+    @Published private(set) var fetchedEvents: [UsageEvent] = [] { didSet { invalidateDerived() } }
     /// MetricKit diagnostics (`CrashReport`).
-    @Published private(set) var fetchedCrashes: [CrashReport] = []
+    @Published private(set) var fetchedCrashes: [CrashReport] = [] { didSet { invalidateDerived() } }
+
+    /// Usage events summed by day, once, when they arrived — see
+    /// `UsageRollups`. This, not `fetchedEvents`, is what every usage number on
+    /// screen is computed from: `fetchedEvents` only holds the recent window
+    /// the 사용 내역 list shows individually.
+    private(set) var rollups = UsageRollups() { didSet { invalidateUsageRollups() } }
+
+    // MARK: - Derived-value cache
+
+    /// Everything on screen is derived from the four arrays above, and SwiftUI
+    /// asks for it again on every `body` — for every row, on every frame.
+    /// Aggregating there costs a pass over every record *per row*: the project
+    /// list was O(프로젝트 수 × 레코드 수) per frame for numbers that only
+    /// change when a refresh lands. So each rollup is computed once and kept
+    /// here until one of its inputs moves.
+    ///
+    /// The trade to keep in mind: a "최근 7일" window is frozen at the moment it
+    /// was computed instead of following the clock. It moves on the next
+    /// refresh — at worst `autoRefreshInterval` away, and always at least once
+    /// per launch — which is far finer than the day-sized buckets it feeds.
+    struct Derived {
+        // The visible records: hidden projects taken out.
+        var feedback: [Feedback]?
+        var snapshots: [UsageSnapshot]?
+        var events: [UsageEvent]?
+        var crashes: [CrashReport]?
+
+        // The same records grouped by project, so every `…(for:)` accessor is
+        // a dictionary lookup instead of a filter over the whole array.
+        var feedbackByProject: [String: [Feedback]]?
+        var snapshotsByProject: [String: [UsageSnapshot]]?
+        var eventsByProject: [String: [UsageEvent]]?
+        var crashesByProject: [String: [CrashReport]]?
+
+        var projectKeys: [String]?
+        var projectCounts: [(key: String, count: Int)]?
+        var projectSummaries: [ProjectSummary]?
+        var hiddenProjectEntries: [(key: String, displayName: String, records: Int)]?
+        var availableVersions: [String]?
+
+        var trafficByProject: [String: Traffic]?
+        var overallTraffic: Traffic?
+        var crashingProjects: [(key: String, displayName: String, total: Int, last7Days: Int)]?
+
+        // Per scope — the key is the project, `nil` meaning 전체 프로젝트.
+        var stats: [String?: Stats] = [:]
+        var usage: [String?: ProjectUsage] = [:]
+        var crashSummary: [String?: CrashSummary] = [:]
+        var eventStats: [String?: [EventStat]] = [:]
+        var eventTallies: [String?: [String: UsageNameTotal]] = [:]
+        var eventLog: [String?: [UsageEvent]] = [:]
+        var metricAverages: [String?: [MetricAverage]] = [:]
+        var flagShares: [String?: [FlagShare]] = [:]
+        var distribution: [DistributionKey: [DistributionBucket]] = [:]
+        var trend: [TrendKey: [TrendPoint]] = [:]
+    }
+
+    /// Not `private` only because the aggregation that fills it lives in
+    /// `FeedbackStore+Usage.swift`.
+    var derived = Derived()
+
+    /// Throw every rollup away. Only for changes that move the records
+    /// themselves — a fetch, or hiding a project, which changes what the
+    /// records *are* for every screen.
+    func invalidateDerived() { derived = Derived() }
+
+    /// Drop only what the read / 확인 sets feed. Marking one feedback read used
+    /// to invalidate everything, so the next frame re-aggregated every event in
+    /// the hub to redraw a dot — with a few thousand records that is the pause
+    /// you feel on a tap. Nothing but the per-project unread count depends on
+    /// these sets.
+    private func invalidateReadState() {
+        derived.projectSummaries = nil
+    }
+
+    /// Drop only what an app's display name feeds: the lists that show it and
+    /// the orderings that compare on it. Trends, distributions and event
+    /// statistics do not know a project's label exists.
+    private func invalidateLabels() {
+        derived.projectKeys = nil
+        derived.projectCounts = nil
+        derived.projectSummaries = nil
+        derived.hiddenProjectEntries = nil
+        derived.crashingProjects = nil
+        derived.usage = [:]
+    }
+
+    /// Drop what reads the day buckets. Folding new events changes the usage
+    /// numbers and nothing else — not feedback, not diagnostics.
+    private func invalidateUsageRollups() {
+        derived.projectKeys = nil
+        derived.projectCounts = nil
+        derived.projectSummaries = nil
+        derived.trafficByProject = nil
+        derived.overallTraffic = nil
+        derived.usage = [:]
+        derived.eventStats = [:]
+        derived.eventTallies = [:]
+        derived.trend = [:]
+    }
 
     var allFeedback: [Feedback] {
-        hiddenProjects.isEmpty ? fetchedFeedback : fetchedFeedback.filter { !hiddenProjects.contains($0.projectKey) }
+        if let cached = derived.feedback { return cached }
+        let value = hiddenProjects.isEmpty
+            ? fetchedFeedback
+            : fetchedFeedback.filter { !hiddenProjects.contains($0.projectKey) }
+        derived.feedback = value
+        return value
     }
     var allSnapshots: [UsageSnapshot] {
-        hiddenProjects.isEmpty ? fetchedSnapshots : fetchedSnapshots.filter { !hiddenProjects.contains($0.projectKey) }
+        if let cached = derived.snapshots { return cached }
+        let value = hiddenProjects.isEmpty
+            ? fetchedSnapshots
+            : fetchedSnapshots.filter { !hiddenProjects.contains($0.projectKey) }
+        derived.snapshots = value
+        return value
     }
     var allEvents: [UsageEvent] {
-        hiddenProjects.isEmpty ? fetchedEvents : fetchedEvents.filter { !hiddenProjects.contains($0.projectKey) }
+        if let cached = derived.events { return cached }
+        let value = hiddenProjects.isEmpty
+            ? fetchedEvents
+            : fetchedEvents.filter { !hiddenProjects.contains($0.projectKey) }
+        derived.events = value
+        return value
     }
     var allCrashes: [CrashReport] {
-        hiddenProjects.isEmpty ? fetchedCrashes : fetchedCrashes.filter { !hiddenProjects.contains($0.projectKey) }
+        if let cached = derived.crashes { return cached }
+        let value = hiddenProjects.isEmpty
+            ? fetchedCrashes
+            : fetchedCrashes.filter { !hiddenProjects.contains($0.projectKey) }
+        derived.crashes = value
+        return value
     }
+
+    // MARK: - Grouped by project
+
+    /// Visible feedback grouped by project key, built in one pass. Everything
+    /// that used to write `allFeedback.filter { $0.projectKey == key }` reads
+    /// this instead — that filter inside a per-row call is the O(N²) shape.
+    var feedbackByProject: [String: [Feedback]] {
+        if let cached = derived.feedbackByProject { return cached }
+        let value = Dictionary(grouping: allFeedback, by: \.projectKey)
+        derived.feedbackByProject = value
+        return value
+    }
+
+    /// Feedback for one project, or all of it when `project` is nil.
+    func feedback(for project: String?) -> [Feedback] {
+        guard let project else { return allFeedback }
+        return feedbackByProject[project] ?? []
+    }
+
     /// Why usage data is missing, when it is. Usage has its own schema and read
     /// permission, so it can fail on its own while feedback loads.
     @Published var usageNotice: String?
@@ -115,6 +256,13 @@ final class FeedbackStore: ObservableObject {
     /// Whether there is anything on screen at all, from cache or from the
     /// network. Errors and empty states defer to it.
     var hasContent: Bool {
+        // A hub whose raw events have all aged out of the retained window still
+        // has every number on its statistics screen.
+        hasFetchedRecords || !rollups.isEmpty
+    }
+    /// Whether any *record* is held, rollups aside. What the cache restore asks
+    /// before painting: it must not overwrite a refresh that already landed.
+    private var hasFetchedRecords: Bool {
         !fetchedFeedback.isEmpty || !fetchedSnapshots.isEmpty
             || !fetchedEvents.isEmpty || !fetchedCrashes.isEmpty
     }
@@ -227,9 +375,15 @@ final class FeedbackStore: ObservableObject {
     /// Re-reading a handful of records is free — they merge by record name.
     private static let syncOverlap: TimeInterval = 5 * 60
 
-    /// Hard caps on the two record types that grow without bound. Applied after
-    /// merging, so an incremental read can't grow the cache forever.
+    /// How much of the raw event stream is kept as individual records. Older
+    /// events are not lost: they were folded into `rollups` the moment they
+    /// arrived, and every number on screen comes from there. This window is
+    /// only what the 사용 내역 list needs to show events one by one.
+    static let rawEventRetentionDays = 90
+    /// Backstop on the retained window, for an app that reports thousands of
+    /// events a day. The rollups are unaffected either way.
     private static let eventLimit = 5000
+    /// Diagnostics are read whole and are small; this is the only cap they get.
     private static let crashLimit = 1000
 
     /// When each record type was last read successfully. Persisted with the
@@ -287,9 +441,16 @@ final class FeedbackStore: ObservableObject {
         // what is already stored lets it stop reading as soon as it reaches it.
         // Snapshots are left out on purpose: each install rewrites its own
         // record, so a name we already have is exactly what we need to re-read.
+        //
+        // Events get their boundary even on a *full* refresh, which the other
+        // types don't. A full refresh exists to notice records deleted in the
+        // console, and a deleted event cannot be un-counted from a day that was
+        // already summed — so re-reading the whole stream would cost the most
+        // and buy nothing. "캐시 비우고 전체 다시 불러오기" is the way to rebuild
+        // the rollups from scratch.
         var usageKnown: [String: Set<String>] = [:]
+        usageKnown[CloudKitService.eventRecordType] = rollups.knownEventIDs
         if isIncremental {
-            usageKnown[CloudKitService.eventRecordType] = Set(fetchedEvents.map(\.id))
             usageKnown[CloudKitService.crashRecordType] = Set(fetchedCrashes.map(\.id))
         }
         let usage = await service.fetchUsage(modifiedSince: usageSince, known: usageKnown)
@@ -341,38 +502,74 @@ final class FeedbackStore: ObservableObject {
     @discardableResult
     private func apply(_ usage: CloudKitService.UsageOutcome, incremental: Bool) -> Bool {
         var changed = !incremental
+        var rollupsChanged = false
         if let snapshots = usage.snapshots {
             // Snapshots are the one type read in full every time, so "came
             // back non-empty" says nothing. Compare contents instead, or the
             // cache would be re-encoded once a minute for no reason.
-            let before = Self.fingerprint(fetchedSnapshots)
-            fetchedSnapshots = incremental
+            let next = incremental
                 ? Self.merged(snapshots, into: fetchedSnapshots,
                               newestFirst: { ($0.lastActiveAt ?? .distantPast) > ($1.lastActiveAt ?? .distantPast) })
                 : snapshots
-            changed = changed || Self.fingerprint(fetchedSnapshots) != before
+            // Compared *before* assigning, not after: the assignment itself is
+            // what drops the derived cache, so an unchanged read has to stop
+            // short of it or the refresh loop re-aggregates for nothing.
+            if Self.fingerprint(next) != Self.fingerprint(fetchedSnapshots) {
+                fetchedSnapshots = next
+                changed = true
+            }
         }
         if let events = usage.events {
-            let all = incremental
-                ? Self.merged(events, into: fetchedEvents, newestFirst: { $0.occurredAt > $1.occurredAt })
-                : events
-            fetchedEvents = Array(all.prefix(Self.eventLimit))
+            // Summed first, kept second. Folding is what makes the number on
+            // screen permanent; the raw records below are only the recent
+            // window the 사용 내역 list reads, and are merged (never replaced)
+            // because a read that stopped early returns only the new tail.
+            let folded = rollups.fold(events)
+            if folded > 0 {
+                rollups.pruneIdentifiers()
+                rollupsChanged = true
+                changed = true
+            }
+            let all = Self.merged(events, into: fetchedEvents, newestFirst: { $0.occurredAt > $1.occurredAt })
+            let window = Self.withinRetention(all)
+            // Assigning an identical array would still fire `didSet` and throw
+            // away every rollup — the once-a-minute refresh that found nothing
+            // must not cost a full re-aggregation.
+            if folded > 0 || window.count != fetchedEvents.count {
+                fetchedEvents = window
+            }
         }
         if let crashes = usage.crashes {
             let all = incremental
                 ? Self.merged(crashes, into: fetchedCrashes,
                               newestFirst: { ($0.receivedAt ?? .distantPast) > ($1.receivedAt ?? .distantPast) })
                 : crashes
-            fetchedCrashes = Array(all.prefix(Self.crashLimit))
+            // Diagnostics stop reading at what this device already has, so a
+            // non-empty incremental result is genuinely new. Comparing counts
+            // would miss one once the cap is reached and the count stops moving.
+            if !crashes.isEmpty || !incremental {
+                fetchedCrashes = Array(all.prefix(Self.crashLimit))
+            }
         }
         usageNotice = usage.notice
         watermarks.merge(usage.syncedTypes) { _, new in new }
-        // Events and diagnostics stop reading at what this device already has,
-        // so anything that came back is genuinely new.
-        changed = changed
-            || !(usage.events?.isEmpty ?? true)
-            || !(usage.crashes?.isEmpty ?? true)
+        // Diagnostics stop reading at what this device already has, so anything
+        // that came back is genuinely new. Events answer for themselves: only a
+        // fold that counted something is news.
+        changed = changed || !(usage.crashes?.isEmpty ?? true)
+        if rollupsChanged { persistRollups() }
         return changed
+    }
+
+    /// The slice of the event stream kept as individual records, newest first.
+    private static func withinRetention(_ events: [UsageEvent],
+                                        calendar: Calendar = .current,
+                                        now: Date = Date()) -> [UsageEvent] {
+        guard let cutoff = calendar.date(byAdding: .day, value: -rawEventRetentionDays,
+                                         to: calendar.startOfDay(for: now)) else {
+            return Array(events.prefix(eventLimit))
+        }
+        return Array(events.filter { $0.occurredAt >= cutoff }.prefix(eventLimit))
     }
 
     /// A cheap stand-in for "did any install's numbers move". Coarse on
@@ -410,13 +607,31 @@ final class FeedbackStore: ObservableObject {
     /// which decides if the refresh that follows can be incremental.
     @discardableResult
     private func restoreFromCache() async -> Bool {
-        guard let cached = await FeedbackCache.shared.load(), !cached.isEmpty else { return false }
+        let cached = await FeedbackCache.shared.load()
+
+        // The day buckets live in their own file and are restored on their own:
+        // they are what every usage number reads, and they reach back much
+        // further than the records below. Skipped if a refresh has already
+        // folded its own — that read is the newer of the two.
+        if rollups.isEmpty {
+            var restored = await RollupCache.shared.load() ?? UsageRollups()
+            // Idempotent, so this only does work on the first launch after a
+            // device upgrades into rollups and has to seed them from the
+            // records it already had on disk.
+            if restored.fold(cached?.events ?? []) > 0 {
+                restored.pruneIdentifiers()
+                persistRollups(restored)
+            }
+            if !restored.isEmpty { rollups = restored }
+        }
+
+        guard let cached, !cached.isEmpty else { return false }
         // A refresh that already finished is newer than the file by definition.
-        guard !hasContent else { return false }
+        guard !hasFetchedRecords else { return false }
 
         fetchedFeedback = cached.feedback
         fetchedSnapshots = cached.snapshots
-        fetchedEvents = cached.events
+        fetchedEvents = Self.withinRetention(cached.events)
         fetchedCrashes = cached.crashes
         resolvedRecordType = cached.resolvedRecordType
         watermarks = cached.watermarks
@@ -441,9 +656,22 @@ final class FeedbackStore: ObservableObject {
         Task { await FeedbackCache.shared.save(hub) }
     }
 
+    /// Write the day buckets back, in their own file. Kept apart from
+    /// `persistCache()` so a refresh that only added a handful of events
+    /// rewrites a few kilobytes of sums instead of every record the hub holds.
+    private func persistRollups(_ value: UsageRollups? = nil) {
+        let rollups = value ?? self.rollups
+        Task { await RollupCache.shared.save(rollups) }
+    }
+
     /// Throw the cache away and read everything again from CloudKit.
     func resetCacheAndReload() async {
         await FeedbackCache.shared.clear()
+        await RollupCache.shared.clear()
+        // The one path that rebuilds the sums from scratch: without this the
+        // day buckets would survive the reset and keep counting events the
+        // fresh read is about to hand back.
+        rollups = UsageRollups()
         watermarks = [:]
         await load(mode: .full)
     }
@@ -487,10 +715,18 @@ final class FeedbackStore: ObservableObject {
             }
         }
 
-        seenFeedbackIDs = feedbackIDs
-        seenCrashIDs = crashIDs
-        defaults.set(Array(feedbackIDs), forKey: Self.seenFeedbackIDsKey)
-        defaults.set(Array(crashIDs), forKey: Self.seenCrashIDsKey)
+        // Written back only when they actually moved. This runs after every
+        // refresh — once a minute with auto-refresh on — and with a few
+        // thousand records these are two sizeable arrays to re-encode into
+        // user defaults for nothing.
+        if seenFeedbackIDs != feedbackIDs {
+            seenFeedbackIDs = feedbackIDs
+            defaults.set(Array(feedbackIDs), forKey: Self.seenFeedbackIDsKey)
+        }
+        if seenCrashIDs != crashIDs {
+            seenCrashIDs = crashIDs
+            defaults.set(Array(crashIDs), forKey: Self.seenCrashIDsKey)
+        }
     }
 
     /// The app icon badge follows the unread feedback count.
@@ -502,7 +738,7 @@ final class FeedbackStore: ObservableObject {
 
     /// Record names the user has already opened. Persisted, so a relaunch
     /// doesn't resurface feedback that was already dealt with.
-    @Published private(set) var readIDs: Set<String> = []
+    @Published private(set) var readIDs: Set<String> = [] { didSet { invalidateReadState() } }
     private static let readIDsKey = "readFeedbackIDs"
 
     func isUnread(_ feedback: Feedback) -> Bool { !readIDs.contains(feedback.id) }
@@ -515,8 +751,7 @@ final class FeedbackStore: ObservableObject {
 
     /// Unread inside one project (nil == 전체) — what the project rows show.
     func unreadCount(for project: String?) -> Int {
-        guard let project else { return unreadCount }
-        return countUnread(in: allFeedback.filter { $0.projectKey == project })
+        countUnread(in: feedback(for: project))
     }
 
     private func countUnread(in items: [Feedback]) -> Int {
@@ -533,7 +768,7 @@ final class FeedbackStore: ObservableObject {
 
     /// Clear the badges for one project, or for everything when `project` is nil.
     func markAllRead(project: String? = nil) {
-        let targets = project.map { key in allFeedback.filter { $0.projectKey == key } } ?? allFeedback
+        let targets = feedback(for: project)
         let ids = Set(targets.map(\.id))
         guard !ids.isSubset(of: readIDs) else { return }
         readIDs.formUnion(ids)
@@ -555,7 +790,7 @@ final class FeedbackStore: ObservableObject {
     /// vanish just for being looked at. This one only ever moves when the user
     /// says so, which is what makes it safe to hide by. Persisted per device;
     /// nothing is written back to CloudKit.
-    @Published private(set) var handledIDs: Set<String> = []
+    @Published private(set) var handledIDs: Set<String> = [] { didSet { invalidateReadState() } }
     private static let handledIDsKey = "handledFeedbackIDs"
 
     /// Show the 확인한 rows in the list anyway. Off by default — the point of
@@ -576,8 +811,7 @@ final class FeedbackStore: ObservableObject {
 
     /// 확인한 건수, 프로젝트 단위 (nil == 전체).
     func handledCount(for project: String?) -> Int {
-        guard let project else { return handledCount }
-        return countHandled(in: allFeedback.filter { $0.projectKey == project })
+        countHandled(in: feedback(for: project))
     }
 
     private func countHandled(in items: [Feedback]) -> Int {
@@ -605,7 +839,7 @@ final class FeedbackStore: ObservableObject {
     /// Mark every feedback in one project — or everything when `project` is nil
     /// — as 확인함.
     func markAllHandled(project: String? = nil) {
-        let targets = project.map { key in allFeedback.filter { $0.projectKey == key } } ?? allFeedback
+        let targets = feedback(for: project)
         let ids = Set(targets.map(\.id))
         guard !ids.isSubset(of: handledIDs) else { return }
         handledIDs.formUnion(ids)
@@ -618,7 +852,7 @@ final class FeedbackStore: ObservableObject {
     /// Undo the marking for one project's currently loaded feedback, or for all
     /// of it. Older entries for records no longer held are left alone.
     func clearHandled(project: String? = nil) {
-        let targets = project.map { key in allFeedback.filter { $0.projectKey == key } } ?? allFeedback
+        let targets = feedback(for: project)
         let ids = Set(targets.map(\.id))
         guard !handledIDs.isDisjoint(with: ids) else { return }
         handledIDs.subtract(ids)
@@ -634,7 +868,7 @@ final class FeedbackStore: ObservableObject {
     /// Projects taken out of this viewer. Nothing is deleted from CloudKit —
     /// the records stay in the hub and come back the moment the project is
     /// shown again. Persisted per device.
-    @Published private(set) var hiddenProjects: Set<String> = []
+    @Published private(set) var hiddenProjects: Set<String> = [] { didSet { invalidateDerived() } }
     private static let hiddenProjectsKey = "hiddenProjects"
 
     func isHidden(_ project: String) -> Bool { hiddenProjects.contains(project) }
@@ -670,14 +904,24 @@ final class FeedbackStore: ObservableObject {
     /// Hidden projects that actually have records, newest data first, for the
     /// "숨긴 프로젝트" list. A key with nothing behind it any more is dropped.
     var hiddenProjectEntries: [(key: String, displayName: String, records: Int)] {
-        hiddenProjects.map { key in
-            let records = fetchedFeedback.filter { $0.projectKey == key }.count
-                + fetchedSnapshots.filter { $0.projectKey == key }.count
-                + fetchedEvents.filter { $0.projectKey == key }.count
-                + fetchedCrashes.filter { $0.projectKey == key }.count
-            return (key: key, displayName: displayName(for: key), records: records)
+        if let cached = derived.hiddenProjectEntries { return cached }
+        guard !hiddenProjects.isEmpty else {
+            derived.hiddenProjectEntries = []
+            return []
         }
-        .sorted { $0.displayName.localizedStandardCompare($1.displayName) == .orderedAscending }
+        // One pass over the raw records rather than four filters per hidden
+        // project: this is read three times while the section draws.
+        var records: [String: Int] = [:]
+        for key in fetchedFeedback.map(\.projectKey) where hiddenProjects.contains(key) { records[key, default: 0] += 1 }
+        for key in fetchedSnapshots.map(\.projectKey) where hiddenProjects.contains(key) { records[key, default: 0] += 1 }
+        for key in fetchedEvents.map(\.projectKey) where hiddenProjects.contains(key) { records[key, default: 0] += 1 }
+        for key in fetchedCrashes.map(\.projectKey) where hiddenProjects.contains(key) { records[key, default: 0] += 1 }
+
+        let value: [(key: String, displayName: String, records: Int)] = hiddenProjects
+            .map { (key: $0, displayName: displayName(for: $0), records: records[$0] ?? 0) }
+            .sorted { $0.displayName.localizedStandardCompare($1.displayName) == .orderedAscending }
+        derived.hiddenProjectEntries = value
+        return value
     }
 
     private func persistHiddenProjects() {
@@ -689,12 +933,12 @@ final class FeedbackStore: ObservableObject {
     /// Learned `appId → appName` from records that carry both. Lets records
     /// that only have an `appId` (older LeeoKit submissions) still show a
     /// human-readable name.
-    @Published private(set) var learnedAppNames: [String: String] = [:]
+    @Published private(set) var learnedAppNames: [String: String] = [:] { didSet { invalidateLabels() } }
 
     /// Manual `appId → 앱 이름` overrides for apps whose records never include an
     /// `appName` at all. Edit this to name legacy-only projects.
     /// 예: ["com.Ysoup.OldApp": "옛날앱"]
-    var appNameOverrides: [String: String] = [:]
+    var appNameOverrides: [String: String] = [:] { didSet { invalidateLabels() } }
 
     private func learnAppNames(from feedback: [Feedback]) {
         var map: [String: String] = [:]
@@ -743,6 +987,7 @@ final class FeedbackStore: ObservableObject {
     /// (key, count) pairs, most feedback first, for the sidebar list. `key` is
     /// the grouping identity (appId); resolve its label with `displayName(for:)`.
     var projectCounts: [(key: String, count: Int)] {
+        if let cached = derived.projectCounts { return cached }
         var buckets: [String: Int] = [:]
         // Every project the hub knows about, not just the ones that have sent
         // feedback: an app that only reports usage or only crashed is still an
@@ -751,14 +996,17 @@ final class FeedbackStore: ObservableObject {
         for key in allProjectKeys { buckets[key] = 0 }
         for fb in allFeedback { buckets[fb.projectKey, default: 0] += 1 }
         let traffic = trafficByProject
-        return buckets
+        let value: [(key: String, count: Int)] = buckets
             .map { (key: $0.key, count: $0.value) }
             .sorted { lhs, rhs in ordered(lhs.key, lhs.count, rhs.key, rhs.count, traffic: traffic) }
+        derived.projectCounts = value
+        return value
     }
 
     /// Per-project rolled-up numbers for the overview grid, ordered the same
     /// way as `projectCounts` (most feedback first, "미분류" last).
     var projectSummaries: [ProjectSummary] {
+        if let cached = derived.projectSummaries { return cached }
         let weekAgo = Date().addingTimeInterval(-7 * 24 * 60 * 60)
         // Seeded with every known project (see `projectCounts`) so an app that
         // has usage or diagnostics but no feedback yet still gets a card.
@@ -767,7 +1015,7 @@ final class FeedbackStore: ObservableObject {
         for fb in allFeedback { grouped[fb.projectKey, default: []].append(fb) }
         let traffic = trafficByProject
 
-        return grouped.map { key, items in
+        let value: [ProjectSummary] = grouped.map { key, items in
             let ratings = items.compactMap(\.rating)
             let average = ratings.isEmpty ? nil : Double(ratings.reduce(0, +)) / Double(ratings.count)
             let last7 = items.filter { ($0.createdAt ?? .distantPast) >= weekAgo }.count
@@ -778,6 +1026,8 @@ final class FeedbackStore: ObservableObject {
                                   unreadCount: countUnread(in: items))
         }
         .sorted { ordered($0.project, $0.count, $1.project, $1.count, traffic: traffic) }
+        derived.projectSummaries = value
+        return value
     }
 
     /// How busy a project is right now. "트래픽" here is the apps' own
@@ -802,47 +1052,39 @@ final class FeedbackStore: ObservableObject {
     /// than calling `usage(for:)` inside a comparison, which would re-aggregate
     /// every record for every comparison.
     var trafficByProject: [String: Traffic] {
+        if let cached = derived.trafficByProject { return cached }
         let calendar = Calendar.current
-        let today = calendar.startOfDay(for: Date())
-        let days = 14
-        guard let sparklineStart = calendar.date(byAdding: .day, value: -(days - 1), to: today) else { return [:] }
-        let weekAgo = Date().addingTimeInterval(-7 * 86_400)
+        // Day buckets, not raw events: this used to be a pass over the whole
+        // event stream per refresh, and the stream is the one thing that grows
+        // without bound. Reading the sums instead makes the cost depend on how
+        // many *days* the hub has seen, not how many events.
+        let axis = UsageRollups.recentDayKeys(14, calendar: calendar)
+        let weekKeys = Set(UsageRollups.windowKeys(days: 7, calendar: calendar))
 
-        var events7: [String: Int] = [:]
-        var totals: [String: Int] = [:]
-        var actives: [String: Set<String>] = [:]
         var installs: [String: Int] = [:]
-        var daily: [String: [Date: Int]] = [:]
-
-        for event in allEvents {
-            let key = event.projectKey
-            totals[key, default: 0] += 1
-            if event.occurredAt >= weekAgo {
-                events7[key, default: 0] += 1
-                if let id = event.installID { actives[key, default: []].insert(id) }
-            }
-            if event.occurredAt >= sparklineStart {
-                let day = calendar.startOfDay(for: event.occurredAt)
-                daily[key, default: [:]][day, default: 0] += 1
-            }
-        }
         for snapshot in allSnapshots {
             installs[snapshot.projectKey, default: 0] += 1
         }
 
-        let axis: [Date] = (0..<days).compactMap {
-            calendar.date(byAdding: .day, value: $0 - (days - 1), to: today)
-        }
-
         var result: [String: Traffic] = [:]
-        for key in Set(totals.keys).union(installs.keys) {
-            let buckets = daily[key] ?? [:]
-            result[key] = Traffic(events7: events7[key] ?? 0,
-                                  activeInstalls7: actives[key]?.count ?? 0,
+        for key in rollups.projectKeys.subtracting(hiddenProjects).union(installs.keys) {
+            let days = rollups.days(for: key)
+            var total = 0
+            var events7 = 0
+            var active: Set<String> = []
+            for (day, bucket) in days {
+                total += bucket.events
+                guard weekKeys.contains(day) else { continue }
+                events7 += bucket.events
+                active.formUnion(bucket.installs)
+            }
+            result[key] = Traffic(events7: events7,
+                                  activeInstalls7: active.count,
                                   installs: installs[key] ?? 0,
-                                  totalEvents: totals[key] ?? 0,
-                                  sparkline: axis.map { DayCount(date: $0, count: buckets[$0] ?? 0) })
+                                  totalEvents: total,
+                                  sparkline: axis.map { DayCount(date: $0.date, count: days[$0.key]?.events ?? 0) })
         }
+        derived.trafficByProject = result
         return result
     }
 
@@ -852,6 +1094,7 @@ final class FeedbackStore: ObservableObject {
 
     /// Every project's traffic added together — the 전체 프로젝트 row's shape.
     var overallTraffic: Traffic {
+        if let cached = derived.overallTraffic { return cached }
         let all = Array(trafficByProject.values)
         guard let axis = all.first?.sparkline else { return .none }
         var summed = axis.map { DayCount(date: $0.date, count: 0) }
@@ -861,13 +1104,15 @@ final class FeedbackStore: ObservableObject {
                                          count: summed[index].count + point.count)
             }
         }
-        return Traffic(events7: all.reduce(0) { $0 + $1.events7 },
-                       // Installs are anonymous per app, so "활동 사용자" only
-                       // adds up as a sum of each app's own count.
-                       activeInstalls7: all.reduce(0) { $0 + $1.activeInstalls7 },
-                       installs: all.reduce(0) { $0 + $1.installs },
-                       totalEvents: all.reduce(0) { $0 + $1.totalEvents },
-                       sparkline: summed)
+        let value = Traffic(events7: all.reduce(0) { $0 + $1.events7 },
+                            // Installs are anonymous per app, so "활동 사용자"
+                            // only adds up as a sum of each app's own count.
+                            activeInstalls7: all.reduce(0) { $0 + $1.activeInstalls7 },
+                            installs: all.reduce(0) { $0 + $1.installs },
+                            totalEvents: all.reduce(0) { $0 + $1.totalEvents },
+                            sparkline: summed)
+        derived.overallTraffic = value
+        return value
     }
 
     /// Busiest app first. Which app is being *used* the most is what decides
@@ -888,18 +1133,18 @@ final class FeedbackStore: ObservableObject {
     }
 
     var availableVersions: [String] {
+        if let cached = derived.availableVersions { return cached }
         let versions = Set(allFeedback.compactMap { $0.appVersion?.trimmingCharacters(in: .whitespaces) }
             .filter { !$0.isEmpty })
-        return versions.sorted { $0.localizedStandardCompare($1) == .orderedDescending }
+        let value: [String] = versions.sorted { $0.localizedStandardCompare($1) == .orderedDescending }
+        derived.availableVersions = value
+        return value
     }
 
     /// All feedback narrowed to the selected project only (ignoring search /
     /// version / rating). This is the base set for statistics so the whole
     /// dashboard can focus on one project. `nil` selection == every project.
-    var scopedFeedback: [Feedback] {
-        guard let key = selectedProject else { return allFeedback }
-        return allFeedback.filter { $0.projectKey == key }
-    }
+    var scopedFeedback: [Feedback] { feedback(for: selectedProject) }
 
     var filteredFeedback: [Feedback] {
         var items = scopedFeedback
@@ -960,7 +1205,8 @@ final class FeedbackStore: ObservableObject {
     var overallStats: Stats { stats(for: nil) }
 
     func stats(for project: String?) -> Stats {
-        let source = project.map { key in allFeedback.filter { $0.projectKey == key } } ?? allFeedback
+        if let cached = derived.stats[project] { return cached }
+        let source = feedback(for: project)
         let total = source.count
 
         let ratings = source.compactMap { $0.rating }
@@ -982,11 +1228,13 @@ final class FeedbackStore: ObservableObject {
         let weekAgo = Date().addingTimeInterval(-7 * 24 * 60 * 60)
         let last7 = source.filter { ($0.createdAt ?? .distantPast) >= weekAgo }.count
 
-        return Stats(total: total,
-                     averageRating: average,
-                     ratingCounts: ratingCounts,
-                     versionCounts: versionCounts,
-                     last7Days: last7)
+        let value = Stats(total: total,
+                          averageRating: average,
+                          ratingCounts: ratingCounts,
+                          versionCounts: versionCounts,
+                          last7Days: last7)
+        derived.stats[project] = value
+        return value
     }
 
     /// (category, count) pairs from the LeeoKit `type` field, most common first.
