@@ -37,6 +37,9 @@ struct FeedbackDetailView: View {
                             .font(.title3)
                             .textSelection(.enabled)
                             .frame(maxWidth: .infinity, alignment: .leading)
+                        // Feedback comes in whatever language its writer speaks;
+                        // this puts Korean under it without leaving the app.
+                        TranslateToKoreanView(text: feedback.text)
                     }
                 }
 
