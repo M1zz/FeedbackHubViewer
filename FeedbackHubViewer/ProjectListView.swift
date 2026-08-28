@@ -82,7 +82,11 @@ struct ProjectListView: View {
         }
         .overlay {
             if store.isLoading && store.allFeedback.isEmpty {
-                ProgressView("불러오는 중…")
+                // The first launch with no cache is the one read that takes
+                // real time, so this is where the step and the count earn
+                // their place.
+                ProgressView(store.refreshProgress?.text ?? "불러오는 중…")
+                    .monospacedDigit()
             }
         }
     }
@@ -105,6 +109,15 @@ private struct StatusRow: View {
             Spacer(minLength: 4)
             if store.isRefreshing {
                 ProgressView().controlSize(.mini)
+                // Which step, and how far into it — the caption has room for
+                // that much of `RefreshProgress` and no more.
+                if let progress = store.refreshProgress {
+                    Text(progress.shortText)
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .monospacedDigit()
+                }
             } else if let updated = store.lastUpdated {
                 Text("업데이트 \(AppFormat.time(updated))")
                     .font(.caption2)

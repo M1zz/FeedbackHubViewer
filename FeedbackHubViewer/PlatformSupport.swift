@@ -57,6 +57,19 @@ enum AppFormat {
         relativeFormatter.localizedString(for: date, relativeTo: Date())
     }
 
+    /// "1,240" — a running record count, grouped so a five-digit number is
+    /// readable at a glance in the status line.
+    static func count(_ value: Int) -> String {
+        countFormatter.string(from: NSNumber(value: value)) ?? String(value)
+    }
+
+    private static let countFormatter: NumberFormatter = {
+        let f = NumberFormatter()
+        f.locale = locale
+        f.numberStyle = .decimal
+        return f
+    }()
+
     private static let dateTimeFormatter: DateFormatter = {
         let f = DateFormatter()
         f.locale = locale

@@ -66,7 +66,9 @@ private struct HubToolbar: ViewModifier {
                                 Text("시스템 설정에서 이 앱의 알림을 허용해야 알림이 표시됩니다.")
                             }
                         }
-                        if let updated = store.lastUpdated {
+                        if let progress = store.refreshProgress {
+                            Section { Text(progress.text) }
+                        } else if let updated = store.lastUpdated {
                             Section {
                                 Text("업데이트: \(AppFormat.time(updated))")
                             }

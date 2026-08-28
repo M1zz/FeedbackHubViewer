@@ -24,7 +24,8 @@ struct FeedbackListView: View {
                 .hubListStyle()
                 .overlay {
                     if store.isLoading && store.allFeedback.isEmpty {
-                        ProgressView("불러오는 중…")
+                        ProgressView(store.refreshProgress?.text ?? "불러오는 중…")
+                            .monospacedDigit()
                     }
                 }
         }

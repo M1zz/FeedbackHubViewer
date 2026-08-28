@@ -126,7 +126,8 @@ struct StatisticsDashboard: View {
         }
         .overlay {
             if store.isLoading && store.allFeedback.isEmpty && !store.hasUsageData {
-                ProgressView("불러오는 중…")
+                ProgressView(store.refreshProgress?.text ?? "불러오는 중…")
+                    .monospacedDigit()
             }
         }
     }

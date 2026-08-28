@@ -102,17 +102,7 @@ struct SplitRootView: View {
     @ToolbarContentBuilder
     private var macToolbarContent: some ToolbarContent {
         ToolbarItem(placement: .status) {
-            // The cached hub is already on screen by now, so a refresh says so
-            // in passing rather than replacing the window with a spinner.
-            if store.isRefreshing {
-                Text("업데이트 확인 중…")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            } else if let updated = store.lastUpdated {
-                Text("업데이트: \(AppFormat.time(updated))")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
+            RefreshStatus()
         }
 
         ToolbarItem(placement: .primaryAction) {
@@ -148,7 +138,9 @@ struct SplitRootView: View {
                 Toggle(isOn: $store.notificationsEnabled) {
                     Label("새 피드백·진단 알림", systemImage: "bell.badge")
                 }
-                if let updated = store.lastUpdated {
+                if let progress = store.refreshProgress {
+                    Section { Text(progress.text) }
+                } else if let updated = store.lastUpdated {
                     Section { Text("업데이트: \(AppFormat.time(updated))") }
                 }
                 Section {
@@ -160,6 +152,46 @@ struct SplitRootView: View {
         }
     }
     #endif
+}
+
+/// The toolbar's status line: what a running refresh is doing, or when the
+/// data last came in.
+///
+/// The cached hub is already on screen by now, so a refresh reports in passing
+/// rather than replacing the window with a spinner. What it reports is the step
+/// it is on and how many records it has read — see `FeedbackStore.RefreshProgress`
+/// for why there is no percentage to show.
+///
+/// It is its own view, not inline in the toolbar body, so a store change
+/// rebuilds this label alone rather than the whole toolbar (see `IdentityMenu`).
+struct RefreshStatus: View {
+    @EnvironmentObject private var store: FeedbackStore
+
+    var body: some View {
+        if store.isRefreshing {
+            HStack(spacing: 6) {
+                if let progress = store.refreshProgress {
+                    ProgressView(value: progress.fraction)
+                        .progressViewStyle(.linear)
+                        .frame(width: 54)
+                    Text(progress.text)
+                } else {
+                    ProgressView().controlSize(.small)
+                    Text("업데이트 확인 중…")
+                }
+            }
+            .font(.caption)
+            .foregroundStyle(.secondary)
+            // The step number and the record count both change width as they
+            // climb; without this the neighbouring toolbar items jitter.
+            .frame(minWidth: 210, alignment: .leading)
+            .monospacedDigit()
+        } else if let updated = store.lastUpdated {
+            Text("업데이트: \(AppFormat.time(updated))")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+    }
 }
 
 /// A menu that shows which CloudKit environment is being read and this

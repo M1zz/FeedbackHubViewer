@@ -78,6 +78,17 @@ final class CloudKitService {
     private let container: CKContainer
     private var database: CKDatabase { container.publicCloudDatabase }
 
+    /// Called on every page a read walks, with the record type being paged and
+    /// how many records of it have been seen so far.
+    ///
+    /// This is deliberately a count and not a fraction: a CloudKit query never
+    /// says how many records it will return — paging just runs until the cursor
+    /// comes back `nil` — so there is no denominator to build a percentage out
+    /// of. What a refresh *can* say honestly is which record type it is on and
+    /// how far it has walked, which is what `FeedbackStore.refreshProgress`
+    /// turns into the status line.
+    var onProgress: ((String, Int) -> Void)?
+
     init() {
         container = CKContainer(identifier: Self.containerIdentifier)
     }
@@ -397,6 +408,10 @@ final class CloudKitService {
         var collected: [CKRecord] = []
         var cursor: CKQueryOperation.Cursor?
         var knownRun = 0
+        // Everything the read walked, including records skipped because this
+        // device already holds them — that, not the collected count, is what
+        // "how far along" means to someone watching the status line.
+        var scanned = 0
 
         repeat {
             let page: (matchResults: [(CKRecord.ID, Result<CKRecord, Error>)],
@@ -413,14 +428,19 @@ final class CloudKitService {
             }
             for (_, result) in page.matchResults {
                 guard case .success(let record) = result else { continue }
+                scanned += 1
                 if let known, known.contains(record.recordID.recordName) {
                     knownRun += 1
-                    if knownRun >= Self.knownRunToStop { return collected }
+                    if knownRun >= Self.knownRunToStop {
+                        onProgress?(query.recordType, scanned)
+                        return collected
+                    }
                     continue
                 }
                 knownRun = 0
                 collected.append(record)
             }
+            onProgress?(query.recordType, scanned)
             cursor = page.queryCursor
             if let limit, collected.count >= limit {
                 return Array(collected.prefix(limit))

@@ -249,6 +249,10 @@ final class FeedbackStore: ObservableObject {
     /// cache painted while this is true — only the small toolbar indicator and
     /// the refresh button react to it.
     @Published private(set) var isRefreshing = false
+    /// What the in-flight refresh is doing, or `nil` when nothing is running.
+    /// See `RefreshProgress` for why this is a step and a count rather than a
+    /// percentage.
+    @Published private(set) var refreshProgress: RefreshProgress?
     /// True only while a refresh is running with nothing to show yet: the
     /// condition the full-screen "불러오는 중…" spinners key off. With a cache on
     /// disk this is false from the first frame.
@@ -337,6 +341,14 @@ final class FeedbackStore: ObservableObject {
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
+        // Both sides are @MainActor, so a page landing publishes straight to
+        // the status line — no hop, no throttling needed at one call per page.
+        service.onProgress = { [weak self] recordType, count in
+            guard let self, self.isRefreshing else { return }
+            var progress = Self.progressStep(for: recordType)
+            progress.records = count
+            self.refreshProgress = progress
+        }
         readIDs = Set(defaults.stringArray(forKey: Self.readIDsKey) ?? [])
         handledIDs = Set(defaults.stringArray(forKey: Self.handledIDsKey) ?? [])
         showHandled = defaults.bool(forKey: Self.showHandledKey)
@@ -365,6 +377,52 @@ final class FeedbackStore: ObservableObject {
         /// Read only what changed since the last successful read of each record
         /// type and merge it in. What a launch on top of a warm cache does.
         case incremental
+    }
+
+    /// How far along a refresh is.
+    ///
+    /// There is no percentage to show: CloudKit answers a query by handing back
+    /// one page and a cursor, never a total, so the denominator a percentage
+    /// needs does not exist until the read is already over. What *is* known is
+    /// that a refresh walks four record types in a fixed order, and how many
+    /// records of the current one it has read — so the status line says
+    /// "이벤트 확인 중… 1,240건 (2/4)" instead of inventing a number.
+    struct RefreshProgress: Equatable {
+        /// 1...`stepCount`, in the order `load(mode:)` reads the types.
+        var step: Int
+        /// The record type in human terms: 사용 현황 · 이벤트 · 진단 · 피드백.
+        var label: String
+        /// Records walked in this step so far. Resets when the step does.
+        var records: Int = 0
+
+        static let stepCount = 4
+
+        /// For a determinate `ProgressView`. Steps, not records — the records
+        /// have no total to divide by.
+        var fraction: Double { Double(step) / Double(Self.stepCount) }
+
+        /// "이벤트 확인 중… 1,240건 (2/4)"
+        var text: String {
+            let counted = records > 0 ? " \(AppFormat.count(records))건" : ""
+            return "\(label) 확인 중…\(counted) (\(step)/\(Self.stepCount))"
+        }
+
+        /// The same thing where there is only room for a few characters.
+        var shortText: String {
+            records > 0 ? "\(label) \(AppFormat.count(records))건" : "\(label) 확인 중…"
+        }
+    }
+
+    /// Which step of a refresh a record type belongs to. Feedback's real type
+    /// name is discovered at runtime and several candidates may be probed, so
+    /// anything unrecognised is the feedback step.
+    private static func progressStep(for recordType: String) -> RefreshProgress {
+        switch recordType {
+        case CloudKitService.snapshotRecordType: return RefreshProgress(step: 1, label: "사용 현황")
+        case CloudKitService.eventRecordType:    return RefreshProgress(step: 2, label: "이벤트")
+        case CloudKitService.crashRecordType:    return RefreshProgress(step: 3, label: "진단")
+        default:                                 return RefreshProgress(step: 4, label: "피드백")
+        }
     }
 
     /// Record type key for the feedback watermark. Feedback's real type name is
@@ -412,7 +470,13 @@ final class FeedbackStore: ObservableObject {
         guard !isRefreshing else { return }
         isRefreshing = true
         errorMessage = nil
-        defer { isRefreshing = false }
+        // The first step is named before its first page comes back, so the
+        // status line says something during the account-status round trip too.
+        refreshProgress = Self.progressStep(for: CloudKitService.snapshotRecordType)
+        defer {
+            isRefreshing = false
+            refreshProgress = nil
+        }
 
         // An incremental read is only meaningful on top of data we already
         // have, and only until the cache is old enough that a deletion in the
@@ -455,6 +519,8 @@ final class FeedbackStore: ObservableObject {
         }
         let usage = await service.fetchUsage(modifiedSince: usageSince, known: usageKnown)
         var changed = apply(usage, incremental: isIncremental)
+
+        refreshProgress = Self.progressStep(for: Self.feedbackSyncKey)
 
         do {
             let startedAt = Date()
