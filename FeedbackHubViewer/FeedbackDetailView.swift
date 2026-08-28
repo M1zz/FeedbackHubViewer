@@ -32,7 +32,9 @@ struct FeedbackDetailView: View {
                 Divider()
 
                 if !feedback.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                    section(title: "내용") {
+                    section(title: "내용", accessory: {
+                        CopyButton(text: feedback.text, title: "내용 복사")
+                    }) {
                         Text(feedback.text)
                             .font(.title3)
                             .textSelection(.enabled)
@@ -202,6 +204,26 @@ struct FeedbackDetailView: View {
         VStack(alignment: .leading, spacing: 8) {
             Text(title)
                 .font(.title3.weight(.semibold))
+            content()
+        }
+    }
+
+    /// The same section with a control parked at the end of its title row —
+    /// where a per-section action belongs, rather than as another button
+    /// stacked under the text it acts on.
+    @ViewBuilder
+    private func section<Content: View, Accessory: View>(
+        title: String,
+        @ViewBuilder accessory: () -> Accessory,
+        @ViewBuilder content: () -> Content
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text(title)
+                    .font(.title3.weight(.semibold))
+                Spacer(minLength: 12)
+                accessory()
+            }
             content()
         }
     }

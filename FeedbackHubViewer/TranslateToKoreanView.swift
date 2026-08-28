@@ -138,9 +138,15 @@ private struct InlineTranslation: View {
 
     private func translationBox(_ result: Translated) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text(TranslateToKoreanView.languageLabel(from: result.sourceLanguage))
-                .font(.caption)
-                .foregroundStyle(.secondary)
+            HStack {
+                Text(TranslateToKoreanView.languageLabel(from: result.sourceLanguage))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Spacer(minLength: 12)
+                // The translation is the part worth pasting into a reply, so it
+                // gets its own copy button rather than sharing the original's.
+                CopyButton(text: result.text, title: "번역 복사", isCompact: true)
+            }
             Text(result.text)
                 .font(.title3)
                 .textSelection(.enabled)
