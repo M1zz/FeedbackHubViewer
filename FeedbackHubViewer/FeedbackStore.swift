@@ -142,6 +142,9 @@ final class FeedbackStore: ObservableObject {
         var flagShares: [String?: [FlagShare]] = [:]
         var distribution: [DistributionKey: [DistributionBucket]] = [:]
         var trend: [TrendKey: [TrendPoint]] = [:]
+        // The value is itself optional — "잴 활동이 없다"는 계산 결과이지 미계산이
+        // 아니므로, 그것도 캐시해야 매 프레임 다시 훑지 않는다.
+        var carryingCapacity: [CapacityKey: CarryingCapacity?] = [:]
     }
 
     /// Not `private` only because the aggregation that fills it lives in
@@ -186,6 +189,7 @@ final class FeedbackStore: ObservableObject {
         derived.eventStats = [:]
         derived.eventTallies = [:]
         derived.trend = [:]
+        derived.carryingCapacity = [:]
     }
 
     var allFeedback: [Feedback] {

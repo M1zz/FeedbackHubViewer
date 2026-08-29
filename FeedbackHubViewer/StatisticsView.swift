@@ -106,6 +106,7 @@ struct StatisticsDashboard: View {
                             userTiles
                             specCards
                             weekOverWeek
+                            CarryingCapacityCard(project: scope)
                             trendCard
                             eventCard
                             eventLogCard
@@ -688,7 +689,9 @@ struct StatisticsDashboard: View {
 
 // MARK: - Building blocks
 
-private struct StatTile: View {
+/// 이 파일 밖에서도 쓴다(`CarryingCapacityCard`) — 통계 화면의 숫자는 어디에 있든
+/// 같은 타일이어야 한다.
+struct StatTile: View {
     let title: String
     let value: String
     let unit: String
@@ -891,7 +894,8 @@ private struct SpecBar: View {
     }
 }
 
-private struct Card<Content: View>: View {
+/// 통계 화면의 카드 껍데기. `StatTile`과 같은 이유로 파일 밖에서도 쓴다.
+struct Card<Content: View>: View {
     let title: String
     let systemImage: String
     @ViewBuilder let content: Content

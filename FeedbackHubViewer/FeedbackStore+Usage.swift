@@ -174,6 +174,12 @@ extension FeedbackStore {
         let calendar: Calendar
     }
 
+    /// What `carryingCapacity(for:period:)` was asked for.
+    struct CapacityKey: Hashable {
+        let project: String?
+        let period: CarryingCapacity.Period
+    }
+
     // MARK: - Scoping
 
     /// Visible snapshots grouped by project, built in one pass — the three
@@ -523,5 +529,24 @@ extension FeedbackStore {
         }
         derived.trend[cacheKey] = points
         return points
+    }
+
+
+    // MARK: - Carrying capacity
+
+    /// 이 프로젝트의 성장 상한 — 지금의 유입과 이탈이 이어질 때 활동 사용자가
+    /// 멈추는 자리(`CarryingCapacity`). 활동이 한 번도 없었으면 nil.
+    ///
+    /// 추이와 같은 일 버킷에서 나오므로 이벤트 원본 보관 기간과 무관하게 허브가
+    /// 아는 모든 과거를 본다.
+    func carryingCapacity(for project: String?,
+                          period: CarryingCapacity.Period) -> CarryingCapacity? {
+        let key = CapacityKey(project: project, period: period)
+        if let cached = derived.carryingCapacity[key] { return cached }
+        let value = CarryingCapacity.measure(
+            days: rollups.days(for: project, excluding: hiddenProjects),
+            period: period)
+        derived.carryingCapacity[key] = value
+        return value
     }
 }
