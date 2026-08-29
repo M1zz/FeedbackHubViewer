@@ -9,11 +9,29 @@
 import SwiftUI
 
 struct ContentView: View {
+    @EnvironmentObject private var store: FeedbackStore
     #if os(iOS)
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     #endif
 
     var body: some View {
+        layout
+            // A refresh writes what it has read every few seconds; this is what
+            // keeps the last few from being lost when the app is quit or —
+            // on a phone, which is most of the time — switched away from
+            // while the read is still running.
+            //
+            // It hangs here rather than on the `WindowGroup`'s own content
+            // because SwiftUI builds the saved-window-frame key out of that
+            // view's type name: a modifier up there renames the key and every
+            // Mac forgets the window size it had.
+            .onReceive(NotificationCenter.default.publisher(for: Platform.willStopNotification)) { _ in
+                store.flushCache()
+            }
+    }
+
+    @ViewBuilder
+    private var layout: some View {
         #if os(macOS)
         SplitRootView()
         #else
@@ -116,8 +134,13 @@ struct SplitRootView: View {
             .help("새 피드백·진단이 들어오면 알리고, 앱 아이콘에 안 읽은 수를 표시합니다")
             .toggleStyle(.button)
 
+            // A stopwatch, not a second round arrow: beside the refresh
+            // button the old icon was the same glyph twice, and nothing said
+            // which one ran now and which one only scheduled. Spelling the
+            // title out would say it plainer still, but it widens the group
+            // enough to push the toolbar into its overflow menu.
             Toggle(isOn: $store.autoRefresh) {
-                Label("자동 갱신", systemImage: "arrow.triangle.2.circlepath")
+                Label("자동 갱신", systemImage: "timer")
             }
             .help("1분마다 자동으로 새로고침합니다")
             .toggleStyle(.button)
@@ -133,7 +156,7 @@ struct SplitRootView: View {
         ToolbarItem(placement: .topBarTrailing) {
             Menu {
                 Toggle(isOn: $store.autoRefresh) {
-                    Label("자동 갱신 (1분)", systemImage: "arrow.triangle.2.circlepath")
+                    Label("자동 갱신 (1분)", systemImage: "timer")
                 }
                 Toggle(isOn: $store.notificationsEnabled) {
                     Label("새 피드백·진단 알림", systemImage: "bell.badge")

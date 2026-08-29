@@ -56,7 +56,7 @@ private struct HubToolbar: ViewModifier {
                 ToolbarItem(placement: .topBarTrailing) {
                     Menu {
                         Toggle(isOn: $store.autoRefresh) {
-                            Label("자동 갱신 (1분)", systemImage: "arrow.triangle.2.circlepath")
+                            Label("자동 갱신 (1분)", systemImage: "timer")
                         }
                         Toggle(isOn: $store.notificationsEnabled) {
                             Label("새 피드백·진단 알림", systemImage: "bell.badge")

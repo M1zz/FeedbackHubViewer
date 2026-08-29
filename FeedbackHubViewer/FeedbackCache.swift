@@ -49,6 +49,35 @@ struct CachedHub: Codable {
     }
 }
 
+/// Where the cache files live, and how a value gets into one.
+///
+/// Free of any actor's state on purpose: two callers need it. The actors below
+/// use it for their ordinary reads and writes, and `FeedbackStore.flushCache()`
+/// uses it as the app goes away — that one cannot afford to hop onto an actor,
+/// because the hop may never be scheduled before the process is suspended.
+enum CacheFile {
+
+    /// `~/…/Application Support/FeedbackHubViewer/<name>-<environment>.json`.
+    /// One file per CloudKit environment — a Development build must never show
+    /// Production numbers.
+    static func url(_ name: String, _ environment: CloudKitEnvironment) -> URL? {
+        guard let base = try? FileManager.default.url(for: .applicationSupportDirectory,
+                                                      in: .userDomainMask,
+                                                      appropriateFor: nil,
+                                                      create: true) else { return nil }
+        let directory = base.appendingPathComponent("FeedbackHubViewer", isDirectory: true)
+        try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        return directory.appendingPathComponent("\(name)-\(environment.restPathComponent).json")
+    }
+
+    /// Encode and write where the caller stands. Atomic, so a write cut short
+    /// leaves the previous file rather than half of a new one.
+    static func write<Value: Encodable>(_ value: Value, to url: URL?) {
+        guard let url, let data = try? JSONEncoder().encode(value) else { return }
+        try? data.write(to: url, options: .atomic)
+    }
+}
+
 /// Reads and writes `CachedHub`. An actor, so the JSON work stays off the main
 /// thread — the whole point is that the first frame doesn't wait for it.
 actor FeedbackCache {
@@ -60,24 +89,21 @@ actor FeedbackCache {
     /// the cache is rebuilt from scratch once a day.
     static let fullRefreshInterval: TimeInterval = 24 * 60 * 60
 
+    private static let fileName = "hub"
+
     private let environment: CloudKitEnvironment
-    private var directoryIsReady = false
 
     init(environment: CloudKitEnvironment = .current) {
         self.environment = environment
     }
 
-    private var fileURL: URL? {
-        guard let base = try? FileManager.default.url(for: .applicationSupportDirectory,
-                                                      in: .userDomainMask,
-                                                      appropriateFor: nil,
-                                                      create: true) else { return nil }
-        let directory = base.appendingPathComponent("FeedbackHubViewer", isDirectory: true)
-        if !directoryIsReady {
-            try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-            directoryIsReady = true
-        }
-        return directory.appendingPathComponent("hub-\(environment.restPathComponent).json")
+    private var fileURL: URL? { CacheFile.url(Self.fileName, environment) }
+
+    /// Write without the actor hop. See `CacheFile` and
+    /// `FeedbackStore.flushCache()`.
+    nonisolated static func saveNow(_ hub: CachedHub,
+                                    environment: CloudKitEnvironment = .current) {
+        CacheFile.write(hub, to: CacheFile.url(fileName, environment))
     }
 
     func load() -> CachedHub? {
@@ -93,8 +119,7 @@ actor FeedbackCache {
     }
 
     func save(_ hub: CachedHub) {
-        guard let fileURL, let data = try? JSONEncoder().encode(hub) else { return }
-        try? data.write(to: fileURL, options: .atomic)
+        CacheFile.write(hub, to: fileURL)
     }
 
     func clear() {
@@ -114,24 +139,20 @@ actor RollupCache {
 
     static let shared = RollupCache()
 
+    private static let fileName = "rollups"
+
     private let environment: CloudKitEnvironment
-    private var directoryIsReady = false
 
     init(environment: CloudKitEnvironment = .current) {
         self.environment = environment
     }
 
-    private var fileURL: URL? {
-        guard let base = try? FileManager.default.url(for: .applicationSupportDirectory,
-                                                      in: .userDomainMask,
-                                                      appropriateFor: nil,
-                                                      create: true) else { return nil }
-        let directory = base.appendingPathComponent("FeedbackHubViewer", isDirectory: true)
-        if !directoryIsReady {
-            try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-            directoryIsReady = true
-        }
-        return directory.appendingPathComponent("rollups-\(environment.restPathComponent).json")
+    private var fileURL: URL? { CacheFile.url(Self.fileName, environment) }
+
+    /// Write without the actor hop. See `FeedbackStore.flushCache()`.
+    nonisolated static func saveNow(_ rollups: UsageRollups,
+                                    environment: CloudKitEnvironment = .current) {
+        CacheFile.write(rollups, to: CacheFile.url(fileName, environment))
     }
 
     func load() -> UsageRollups? {
@@ -145,8 +166,7 @@ actor RollupCache {
     }
 
     func save(_ rollups: UsageRollups) {
-        guard let fileURL, let data = try? JSONEncoder().encode(rollups) else { return }
-        try? data.write(to: fileURL, options: .atomic)
+        CacheFile.write(rollups, to: fileURL)
     }
 
     func clear() {

@@ -512,13 +512,37 @@ final class FeedbackStore: ObservableObject {
         // already summed — so re-reading the whole stream would cost the most
         // and buy nothing. "캐시 비우고 전체 다시 불러오기" is the way to rebuild
         // the rollups from scratch.
+        //
+        // Either way the boundary is only sound once that type has been read to
+        // the end at least once. A read that was interrupted left the newest
+        // records on disk and nothing older, and a boundary would stop the next
+        // read right there — leaving the gap behind it unread for good. Having
+        // finished is exactly what a watermark records.
         var usageKnown: [String: Set<String>] = [:]
-        usageKnown[CloudKitService.eventRecordType] = rollups.knownEventIDs
-        if isIncremental {
+        if watermarks[CloudKitService.eventRecordType] != nil {
+            usageKnown[CloudKitService.eventRecordType] = rollups.knownEventIDs
+        }
+        if isIncremental, watermarks[CloudKitService.crashRecordType] != nil {
             usageKnown[CloudKitService.crashRecordType] = Set(fetchedCrashes.map(\.id))
         }
-        let usage = await service.fetchUsage(modifiedSince: usageSince, known: usageKnown)
+        let usage = await service.fetchUsage(modifiedSince: usageSince, known: usageKnown) { [weak self] partial in
+            // What has arrived so far, while the read is still running. Merged
+            // and written out as it comes: a first launch reads thousands of
+            // records over a minute or more, and quitting the app — or, on a
+            // phone, just switching away from it — used to throw every one of
+            // them away because the file was written only at the very end.
+            //
+            // Always merged, never replacing: a partial is the newest slice of
+            // one record type, so `incremental` is true here regardless of what
+            // the refresh as a whole is doing.
+            guard let self else { return }
+            let completedType = !partial.syncedTypes.isEmpty
+            if self.apply(partial, incremental: true) {
+                self.checkpoint(force: completedType)
+            }
+        }
         var changed = apply(usage, incremental: isIncremental)
+        usageNotice = usage.notice
 
         refreshProgress = Self.progressStep(for: Self.feedbackSyncKey)
 
@@ -526,7 +550,8 @@ final class FeedbackStore: ObservableObject {
             let startedAt = Date()
             let outcome = try await service.fetchFeedback(modifiedSince: since(Self.feedbackSyncKey),
                                                           knownRecordType: resolvedRecordType,
-                                                          known: isIncremental ? Set(fetchedFeedback.map(\.id)) : nil)
+                                                          known: isIncremental && watermarks[Self.feedbackSyncKey] != nil
+                                                              ? Set(fetchedFeedback.map(\.id)) : nil)
             fetchedFeedback = isIncremental
                 ? Self.merged(outcome.feedback, into: fetchedFeedback, newestFirst: { ($0.createdAt ?? .distantPast) > ($1.createdAt ?? .distantPast) })
                 : outcome.feedback
@@ -556,8 +581,14 @@ final class FeedbackStore: ObservableObject {
         refreshBadge()
         // An incremental check that found nothing has nothing to write, and the
         // auto-refresh runs every minute — no point rewriting megabytes of JSON
-        // to say the same thing.
-        if changed { persistCache() }
+        // to say the same thing. `hasUnsavedChanges` covers the other end: the
+        // partials above may have brought something in that the throttle has
+        // not written yet.
+        if changed {
+            checkpoint(force: true)
+        } else if hasUnsavedChanges {
+            persistCache()
+        }
     }
 
     /// Fold a usage read into what is held. A record type the read could not
@@ -617,7 +648,6 @@ final class FeedbackStore: ObservableObject {
                 fetchedCrashes = Array(all.prefix(Self.crashLimit))
             }
         }
-        usageNotice = usage.notice
         watermarks.merge(usage.syncedTypes) { _, new in new }
         // Diagnostics stop reading at what this device already has, so anything
         // that came back is genuinely new. Events answer for themselves: only a
@@ -708,18 +738,59 @@ final class FeedbackStore: ObservableObject {
         return true
     }
 
+    /// How often a refresh that is still running writes what it has. Encoding
+    /// the whole hub is not free, and a long read hands over a batch every few
+    /// seconds; this bounds the cost while keeping what can be lost to a few
+    /// seconds of reading.
+    private static let checkpointInterval: TimeInterval = 5
+    private var lastPersist = Date.distantPast
+    /// Whether anything held is newer than what is on disk. Drives both the
+    /// throttle and the flush the app runs on its way out.
+    private var hasUnsavedChanges = false
+
+    /// Note that what is held has moved, and write it unless a write has just
+    /// happened. `force` skips the throttle — what the end of a record type
+    /// and the end of a refresh use.
+    private func checkpoint(force: Bool = false) {
+        hasUnsavedChanges = true
+        guard force || Date().timeIntervalSince(lastPersist) >= Self.checkpointInterval else { return }
+        persistCache()
+    }
+
+    /// The snapshot to write, as of right now.
+    private var currentHub: CachedHub {
+        CachedHub(savedAt: lastUpdated ?? Date(),
+                  watermarks: watermarks,
+                  resolvedRecordType: resolvedRecordType,
+                  filterFields: service.incrementalFilterFields,
+                  feedback: fetchedFeedback,
+                  snapshots: fetchedSnapshots,
+                  events: fetchedEvents,
+                  crashes: fetchedCrashes)
+    }
+
     /// Write what is held back to disk. Fire-and-forget: the encode happens on
     /// the cache actor, off the main thread.
     private func persistCache() {
-        let hub = CachedHub(savedAt: lastUpdated ?? Date(),
-                            watermarks: watermarks,
-                            resolvedRecordType: resolvedRecordType,
-                            filterFields: service.incrementalFilterFields,
-                            feedback: fetchedFeedback,
-                            snapshots: fetchedSnapshots,
-                            events: fetchedEvents,
-                            crashes: fetchedCrashes)
+        let hub = currentHub
+        lastPersist = Date()
+        hasUnsavedChanges = false
         Task { await FeedbackCache.shared.save(hub) }
+    }
+
+    /// Write anything not yet saved, right here, before returning.
+    ///
+    /// Called when the app is about to stop being frontmost. `persistCache()`
+    /// won't do: it hands the work to an actor, and a hop scheduled as the
+    /// process is suspended (iOS) or torn down (⌘Q) may simply never run. This
+    /// pays for the encode on the spot instead — a few hundred milliseconds at
+    /// a moment where the system allows them.
+    func flushCache() {
+        guard hasUnsavedChanges else { return }
+        FeedbackCache.saveNow(currentHub)
+        RollupCache.saveNow(rollups)
+        lastPersist = Date()
+        hasUnsavedChanges = false
     }
 
     /// Write the day buckets back, in their own file. Kept apart from

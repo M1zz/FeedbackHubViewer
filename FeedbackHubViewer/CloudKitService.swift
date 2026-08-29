@@ -137,10 +137,17 @@ final class CloudKitService {
     ///   - eventLimit: hard cap on event records. The stream grows without
     ///     bound, and the charts only look back so far.
     ///   - crashLimit: same idea for diagnostics.
+    ///   - onPartial: handed a slice of one record type while it is still being
+    ///     read, and once more with the whole of it when that type is done —
+    ///     that last call is the one carrying `syncedTypes`, which is what
+    ///     tells the caller the type was read to the end. Everything before it
+    ///     is the newest records and nothing older, so it may only be merged,
+    ///     never treated as the whole type. See `partialBatch`.
     func fetchUsage(modifiedSince: [String: Date] = [:],
                     known: [String: Set<String>] = [:],
                     eventLimit: Int = 5000,
-                    crashLimit: Int = 1000) async -> UsageOutcome {
+                    crashLimit: Int = 1000,
+                    onPartial: ((UsageOutcome) -> Void)? = nil) async -> UsageOutcome {
         var outcome = UsageOutcome()
         var problems: [String] = []
         let startedAt = Date()
@@ -150,9 +157,14 @@ final class CloudKitService {
             // time an install reports again, so its creation date says nothing.
             outcome.snapshots = try await queryAll(recordType: Self.snapshotRecordType,
                                                    modifiedSince: modifiedSince[Self.snapshotRecordType],
-                                                   shape: .upserted)
+                                                   shape: .upserted,
+                                                   onPartial: { records in
+                onPartial?(UsageOutcome(snapshots: records.map(UsageSnapshot.init(record:))))
+            })
                 .map(UsageSnapshot.init(record:))
             outcome.syncedTypes[Self.snapshotRecordType] = startedAt
+            onPartial?(UsageOutcome(snapshots: outcome.snapshots,
+                                    syncedTypes: [Self.snapshotRecordType: startedAt]))
         } catch {
             problems.append(usageProblem(Self.snapshotRecordType, error))
         }
@@ -161,9 +173,14 @@ final class CloudKitService {
             outcome.events = try await queryAll(recordType: Self.eventRecordType,
                                                 limit: eventLimit,
                                                 modifiedSince: modifiedSince[Self.eventRecordType],
-                                                known: known[Self.eventRecordType])
+                                                known: known[Self.eventRecordType],
+                                                onPartial: { records in
+                onPartial?(UsageOutcome(events: records.map(UsageEvent.init(record:))))
+            })
                 .map(UsageEvent.init(record:))
             outcome.syncedTypes[Self.eventRecordType] = startedAt
+            onPartial?(UsageOutcome(events: outcome.events,
+                                    syncedTypes: [Self.eventRecordType: startedAt]))
         } catch {
             problems.append(usageProblem(Self.eventRecordType, error))
         }
@@ -172,9 +189,14 @@ final class CloudKitService {
             outcome.crashes = try await queryAll(recordType: Self.crashRecordType,
                                                  limit: crashLimit,
                                                  modifiedSince: modifiedSince[Self.crashRecordType],
-                                                 known: known[Self.crashRecordType])
+                                                 known: known[Self.crashRecordType],
+                                                 onPartial: { records in
+                onPartial?(UsageOutcome(crashes: records.map(CrashReport.init(record:))))
+            })
                 .map(CrashReport.init(record:))
             outcome.syncedTypes[Self.crashRecordType] = startedAt
+            onPartial?(UsageOutcome(crashes: outcome.crashes,
+                                    syncedTypes: [Self.crashRecordType: startedAt]))
         } catch {
             problems.append(usageProblem(Self.crashRecordType, error))
         }
@@ -325,18 +347,21 @@ final class CloudKitService {
                           limit: Int? = nil,
                           modifiedSince: Date? = nil,
                           shape: ChangeShape = .appendOnly,
-                          known: Set<String>? = nil) async throws -> [CKRecord] {
+                          known: Set<String>? = nil,
+                          onPartial: (([CKRecord]) -> Void)? = nil) async throws -> [CKRecord] {
         let boundary = shape == .appendOnly ? known : nil
 
         guard let modifiedSince else {
             return try await runFiltered(recordType: recordType, limit: limit,
-                                         field: .none, since: nil, known: boundary)
+                                         field: .none, since: nil, known: boundary,
+                                         onPartial: onPartial)
         }
 
         for field in filterCandidates(for: recordType, shape: shape) {
             do {
                 let records = try await runFiltered(recordType: recordType, limit: limit,
-                                                    field: field, since: modifiedSince, known: boundary)
+                                                    field: field, since: modifiedSince, known: boundary,
+                                                    onPartial: onPartial)
                 learnedFilterField[recordType] = field
                 return records
             } catch {
@@ -347,7 +372,8 @@ final class CloudKitService {
 
         learnedFilterField[recordType] = FilterField.none
         return try await runFiltered(recordType: recordType, limit: limit,
-                                     field: .none, since: nil, known: boundary)
+                                     field: .none, since: nil, known: boundary,
+                                     onPartial: onPartial)
     }
 
     /// What is worth trying for this record type, narrowed to one entry (or
@@ -366,7 +392,8 @@ final class CloudKitService {
                              limit: Int?,
                              field: FilterField,
                              since: Date?,
-                             known: Set<String>?) async throws -> [CKRecord] {
+                             known: Set<String>?,
+                             onPartial: (([CKRecord]) -> Void)? = nil) async throws -> [CKRecord] {
         let predicate: NSPredicate
         if let key = field.key, let since {
             predicate = NSPredicate(format: "%K > %@", key, since as NSDate)
@@ -378,13 +405,13 @@ final class CloudKitService {
         // timestamp as sortable — fall back to an unsorted query if so.
         query.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
         do {
-            return try await runQuery(query, limit: limit, stoppingAtKnown: known)
+            return try await runQuery(query, limit: limit, stoppingAtKnown: known, onPartial: onPartial)
         } catch {
             if isSortError(error) {
                 query.sortDescriptors = []
                 // Unordered, there is no boundary to stop at: a known record can
                 // sit anywhere in the results, so the whole type is read.
-                return try await runQuery(query, limit: limit)
+                return try await runQuery(query, limit: limit, onPartial: onPartial)
             }
             throw error
         }
@@ -396,6 +423,14 @@ final class CloudKitService {
     /// one — is what marks the boundary.
     private static let knownRunToStop = 5
 
+    /// How many records a read collects before handing what it has back to the
+    /// caller mid-flight. A first launch reads thousands of records over a
+    /// minute or more, and on a phone that read is very likely to be cut short
+    /// — so the caller gets a chance to write what has arrived rather than
+    /// losing all of it. Batched rather than per page, because each hand-over
+    /// costs the caller a merge and a disk write.
+    private static let partialBatch = 500
+
     /// - Parameter known: record names this device already holds. The query is
     ///   ordered newest-first and these record types are only ever appended to,
     ///   so a run of already-stored records is the boundary: everything past it
@@ -404,10 +439,13 @@ final class CloudKitService {
     ///   are not collected, so an empty result means "nothing new".
     private func runQuery(_ query: CKQuery,
                           limit: Int? = nil,
-                          stoppingAtKnown known: Set<String>? = nil) async throws -> [CKRecord] {
+                          stoppingAtKnown known: Set<String>? = nil,
+                          onPartial: (([CKRecord]) -> Void)? = nil) async throws -> [CKRecord] {
         var collected: [CKRecord] = []
         var cursor: CKQueryOperation.Cursor?
         var knownRun = 0
+        // How much of `collected` the caller has already been shown.
+        var handedOver = 0
         // Everything the read walked, including records skipped because this
         // device already holds them — that, not the collected count, is what
         // "how far along" means to someone watching the status line.
@@ -441,6 +479,10 @@ final class CloudKitService {
                 collected.append(record)
             }
             onProgress?(query.recordType, scanned)
+            if let onPartial, collected.count - handedOver >= Self.partialBatch {
+                onPartial(Array(collected[handedOver...]))
+                handedOver = collected.count
+            }
             cursor = page.queryCursor
             if let limit, collected.count >= limit {
                 return Array(collected.prefix(limit))

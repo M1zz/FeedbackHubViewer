@@ -26,6 +26,18 @@ enum Platform {
         #endif
     }
 
+    /// The notification the system posts when this app is about to stop being
+    /// frontmost — on a Mac, quitting; on a phone, being switched away from,
+    /// after which the process can be killed without another word. The last
+    /// moment to write anything that has to survive.
+    static var willStopNotification: Notification.Name {
+        #if os(macOS)
+        return NSApplication.willTerminateNotification
+        #else
+        return UIApplication.didEnterBackgroundNotification
+        #endif
+    }
+
     /// Where the iCloud account is signed in, for user-facing copy.
     static var deviceNoun: String {
         #if os(macOS)
