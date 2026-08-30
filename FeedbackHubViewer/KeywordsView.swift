@@ -260,34 +260,61 @@ struct KeywordsView: View {
                         .font(.caption).foregroundStyle(.secondary)
                 }
                 ForEach(competitors) { competitor in
-                    HStack(alignment: .top, spacing: 10) {
-                        AsyncImage(url: competitor.app.iconURL) { image in
-                            image.resizable().aspectRatio(contentMode: .fit)
-                        } placeholder: {
-                            RoundedRectangle(cornerRadius: 8).fill(.quaternary)
-                        }
-                        .frame(width: 32, height: 32)
-                        .clipShape(RoundedRectangle(cornerRadius: 8))
-
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(competitor.app.name).font(.callout.weight(.medium)).lineLimit(1)
-                            Text(competitor.terms.prefix(4).joined(separator: " · ")
-                                 + (competitor.terms.count > 4 ? " 외 \(competitor.terms.count - 4)" : ""))
-                                .font(.caption).foregroundStyle(.secondary).lineLimit(1)
-                        }
-                        Spacer()
-                        VStack(alignment: .trailing, spacing: 2) {
-                            if competitor.timesAbove > 0 {
-                                Text("내 위 \(competitor.timesAbove)")
-                                    .font(.caption.weight(.semibold))
-                                    .foregroundStyle(.orange)
-                            }
-                            Text("\(competitor.keywords)개 키워드 · 최고 \(competitor.bestRank)위")
-                                .font(.caption2).foregroundStyle(.secondary)
-                        }
-                    }
+                    competitorRow(competitor)
                 }
             }
+        }
+    }
+
+    /// One rival. The whole row opens its App Store page — looking at what the
+    /// app above you actually looks like is the next thing anyone wants after
+    /// reading that it is above you, and making them copy the name into the
+    /// store by hand for that is silly.
+    @ViewBuilder
+    private func competitorRow(_ competitor: CompetitorStanding) -> some View {
+        let row = HStack(alignment: .top, spacing: 10) {
+            AsyncImage(url: competitor.app.iconURL) { image in
+                image.resizable().aspectRatio(contentMode: .fit)
+            } placeholder: {
+                RoundedRectangle(cornerRadius: 8).fill(.quaternary)
+            }
+            .frame(width: 32, height: 32)
+            .clipShape(RoundedRectangle(cornerRadius: 8))
+
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 4) {
+                    Text(competitor.app.name).font(.callout.weight(.medium)).lineLimit(1)
+                    if let rating = competitor.app.averageRating, competitor.app.ratingCount > 0 {
+                        Text(String(format: "★%.1f (%@)", rating,
+                                    AppFormat.count(competitor.app.ratingCount)))
+                            .font(.caption2).foregroundStyle(.secondary)
+                    }
+                }
+                Text(competitor.terms.prefix(4).joined(separator: " · ")
+                     + (competitor.terms.count > 4 ? " 외 \(competitor.terms.count - 4)" : ""))
+                    .font(.caption).foregroundStyle(.secondary).lineLimit(1)
+            }
+            Spacer()
+            VStack(alignment: .trailing, spacing: 2) {
+                if competitor.timesAbove > 0 {
+                    Text("내 위 \(competitor.timesAbove)")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.orange)
+                }
+                Text("\(competitor.keywords)개 키워드 · 최고 \(competitor.bestRank)위")
+                    .font(.caption2).foregroundStyle(.secondary)
+            }
+            Image(systemName: "chevron.right")
+                .font(.caption2).foregroundStyle(.tertiary)
+        }
+        .contentShape(Rectangle())
+
+        if let url = competitor.app.storeURL {
+            Link(destination: url) { row }
+                .buttonStyle(.plain)
+                .help("App Store에서 \(competitor.app.name) 열기")
+        } else {
+            row
         }
     }
 

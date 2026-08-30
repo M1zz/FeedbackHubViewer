@@ -283,7 +283,28 @@ final class FeedbackStore: ObservableObject {
     }
     @Published var errorMessage: String?
     @Published var noticeMessage: String?
-    @Published var lastUpdated: Date?
+    /// When CloudKit was last checked — which is not the same as when the data
+    /// last changed, and the two coming apart is what made every launch re-read
+    /// the whole hub.
+    ///
+    /// `CachedHub.savedAt` is written with the records, and the records are
+    /// only written when something in them moved. So a refresh that correctly
+    /// found nothing new left the timestamp where it was; the next launch saw a
+    /// cache that looked hours old, checked again, found nothing again, and
+    /// left it again — forever, once per launch, with `UsageSnapshot` read
+    /// whole every time. Rewriting eight megabytes of records to say "we
+    /// looked" is no answer either. The answer is that "we looked" was never
+    /// part of the records: it is one date, and it lives on its own.
+    @Published var lastUpdated: Date? {
+        didSet {
+            guard let lastUpdated else { return }
+            UserDefaults.standard.set(lastUpdated, forKey: Self.lastCheckedKey)
+        }
+    }
+
+    /// Per bundle id, so a Development build's clock never speaks for a
+    /// Production one — the same split the cache files make.
+    private static let lastCheckedKey = "lastCheckedAt"
     /// This account's CloudKit user record name — the value to register in an
     /// admin Security Role so it can read feedback. Shown in the toolbar.
     @Published var userRecordName: String?
@@ -427,18 +448,42 @@ final class FeedbackStore: ObservableObject {
     /// Which step of a refresh a record type belongs to. Feedback's real type
     /// name is discovered at runtime and several candidates may be probed, so
     /// anything unrecognised is the feedback step.
+    ///
+    /// Feedback is read first and 사용 현황 last, which is the reverse of the
+    /// order they were written in. Feedback is why anyone opens this app, and
+    /// it is also the cheapest read — a handful of records that stops at the
+    /// first one this device already holds. 사용 현황 is the opposite on both
+    /// counts: it is the slowest read in the app and its numbers move by the
+    /// day. Reading it first meant a new piece of feedback waited behind a
+    /// full scan of every install record before it could appear.
     private static func progressStep(for recordType: String) -> RefreshProgress {
         switch recordType {
-        case CloudKitService.snapshotRecordType: return RefreshProgress(step: 1, label: "사용 현황")
+        case CloudKitService.snapshotRecordType: return RefreshProgress(step: 4, label: "사용 현황")
         case CloudKitService.eventRecordType:    return RefreshProgress(step: 2, label: "이벤트")
         case CloudKitService.crashRecordType:    return RefreshProgress(step: 3, label: "진단")
-        default:                                 return RefreshProgress(step: 4, label: "피드백")
+        default:                                 return RefreshProgress(step: 1, label: "피드백")
         }
     }
 
     /// Record type key for the feedback watermark. Feedback's real type name is
     /// discovered at runtime, so the watermark is filed under a fixed key.
     private static let feedbackSyncKey = "feedback"
+    /// How fresh the cache has to be for a launch to leave CloudKit alone.
+    ///
+    /// Every number this app shows is day-grained or nearly so — 최근 7일,
+    /// 일별 추이, 설치 수 — so a cache a few minutes old differs from a fresh
+    /// read in nothing anyone can see. Meanwhile a launch refresh is the most
+    /// expensive thing the app does: `UsageSnapshot` can be neither filtered
+    /// nor sorted in this container, so it is read whole, every time, and the
+    /// status line sits on "사용 현황 확인 중" while it happens. Doing that
+    /// again because a window was closed and reopened is pure waste.
+    ///
+    /// Five minutes, not longer: this hub is often open next to the app whose
+    /// feedback it shows, and a test message sent a moment ago should not have
+    /// to wait. Anything more urgent than that is what ⌘R is for, and the
+    /// toolbar always says when the data is from.
+    static let launchRefreshInterval: TimeInterval = 5 * 60
+
     /// Clocks on this device and in CloudKit are not exactly in step, so an
     /// incremental read looks slightly further back than the last one ran.
     /// Re-reading a handful of records is free — they merge by record name.
@@ -483,6 +528,13 @@ final class FeedbackStore: ObservableObject {
         startupTask = Task { [weak self] in
             guard let self else { return }
             let restored = await restore.value
+            // A cache written minutes ago has nothing to add. See
+            // `launchRefreshInterval` — this is the difference between opening
+            // the hub and waiting for it.
+            if restored, let updated = self.lastUpdated,
+               Date().timeIntervalSince(updated) < Self.launchRefreshInterval {
+                return
+            }
             await self.load(mode: restored ? .incremental : .full)
         }
     }
@@ -509,7 +561,7 @@ final class FeedbackStore: ObservableObject {
         errorMessage = nil
         // The first step is named before its first page comes back, so the
         // status line says something during the account-status round trip too.
-        refreshProgress = Self.progressStep(for: CloudKitService.snapshotRecordType)
+        refreshProgress = Self.progressStep(for: Self.feedbackSyncKey)
         defer {
             isRefreshing = false
             refreshProgress = nil
@@ -528,6 +580,44 @@ final class FeedbackStore: ObservableObject {
 
         noticeMessage = await service.accountStatusMessage()
         userRecordName = await service.currentUserRecordName()
+
+        // Whether this refresh moved anything, so an empty check can skip the
+        // disk write that would otherwise follow it.
+        var changed = false
+
+        refreshProgress = Self.progressStep(for: Self.feedbackSyncKey)
+
+        do {
+            let startedAt = Date()
+            let outcome = try await service.fetchFeedback(modifiedSince: since(Self.feedbackSyncKey),
+                                                          knownRecordType: resolvedRecordType,
+                                                          known: isIncremental && watermarks[Self.feedbackSyncKey] != nil
+                                                              ? Set(fetchedFeedback.map(\.id)) : nil)
+            fetchedFeedback = isIncremental
+                ? Self.merged(outcome.feedback, into: fetchedFeedback, newestFirst: { ($0.createdAt ?? .distantPast) > ($1.createdAt ?? .distantPast) })
+                : outcome.feedback
+            resolvedRecordType = outcome.resolvedRecordType
+            watermarks[Self.feedbackSyncKey] = startedAt
+            changed = !isIncremental || !outcome.feedback.isEmpty
+            learnAppNames(from: fetchedFeedback)
+            lastUpdated = Date()
+            if fetchedFeedback.isEmpty && errorMessage == nil {
+                noticeMessage = noticeMessage ?? "표시할 피드백이 없습니다. 레코드 타입 이름이 다르거나(코드의 candidateRecordTypes 확인), CloudKit 대시보드에서 필드가 Queryable로 설정되지 않았을 수 있습니다."
+            }
+        } catch {
+            errorMessage = Self.friendlyMessage(for: error)
+            // A permission failure here almost always means this iCloud account
+            // isn't registered in an admin Security Role with read access. Show
+            // the user record name so it can be copied into the CloudKit Console.
+            if Self.isPermissionError(error), let name = await service.currentUserRecordName() {
+                errorMessage = (errorMessage ?? "")
+                    + "\n\n등록할 내 CloudKit User Record Name:\n\(name)\n\n"
+                    + "CloudKit Console → 컨테이너 → Security Roles에서 admin 역할에 이 값을 추가하고 피드백 레코드 타입에 read 권한을 준 뒤, Production으로 배포하세요."
+            }
+        }
+
+
+        refreshProgress = Self.progressStep(for: CloudKitService.eventRecordType)
 
         // Usage statistics live in their own record types with their own read
         // permission, so they are loaded separately and never fail the feedback
@@ -578,39 +668,8 @@ final class FeedbackStore: ObservableObject {
                 self.checkpoint(force: completedType)
             }
         }
-        var changed = apply(usage, incremental: isIncremental)
+        changed = apply(usage, incremental: isIncremental) || changed
         usageNotice = usage.notice
-
-        refreshProgress = Self.progressStep(for: Self.feedbackSyncKey)
-
-        do {
-            let startedAt = Date()
-            let outcome = try await service.fetchFeedback(modifiedSince: since(Self.feedbackSyncKey),
-                                                          knownRecordType: resolvedRecordType,
-                                                          known: isIncremental && watermarks[Self.feedbackSyncKey] != nil
-                                                              ? Set(fetchedFeedback.map(\.id)) : nil)
-            fetchedFeedback = isIncremental
-                ? Self.merged(outcome.feedback, into: fetchedFeedback, newestFirst: { ($0.createdAt ?? .distantPast) > ($1.createdAt ?? .distantPast) })
-                : outcome.feedback
-            resolvedRecordType = outcome.resolvedRecordType
-            watermarks[Self.feedbackSyncKey] = startedAt
-            changed = changed || !isIncremental || !outcome.feedback.isEmpty
-            learnAppNames(from: fetchedFeedback)
-            lastUpdated = Date()
-            if fetchedFeedback.isEmpty && errorMessage == nil {
-                noticeMessage = noticeMessage ?? "표시할 피드백이 없습니다. 레코드 타입 이름이 다르거나(코드의 candidateRecordTypes 확인), CloudKit 대시보드에서 필드가 Queryable로 설정되지 않았을 수 있습니다."
-            }
-        } catch {
-            errorMessage = Self.friendlyMessage(for: error)
-            // A permission failure here almost always means this iCloud account
-            // isn't registered in an admin Security Role with read access. Show
-            // the user record name so it can be copied into the CloudKit Console.
-            if Self.isPermissionError(error), let name = await service.currentUserRecordName() {
-                errorMessage = (errorMessage ?? "")
-                    + "\n\n등록할 내 CloudKit User Record Name:\n\(name)\n\n"
-                    + "CloudKit Console → 컨테이너 → Security Roles에서 admin 역할에 이 값을 추가하고 피드백 레코드 타입에 read 권한을 준 뒤, Production으로 배포하세요."
-            }
-        }
 
         // Only after both fetches: a notification should reflect the whole
         // refresh, and the badge the unread count it leaves behind.
@@ -773,7 +832,10 @@ final class FeedbackStore: ObservableObject {
         resolvedRecordType = cached.resolvedRecordType
         watermarks = cached.watermarks
         service.restoreIncrementalFilterFields(cached.filterFields)
-        lastUpdated = cached.savedAt
+        // The recorded check time outranks the file's own, because it is
+        // written whether or not the refresh had anything to save.
+        let checked = UserDefaults.standard.object(forKey: Self.lastCheckedKey) as? Date
+        lastUpdated = max(cached.savedAt, checked ?? .distantPast)
         learnAppNames(from: cached.feedback)
         refreshBadge()
         return true
