@@ -53,8 +53,18 @@ struct KeywordCheck: Codable {
     /// How many results the store returned at all, so "안 잡힘" can say out of
     /// how many rather than leaving it open.
     var resultCount: Int = 0
+    /// Per app of yours that ranked: how many of the apps *above* it have fewer
+    /// ratings than it does.
+    ///
+    /// Rank alone does not say whether a place is worth going after. 17th with
+    /// three apps above you holding 0, 1 and 0 ratings is a different situation
+    /// from 17th behind sixteen established apps, and the store tells you which
+    /// one it is. Counted here, when the results are in hand, rather than
+    /// stored: it needs the whole result list, and `top` only keeps thirty.
+    var weakerAbove: [String: Int] = [:]
 
     func rank(of trackId: Int) -> Int? { ranks[String(trackId)] }
+    func weakerAbove(_ trackId: Int) -> Int? { weakerAbove[String(trackId)] }
 }
 
 /// One keyword's numbers for a scope, ready to put in a row.
@@ -74,8 +84,37 @@ struct KeywordStanding {
     let recent: [Int?]
     /// How many results the store returned on the latest check.
     let resultCount: Int
+    /// Of the apps above this one, how many have fewer ratings than it — the
+    /// ones it is plausibly already past on everything but this term.
+    ///
+    /// Measured against *this* app's own rating count, so it says something
+    /// different for an established app than for a new one. An app with no
+    /// ratings yet finds nothing above it weaker, and `blockers` collapses back
+    /// to the raw rank — which is the right answer for it: go where you already
+    /// place best, because nothing up there is smaller than you.
+    let weakerAbove: Int?
 
     var isRanked: Bool { rank != nil }
+
+    /// Apps above this one that are *not* smaller than it. The honest measure
+    /// of distance to the top: 17th with fifteen of the sixteen above holding
+    /// fewer ratings is two apps deep, not seventeen.
+    var blockers: Int? {
+        guard let rank, let weakerAbove else { return nil }
+        return max(rank - 1 - weakerAbove, 0)
+    }
+
+    /// Ranked, and not already at the top.
+    ///
+    /// There is deliberately no threshold on `blockers` here. One was tried —
+    /// "five or fewer" — and on real data it left the list empty while the best
+    /// term sat at seven, which is exactly what an invented cutoff does: it
+    /// decides for the reader using a number nobody measured. The ordering is
+    /// the honest part; where to stop reading is theirs.
+    var hasRoomToClimb: Bool {
+        guard let rank else { return false }
+        return rank > 1
+    }
 }
 
 /// Every check, per keyword, per day. Its own file — it has nothing to do with
@@ -146,7 +185,14 @@ struct KeywordHistory: Codable {
         var check = KeywordCheck(checkedAt: now, resultCount: results.count)
         for (index, app) in results.enumerated() {
             let position = index + 1
-            if mine.contains(app.id) { check.ranks[String(app.id)] = position }
+            if mine.contains(app.id) {
+                check.ranks[String(app.id)] = position
+                // Ratings are a crude stand-in for how established an app is,
+                // but they are a *measured* one — unlike anything that could be
+                // said about demand for the term itself.
+                check.weakerAbove[String(app.id)] =
+                    results.prefix(index).count { $0.ratingCount < app.ratingCount }
+            }
             if position <= Self.competitorDepth {
                 check.top.append(app.id)
                 apps[String(app.id)] = app
@@ -225,7 +271,7 @@ struct KeywordHistory: Codable {
         guard let trackId else {
             return KeywordStanding(keyword: keyword, rank: nil, seenAt: nil, delta: nil,
                                    best: nil, recent: Array(repeating: nil, count: days),
-                                   resultCount: 0)
+                                   resultCount: 0, weakerAbove: nil)
         }
 
         // Newest first, so "latest" and "the one before it" are the first two
@@ -251,7 +297,8 @@ struct KeywordHistory: Codable {
                                delta: delta,
                                best: ranked.map(\.rank).min(),
                                recent: recent,
-                               resultCount: latest?.value.resultCount ?? 0)
+                               resultCount: latest?.value.resultCount ?? 0,
+                               weakerAbove: current.flatMap { history[$0.day]?.weakerAbove(trackId) })
     }
 
     /// The latest check for a keyword, whichever day it landed on.

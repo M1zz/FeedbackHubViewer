@@ -339,9 +339,21 @@ final class KeywordStore: ObservableObject {
         history.record(TrackedKeyword(term: app.name, country: store),
                        results: neighbours, mine: [trackId])
 
+        // Widen the pool by asking the same question of the rivals. Searching
+        // a competitor's name returns *its* neighbourhood, which overlaps this
+        // app's without being the same — that is where a term this app has
+        // never been near comes from. Two rivals is the whole budget: each
+        // costs a request, and the names they bring back repeat quickly.
+        var pool = neighbours.prefix(30).map(\.name)
+        for rival in neighbours.dropFirst().prefix(2) {
+            guard !Task.isCancelled else { break }
+            progress = CheckProgress(done: 0, total: limit + 3, term: rival.name)
+            guard let more = try? await directory.search(term: rival.name, country: store) else { continue }
+            pool.append(contentsOf: more.prefix(20).map(\.name))
+        }
+
         let taken = Set(history.keywords(for: project).map { TrackedKeyword.normalize($0.term) })
-        let candidates = KeywordCandidates.mined(from: neighbours.prefix(30).map(\.name),
-                                                 excluding: taken, limit: limit)
+        let candidates = KeywordCandidates.mined(from: pool, excluding: taken, limit: limit)
         guard !candidates.isEmpty else {
             persist()
             errorMessage = "이웃 앱 이름에서 공통으로 쓰이는 말을 찾지 못했습니다."
@@ -404,6 +416,23 @@ final class KeywordStore: ObservableObject {
                 default:           return lhs.keyword.term < rhs.keyword.term
                 }
             }
+    }
+
+    /// The terms this app is nearest to owning, nearest first.
+    ///
+    /// Not a score, and not a shortlist with a cutoff. Every number in a row is
+    /// something the store said — the rank, how many apps are above it, how
+    /// many of those have fewer ratings — and the ordering is by the one that
+    /// answers "how far is it really": the apps above that are *not* smaller.
+    /// Seventeenth behind sixteen apps with no ratings is two apps deep;
+    /// seventeenth behind sixteen established ones is seventeen.
+    func closest(for project: String?, limit: Int = 6) -> [KeywordStanding] {
+        Array(standings(for: project)
+            .filter(\.hasRoomToClimb)
+            .sorted {
+                ($0.blockers ?? .max, $0.rank ?? .max) < ($1.blockers ?? .max, $1.rank ?? .max)
+            }
+            .prefix(limit))
     }
 
     func competitors(for project: String?) -> [CompetitorStanding] {
