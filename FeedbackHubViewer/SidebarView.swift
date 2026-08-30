@@ -12,6 +12,9 @@ import SwiftUI
 
 struct SidebarView: View {
     @EnvironmentObject private var store: FeedbackStore
+    /// Only for the app icons — the store links it resolves on launch are what
+    /// turns a bundle id into a picture (see `AppIcon`).
+    @EnvironmentObject private var keywords: KeywordStore
 
     var body: some View {
         // One pass for the whole list: each row's numbers and its sparkline
@@ -33,6 +36,7 @@ struct SidebarView: View {
 
                 ForEach(store.projectCounts, id: \.key) { entry in
                     ProjectRow(name: store.displayName(for: entry.key),
+                               iconURL: keywords.storeApp(for: entry.key)?.iconURL,
                                systemImage: entry.key == Feedback.unclassifiedProject
                                    ? "questionmark.folder" : "app.dashed",
                                tint: entry.key == Feedback.unclassifiedProject ? .secondary : .accentColor,
@@ -127,6 +131,8 @@ struct SidebarView: View {
 /// says "3" twice and leaves you to guess which 3 is which.
 private struct ProjectRow: View {
     let name: String
+    /// The App Store icon, when this project is an app the store knows.
+    var iconURL: URL? = nil
     let systemImage: String
     let tint: Color
     let count: Int
@@ -141,10 +147,8 @@ private struct ProjectRow: View {
     var body: some View {
         Button(action: action) {
             HStack(spacing: 10) {
-                Image(systemName: systemImage)
-                    .font(.body)
-                    .foregroundStyle(isSelected ? Color.accentColor : tint)
-                    .frame(width: 22)
+                AppIcon(url: iconURL, symbol: systemImage,
+                        tint: isSelected ? Color.accentColor : tint, size: 22)
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(name)

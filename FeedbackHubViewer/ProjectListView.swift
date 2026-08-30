@@ -171,6 +171,8 @@ private struct AllProjectsCard: View {
 
 private struct ProjectCard: View {
     @EnvironmentObject private var store: FeedbackStore
+    /// Only for the app icon — see `AppIcon`.
+    @EnvironmentObject private var keywords: KeywordStore
     let summary: FeedbackStore.ProjectSummary
 
     var body: some View {
@@ -181,7 +183,8 @@ private struct ProjectCard: View {
             CardFrame {
                 CardTitle(systemImage: summary.isUnclassified ? "questionmark.folder" : "app.dashed",
                           tint: summary.isUnclassified ? .secondary : .accentColor,
-                          name: summary.displayName)
+                          name: summary.displayName,
+                          iconURL: keywords.storeApp(for: summary.project)?.iconURL)
 
                 Divider()
 
@@ -309,13 +312,11 @@ private struct CardTitle: View {
     let tint: Color
     let name: String
     var subtitle: String? = nil
+    var iconURL: URL? = nil
 
     var body: some View {
         HStack(alignment: .center, spacing: 10) {
-            Image(systemName: systemImage)
-                .font(.title3)
-                .foregroundStyle(tint)
-                .frame(width: 26)
+            AppIcon(url: iconURL, symbol: systemImage, tint: tint, size: 26)
             VStack(alignment: .leading, spacing: 2) {
                 // A bundle id can be long ("com.devkoan.CalendarSnap") and the
                 // tail is what tells projects apart, so let it wrap and shrink
