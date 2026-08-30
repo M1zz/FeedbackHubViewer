@@ -34,6 +34,18 @@ struct CrashReport: Identifiable, Hashable {
     /// once a day, so this trails the actual crash.
     let receivedAt: Date?
 
+    // MARK: - 5.0.6 부터
+
+    /// 크래시가 **난** 시각. 옛 레코드에는 없다.
+    let occurredAt: Date?
+    /// `MXMetaData.applicationBuildVersion`. **죽은 빌드를 정확히 가리키는 유일한 값**
+    /// 이다. `appVersion` 은 배달 시점에 깔려 있던 버전이라 어긋날 수 있다.
+    let buildNumber: String?
+    /// 크래시에만 있다. 종료 사유 한 줄로는 SIGSEGV 와 워치독이 안 갈린다.
+    let exceptionType: String?
+    let exceptionCode: String?
+    let signal: String?
+
     static func == (lhs: CrashReport, rhs: CrashReport) -> Bool { lhs.id == rhs.id }
     func hash(into hasher: inout Hasher) { hasher.combine(id) }
 
@@ -67,9 +79,10 @@ struct CrashReport: Identifiable, Hashable {
 
     /// Plain text for copying into a bug report, like the apps' own screen.
     var copyText: String {
-        var lines = ["[\(kindLabel)] \(appVersion)"]
-        if let receivedAt { lines.append(AppFormat.dateTime(receivedAt)) }
+        var lines = ["[\(kindLabel)] \(versionLabel)"]
+        if let happenedAt { lines.append(AppFormat.dateTime(happenedAt)) }
         lines.append("\(deviceType) · OS \(osVersion)")
+        if let signalLabel { lines.append(signalLabel) }
         if hasDetail { lines.append(detail) }
         lines.append("")
         lines.append(stack)
@@ -86,6 +99,11 @@ struct CrashReport: Identifiable, Hashable {
         deviceType = (record["deviceType"] as? String) ?? "—"
         stack = (record["stack"] as? String) ?? ""
         receivedAt = record.creationDate
+        occurredAt = record["occurredAt"] as? Date
+        buildNumber = record["buildNumber"] as? String
+        exceptionType = record["exceptionType"] as? String
+        exceptionCode = record["exceptionCode"] as? String
+        signal = record["signal"] as? String
     }
 }
 

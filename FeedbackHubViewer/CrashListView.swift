@@ -2,15 +2,56 @@
 //  CrashListView.swift
 //  FeedbackHubViewer
 //
-//  The 진단 section of a project screen — every diagnostic the project sent, or
-//  every project's when the scope is 전체. Reports arrive from MetricKit (see
-//  `CrashReport.swift`), so the timestamps are when the hub received them, not
-//  when the crash happened. The title belongs to `ProjectSectionView`.
+//  The 진단 section of a project screen. 두 시야를 오간다.
+//
+//   · **이슈** (기본): 같은 사고끼리 묶어 아픈 것부터. `CrashIssueListView`
+//   · **전체**: 한 건씩, 버전별로 묶어서. 이 파일의 `CrashReportListView`
+//
+//  묶어 보는 쪽이 기본인 이유는 간단하다. 한 건씩 늘어놓은 목록으로는 "무엇을 먼저
+//  고칠까"를 고를 수 없다. 다만 한 건씩 훑어야 할 때가 있어 옛 시야도 남겨 둔다.
+//
+//  Reports arrive from MetricKit (see `CrashReport.swift`), so a report with no
+//  `occurredAt` falls back to when the hub received it, not when the crash
+//  happened. The title belongs to `ProjectSectionView`.
 //
 
 import SwiftUI
 
+/// 진단 화면의 문. 어느 시야로 볼지 고르고 그쪽에 넘긴다.
+///
+/// 고른 시야는 기기에 남는다. 크래시를 쫓는 사람은 대개 한 가지 시야만 쓰는데,
+/// 화면에 들어올 때마다 되돌아가면 매번 다시 골라야 한다.
 struct CrashListView: View {
+    let project: String?
+    @AppStorage("crashViewMode") private var mode = Mode.issues.rawValue
+
+    enum Mode: String, CaseIterable, Identifiable {
+        case issues, reports
+        var id: String { rawValue }
+        var label: String { self == .issues ? "이슈" : "전체" }
+    }
+
+    var body: some View {
+        Group {
+            if mode == Mode.reports.rawValue {
+                CrashReportListView(project: project)
+            } else {
+                CrashIssueListView(project: project)
+            }
+        }
+        .toolbar {
+            ToolbarItem(placement: .automatic) {
+                Picker("보기", selection: $mode) {
+                    ForEach(Mode.allCases) { Text($0.label).tag($0.rawValue) }
+                }
+                .pickerStyle(.segmented)
+                .help("이슈로 묶어 보거나, 한 건씩 봅니다")
+            }
+        }
+    }
+}
+
+struct CrashReportListView: View {
     @EnvironmentObject private var store: FeedbackStore
     /// nil == 전체 프로젝트.
     let project: String?

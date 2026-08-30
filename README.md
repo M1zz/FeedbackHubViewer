@@ -114,11 +114,20 @@ CloudKit은 어느 환경을 읽을지 **빌드에 박히는 entitlement**
   **사용 내역** 카드는 "최근 7일 사용 N건"의 그 N건을 실제로 보여줍니다 — 이벤트 이름, 발생 시각,
   설치 ID 앞 8자리, 버전·플랫폼이 한 줄씩. 20건부터 "더 보기"로 50건씩 늘립니다.
   이벤트 이름과 `metrics` 키는 앱이 보낸 원문 그대로 표시합니다(뷰어가 앱별 용어를 번역하지 않습니다).
-- **진단**: 프로젝트 화면의 **진단** 세그먼트(또는 안정성 카드의 "전부 모아보기")로 들어가면
-  **앱 버전별로 묶여서** 표시됩니다(최신 버전이 위, 각 묶음 안에서는 최신순, 헤더에 그 버전의 전체
-  건수와 최근 7일 건수). 그리고 최근 7일·전체 건수와 지난주 대비, 종류 필터(크래시·멈춤·
-  과도한 디스크 쓰기), 프로젝트별 건수(탭하면 그 앱만), 전체 목록(콜스택 펼치기·개별/전체 복사)이
-  나옵니다.
+- **진단**: 프로젝트 화면의 **진단** 세그먼트(또는 안정성 카드의 "전부 모아보기").
+  툴바에서 두 시야를 오갑니다.
+
+  - **이슈** (기본): 같은 사고끼리 묶어 **아픈 것부터** 보여 줍니다. 한 줄에 범인 프레임,
+    원인(워치독 종료 지연 · 화면 갱신 지연 · 신호 · 멈춤 · 메모리), 건수, 최근 7일과 지난주 대비,
+    영향 버전·기기 종류, 그리고 **새로 생김** / **최근 7일 없음** 표시가 붙습니다.
+    맨 위에는 아직 나는 이슈 수 · 최근 7일 건수 · 새로 생긴 이슈 수가 섭니다.
+    이슈를 누르면 첫 등장과 마지막, 버전·기기·OS 분포, **내 코드 프레임을 굵게 그린 콜스택**,
+    개별 진단 목록, 그리고 "무엇을 보면 되는지" 한 줄 안내가 나옵니다.
+  - **전체**: 예전처럼 한 건씩, **앱 버전별로 묶어서**(최신 버전이 위, 묶음 안에서는 최신순).
+    종류 필터, 프로젝트별 건수, 콜스택 펼치기, 개별/전체 복사.
+
+  왜 묶는 쪽이 기본인가: 한 건씩 늘어놓은 목록으로는 "무엇을 먼저 고칠까"를 고를 수 없습니다.
+  묶는 규칙과 그 한계는 `CrashAnalysis.swift` 머리말에 적어 두었습니다.
 - **프로젝트 숨기기**: 사이드바 프로젝트 행(오른쪽 클릭 또는 스와이프)이나 프로젝트 카드 우클릭에서
   "이 프로젝트 숨기기". 그 앱의 피드백·사용 통계·이벤트·크래시가 목록과 집계에서 한꺼번에
   빠집니다. **허브의 레코드는 지우지 않습니다** — 이 기기의 표시 설정(`UserDefaults`)일 뿐이고,
@@ -186,7 +195,7 @@ CloudKit은 어느 환경을 읽을지 **빌드에 박히는 entitlement**
 |---|---|---|
 | `UsageSnapshot` | 설치 1건(레코드 이름 `usage-<installID>`, upsert) | `appId` `appName` `appVersion` `platform` `osVersion` `locale` `launchCount` `eventCount` `daysSinceInstall` `installDate` `lastActiveAt` `metrics`(JSON `[String: Double]`) |
 | `UsageEvent` | 주요 행동 1건 | `appId` `appName` `event` `appVersion` `platform` `installID` `occurredAt` |
-| `CrashReport` | MetricKit 진단 1건 | `appId` `kind`(crash/hang/disk_write) `detail` `appVersion` `osVersion` `deviceType` `stack` (전부 String) |
+| `CrashReport` | MetricKit 진단 1건 | `appId` `kind`(crash/hang/disk_write) `detail` `appVersion` `osVersion` `deviceType` `stack` · **`occurredAt`**(Date) `buildNumber` `exceptionType` `exceptionCode` `signal` |
 
 - 추이·활성 사용자는 **`occurredAt`** 으로 계산합니다. `creationDate`(서버가 쓴 시각)로 세면
   나중에 소급 전송된 활동일이 보낸 날 하루에 뭉칩니다.
@@ -194,8 +203,14 @@ CloudKit은 어느 환경을 읽을지 **빌드에 박히는 entitlement**
   최근 N일 신규 = `installDate`가 그 구간인 스냅샷, 활동한 사용자 = 구간 내 서로 다른 `installID`.
 - `metrics` 키와 이벤트 이름은 앱마다 다릅니다. 뷰어는 키를 해석하지 않고 그대로 나열하며,
   `flag.*` · `persona.*` 키만 0/1 플래그로 보고 "사용자 비율"에 넣습니다.
-- `CrashReport`에는 시각 필드가 없어 **레코드 생성 시각**을 씁니다. MetricKit이 하루 한 번꼴로 묶어
-  보내므로 "최근 7일"은 "그 사이에 도착한 진단"이라는 뜻입니다(크래시가 난 시점이 아님).
+- `CrashReport`의 뒤쪽 5개 필드는 **ClipKeyboard 5.0.6부터** 옵니다. 그 이전 레코드에는 없으므로
+  뷰어는 전부 없을 수 있다고 보고 다룹니다. `occurredAt`이 없으면 **레코드 생성 시각**으로 대신하고,
+  이슈 상세에 그 사실을 표시합니다(MetricKit 배달이 하루까지 늦으므로 실제 발생은 그보다 앞섭니다).
+- ⚠️ `appVersion`은 **배달 시점에 깔려 있던** 버전입니다. 죽은 버전이 아닐 수 있습니다.
+  정확한 값은 `buildNumber`(`MXMetaData.applicationBuildVersion`)이고, 둘이 어긋나면 이름표를 의심합니다.
+- ⚠️ `stack` 형식이 5.0.6에 바뀌었습니다. 그 전에는 잘린 JSON 덩어리라 **갈라 볼 수 없습니다**.
+  뷰어는 `{`로 시작하는지로 구분해 옛 레코드를 "옛 형식" 한 덩어리로 모으고 이유를 화면에 적습니다.
+  왜 그렇게 됐는지는 ClipKeyboard 저장소의 `docs/postmortem/CRASH_STACK_TRUNCATION.md`.
 - 한 번에 읽는 양은 이벤트 5,000건, 진단 1,000건이 상한입니다
   (`CloudKitService.fetchUsage(eventLimit:crashLimit:)`). 이벤트는 이 상한이 **화면의 숫자에 영향을
   주지 않습니다** — 도착할 때 일 단위로 합산해 두기 때문입니다(§5-2).
@@ -302,6 +317,57 @@ SwiftUI는 화면을 다시 그릴 때마다 `body`를 다시 실행하므로, �
 
 계산은 다른 통계와 같이 새로고침마다 한 번만 하고 캐시합니다(§5-1).
 
+## 5-4. 심볼로 되돌리기 (오프셋 → 함수 이름)
+
+콜스택의 `+820588` 은 함수 이름이 아니라 **텍스트 세그먼트 기준 오프셋**입니다.
+이름까지 보려면 **정확히 그 빌드의 dSYM** 이 있어야 합니다. 버전 이름만으로는 못 고릅니다
+(같은 5.0.6 이라도 빌드가 여럿입니다). 그래서 앱이 스택 끝에 바이너리마다 UUID 를 실어 줍니다.
+
+```
+ 0 ClipKeyboard +820588
+ 1 SwiftUI +1042364
+...
+--
+@ ClipKeyboard 794FD256-8A8D-3C8D-91AA-AAC27EF3512C
+```
+
+### 준비 (한 번)
+
+**dSYM 을 버리지 않는 것**이 전부입니다. 아카이브 안에 들어 있지만, 아카이브를 지우면 같이 사라집니다.
+
+- Xcode: Organizer → Archives → 해당 아카이브 우클릭 → **Show in Finder** →
+  패키지 내용 보기 → `dSYMs/` 폴더. 이걸 따로 보관합니다.
+- Xcode Cloud / App Store Connect 로 올렸다면 Organizer 에서
+  **Download Debug Symbols** 로 내려받습니다.
+- Spotlight 가 색인하는 자리에 두면 아래 `mdfind` 가 UUID 로 바로 찾아 줍니다.
+
+### 되돌리기
+
+이슈 상세의 콜스택 아래 **"심볼 복원 명령 복사"** 버튼이 아래 두 줄을 만들어 줍니다.
+
+```bash
+# ① UUID 로 그 빌드의 dSYM 찾기
+mdfind "com_apple_xcode_dsym_uuids == 794FD256-8A8D-3C8D-91AA-AAC27EF3512C"
+
+# ② 오프셋을 함수 이름으로
+atos -o <위에서 찾은 경로>/Contents/Resources/DWARF/ClipKeyboard \
+     -arch arm64e -l 0x100000000 0x1000c856c
+```
+
+`-l 0x100000000` 은 64비트 앱의 텍스트 세그먼트 시작이고, 마지막 주소는 `시작 + 오프셋` 입니다.
+`mdfind` 가 아무것도 못 찾으면 그 빌드의 dSYM 이 이 기기에 없다는 뜻입니다.
+
+`-arch` 는 기기에 맞춥니다. 요즘 아이폰은 `arm64e`, 그 이전은 `arm64` 입니다
+(`deviceType` 이 iPhone11,x 이상이면 `arm64e`).
+
+### 안 되는 것
+
+- **애플 프레임워크 프레임**(UIKitCore·SwiftUI 등)은 되돌릴 수 없습니다. 그쪽 dSYM 이 없습니다.
+  그래서 이슈 화면은 **내 코드 프레임을 굵게** 그립니다. 볼 곳이 거기입니다.
+- 옛 형식 레코드는 오프셋 자체가 안 실려 있어 되돌릴 것이 없습니다.
+
+---
+
 ## 6. 프로젝트 구성
 
 ```
@@ -315,7 +381,11 @@ FeedbackHubViewer/
    ├─ CarryingCapacity.swift       # 성장 상한 계산(신규·이탈률·전망, §5-3)
    ├─ CarryingCapacityCard.swift   # 성장 상한 카드(막대·타일·궤적/전망 차트)
    ├─ CrashReport.swift            # MetricKit 진단 모델(고정 스키마)
-   ├─ CrashListView.swift          # 진단 모아보기(종류·프로젝트 필터, 콜스택)
+   ├─ CrashAnalysis.swift          # 콜스택 가르기·원인 분류·지문(묶는 규칙과 한계)
+   ├─ CrashIssue.swift             # 같은 사고끼리 묶은 이슈 + 묶기
+   ├─ CrashIssueListView.swift     # 이슈 목록(아픈 것부터, 원인 필터)
+   ├─ CrashIssueDetailView.swift   # 이슈 하나(분포·콜스택·개별 진단)
+   ├─ CrashListView.swift          # 진단 시야 전환 + 한 건씩 보는 목록
    ├─ NotificationService.swift    # 앱 아이콘 배지 + 로컬 알림
    ├─ FeedbackStore+Usage.swift    # 사용 통계 집계(활성·신규·이벤트·지표·추이·퍼널 입력)
    ├─ CloudKitService.swift        # Public DB 조회(CKContainer) + 환경(CloudKitEnvironment)
