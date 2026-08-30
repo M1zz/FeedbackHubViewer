@@ -33,9 +33,14 @@ struct KeywordsView: View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 14) {
                 if let app = linkedApp { linkedAppCard(app) } else { unlinkedCard }
+                if linkedApp != nil && standings.isEmpty { startCard }
                 addCard
                 if !standings.isEmpty { rankCard }
-                if !competitors.isEmpty { competitorCard }
+                // Shown even when empty. Competitors are read out of the
+                // results for the terms you track, so with no terms this card
+                // is blank — and a card that just disappears leaves you to
+                // work out the dependency for yourself.
+                if linkedApp != nil { competitorCard }
                 if !suggestions.isEmpty { suggestionCard }
                 limitsCard
             }
@@ -94,12 +99,41 @@ struct KeywordsView: View {
             VStack(alignment: .leading, spacing: 8) {
                 Text(project == nil
                      ? "프로젝트를 하나 고르면 그 앱의 키워드 순위를 봅니다."
-                     : "이 번들 ID로 App Store에서 앱을 찾지 못했습니다. 아직 심사 중이거나 개발용 빌드일 수 있습니다.")
+                     : keywords.isChecking
+                         ? "App Store에서 이 앱을 찾는 중입니다…"
+                         : "이 번들 ID로 App Store에서 앱을 찾지 못했습니다. 아직 심사 중이거나 개발용 빌드일 수 있습니다.")
                     .font(.callout).foregroundStyle(.secondary)
                 if project != nil {
                     Button("App Store에서 다시 찾기") {
                         keywords.refreshLinks(bundleIds: store.allProjectKeys)
                     }
+                }
+            }
+        }
+    }
+
+    // MARK: - Getting started
+
+    /// The first screen anyone sees. It has to say two things: that everything
+    /// below hangs off the terms you track, and that you do not have to think
+    /// any of them up.
+    private var startCard: some View {
+        Card(title: "여기서 시작", systemImage: "sparkle.magnifyingglass") {
+            VStack(alignment: .leading, spacing: 10) {
+                Text("추적 중인 검색어가 없습니다. **순위도 경쟁 앱도 검색어에서 나옵니다** — 검색어 하나를 넣으면 그 검색 결과에서 내 순위를 읽고, 같은 결과의 상위 앱들이 경쟁 앱이 됩니다.")
+                    .font(.callout)
+                Text("떠올리지 않아도 됩니다. 이 앱 이름으로 한 번 검색해 같은 자리에 서는 앱들을 모으고, 그 이름들이 공통으로 쓰는 말을 후보로 뽑은 다음, **하나씩 실제로 검색해서 순위에 잡히는 것만** 남깁니다.")
+                    .font(.caption).foregroundStyle(.secondary)
+                HStack {
+                    Button {
+                        if let project { keywords.discover(for: project, country: addCountries.first) }
+                    } label: {
+                        Label("앱 이름으로 자동 찾기", systemImage: "wand.and.stars")
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .disabled(project == nil || keywords.isChecking)
+                    Text("검색어 하나당 3초, 열두 개면 30초쯤")
+                        .font(.caption2).foregroundStyle(.secondary)
                 }
             }
         }
@@ -119,8 +153,19 @@ struct KeywordsView: View {
                                   || addCountries.isEmpty)
                 }
                 countryPicker
-                Text("검색 한 번이 내 앱 전부를 커버합니다. 같은 검색어를 다른 앱에서도 추적해도 요청은 늘지 않습니다.")
-                    .font(.caption).foregroundStyle(.secondary)
+                HStack(spacing: 8) {
+                    Text("검색 한 번이 내 앱 전부를 커버합니다. 같은 검색어를 다른 앱에서도 추적해도 요청은 늘지 않습니다.")
+                        .font(.caption).foregroundStyle(.secondary)
+                    Spacer()
+                    if project != nil, !standings.isEmpty {
+                        Button {
+                            if let project { keywords.discover(for: project, country: addCountries.first) }
+                        } label: {
+                            Label("자동 찾기", systemImage: "wand.and.stars").font(.caption)
+                        }
+                        .disabled(keywords.isChecking)
+                    }
+                }
             }
         }
     }
@@ -204,8 +249,16 @@ struct KeywordsView: View {
     private var competitorCard: some View {
         Card(title: "경쟁 앱", systemImage: "person.2") {
             VStack(alignment: .leading, spacing: 10) {
-                Text("추적 중인 키워드에서 실제로 마주친 앱입니다. 내 앱보다 위에 있는 횟수가 많은 순.")
-                    .font(.caption).foregroundStyle(.secondary)
+                if competitors.isEmpty {
+                    Text(standings.isEmpty
+                         ? "아직 없습니다. 경쟁 앱은 **추적 중인 검색어의 결과**에서 뽑으므로, 검색어를 하나 넣어야 나옵니다."
+                         : "아직 없습니다. 추적 중인 검색어를 한 번 확인하고 나면 그 결과의 상위 앱들이 여기 섭니다.")
+                        .font(.callout).foregroundStyle(.secondary)
+                }
+                if !competitors.isEmpty {
+                    Text("추적 중인 키워드에서 실제로 마주친 앱입니다. 내 앱보다 위에 있는 횟수가 많은 순.")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
                 ForEach(competitors) { competitor in
                     HStack(alignment: .top, spacing: 10) {
                         AsyncImage(url: competitor.app.iconURL) { image in

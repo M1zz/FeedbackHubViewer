@@ -87,6 +87,17 @@ final class KeywordStore: ObservableObject {
                 countries.append(country)
             }
             self.countries = countries
+            // Resolve the store links first, and whether or not anything is
+            // being tracked yet. They used to be resolved only as the opening
+            // step of a daily check, and a check only runs once there is a term
+            // to check — so a hub with no keywords never looked its apps up,
+            // showed "App Store에서 찾지 못했습니다" for apps that are plainly
+            // on the store, and left 자동 찾기 with nothing to start from.
+            // One request per launch, and only while something is unlinked.
+            if bundleIds.contains(where: { self.history.links[$0] == nil }) {
+                await self.resolveLinks(bundleIds: bundleIds)
+                self.persist()
+            }
             guard self.needsDailyCheck else { return }
             self.check(bundleIds: bundleIds)
         }
@@ -242,6 +253,102 @@ final class KeywordStore: ObservableObject {
             } catch {
                 self.errorMessage = error.localizedDescription
             }
+        }
+    }
+
+    // MARK: - Discovery
+
+    /// Find this app's keywords without being told any.
+    ///
+    /// The 경쟁 앱 list is built out of the terms you track, so with no terms
+    /// there is nothing to show and no obvious first move — a blank screen that
+    /// asks you to already know the answer. This breaks that circle using the
+    /// one term every app has for free: its own name.
+    ///
+    ///   1. search the app's own name — whoever comes back is standing in the
+    ///      same part of the store, which is the definition of a neighbour;
+    ///   2. mine their names for the words the category shares
+    ///      (`KeywordCandidates.mined`);
+    ///   3. put every candidate to the store as a real search, and keep only
+    ///      the ones this app actually ranks for.
+    ///
+    /// Step 3 is what makes it trustworthy rather than clever. The mining in
+    /// step 2 is a rough net that produces plenty of nonsense; the store
+    /// settles which of it is real, and nothing that fails is written down.
+    ///
+    /// Costs one request per candidate, at `AppStoreDirectory.minimumInterval`
+    /// apart — about half a minute for a dozen. It runs in the background and
+    /// reports progress like an ordinary check.
+    func discover(for project: String, country: String? = nil, limit: Int = 12) {
+        guard checkTask == nil else { return }
+        checkTask = Task { [weak self] in
+            await self?.runDiscovery(project: project, country: country, limit: limit)
+            self?.checkTask = nil
+        }
+    }
+
+    private func runDiscovery(project: String, country: String?, limit: Int) async {
+        guard let trackId = history.links[project],
+              let app = history.apps[String(trackId)] else {
+            errorMessage = "App Store에서 이 앱을 먼저 찾아야 합니다."
+            return
+        }
+        let store = country ?? countries.first ?? "kr"
+        isChecking = true
+        errorMessage = nil
+        defer {
+            isChecking = false
+            progress = nil
+        }
+
+        progress = CheckProgress(done: 0, total: 1, term: app.name)
+        let neighbours: [StoreApp]
+        do {
+            neighbours = try await directory.search(term: app.name, country: store)
+        } catch {
+            errorMessage = error.localizedDescription
+            return
+        }
+        // The app's own name is a term too, and usually its best one.
+        history.add(term: app.name, country: store, for: project)
+        history.record(TrackedKeyword(term: app.name, country: store),
+                       results: neighbours, mine: [trackId])
+
+        let taken = Set(history.keywords(for: project).map { TrackedKeyword.normalize($0.term) })
+        let candidates = KeywordCandidates.mined(from: neighbours.prefix(30).map(\.name),
+                                                 excluding: taken, limit: limit)
+        guard !candidates.isEmpty else {
+            persist()
+            errorMessage = "이웃 앱 이름에서 공통으로 쓰이는 말을 찾지 못했습니다."
+            return
+        }
+
+        var kept = 0
+        for (index, term) in candidates.enumerated() {
+            guard !Task.isCancelled else { break }
+            progress = CheckProgress(done: index + 1, total: candidates.count + 1, term: term)
+            let keyword = TrackedKeyword(term: term, country: store)
+            do {
+                let results = try await directory.search(term: term, country: store)
+                // Only what the store agrees with is written down. A candidate
+                // this app does not rank for is dropped rather than added as an
+                // empty row — a list of terms you are invisible for is a list
+                // of things to scroll past.
+                guard results.contains(where: { $0.id == trackId }) else { continue }
+                history.add(term: term, country: store, for: project)
+                history.record(keyword, results: results, mine: [trackId])
+                kept += 1
+            } catch is CancellationError {
+                break
+            } catch {
+                if errorMessage == nil { errorMessage = error.localizedDescription }
+            }
+        }
+
+        history.lastCheckedAt = Date()
+        persist()
+        if kept == 0 {
+            errorMessage = "후보 \(candidates.count)개를 확인했지만 순위에 잡히는 것이 없었습니다."
         }
     }
 
