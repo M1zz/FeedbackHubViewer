@@ -4,15 +4,16 @@
 //
 //  One project's screen — the second level of the app. The project is chosen
 //  first (sidebar on a Mac/iPad, the project list on a phone); 피드백 · 통계 ·
-//  진단 are the three things to look at inside it, switched by the segmented
-//  control at the top. They are peers of each other and never of the project,
-//  which is what the old 개요/통계 top-level split got backwards.
+//  진단 · 키워드 are the things to look at inside it, switched by the buttons
+//  at the top. They are peers of each other and never of the project, which is
+//  what the old 개요/통계 top-level split got backwards.
 //
 
 import SwiftUI
 
 struct ProjectSectionView: View {
     @EnvironmentObject private var store: FeedbackStore
+    @EnvironmentObject private var keywords: KeywordStore
     /// nil == 전체 프로젝트.
     let project: String?
     /// The Mac's third column follows this; a phone pushes the detail instead.
@@ -45,12 +46,12 @@ struct ProjectSectionView: View {
 
     // MARK: - Section switch
 
-    /// Three big labelled buttons rather than a segmented control: each one
-    /// says what it is with an icon, a word and its count, and each is a
-    /// comfortable target on a phone. A segmented control put the same three
-    /// choices in half the height and none of the meaning.
+    /// Big labelled buttons rather than a segmented control: each one says
+    /// what it is with an icon, a word and its count, and each is a comfortable
+    /// target on a phone. A segmented control put the same choices in half the
+    /// height and none of the meaning.
     private var sectionBar: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 6) {
             ForEach(FeedbackStore.ProjectSection.allCases) { section in
                 sectionButton(section)
             }
@@ -97,6 +98,7 @@ struct ProjectSectionView: View {
         case .feedback: return store.scopedFeedback.count
         case .stats: return store.usage(for: project).installs
         case .crashes: return store.crashSummary(for: project).total
+        case .keywords: return keywords.standings(for: project).filter(\.isRanked).count
         }
     }
 
@@ -110,6 +112,13 @@ struct ProjectSectionView: View {
             return count > 0 ? "설치 \(count)곳" : "사용 통계"
         case .crashes:
             return count > 0 ? "\(count)건" : "없음"
+        case .keywords:
+            let tracked = keywords.standings(for: project).count
+            guard tracked > 0 else { return "App Store 검색" }
+            // 전체 프로젝트 has no single app whose rank to read, so a "잡힘"
+            // fraction there is a zero that means nothing. Count the terms.
+            guard project != nil else { return "\(tracked)개 추적" }
+            return "\(count)/\(tracked) 잡힘"
         }
     }
 
@@ -122,6 +131,8 @@ struct ProjectSectionView: View {
             StatisticsDashboard(project: project)
         case .crashes:
             CrashListView(project: project)
+        case .keywords:
+            KeywordsView(project: project)
         }
     }
 
@@ -146,6 +157,15 @@ struct ProjectSectionView: View {
             let summary = store.crashSummary(for: project)
             guard !summary.isEmpty else { return "올라온 진단 없음" }
             return "전체 \(summary.total)건 · 최근 7일 \(summary.last7Days)건"
+        case .keywords:
+            let standings = keywords.standings(for: project)
+            guard !standings.isEmpty else { return "추적 중인 키워드 없음" }
+            guard project != nil else { return "키워드 \(standings.count)개 추적 중 · 프로젝트를 골라 순위를 봅니다" }
+            let ranked = standings.filter(\.isRanked)
+            let best = ranked.compactMap(\.rank).min()
+            var text = "키워드 \(standings.count)개 · \(ranked.count)개 잡힘"
+            if let best { text += " · 최고 \(best)위" }
+            return text
         }
     }
 }

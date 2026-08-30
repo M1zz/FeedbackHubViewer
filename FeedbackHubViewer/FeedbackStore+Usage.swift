@@ -138,6 +138,16 @@ extension FeedbackStore {
             }
         }
 
+        /// The rung of `UsageRollups` this unit reads.
+        var granularity: UsageRollups.Granularity {
+            switch self {
+            case .day: return .day
+            case .week: return .week
+            case .month: return .month
+            case .year: return .year
+            }
+        }
+
         var label: String {
             switch self {
             case .day: return "일간"
@@ -357,6 +367,17 @@ extension FeedbackStore {
             .sorted { ($0.receivedAt ?? .distantPast) > ($1.receivedAt ?? .distantPast) }
     }
 
+    /// 같은 사고끼리 묶은 이슈, **아픈 것부터**. 진단 화면의 기본 시야다.
+    ///
+    /// 한 건씩 늘어놓은 목록은 "많이 나는 것부터"를 못 고른다. 묶어야 고칠 순서가
+    /// 정해진다. 묶는 규칙과 그 한계는 `CrashAnalysis.swift` 머리말에 있다.
+    func crashIssues(for project: String?) -> [CrashIssue] {
+        if let cached = derived.crashIssues[project] { return cached }
+        let value = CrashIssue.group(crashes(for: project))
+        derived.crashIssues[project] = value
+        return value
+    }
+
     /// Projects that reported diagnostics, worst first — the list behind the
     /// red ⚠︎ marks.
     var crashingProjects: [(key: String, displayName: String, total: Int, last7Days: Int)] {
@@ -491,16 +512,19 @@ extension FeedbackStore {
             calendar.dateInterval(of: unit.component, for: date)?.start
         }
 
-        // Weeks, months and years are day buckets added up — and 활동 사용자 is
-        // the *union* of their install sets, never the sum, because one install
-        // active on Monday and Tuesday is one user.
+        // Weeks, months and years were added up once, when the events that
+        // moved them arrived (`UsageRollups.rebuildDirtyPeriods`), so this
+        // reads one bucket per point on the chart instead of re-summing every
+        // day the hub has ever held. 활동 사용자 is the *union* of the install
+        // sets inside a period, never the sum — one install active on Monday
+        // and Tuesday is one user — which is why the ladder stores the sets.
         var eventCounts: [Date: Int] = [:]
-        var installsByBucket: [Date: Set<String>] = [:]
-        for (day, bucket) in rollups.days(for: project, excluding: hiddenProjects) {
-            guard let date = UsageRollups.date(fromDayKey: day, calendar: calendar),
-                  let start = bucketStart(date) else { continue }
-            eventCounts[start, default: 0] += bucket.events
-            installsByBucket[start, default: []].formUnion(bucket.installs)
+        var activeInstalls: [Date: Int] = [:]
+        for (key, bucket) in rollups.buckets(unit.granularity, for: project, excluding: hiddenProjects) {
+            guard let start = UsageRollups.date(fromKey: key, granularity: unit.granularity,
+                                                calendar: calendar) else { continue }
+            eventCounts[start] = bucket.events
+            activeInstalls[start] = bucket.installs.count
         }
 
         var newInstalls: [Date: Int] = [:]
@@ -509,7 +533,7 @@ extension FeedbackStore {
             newInstalls[start, default: 0] += 1
         }
 
-        let starts = Set(eventCounts.keys).union(installsByBucket.keys).union(newInstalls.keys)
+        let starts = Set(eventCounts.keys).union(activeInstalls.keys).union(newInstalls.keys)
         guard let first = starts.min(), let today = bucketStart(Date()) else {
             derived.trend[cacheKey] = []
             return []
@@ -522,7 +546,7 @@ extension FeedbackStore {
         while cursor <= last && points.count < 400 {
             points.append(TrendPoint(date: cursor,
                                      events: eventCounts[cursor] ?? 0,
-                                     activeInstalls: installsByBucket[cursor]?.count ?? 0,
+                                     activeInstalls: activeInstalls[cursor] ?? 0,
                                      newInstalls: newInstalls[cursor] ?? 0))
             guard let next = calendar.date(byAdding: unit.component, value: 1, to: cursor) else { break }
             cursor = next

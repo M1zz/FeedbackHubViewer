@@ -29,12 +29,18 @@ final class FeedbackStore: ObservableObject {
         case feedback = "피드백"
         case stats = "통계"
         case crashes = "진단"
+        /// App Store search — the only section that reads something other than
+        /// the CloudKit hub (see `KeywordStore`). It sits here because it is
+        /// still one thing you look at *inside* a project, which is what this
+        /// enum means.
+        case keywords = "키워드"
         var id: String { rawValue }
         var systemImage: String {
             switch self {
             case .feedback: return "text.bubble"
             case .stats: return "chart.bar"
             case .crashes: return "exclamationmark.triangle"
+            case .keywords: return "magnifyingglass"
             }
         }
     }
@@ -135,6 +141,7 @@ final class FeedbackStore: ObservableObject {
         var stats: [String?: Stats] = [:]
         var usage: [String?: ProjectUsage] = [:]
         var crashSummary: [String?: CrashSummary] = [:]
+        var crashIssues: [String?: [CrashIssue]] = [:]
         var eventStats: [String?: [EventStat]] = [:]
         var eventTallies: [String?: [String: UsageNameTotal]] = [:]
         var eventLog: [String?: [UsageEvent]] = [:]
@@ -444,25 +451,51 @@ final class FeedbackStore: ObservableObject {
     static let rawEventRetentionDays = 90
     /// Backstop on the retained window, for an app that reports thousands of
     /// events a day. The rollups are unaffected either way.
+    ///
+    /// A retention cap, never a read cap. The two used to share a number and
+    /// the number leaked into `CloudKitService.fetchUsage`, which stopped the
+    /// event read at 5,000 records and then recorded the type as read to the
+    /// end — so an unordered read handed back an arbitrary slice of the stream
+    /// and the rest was never asked for again. Reads are uncapped now; what is
+    /// bounded is what this device *keeps*.
     private static let eventLimit = 5000
-    /// Diagnostics are read whole and are small; this is the only cap they get.
+    /// Diagnostics are read whole and are small; this is the only cap they get
+    /// — again on what is kept, applied after the merge.
     private static let crashLimit = 1000
 
     /// When each record type was last read successfully. Persisted with the
     /// cache; drives the incremental queries.
     private var watermarks: [String: Date] = [:]
     private var startupTask: Task<Void, Never>?
+    /// Just the cache read, kept separately from the refresh behind it — see
+    /// `awaitRestore()`.
+    private var restoreTask: Task<Bool, Never>?
 
     /// Called once when the app's window appears. Paints the cache first, then
     /// checks CloudKit for what changed — on its own task, so the check outlives
     /// the view that kicked it off and never holds up the first frame.
     func start() {
         guard startupTask == nil else { return }
+        let restore = Task { [weak self] in
+            await self?.restoreFromCache() ?? false
+        }
+        restoreTask = restore
         startupTask = Task { [weak self] in
             guard let self else { return }
-            let restored = await self.restoreFromCache()
+            let restored = await restore.value
             await self.load(mode: restored ? .incremental : .full)
         }
+    }
+
+    /// Wait for the cache to be painted — and only that, not the network
+    /// refresh behind it, which runs for minutes.
+    ///
+    /// For anything at launch that needs the project list before it can do its
+    /// own work. `KeywordStore` is the case in point: a rank check started
+    /// before this returns has no apps to look for, so it records competitors
+    /// and not one rank.
+    func awaitRestore() async {
+        _ = await restoreTask?.value
     }
 
     /// Read everything again — the refresh button, ⌘R, and pull-to-refresh.
@@ -524,7 +557,7 @@ final class FeedbackStore: ObservableObject {
         // finished is exactly what a watermark records.
         var usageKnown: [String: Set<String>] = [:]
         if watermarks[CloudKitService.eventRecordType] != nil {
-            usageKnown[CloudKitService.eventRecordType] = rollups.knownEventIDs
+            usageKnown[CloudKitService.eventRecordType] = rollups.knownEventIDs()
         }
         if isIncremental, watermarks[CloudKitService.crashRecordType] != nil {
             usageKnown[CloudKitService.crashRecordType] = Set(fetchedCrashes.map(\.id))
@@ -628,6 +661,9 @@ final class FeedbackStore: ObservableObject {
             let folded = rollups.fold(events)
             if folded > 0 {
                 rollups.pruneIdentifiers()
+                // Only the weeks, months and years the fold above actually
+                // touched — usually today's three — are added up again.
+                rollups.rebuildDirtyPeriods()
                 rollupsChanged = true
                 changed = true
             }
@@ -720,6 +756,7 @@ final class FeedbackStore: ObservableObject {
             // records it already had on disk.
             if restored.fold(cached?.events ?? []) > 0 {
                 restored.pruneIdentifiers()
+                restored.rebuildDirtyPeriods()
                 persistRollups(restored)
             }
             if !restored.isEmpty { rollups = restored }
@@ -767,6 +804,7 @@ final class FeedbackStore: ObservableObject {
                   watermarks: watermarks,
                   resolvedRecordType: resolvedRecordType,
                   filterFields: service.incrementalFilterFields,
+                  unsortableTypes: service.unsortableRecordTypes.sorted(),
                   feedback: fetchedFeedback,
                   snapshots: fetchedSnapshots,
                   events: fetchedEvents,

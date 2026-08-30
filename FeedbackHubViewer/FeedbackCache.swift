@@ -31,6 +31,11 @@ struct CachedHub: Codable {
     /// incremental read filter on — an empty value means "neither". Remembered
     /// so a launch doesn't re-ask a question already answered.
     var filterFields: [String: String] = [:]
+    /// Record types the last read could not sort newest-first, so it had to
+    /// walk the whole type. Optional because files written before this existed
+    /// must still decode; purely diagnostic — it is re-learned on every read,
+    /// never restored.
+    var unsortableTypes: [String]?
 
     var feedback: [Feedback] = []
     var snapshots: [UsageSnapshot] = []
@@ -68,6 +73,19 @@ enum CacheFile {
         let directory = base.appendingPathComponent("FeedbackHubViewer", isDirectory: true)
         try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         return directory.appendingPathComponent("\(name)-\(environment.restPathComponent).json")
+    }
+
+    /// The same, for a file that has nothing to do with CloudKit — keyword
+    /// rank history, which reads the public App Store and must survive a switch
+    /// between the Development and Production schemes.
+    static func url(_ name: String) -> URL? {
+        guard let base = try? FileManager.default.url(for: .applicationSupportDirectory,
+                                                      in: .userDomainMask,
+                                                      appropriateFor: nil,
+                                                      create: true) else { return nil }
+        let directory = base.appendingPathComponent("FeedbackHubViewer", isDirectory: true)
+        try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        return directory.appendingPathComponent("\(name).json")
     }
 
     /// Encode and write where the caller stands. Atomic, so a write cut short
@@ -157,11 +175,17 @@ actor RollupCache {
 
     func load() -> UsageRollups? {
         guard let fileURL, let data = try? Data(contentsOf: fileURL) else { return nil }
-        guard let rollups = try? JSONDecoder().decode(UsageRollups.self, from: data),
-              rollups.version == UsageRollups.currentVersion else {
+        guard var rollups = try? JSONDecoder().decode(UsageRollups.self, from: data),
+              (UsageRollups.earliestReadableVersion...UsageRollups.currentVersion)
+                  .contains(rollups.version) else {
             try? FileManager.default.removeItem(at: fileURL)
             return nil
         }
+        // An older file, a device that changed region, or a run that folded
+        // events and was killed before it re-summed them: all three are made
+        // good from the day buckets, which are the only thing here that cannot
+        // be recomputed. Written back now so the next launch has nothing to do.
+        if rollups.prepareLadder() { CacheFile.write(rollups, to: fileURL) }
         return rollups
     }
 

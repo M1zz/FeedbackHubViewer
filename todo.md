@@ -50,8 +50,42 @@
 - [x] 두번알림 스펙에 빠진 이벤트 라벨 5개 보충
       (onboarding_shown · timer_cancelled · preset_saved · purchase_started · purchase_failed)
 - [x] sync-stats-specs.sh의 ClipKeyboard 경로 수정 (docs/ → docs/engineering/)
+- [x] 일/주/월/연 요약 사다리(`UsageRollups.weeks/months/years`): 일 버킷이 진실, 그 위 단계는 일의 합.
+      새로고침이 건드린 날의 기간만 다시 합산(`dirtyDays` → `rebuildDirtyPeriods`)하므로 갱신 비용이
+      쌓인 양이 아니라 바뀐 양에 비례. 주/월/연 추이가 전 기간 일 버킷을 다시 훑지 않고 버킷 하나를 읽음.
+      v1 파일은 버리지 않고 일 버킷에서 사다리를 다시 세워 올림(지역 변경으로 주 경계가 바뀌어도 동일)
+- [x] 이벤트·진단 조회의 5,000/1,000건 상한 제거: 이어서 읽을 방법이 없는 읽기에 상한을 걸면
+      "최신 N건"이 아니라 "아무 N건"이 돌아오는데, 그 읽기를 끝까지 읽은 것으로 기록해서
+      나머지를 영영 다시 묻지 않았음. 보관 상한(`withinRetention`·`crashLimit`)만 남김
+- [x] 정렬도 필터도 안 되는 레코드 타입을 화면에 알림(`unindexedTypes`) + 캐시에 기록.
+      지금 이 컨테이너에서는 `UsageSnapshot`이 그래서 새로고침마다 4,600건 전체를 읽고 있음
+
+- [x] **크래시 이슈 분석**: 같은 사고끼리 묶어 아픈 것부터(`CrashIssue`). 원인 분류
+      (워치독 종료 지연·화면 갱신 지연·신호·멈춤·메모리), 첫 등장/마지막, 최근 7일과 지난주 대비,
+      버전·기기·OS 분포, 내 코드 프레임을 굵게 그린 콜스택, 새로 생김/잠잠 표시,
+      그리고 dSYM 을 찾아 `atos` 를 돌리는 명령 복사까지. 진단 화면은 이슈/전체 두 시야
+- [x] 보내는 쪽(ClipKeyboard 5.0.6)에서 콜스택을 프레임 목록으로 바꿈. 그 전 149건은
+      JSON 중간에서 잘려 분석 불가라 "옛 형식" 한 덩어리로 모으고 이유를 화면에 적음
+- [x] **ASO(키워드) 섹션**: 프로젝트 안에 피드백·통계·진단과 나란히 "키워드" 추가.
+      iTunes Search API로 App Store 검색 순위를 매일 추적하고, 검색 결과 상위에서 경쟁 앱을 수집.
+      번들 ID → trackId 자동 연결(`lookup?bundleId=`, 20개씩 묶어 한 번에).
+      설계의 핵심: **검색 1회가 내 앱 전부를 커버**하므로 요청 비용이 `키워드 × 국가`(앱 수와 무관).
+      순위 이력은 일 단위 1건이라 사다리 없이 일 버킷만 둠(합이 아니라 시점 값이라 정의도 다름).
+      요청은 3초 간격으로 직렬화, 하루 한 번만 확인, 화면에 검색량 없음·정렬 근사·Play 미지원을 명시
 
 ## 남은 것
+- [ ] (선택) 경쟁 앱이 랭킹된 키워드 역추적 — "저쪽은 있고 나는 없는" 키워드 발굴.
+      요청이 여러 배로 늘어나므로 탐색 전략(어떤 후보를 어떤 순서로 볼지)이 먼저 필요
+- [ ] (선택) AI 리스팅 제안 — 순위·경쟁 앱 데이터를 근거로 앱 이름·설명 개선안. Claude API 키·비용 발생
+- [ ] Google Play 순위 — 공식 API가 없어 스크래핑이 필요. App Store와는 다른 종류의 작업
+- [ ] **CloudKit 인덱스 추가**: 네 타입 모두 `___createTime`/`___modTime`이 Queryable이 아니라
+      증분 조회가 한 번도 동작한 적 없음(캐시의 `filterFields`가 전부 빈 값). UsageEvent·CrashReport·
+      Feedback은 정렬이 되어 "이미 가진 것에서 멈추기"로 버티지만, UsageSnapshot은 정렬도 안 돼
+      매번 전체를 읽음. Console → 각 레코드 타입 Indexes에서 Created·Modified를 Queryable·Sortable로
+- [ ] **앱스토어 설치 수 ≫ 허브 설치 수**: 허브의 "설치 수"는 UsageSnapshot 레코드 수 = *리포트가
+      도달한* 설치 수. 조회 쪽은 완전함을 확인했으므로(스냅샷은 상한 없는 전수 조회) 간극은 앱 쪽
+      전송 유실. LeeoKit 리포터에서 확인할 것: iCloud 미로그인 시 동작, 첫 실행 직후 종료 시 저장 완료,
+      CKError 재시도, 공개 DB 쓰기 스로틀링
 - [ ] **두번알림에 결제 성공 이벤트가 없음**: `purchase_started`·`purchase_failed`는 오는데 완료가
       안 옴(스펙의 `paywall_converted`가 "보내지 않음"으로 뜸). 앱에서 보내야 퍼널 마지막 칸이 채워짐
 - [ ] (선택) ClipKeyboard `paywall_view`에 출처 슬라이스(`:nudge_slots_left` 등)를 붙이면
@@ -64,3 +98,11 @@
       `modifiedTimestamp`(UsageSnapshot)를 QUERYABLE 인덱스로 추가 → 서버 쪽 날짜 필터까지 사용
       (없어도 새 레코드만 받습니다. README §5-7 참고, 코드 변경 없이 앱이 자동 감지)
 - [ ] 앱이 꺼져 있을 때 알림: Push Notifications capability + `CKQuerySubscription`(미구현)
+- [ ] **다른 앱들도 5.0.6 의 진단 전송으로 올리기**: 지금은 ClipKeyboard 만 새 형식이다.
+      `DiagnosticsService` 를 LeeoKit 으로 올려 46개 앱이 같은 형식을 쓰게 하면
+      이 화면이 그대로 전 포트폴리오에 적용된다
+- [ ] (선택) dSYM 보관 자동화: 아카이브에서 `dSYMs/` 를 따로 떠 두는 스크립트.
+      지금은 손으로 챙겨야 하고, 아카이브를 지우면 그 빌드는 영영 심볼을 못 붙인다
+- [ ] (선택) 이슈 "확인함" 표시: 피드백처럼 이미 본 이슈를 접어 두기
+- [ ] (선택) 크래시율(크래시 ÷ 활동 사용자): 지금은 절대 건수만 보여서, 사용자가 늘어
+      건수가 는 것과 실제로 나빠진 것이 구분되지 않는다. 롤업의 일별 활동 사용자와 나누면 된다

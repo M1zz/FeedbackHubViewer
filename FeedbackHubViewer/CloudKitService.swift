@@ -122,6 +122,12 @@ final class CloudKitService {
         /// Record types whose query succeeded, with the moment it ran. The
         /// caller stores these as the watermark for the next incremental read.
         var syncedTypes: [String: Date] = [:]
+        /// Record types this container would not let the read narrow — neither
+        /// a `creationDate` filter nor a newest-first sort. Such a read is a
+        /// full unordered scan every time, so it is correct but expensive, and
+        /// it can never stop early. Reported so the hub can say what to fix in
+        /// the CloudKit Console instead of quietly getting slower.
+        var unindexedTypes: Set<String> = []
     }
 
     /// Read the usage statistics the apps report. Each record type is fetched
@@ -134,9 +140,15 @@ final class CloudKitService {
     ///   - known: per record type, the record names this device already holds,
     ///     so the read can stop as soon as it reaches them. Absent reads
     ///     everything, which is what a full refresh wants.
-    ///   - eventLimit: hard cap on event records. The stream grows without
-    ///     bound, and the charts only look back so far.
-    ///   - crashLimit: same idea for diagnostics.
+    ///
+    /// No record type is capped here. A cap on a read that cannot be resumed
+    /// does not return "the newest N" — it returns *some* N, and the type is
+    /// then marked as read to the end, so the rest is never asked for again.
+    /// What the hub keeps is bounded on the way in instead: events are summed
+    /// into `UsageRollups` and only a recent window is retained as records
+    /// (`FeedbackStore.withinRetention`), and diagnostics are trimmed after the
+    /// merge. Reads themselves stop early only where that is sound — at a run
+    /// of records this device already holds, which needs the newest-first sort.
     ///   - onPartial: handed a slice of one record type while it is still being
     ///     read, and once more with the whole of it when that type is done —
     ///     that last call is the one carrying `syncedTypes`, which is what
@@ -145,12 +157,11 @@ final class CloudKitService {
     ///     never treated as the whole type. See `partialBatch`.
     func fetchUsage(modifiedSince: [String: Date] = [:],
                     known: [String: Set<String>] = [:],
-                    eventLimit: Int = 5000,
-                    crashLimit: Int = 1000,
                     onPartial: ((UsageOutcome) -> Void)? = nil) async -> UsageOutcome {
         var outcome = UsageOutcome()
         var problems: [String] = []
         let startedAt = Date()
+        unsortableTypes = []
 
         do {
             // The one upserted type: a snapshot is rewritten in place every
@@ -171,7 +182,6 @@ final class CloudKitService {
 
         do {
             outcome.events = try await queryAll(recordType: Self.eventRecordType,
-                                                limit: eventLimit,
                                                 modifiedSince: modifiedSince[Self.eventRecordType],
                                                 known: known[Self.eventRecordType],
                                                 onPartial: { records in
@@ -187,7 +197,6 @@ final class CloudKitService {
 
         do {
             outcome.crashes = try await queryAll(recordType: Self.crashRecordType,
-                                                 limit: crashLimit,
                                                  modifiedSince: modifiedSince[Self.crashRecordType],
                                                  known: known[Self.crashRecordType],
                                                  onPartial: { records in
@@ -201,6 +210,16 @@ final class CloudKitService {
             problems.append(usageProblem(Self.crashRecordType, error))
         }
 
+        // A type that can be neither filtered nor sorted has no way to read
+        // less than all of it, and no way to stop early either — so it is read
+        // whole on every refresh, for as long as it keeps growing. Nothing on
+        // screen would ever say so, which is why it is said here.
+        outcome.unindexedTypes = unsortableTypes.filter { learnedFilterField[$0] == FilterField.none }
+        if !outcome.unindexedTypes.isEmpty {
+            problems.append("\(outcome.unindexedTypes.sorted().joined(separator: ", "))은(는) 새로고침마다 전체를 읽고 있습니다"
+                + " — CloudKit Console → 이 레코드 타입의 Indexes에서 Created(___createTime)와"
+                + " Modified(___modTime)를 Queryable·Sortable로 추가하면 바뀐 부분만 읽습니다.")
+        }
         if !problems.isEmpty {
             outcome.notice = problems.joined(separator: "\n")
                 + "\n\nCloudKit Console에서 해당 스키마가 이 환경에 배포되어 있고, admin 역할에 read 권한이 있는지 확인하세요."
@@ -308,6 +327,11 @@ final class CloudKitService {
     /// refresh that runs every minute doesn't re-probe.
     private var learnedFilterField: [String: FilterField] = [:]
 
+    /// Record types this container refused to sort newest-first, learned the
+    /// same way — by asking. Reset at the start of each usage read, because it
+    /// describes that read rather than the container forever.
+    private var unsortableTypes: Set<String> = []
+
     /// What has been learned so far, in a form the cache file can hold, so the
     /// next launch doesn't repeat probes that already came back refused.
     var incrementalFilterFields: [String: String] {
@@ -317,6 +341,12 @@ final class CloudKitService {
     func restoreIncrementalFilterFields(_ fields: [String: String]) {
         learnedFilterField = fields.compactMapValues(FilterField.init(rawValue:))
     }
+
+    /// Which record types the last usage read could not sort newest-first. A
+    /// read that cannot be sorted cannot stop at a record this device already
+    /// holds, so it walks the whole type every time — worth recording, because
+    /// nothing else on screen would ever say so.
+    var unsortableRecordTypes: Set<String> { unsortableTypes }
 
     /// Ask the container again. A schema can gain a queryable index long after
     /// this app first asked, so a full refresh re-probes rather than trusting
@@ -344,7 +374,6 @@ final class CloudKitService {
     ///   meaningful for `.appendOnly` types: an upserted record keeps its name
     ///   while its contents change, so stopping at it would skip the update.
     private func queryAll(recordType: String,
-                          limit: Int? = nil,
                           modifiedSince: Date? = nil,
                           shape: ChangeShape = .appendOnly,
                           known: Set<String>? = nil,
@@ -352,14 +381,14 @@ final class CloudKitService {
         let boundary = shape == .appendOnly ? known : nil
 
         guard let modifiedSince else {
-            return try await runFiltered(recordType: recordType, limit: limit,
+            return try await runFiltered(recordType: recordType,
                                          field: .none, since: nil, known: boundary,
                                          onPartial: onPartial)
         }
 
         for field in filterCandidates(for: recordType, shape: shape) {
             do {
-                let records = try await runFiltered(recordType: recordType, limit: limit,
+                let records = try await runFiltered(recordType: recordType,
                                                     field: field, since: modifiedSince, known: boundary,
                                                     onPartial: onPartial)
                 learnedFilterField[recordType] = field
@@ -371,7 +400,7 @@ final class CloudKitService {
         }
 
         learnedFilterField[recordType] = FilterField.none
-        return try await runFiltered(recordType: recordType, limit: limit,
+        return try await runFiltered(recordType: recordType,
                                      field: .none, since: nil, known: boundary,
                                      onPartial: onPartial)
     }
@@ -389,7 +418,6 @@ final class CloudKitService {
     }
 
     private func runFiltered(recordType: String,
-                             limit: Int?,
                              field: FilterField,
                              since: Date?,
                              known: Set<String>?,
@@ -405,13 +433,20 @@ final class CloudKitService {
         // timestamp as sortable — fall back to an unsorted query if so.
         query.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
         do {
-            return try await runQuery(query, limit: limit, stoppingAtKnown: known, onPartial: onPartial)
+            return try await runQuery(query, stoppingAtKnown: known, onPartial: onPartial)
         } catch {
             if isSortError(error) {
                 query.sortDescriptors = []
+                unsortableTypes.insert(recordType)
                 // Unordered, there is no boundary to stop at: a known record can
                 // sit anywhere in the results, so the whole type is read.
-                return try await runQuery(query, limit: limit, onPartial: onPartial)
+                //
+                // And no cap either. Without the sort there is no "newest" to
+                // keep — a cap would hand back whichever records the container
+                // happened to page first and call it the answer, while the
+                // caller went on to record the type as read to the end. That
+                // turns a slow read into a wrong one, which is far worse.
+                return try await runQuery(query, onPartial: onPartial)
             }
             throw error
         }
@@ -438,7 +473,6 @@ final class CloudKitService {
     ///   launch from re-reading the whole hub. Records the caller already has
     ///   are not collected, so an empty result means "nothing new".
     private func runQuery(_ query: CKQuery,
-                          limit: Int? = nil,
                           stoppingAtKnown known: Set<String>? = nil,
                           onPartial: (([CKRecord]) -> Void)? = nil) async throws -> [CKRecord] {
         var collected: [CKRecord] = []
@@ -484,9 +518,6 @@ final class CloudKitService {
                 handedOver = collected.count
             }
             cursor = page.queryCursor
-            if let limit, collected.count >= limit {
-                return Array(collected.prefix(limit))
-            }
         } while cursor != nil
 
         return collected
