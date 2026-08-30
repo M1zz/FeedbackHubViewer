@@ -35,7 +35,6 @@ struct KeywordsView: View {
                 if let app = linkedApp { linkedAppCard(app) } else { unlinkedCard }
                 if linkedApp != nil && standings.isEmpty { startCard }
                 addCard
-                if !closest.isEmpty { closestCard }
                 if !standings.isEmpty { rankCard }
                 // Shown even when empty. Competitors are read out of the
                 // results for the terms you track, so with no terms this card
@@ -225,7 +224,12 @@ struct KeywordsView: View {
 
     private var rankCard: some View {
         Card(title: "키워드 순위", systemImage: "list.number") {
-            VStack(spacing: 0) {
+            VStack(alignment: .leading, spacing: 0) {
+                if standings.contains(where: { $0.blockers != nil }) {
+                    Text("순위순입니다. 각 줄의 **‘N개 앞섬’** 은 위에 있는 앱 중 내 앱보다 리뷰가 많은 것의 수 — 18위인데 위 17개 중 7개가 나보다 작으면 실제로는 10개 뒤입니다. 순위가 낮아도 앞선 앱이 적으면 그쪽이 더 가깝습니다.")
+                        .font(.caption).foregroundStyle(.secondary)
+                        .padding(.bottom, 10)
+                }
                 ForEach(standings, id: \.keyword.id) { standing in
                     KeywordRow(standing: standing,
                                isExpanded: expanded == standing.keyword.id,
@@ -238,51 +242,6 @@ struct KeywordsView: View {
                         keywords.remove(standing.keyword, from: project)
                     }
                     if standing.keyword.id != standings.last?.keyword.id { Divider() }
-                }
-            }
-        }
-    }
-
-    // MARK: - Where you can actually move
-
-    private var closest: [KeywordStanding] { keywords.closest(for: project) }
-
-    /// The answer to "어떤 검색어를 노려야 하나".
-    ///
-    /// Rank alone does not answer it: 17th behind sixteen established apps and
-    /// 17th behind sixteen apps with no ratings are the same number and
-    /// completely different situations. So each row says how many apps are
-    /// above and how many of those are smaller than this one — both measured,
-    /// neither weighted into a score that would hide which is which.
-    private var closestCard: some View {
-        Card(title: "가장 가까운 자리", systemImage: "target") {
-            VStack(alignment: .leading, spacing: 10) {
-                Text("올라가기 가장 쉬운 순서입니다. 순서를 정하는 건 순위가 아니라 **위에 있는 앱 중 내 앱보다 리뷰가 많은 것의 수** — 18위인데 위 17개 중 7개가 나보다 작으면 실제로는 10개 뒤입니다. 리뷰 수는 얼마나 자리 잡았는지를 재는 거친 대용이지만 적어도 측정값입니다(검색량처럼 지어낸 값이 아닙니다). 어디서 끊을지는 보시는 분 몫이라 컷오프는 두지 않았습니다.")
-                    .font(.caption).foregroundStyle(.secondary)
-                ForEach(closest, id: \.keyword.id) { standing in
-                    HStack(spacing: 10) {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(standing.keyword.term).font(.callout.weight(.medium))
-                            if let rank = standing.rank, let weaker = standing.weakerAbove {
-                                Text("위 \(rank - 1)개 중 \(weaker)개가 내 앱보다 리뷰가 적음")
-                                    .font(.caption2).foregroundStyle(.secondary)
-                            }
-                        }
-                        Spacer()
-                        if let blockers = standing.blockers {
-                            VStack(alignment: .trailing, spacing: 1) {
-                                Text(blockers == 0 ? "앞에 없음" : "\(blockers)개 앞섬")
-                                    .font(.caption.weight(.semibold))
-                                    .foregroundStyle(blockers <= 2 ? .green : .orange)
-                                Text("나보다 큰 앱")
-                                    .font(.caption2).foregroundStyle(.tertiary)
-                            }
-                        }
-                        Text("\(standing.rank ?? 0)위")
-                            .font(.body.weight(.semibold).monospacedDigit())
-                            .frame(width: 52, alignment: .trailing)
-                    }
-                    .padding(.vertical, 3)
                 }
             }
         }
@@ -464,10 +423,14 @@ private struct KeywordRow: View {
                 HStack(spacing: 10) {
                     VStack(alignment: .leading, spacing: 2) {
                         Text(standing.keyword.term).font(.callout.weight(.medium))
-                        Text(Storefront.name(for: standing.keyword.country))
-                            .font(.caption2).foregroundStyle(.secondary)
+                        // The country, and — where it is known — how far this
+                        // place really is. A rank on its own cannot say whether
+                        // it is worth going after; the apps above that are not
+                        // smaller than yours can.
+                        Text(subtitle).font(.caption2).foregroundStyle(.secondary)
                     }
                     Spacer()
+                    blockerLabel
                     RankSparkline(values: standing.recent).frame(width: 72, height: 22)
                     deltaLabel
                     rankLabel
@@ -482,6 +445,26 @@ private struct KeywordRow: View {
         .contextMenu {
             Button("지금 확인", systemImage: "arrow.clockwise", action: onCheck)
             Button("추적 중단", systemImage: "trash", role: .destructive, action: onRemove)
+        }
+    }
+
+    private var subtitle: String {
+        let country = Storefront.name(for: standing.keyword.country)
+        guard let rank = standing.rank, rank > 1, let weaker = standing.weakerAbove else { return country }
+        return "\(country) · 위 \(rank - 1)개 중 \(weaker)개가 내 앱보다 리뷰 적음"
+    }
+
+    /// How many apps above this one are not smaller than it — the honest
+    /// distance to the top, next to the raw rank rather than in place of it.
+    @ViewBuilder
+    private var blockerLabel: some View {
+        if let blockers = standing.blockers, standing.rank ?? 0 > 1 {
+            Text(blockers == 0 ? "앞에 없음" : "\(blockers)개 앞섬")
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(blockers <= 2 ? .green : (blockers <= 10 ? .orange : .secondary))
+                .frame(width: 62, alignment: .trailing)
+        } else {
+            Color.clear.frame(width: 62, height: 1)
         }
     }
 
