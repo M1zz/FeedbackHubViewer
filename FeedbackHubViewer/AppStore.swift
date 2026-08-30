@@ -49,9 +49,6 @@ struct StoreApp: Identifiable, Codable, Hashable {
     let version: String?
     let releasedAt: Date?
     let iconURL: URL?
-    /// The store listing's description. Kept because keyword suggestions read
-    /// it; not shown in full anywhere.
-    let listing: String?
 
     var storeURL: URL? { URL(string: "https://apps.apple.com/app/id\(id)") }
 }
@@ -170,8 +167,7 @@ actor AppStoreDirectory {
                 ratingCount: item["userRatingCount"] as? Int ?? 0,
                 version: item["version"] as? String,
                 releasedAt: (item["currentVersionReleaseDate"] as? String).flatMap(iso.date(from:)),
-                iconURL: (item["artworkUrl100"] as? String).flatMap(URL.init(string:)),
-                listing: item["description"] as? String)
+                iconURL: (item["artworkUrl100"] as? String).flatMap(URL.init(string:)))
         }
     }
 

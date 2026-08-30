@@ -155,6 +155,53 @@ struct KeywordHistory: Codable {
         checks[keyword.id, default: [:]][UsageRollups.dayKey(now, calendar: calendar)] = check
     }
 
+    // MARK: - Pruning
+
+    /// How long a day's rank is kept. Long enough that a chart can show more
+    /// than a year of where an app has been.
+    static let retentionDays = 400
+
+    /// Drop what nothing reads any more.
+    ///
+    /// Three things grow here without an upper bound, and only one of them is
+    /// the point.
+    ///
+    ///  - `top` — the thirty apps a search returned. It is read from the
+    ///    *latest* check of each term and nowhere else: the 경쟁 앱 list and
+    ///    the expanded row both ask what the store looks like *now*. Last
+    ///    year's runners-up are 490 bytes a day per keyword that no screen has
+    ///    ever asked for, so an older day keeps only its ranks.
+    ///  - `checks` — one entry per keyword per day, kept for `retentionDays`.
+    ///  - `apps` — every app ever seen in any result list. Once the `top` that
+    ///    named one is gone there is nothing left to label, so it goes too.
+    ///    Never the hub's own apps, which the screen names whether or not they
+    ///    turned up in a search.
+    ///
+    /// Which is the same rule the usage rollups follow: keep what is read,
+    /// drop what was only ever a step on the way there.
+    mutating func prune(calendar: Calendar = .current, now: Date = Date()) {
+        let cutoff = calendar.date(byAdding: .day, value: -Self.retentionDays,
+                                   to: calendar.startOfDay(for: now))
+            .map { UsageRollups.dayKey($0, calendar: calendar) }
+
+        for (keyword, days) in checks {
+            var kept = days
+            if let cutoff { kept = kept.filter { $0.key >= cutoff } }
+            if let newest = kept.keys.max() {
+                for day in kept.keys where day != newest && !(kept[day]?.top.isEmpty ?? true) {
+                    kept[day]?.top = []
+                }
+            }
+            checks[keyword] = kept.isEmpty ? nil : kept
+        }
+
+        var referenced = Set(links.values)
+        for days in checks.values {
+            for check in days.values { referenced.formUnion(check.top) }
+        }
+        apps = apps.filter { referenced.contains(Int($0.key) ?? -1) }
+    }
+
     // MARK: - Reading
 
     /// The keywords on one app's screen. `nil` scope is every tracked term.

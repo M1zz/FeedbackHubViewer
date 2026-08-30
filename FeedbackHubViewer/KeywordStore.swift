@@ -49,6 +49,7 @@ final class KeywordStore: ObservableObject {
 
     private let directory = AppStoreDirectory.shared
     private var checkTask: Task<Void, Never>?
+    private var restoreTask: Task<Void, Never>?
     private var loaded = false
 
     /// How far along a check is. Searches are the only slow part and there are
@@ -70,23 +71,47 @@ final class KeywordStore: ObservableObject {
 
     // MARK: - Lifecycle
 
-    /// Paint what the last check saw, then check today's ranks if today has not
-    /// been checked yet.
+    /// Paint what the last check saw, from disk, straight away.
+    ///
+    /// Deliberately separate from `start(bundleIds:)` and asking nothing of the
+    /// hub. This file is ~100 KB and its own; the hub's is eight megabytes of
+    /// records that have to be decoded before its project list exists. Reading
+    /// the two in sequence meant the 키워드 screen sat blank through a decode it
+    /// has no stake in — the ranks were on disk the whole time. Only the
+    /// *network* half of a launch needs the project list, so only that half
+    /// waits for it.
+    func restore() {
+        guard restoreTask == nil else { return }
+        restoreTask = Task { [weak self] in
+            guard let self else { return }
+            guard let restored = await KeywordCache.shared.load() else { return }
+            self.history = restored
+            var countries = self.countries
+            for country in restored.countriesInUse where !countries.contains(country) {
+                countries.append(country)
+            }
+            self.countries = countries
+        }
+    }
+
+    /// Check today's ranks if today has not been checked yet.
     ///
     /// Ranks move on a scale of days, and a check costs one HTTP request per
     /// term; running it on every launch would spend that budget for numbers
     /// that cannot have changed. Once a day is the honest cadence.
+    ///
+    /// `bundleIds` is the hub's project list, which is why this half — and not
+    /// `restore()` — is the one that waits for the hub's cache.
     func start(bundleIds: [String]) {
         guard !loaded else { return }
         loaded = true
+        restore()
         Task { [weak self] in
             guard let self else { return }
-            if let restored = await KeywordCache.shared.load() { self.history = restored }
-            var countries = self.countries
-            for country in self.history.countriesInUse where !countries.contains(country) {
-                countries.append(country)
-            }
-            self.countries = countries
+            // Never read the history before the file has been folded in, or a
+            // launch would resolve links that are already on disk and write a
+            // half-empty file back over a full one.
+            await self.restoreTask?.value
             // Resolve the store links first, and whether or not anything is
             // being tracked yet. They used to be resolved only as the opening
             // step of a daily check, and a check only runs once there is a term
@@ -418,6 +443,10 @@ final class KeywordStore: ObservableObject {
     // MARK: - Persistence
 
     private func persist() {
+        // Pruned on the way out rather than on a timer: every write is already
+        // paying for the encode, and this is what keeps the file small enough
+        // that the next launch paints from it instantly.
+        history.prune()
         let snapshot = history
         Task { await KeywordCache.shared.save(snapshot) }
     }

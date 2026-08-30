@@ -26,8 +26,11 @@ struct FeedbackHubViewerApp: App {
                     // Paint the cached hub, then check CloudKit for changes on
                     // a task the store owns — the window never waits for it.
                     store.start()
-                    // Ranks move by the day, so this checks at most once a day.
-                    // It waits for the cache first: the apps it looks for in
+                    // The rank history is its own small file and waits for
+                    // nothing — it is on screen before the hub has finished
+                    // decoding.
+                    keywords.restore()
+                    // The daily rank check does wait: the apps it looks for in
                     // each result list are the hub's project keys, and before
                     // the restore there are none.
                     await store.awaitRestore()
