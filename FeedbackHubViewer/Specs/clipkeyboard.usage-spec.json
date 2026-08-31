@@ -142,5 +142,38 @@
         "when": []
       }
     ]
-  }
+  },
+  "funnels": [
+    {
+      "title": "결제 퍼널",
+      "basis": "installs",
+      "note": "한 사람이 페이월을 열 번 봐도 한 명으로 셉니다. 슬라이스(:memo, :buy)는 한 단계로 합쳐요 — 어디서 띄웠든 '봤다'는 하나예요.",
+      "steps": [
+        { "label": "페이월을 봄", "event": "paywall_view" },
+        {
+          "label": "결제 버튼을 누름",
+          "event": "paywall_cta_tapped",
+          "hint": "여기서 크게 새면 페이월 문구나 가격이 문제예요."
+        },
+        {
+          "label": "결제함",
+          "event": "paywall_purchase",
+          "hint": "앞 칸과의 낙차가 스토어 결제창에서 새는 양이에요. 취소는 purchase_cancelled로 따로 옵니다."
+        }
+      ]
+    },
+    {
+      "title": "Pro 넛지 퍼널",
+      "basis": "installs",
+      "note": "넛지(slots_left · time_saved)가 실제로 눌리는지 봅니다. 첫 칸이 큰데 둘째 칸이 작으면 넛지가 뜨는 자리가 틀린 거예요. 여기서 페이월·결제까지 잇지 않은 건 이벤트가 경로를 안 들고 있어서예요 — 페이월은 넛지 말고 다른 데서도 열리니까 이어 붙이면 전환율이 아니라 거짓말이 됩니다. 앱이 paywall_view에 출처 슬라이스(예: paywall_view:nudge_slots_left)를 붙여 보내면 그때 이어요.",
+      "steps": [
+        { "label": "넛지가 뜸", "event": "pro_nudge_shown" },
+        {
+          "label": "넛지를 누름",
+          "event": "pro_nudge_tapped",
+          "hint": "슬라이스(slots_left · time_saved)별로 어느 쪽이 눌리는지는 아래 이벤트 카드에서 볼 수 있어요."
+        }
+      ]
+    }
+  ]
 }
