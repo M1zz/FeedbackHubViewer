@@ -219,13 +219,13 @@ struct StatisticsDashboard: View {
 
     private var userTiles: some View {
         LazyVGrid(columns: tileColumns, spacing: 10) {
-            StatTile(title: "설치 (사용 중인 기기)", value: "\(usage.installs)", unit: "곳",
+            StatTile(title: "설치 (사용 중인 기기)", value: "\(usage.installs)", unit: "개",
                      systemImage: "iphone", tint: .accentColor)
-            StatTile(title: "최근 7일 활성", value: "\(usage.active7)", unit: "곳",
+            StatTile(title: "최근 7일 활성", value: "\(usage.active7)", unit: "개",
                      systemImage: "bolt.fill", tint: .blue)
-            StatTile(title: "최근 30일 활성", value: "\(usage.active30)", unit: "곳",
+            StatTile(title: "최근 30일 활성", value: "\(usage.active30)", unit: "개",
                      systemImage: "calendar", tint: .teal)
-            StatTile(title: "최근 7일 신규", value: "\(usage.new7)", unit: "곳",
+            StatTile(title: "최근 7일 신규", value: "\(usage.new7)", unit: "개",
                      systemImage: "sparkles", tint: .green)
             StatTile(title: "누적 실행", value: "\(usage.totalLaunches)", unit: "회",
                      systemImage: "play.circle", tint: .indigo)
@@ -246,12 +246,12 @@ struct StatisticsDashboard: View {
 
     @ViewBuilder
     private var weekOverWeekItems: some View {
-        comparison("활동한 사용자", "\(usage.activeInstalls7)곳",
-                   "지난주 \(usage.previousActiveInstalls7)곳", usage.activeInstallsDelta)
+        comparison("활동한 사용자", "\(usage.activeInstalls7)명",
+                   "지난주 \(usage.previousActiveInstalls7)명", usage.activeInstallsDelta)
         comparison("사용 건수", "\(usage.events7)건",
                    "지난주 \(usage.previousEvents7)건", usage.eventsDelta)
-        comparison("신규 설치", "\(usage.new7)곳",
-                   "지난주 \(usage.previousNew7)곳", usage.newDelta)
+        comparison("신규 설치", "\(usage.new7)개",
+                   "지난주 \(usage.previousNew7)개", usage.newDelta)
     }
 
     /// One metric's 이번 주 · 지난주 · 변화. More usage is good news on all
