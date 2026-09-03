@@ -47,6 +47,13 @@ struct ProjectStatsSpec: Decodable {
     var segments: SegmentSpec?
     /// 이벤트를 순서대로 세워 단계별로 몇이 남는지 본다(페이월 → 결제).
     var funnels: [FunnelSpec] = []
+    /// 이 앱에서 "돈을 낸 사람"을 뜻하는 0/1 플래그 키(`flag.isPro` 같은 것).
+    ///
+    /// 이름을 앱이 정하는 값이라 뷰어가 짐작할 수 없다. 적어 두면 유료·무료를
+    /// 그 키로 정확히 가르고, 없으면 흔한 이름들로 추측한다
+    /// (`FeedbackStore.paidFlagKey`). 추측한 경우에도 화면에는 어떤 키로 갈랐는지
+    /// 그대로 적으므로, 틀린 키를 골랐다면 눈에 보인다.
+    var paidFlag: String?
 
     static let supportedVersion = 1
 
@@ -56,6 +63,7 @@ struct ProjectStatsSpec: Decodable {
     enum CodingKeys: String, CodingKey {
         case specVersion, appId, appName, metricLabels, metricPrefixLabels
         case eventLabels, tileGroups, distributions, shares, derived, segments, funnels
+        case paidFlag
     }
 
     init(from decoder: Decoder) throws {
@@ -72,6 +80,7 @@ struct ProjectStatsSpec: Decodable {
         derived = try c.decodeIfPresent([DerivedSpec].self, forKey: .derived) ?? []
         segments = try c.decodeIfPresent(SegmentSpec.self, forKey: .segments)
         funnels = try c.decodeIfPresent([FunnelSpec].self, forKey: .funnels) ?? []
+        paidFlag = try c.decodeIfPresent(String.self, forKey: .paidFlag)
     }
 
     struct MetricLabel: Decodable {

@@ -398,6 +398,7 @@ final class FeedbackStore: ObservableObject {
             await self?.restoreFromCache() ?? false
         }
         restoreTask = restore
+        startReviewSync()
         startupTask = Task { [weak self] in
             guard let self else { return }
             let restored = await restore.value
@@ -895,6 +896,11 @@ final class FeedbackStore: ObservableObject {
     /// Mark everything currently loaded as read *without* touching the stored
     /// set's older entries — used by the "모두 읽음" affordances.
     private func persistReadIDs() {
+        persistReadIDsLocally()
+        pushReviewState()
+    }
+
+    private func persistReadIDsLocally() {
         defaults.set(Array(readIDs), forKey: Self.readIDsKey)
     }
 
@@ -958,9 +964,14 @@ final class FeedbackStore: ObservableObject {
         let entry = FeedbackTriageEntry(status: status,
                                         note: note ?? existing?.note ?? "",
                                         decidedAt: Date())
-        // A record back at 확인 필요 with no memo left is simply not tracked, so
-        // the stored set stays as small as the decisions actually made.
-        triage[id] = entry.isEmpty ? nil : entry
+        // 비어 있어도(확인 필요 + 메모 없음) 지우지 않고 시각과 함께 남긴다.
+        //
+        // 예전에는 지웠다. 기기 하나만 볼 때는 그게 맞았지만 — 기록할 판단이
+        // 없으니까 — 기기 사이에서는 **지운 것을 전할 방법이 없다**. 저쪽 기기에
+        // 남아 있는 옛 "반영함"이 이쪽의 되돌리기를 이겨서 되살아난다. 시각을
+        // 가진 빈 항목으로 남기면 "언제 되돌렸다"가 전해져서 늦은 쪽이 이긴다.
+        // 화면은 달라지지 않는다: `status(of:)`가 어차피 .pending을 돌려준다.
+        triage[id] = entry
     }
 
     /// Still waiting on a decision, across every project.
@@ -975,9 +986,58 @@ final class FeedbackStore: ObservableObject {
     }
 
     private func persistTriage() {
+        persistTriageLocally()
+        pushReviewState()
+    }
+
+    private func persistTriageLocally() {
         guard let data = try? JSONEncoder().encode(triage) else { return }
         defaults.set(data, forKey: Self.triageKey)
     }
+
+    // MARK: - 기기 사이 동기화
+
+    /// 읽음·처리를 iCloud 키·값 저장소와 맞추기 시작한다. 저장소를 못 쓰면
+    /// (로그인 없음, iCloud 꺼짐) 조용히 아무 일도 하지 않고, 이 앱은 지금까지처럼
+    /// 기기 안에서만 기억한다. 규칙은 `ReviewStateSync.swift` 머리말에.
+    private func startReviewSync() {
+        ReviewStateSync.shared.start { [weak self] state in
+            self?.adopt(state)
+        }
+        // 켜자마자 한 번 — 다른 기기가 이미 내려 둔 판단을 지금 화면에 반영하고,
+        // 이 기기가 오프라인에서 쌓아 둔 것을 같은 걸음에 올린다.
+        adopt(ReviewStateSync.shared.save(currentReviewState))
+    }
+
+    /// 지금 이 기기가 들고 있는 판단.
+    private var currentReviewState: ReviewState {
+        ReviewState(readIDs: readIDs, triage: triage)
+    }
+
+    /// 이 기기의 판단을 저장소에 올리고, 합쳐져 돌아온 것을 다시 받는다.
+    private func pushReviewState() {
+        guard ReviewStateSync.shared.isAvailable else { return }
+        adopt(ReviewStateSync.shared.save(currentReviewState))
+    }
+
+    /// 합쳐진 상태를 화면과 로컬 미러에 반영한다.
+    ///
+    /// 달라진 것만 대입한다. `readIDs`와 `triage`의 `didSet`이 안 읽음 집계를
+    /// 통째로 버리므로, 같은 값을 다시 넣는 것도 공짜가 아니다.
+    private func adopt(_ state: ReviewState) {
+        if state.readIDs != readIDs {
+            readIDs = state.readIDs
+            persistReadIDsLocally()
+            refreshBadge()
+        }
+        if state.triage != triage {
+            triage = state.triage
+            persistTriageLocally()
+        }
+    }
+
+    /// 이 기기에서 iCloud 동기화가 살아 있는지 — 설정 메뉴가 한 줄로 알려 준다.
+    var isReviewStateSynced: Bool { ReviewStateSync.shared.isAvailable }
 
     private static func decodeTriage(_ data: Data?) -> [String: FeedbackTriageEntry] {
         guard let data,

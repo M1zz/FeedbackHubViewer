@@ -159,6 +159,18 @@ struct IdentityMenu: View {
                 }
             }
 
+            // 켜져 있으면 굳이 말할 것도 없지만, 꺼져 있는 것은 반드시 보여야
+            // 한다 — 안 그러면 다른 기기에서 처리한 게 왜 안 넘어오는지 알 길이
+            // 없다.
+            Section("읽음 · 처리 동기화") {
+                if store.isReviewStateSynced {
+                    Label("이 iCloud 계정의 기기끼리 맞춰집니다", systemImage: "checkmark.icloud")
+                } else {
+                    Label("이 \(Platform.deviceNoun)에서만 기억합니다", systemImage: "icloud.slash")
+                    Text("iCloud 로그인과 iCloud Drive가 켜져 있어야 읽음·반영함 표시가 기기 사이에서 하나가 됩니다.")
+                }
+            }
+
             // The saved hub is what makes a launch instant; this is the way
             // back to a clean read when it looks stale or wrong.
             Section("저장된 데이터") {

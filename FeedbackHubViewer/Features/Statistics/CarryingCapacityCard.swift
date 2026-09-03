@@ -35,7 +35,7 @@ struct CarryingCapacityCard: View {
         Card(title: "성장 상한 (carrying capacity)", systemImage: "speedometer") {
             Picker("기간", selection: $period) {
                 ForEach(CarryingCapacity.Period.allCases) { unit in
-                    Text(unit.label).tag(unit)
+                    Text(unit.pickerLabel).tag(unit)
                 }
             }
             .pickerStyle(.segmented)
@@ -210,7 +210,7 @@ struct CarryingCapacityCard: View {
 
     private func footnote(_ result: CarryingCapacity) -> some View {
         VStack(alignment: .leading, spacing: 3) {
-            Text("상한 = \(result.period.label) 신규 ÷ \(result.period.label) 이탈률. 지금 속도로 유입되고 지금 비율로 빠져나가면 활동 사용자는 이 값 근처에서 멈춥니다 — 유입을 늘리거나 이탈을 줄이지 않는 한 그 위로는 가지 않습니다.")
+            Text("이건 \(result.period.activityName)의 상한입니다 — 위 활성 사용자 카드의 그 숫자가 결국 멈추는 자리예요. 상한 = \(result.period.label) 신규 ÷ \(result.period.label) 이탈률. 지금 속도로 유입되고 지금 비율로 빠져나가면 활동 사용자는 이 값 근처에서 멈춥니다 — 유입을 늘리거나 이탈을 줄이지 않는 한 그 위로는 가지 않습니다.")
             Text("최근 \(result.sampleCount)\(result.period.unit)치(진행 중인 \(result.period.unit) 제외)의 평균입니다. 활동 사용자 = 그 기간에 이벤트를 보낸 설치, 신규 = 이 허브에서 처음 활동한 설치, 이탈 = 지난 기간에 활동했는데 이번 기간에 아무것도 보내지 않은 설치.")
             Text("앱이 주요 행동만 보내므로, 열어만 보고 아무것도 하지 않은 설치는 활동에 들어오지 않습니다. 스토어 다운로드 수와도 다른 숫자입니다.")
         }

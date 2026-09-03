@@ -271,6 +271,55 @@ extension FeedbackStore {
         static let trendDays = 30
     }
 
+    /// 유료 사용자와 무료 사용자, 그리고 그중 지금 살아 있는 사람.
+    ///
+    /// 허브는 결제 영수증을 받지 않는다. 아는 것은 앱이 스냅샷에 실어 보낸 0/1
+    /// 플래그 하나뿐이다 — ClipKeyboard의 `flag.isPro` 같은 것. 그래서 이 숫자는
+    /// "매출"이 아니라 **앱이 유료라고 표시해 보낸 설치 수**이고, 화면에도 어떤
+    /// 키로 갈랐는지 그대로 적는다.
+    ///
+    /// 활성의 정의는 바로 위 타일(`최근 7일 활성`)과 **같은 것**을 쓴다. 스냅샷의
+    /// `lastActiveAt`이다. 이벤트 기반(DAU·WAU·MAU)이 아니라 이쪽인 이유: 유료
+    /// 여부가 스냅샷에 있으므로 같은 레코드에서 두 값을 함께 읽으면 짝이 안 맞는
+    /// 설치가 없다. 덕분에 `유료 + 무료`는 언제나 그 타일의 숫자와 정확히 같고,
+    /// 두 숫자가 어긋나 보이는 일이 생기지 않는다.
+    struct PaidSplit {
+        /// 한 창(전체 / 최근 7일 / 최근 30일)에서 갈린 수.
+        struct Slice {
+            let paid: Int
+            let free: Int
+
+            var total: Int { paid + free }
+            /// 유료 비중. 아무도 없으면 비율이랄 게 없다.
+            var ratio: Double? {
+                guard total > 0 else { return nil }
+                return Double(paid) / Double(total)
+            }
+        }
+
+        /// 이 값을 만든 앱과 그 앱에서 유료를 뜻한 키. 전체 프로젝트에서는
+        /// 앱마다 키가 다르므로 여럿이 된다.
+        struct Source {
+            let project: String
+            let displayName: String
+            let key: String
+            /// 스펙이 그 키에 붙인 이름("Pro 사용자"). 없으면 키 원문을 쓴다.
+            let label: String?
+            /// 스펙이 직접 지정한 키인가, 흔한 이름으로 추측한 것인가.
+            let isDeclared: Bool
+        }
+
+        let sources: [Source]
+        let all: Slice
+        let active7: Slice
+        let active30: Slice
+
+        /// 유료 여부를 보내는 앱이 하나도 없으면 보여 줄 것이 없다.
+        var isEmpty: Bool { sources.isEmpty || all.total == 0 }
+        /// 추측한 키가 하나라도 섞여 있으면 화면에서 그렇다고 말해야 한다.
+        var hasGuessedKey: Bool { sources.contains { !$0.isDeclared } }
+    }
+
     // MARK: - Cache keys
 
     /// What `distribution(for:by:)` was asked for. The keypath identifies the
@@ -418,6 +467,86 @@ extension FeedbackStore {
 
             return ActiveUsers(day: window(.day), week: window(.week), month: window(.month),
                                series: series)
+        }
+    }
+
+    // MARK: - 유료 · 무료
+
+    /// 앱이 "유료"라고 표시해 보내는 플래그 이름 후보.
+    ///
+    /// 스펙(`paidFlag`)이 1순위이고 이건 그 다음이다. 앱 리포가 아직 스펙에
+    /// 한 줄을 안 적었어도 오늘 화면에 뭔가는 나와야 하기 때문인데, 추측이므로
+    /// 고른 키를 각주에 드러내고 "스펙에 적으라"고 말한다.
+    static let paidFlagCandidates = [
+        "flag.isPro", "flag.pro", "flag.isPaid", "flag.paid",
+        "flag.isPremium", "flag.premium", "flag.subscribed", "flag.isSubscriber",
+        "flag.purchased", "flag.isPlus"
+    ]
+
+    /// 이 프로젝트에서 유료를 뜻하는 키와, 그것을 어떻게 알았는지.
+    /// 스냅샷이 실제로 보낸 적 있는 키만 고른다 — 스펙에 적혀 있어도 앱이
+    /// 아직 안 보내면 전부 무료로 세어 버리기 때문이다.
+    func paidFlagKey(for project: String) -> (key: String, isDeclared: Bool)? {
+        let snaps = snapshots(for: project)
+        guard !snaps.isEmpty else { return nil }
+        let present = Set(snaps.flatMap { $0.metrics.keys })
+        if let declared = ProjectStatsSpecCatalog.spec(for: project)?.paidFlag,
+           present.contains(declared) {
+            return (declared, true)
+        }
+        if let guessed = Self.paidFlagCandidates.first(where: present.contains) {
+            return (guessed, false)
+        }
+        return nil
+    }
+
+    /// 유료·무료로 나눈 설치 수. 유료 여부를 보내는 앱이 없으면 nil.
+    ///
+    /// 전체 프로젝트에서는 앱마다 키가 다르므로 앱별로 갈라서 더한다. 유료 여부를
+    /// 아예 안 보내는 앱은 빠진다 — 그 앱의 설치를 무료로 세면 없는 사실을
+    /// 지어내는 것이고, 유료로 세면 말할 것도 없다. 그래서 이 카드의 합계는 위
+    /// 타일의 설치 수보다 작을 수 있고, 화면에 어느 앱을 셌는지 적는다.
+    func paidSplit(for project: String?) -> PaidSplit? {
+        memoized(\.paidSplit, project) {
+            let now = Date()
+            let weekAgo = now.addingTimeInterval(-7 * 86_400)
+            let monthAgo = now.addingTimeInterval(-30 * 86_400)
+
+            let scope = project.map { [$0] } ?? allProjectKeys
+            var sources: [PaidSplit.Source] = []
+            var all = (paid: 0, free: 0)
+            var week = (paid: 0, free: 0)
+            var month = (paid: 0, free: 0)
+
+            for key in scope {
+                guard let flag = paidFlagKey(for: key) else { continue }
+                sources.append(PaidSplit.Source(
+                    project: key,
+                    displayName: displayName(for: key),
+                    key: flag.key,
+                    label: ProjectStatsSpecCatalog.spec(for: key)?.label(forMetric: flag.key),
+                    isDeclared: flag.isDeclared))
+
+                for snapshot in snapshots(for: key) {
+                    // 0/1 플래그라 "1 이상이면 유료". 앱이 실수로 2를 보내도
+                    // 유료 한 명이지 두 명이 아니다.
+                    let isPaid = (snapshot.metrics[flag.key] ?? 0) >= 1
+                    let active = snapshot.lastActiveAt ?? .distantPast
+                    if isPaid { all.paid += 1 } else { all.free += 1 }
+                    if active >= weekAgo {
+                        if isPaid { week.paid += 1 } else { week.free += 1 }
+                    }
+                    if active >= monthAgo {
+                        if isPaid { month.paid += 1 } else { month.free += 1 }
+                    }
+                }
+            }
+
+            guard !sources.isEmpty else { return nil }
+            return PaidSplit(sources: sources.sorted { $0.displayName < $1.displayName },
+                             all: .init(paid: all.paid, free: all.free),
+                             active7: .init(paid: week.paid, free: week.free),
+                             active30: .init(paid: month.paid, free: month.free))
         }
     }
 

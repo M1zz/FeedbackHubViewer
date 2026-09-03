@@ -69,23 +69,27 @@ struct StatisticsDashboard: View {
                     VStack(alignment: .leading, spacing: sectionSpacing) {
                         if let notice = store.usageNotice { usageNotice(notice) }
 
-                        if usage.hasUsageData {
-                            userTiles
-                            activeUsersCard
-                            specCards
-                            weekOverWeek
-                            CarryingCapacityCard(project: scope)
-                            trendCard
-                            eventCard
-                            eventLogCard
-                            metricsCard
-                            flagCard
-                            distributionCards
-                        } else {
-                            noUsageCard
-                            specCards
-                        }
-
+                        // 틀은 어느 앱에서나 같다.
+                        //
+                        // 예전에는 사용 통계가 없으면 카드가 통째로 사라지고
+                        // 안내문 하나만 남았다. 그러면 앱마다 화면의 구성이 달라
+                        // 두 앱을 나란히 읽을 수가 없고, "이 앱은 이 카드가 왜
+                        // 없지"가 매번 새 질문이 된다. 그래서 카드는 언제나 같은
+                        // 자리에 뜨고, 값이 없을 때는 빈칸 대신 **왜 비었는지**가
+                        // 들어간다 — 아직 안 보내는 것과 0인 것은 다른 말이다.
+                        if !usage.hasUsageData { noUsageCard }
+                        userTiles
+                        activeUsersCard
+                        paidCard
+                        specCards
+                        weekOverWeek
+                        CarryingCapacityCard(project: scope)
+                        trendCard
+                        eventCard
+                        eventLogCard
+                        metricsCard
+                        flagCard
+                        distributionCards
                         feedbackCard
                         specGapCard
                     }
@@ -116,9 +120,18 @@ struct StatisticsDashboard: View {
         store.snapshots(for: scope).map(\.metrics)
     }
 
-    /// 앱 자신의 통계 화면이 보여주는 것과 같은 카드들.
+    /// 앱 자신의 통계 화면이 보여주는 것과 같은 카드들. 스펙이 없으면 자리만
+    /// 지키고 무엇을 하면 채워지는지 적는다 — 이 칸이 통째로 없어지면 다른 앱과
+    /// 화면 모양이 달라진다.
     @ViewBuilder
     private var specCards: some View {
+        if spec == nil {
+            Card(title: "앱별 핵심 지표", systemImage: "star.circle") {
+                emptyNote(scope == nil
+                          ? "프로젝트를 하나 고르면 그 앱의 지표가 여기 나옵니다. 앱마다 지표의 뜻이 달라 전체 프로젝트에서는 합칠 수 없어요."
+                          : "이 앱의 통계 스펙이 아직 없습니다. 앱 리포의 docs/usage-spec.json에 라벨과 경계값을 적고 scripts/sync-stats-specs.sh를 돌리면, 앱 자신의 통계 화면과 같은 카드가 여기 그려집니다.")
+            }
+        }
         if let spec {
             // 퍼널만 입력이 다르다: 설치에 남은 상태(`metrics`)가 아니라 일어난 일
             // (이벤트 집계)을 읽는다. 이름별로 이미 접혀 있는 값이라 원본을 훑지 않는다.
@@ -247,7 +260,7 @@ struct StatisticsDashboard: View {
         let active = store.activeUsers(for: scope)
         return Card(title: "활성 사용자 (DAU · WAU · MAU)", systemImage: "person.3") {
             if active.isEmpty {
-                emptyNote("최근 30일 안에 도착한 이벤트가 없습니다.")
+                emptyNote("최근 30일 안에 도착한 이벤트가 없습니다. 활성 사용자는 이벤트로만 셀 수 있어서, 앱이 UsageEvent를 보내기 시작하면 여기 나옵니다.")
             } else {
                 ViewThatFits(in: .horizontal) {
                     HStack(alignment: .top, spacing: 16) { activeUsersFigures(active) }
@@ -336,6 +349,65 @@ struct StatisticsDashboard: View {
         .font(.caption2)
         .foregroundStyle(.secondary)
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    // MARK: - 유료 · 무료
+
+    /// 돈을 낸 사람이 몇이고, 그중 지금 쓰고 있는 사람이 몇인가.
+    ///
+    /// 세 창을 나란히 두는 이유: 전체 유료 비중은 지금까지 판 결과이고, 활성
+    /// 중의 유료 비중은 **지금 이 앱을 떠받치는 사람들**의 구성이다. 둘이
+    /// 벌어지면 유료 사용자가 먼저 빠져나가고 있다는 뜻이라, 같은 화면에
+    /// 있어야 눈에 걸린다.
+    private var paidCard: some View {
+        let split = store.paidSplit(for: scope)
+        return Card(title: "유료 · 무료", systemImage: "creditcard") {
+            if let split, !split.isEmpty {
+                VStack(spacing: 10) {
+                    paidRow("전체 설치", split.all)
+                    paidRow("최근 7일 활성", split.active7)
+                    paidRow("최근 30일 활성", split.active30)
+                }
+                footnote(paidFootnote(split))
+            } else {
+                // 0%가 아니라 "모른다"이다. 유료 여부를 안 보내는 앱을 전부
+                // 무료로 세면 없는 사실을 지어내게 된다.
+                VStack(spacing: 10) {
+                    paidRow("전체 설치", nil)
+                    paidRow("최근 7일 활성", nil)
+                    paidRow("최근 30일 활성", nil)
+                }
+                footnote("이 앱이 유료 여부를 보내지 않습니다. 스냅샷 metrics에 0/1 플래그 하나(예: flag.isPro)를 실어 보내면 여기서 갈립니다 — 어느 키인지는 앱 리포의 docs/usage-spec.json에 paidFlag로 적어 두면 확실해요. 없는 동안은 0%가 아니라 '모름'으로 둡니다.")
+            }
+        }
+    }
+
+    /// `slice`가 nil이면 "아직 모른다" — 막대는 비고 값은 —.
+    private func paidRow(_ label: String, _ slice: FeedbackStore.PaidSplit.Slice?) -> some View {
+        SpecBar(label: label,
+                value: slice?.ratio.map { String(format: "%.0f%%", ($0 * 100).rounded()) } ?? "—",
+                ratio: slice?.ratio ?? 0,
+                hint: slice.map { "유료 \($0.paid)곳 · 무료 \($0.free)곳" } ?? "유료 여부를 안 보냄")
+    }
+
+    /// 이 숫자가 어디서 나왔는지 — 어떤 키로 갈랐고, 어느 앱을 셌는지.
+    /// 결제 영수증이 아니라 앱이 보낸 플래그라는 사실을 감추면 매출로 읽힌다.
+    private func paidFootnote(_ split: FeedbackStore.PaidSplit) -> String {
+        let keys = split.sources
+            .map { source in
+                let name = source.label ?? source.key
+                return scope == nil ? "\(source.displayName) \(name)(\(source.key))"
+                                    : "\(name)(\(source.key))"
+            }
+            .joined(separator: ", ")
+        var text = "앱이 스냅샷에 실어 보낸 플래그로 갈랐습니다 — \(keys). 결제 영수증이 아니라 앱이 \"유료\"라고 표시해 보낸 설치 수예요. 활성은 위 타일과 같은 기준(스냅샷의 마지막 활동 시각)이라, 유료 + 무료가 그 타일 숫자와 맞습니다."
+        if scope == nil {
+            text += " 유료 여부를 아예 안 보내는 앱은 빠져 있어서 합계가 전체 설치보다 적을 수 있어요."
+        }
+        if split.hasGuessedKey {
+            text += " 이름만 보고 고른 키가 섞여 있습니다. 그 앱 리포의 docs/usage-spec.json에 paidFlag를 적어 두면 추측하지 않아요."
+        }
+        return text
     }
 
     /// This week against the one before it, from the event stream.
@@ -585,11 +657,12 @@ struct StatisticsDashboard: View {
         }
     }
 
-    @ViewBuilder
     private var flagCard: some View {
         let shares = store.flagShares(for: scope)
-        if !shares.isEmpty {
-            Card(title: "사용자 비율", systemImage: "person.2") {
+        return Card(title: "사용자 비율", systemImage: "person.2") {
+            if shares.isEmpty {
+                emptyNote("이 앱이 켜짐/꺼짐 지표(flag.*, persona.*)를 보내지 않습니다.")
+            } else {
                 VStack(spacing: 8) {
                     ForEach(shares) { share in
                         VStack(alignment: .leading, spacing: 3) {

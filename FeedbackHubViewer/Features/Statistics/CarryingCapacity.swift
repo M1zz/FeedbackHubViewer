@@ -32,15 +32,25 @@ struct CarryingCapacity {
 
     // MARK: - Period
 
-    /// 한 칸의 길이. 주간은 앱 하나의 리듬을 보기에 알맞고, 월간은 주간 잡음이 큰
-    /// 앱(가끔 쓰는 도구)에서 형태가 드러난다.
+    /// 한 칸의 길이 — 그리고 그 길이가 곧 어떤 활성 사용자의 상한인지를 정한다.
+    ///
+    /// 칸 하나가 하루면 그 칸의 활동 사용자가 DAU이고, 한 주면 WAU, 한 달이면
+    /// MAU다. 그러니 여기서 나오는 상한은 셋을 따로 잰 것이 아니라 **위 활성
+    /// 사용자 카드의 그 숫자가 결국 멈추는 자리**다: 일간을 고르면 DAU 상한,
+    /// 주간이면 WAU 상한, 월간이면 MAU 상한.
+    ///
+    /// 셋의 성격은 다르다. 일간은 "매일 오는 사람"의 평형이라 이탈률이 높게
+    /// 나오고(하루 쉰 것도 이탈로 잡힌다) 잡음도 크지만, 매일 쓰이는 앱이
+    /// 되려는지 알려면 이 칸이라야 한다. 월간은 잡음이 사라지는 대신 여섯 달이
+    /// 쌓여야 말을 한다.
     enum Period: String, CaseIterable, Identifiable, Hashable {
-        case week, month
+        case day, week, month
 
         var id: String { rawValue }
 
         var component: Calendar.Component {
             switch self {
+            case .day: return .day
             case .week: return .weekOfYear
             case .month: return .month
             }
@@ -48,31 +58,48 @@ struct CarryingCapacity {
 
         var label: String {
             switch self {
+            case .day: return "일간"
             case .week: return "주간"
             case .month: return "월간"
             }
         }
 
-        /// 숫자 뒤에 붙는 단위 — "12주", "3달".
+        /// 이 칸의 활동 사용자를 부르는 이름. 상한이 무엇의 상한인지 말할 때 쓴다.
+        var activityName: String {
+            switch self {
+            case .day: return "DAU"
+            case .week: return "WAU"
+            case .month: return "MAU"
+            }
+        }
+
+        /// 고르는 자리에 쓰는 이름 — 위 카드와 같은 말로 부른다.
+        var pickerLabel: String { "\(label) (\(activityName))" }
+
+        /// 숫자 뒤에 붙는 단위 — "28일", "12주", "3달".
         var unit: String {
             switch self {
+            case .day: return "일"
             case .week: return "주"
             case .month: return "달"
             }
         }
 
-        /// 받침에 따라 갈리는 주격 조사 — "4주가", "3달이".
+        /// 받침에 따라 갈리는 주격 조사 — "14일이", "4주가", "3달이".
         var subjectParticle: String {
             switch self {
+            case .day: return "이"
             case .week: return "가"
             case .month: return "이"
             }
         }
 
-        /// 평균을 낼 때 되돌아보는 기간 수. 짧으면 한 주의 사고에 휘둘리고, 길면
-        /// 반년 전의 앱을 지금의 앱이라고 말하게 된다.
+        /// 평균을 낼 때 되돌아보는 기간 수. 짧으면 한 번의 사고에 휘둘리고, 길면
+        /// 반년 전의 앱을 지금의 앱이라고 말하게 된다. 하루 칸은 주말·평일이
+        /// 통째로 들어오도록 4주치를 본다.
         var analysisPeriods: Int {
             switch self {
+            case .day: return 28
             case .week: return 8
             case .month: return 6
             }
@@ -81,6 +108,7 @@ struct CarryingCapacity {
         /// 이보다 적으면 숫자를 내놓되 "아직 참고용"이라고 말한다.
         var minimumPeriods: Int {
             switch self {
+            case .day: return 14
             case .week: return 4
             case .month: return 3
             }
@@ -89,6 +117,7 @@ struct CarryingCapacity {
         /// 차트가 그리는 과거 길이.
         var historyPeriods: Int {
             switch self {
+            case .day: return 60
             case .week: return 26
             case .month: return 18
             }
@@ -97,6 +126,7 @@ struct CarryingCapacity {
         /// 상한을 향해 가는 길을 몇 칸 앞까지 그릴지.
         var projectionPeriods: Int {
             switch self {
+            case .day: return 30
             case .week: return 12
             case .month: return 9
             }
@@ -310,6 +340,11 @@ struct CarryingCapacity {
         }
         if window.contains(where: { $0.active == 0 }) {
             notes.append("활동이 0인 기간이 섞여 있습니다. 실제로 아무도 안 썼거나 수집이 멈춘 것이고, 어느 쪽이든 이탈률이 부풀려집니다.")
+        }
+        // 하루 칸에서는 이탈률이 원래 높다. 그 사실을 안 적으면 "사용자의 80%가
+        // 떠난다"로 읽히는데, 실제로 일어난 일은 대부분 "오늘은 안 열었다"이다.
+        if period == .day {
+            notes.append("하루 단위에서는 '어제 썼는데 오늘 안 썼다'가 전부 이탈로 잡힙니다. 떠난 게 아니라 매일 쓰지는 않는 것이라, 여기 이탈률은 높게 나오는 게 정상이고 DAU 상한은 '안 떠난 사람 수'가 아니라 **매일 오는 사람 수**의 평형입니다.")
         }
         if averageNew == 0 && churnRate > 0 {
             notes.append("이 구간에 새로 활동을 시작한 설치가 없습니다. 유입이 0이면 상한도 0 — 지금 사용자가 빠져나가는 만큼 줄어듭니다.")
