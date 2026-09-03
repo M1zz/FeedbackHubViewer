@@ -33,6 +33,10 @@ struct StatisticsDashboard: View {
     /// 한 계열만 남기면 그 계열의 그래프가 된다 (`ChartLegend`).
     @State private var activeUsersSeries = ChartSeriesSelection()
     @State private var trendSeries = ChartSeriesSelection()
+    /// 지금 가리키고 있는 자리. 눈금 사이의 값은 눈으로 못 읽으므로, 여기에
+    /// 세로선을 긋고 그 자리의 숫자를 적는다 (`ChartReadout`).
+    @State private var activeUsersCursor: Date?
+    @State private var trendCursor: Date?
 
     #if os(macOS)
     private let tileColumns = [GridItem(.adaptive(minimum: 150), spacing: 10)]
@@ -272,7 +276,7 @@ struct StatisticsDashboard: View {
                 }
                 stickinessRow(active)
                 activeUsersChart(active)
-                footnote("각 창 안에서 이벤트를 보낸 서로 다른 설치를 셉니다. 창이 서로 겹치므로 세 숫자를 더하면 안 돼요 — 오늘 쓴 사람은 주간·월간에도 들어 있습니다. 오늘은 아직 지나지 않은 하루라 DAU는 하루가 끝날 때까지 계속 올라가고, 그래서 어제와 견주는 화살표는 늦은 시각일수록 정확해집니다. 위 '최근 7일 활성' 타일은 스냅샷이 적어 보낸 마지막 활동 시각 기준이라 여기 WAU와 숫자가 다를 수 있어요.")
+                footnote("선 위를 가리키면(맥은 마우스를 올리고, 아이폰은 손가락을 대고 밀면) 그 날의 정확한 값이 나옵니다. 범례를 누르면 그 계열이 켜지고 꺼지며, 축은 켜진 것에만 맞춰 다시 잡혀요. 각 창 안에서 이벤트를 보낸 서로 다른 설치를 셉니다. 창이 서로 겹치므로 세 숫자를 더하면 안 돼요 — 오늘 쓴 사람은 주간·월간에도 들어 있습니다. 오늘은 아직 지나지 않은 하루라 DAU는 하루가 끝날 때까지 계속 올라가고, 그래서 어제와 견주는 화살표는 늦은 시각일수록 정확해집니다. 위 '최근 7일 활성' 타일은 스냅샷이 적어 보낸 마지막 활동 시각 기준이라 여기 WAU와 숫자가 다를 수 있어요.")
             }
         }
     }
@@ -353,13 +357,59 @@ struct StatisticsDashboard: View {
                         .interpolationMethod(.monotone)
                 }
             }
+            if let point = activeUsersPoint(active) {
+                RuleMark(x: .value("날짜", point.date, unit: .day))
+                    .foregroundStyle(Color.secondary.opacity(0.35))
+                    .annotation(position: .top, spacing: 4,
+                                overflowResolution: .init(x: .fit(to: .chart), y: .disabled)) {
+                        ChartReadout(title: AppFormat.chartDay(point.date),
+                                     items: activeUsersReadout(point))
+                    }
+                // 어느 선의 값인지 점으로 못박는다. 숫자만 있으면 세 선 중
+                // 어디를 읽은 것인지 다시 눈으로 찾아야 한다.
+                ForEach(activeUsersMarks(point), id: \.label) { mark in
+                    PointMark(x: .value("날짜", point.date, unit: .day),
+                              y: .value("사용자", mark.value))
+                        .foregroundStyle(mark.color)
+                        .symbolSize(36)
+                }
+            }
         }
         // 0에서 시작하지 않으면 몇 명 오르내린 것이 절벽처럼 보인다.
         .chartYScale(domain: 0...Double(max(1, peak)))
         .chartYAxis { AxisMarks(position: .leading) }
         .frame(height: trendHeight)
+        .chartCursor($activeUsersCursor)
 
         ChartLegend(series: Self.activeUserSeries, selection: $activeUsersSeries)
+    }
+
+    /// 가리킨 자리에서 가장 가까운 점. 선택은 픽셀에서 오지만 값은 하루 단위로만
+    /// 있으므로, 사이를 가리켜도 하루에 붙는다.
+    private func activeUsersPoint(_ active: FeedbackStore.ActiveUsers) -> FeedbackStore.ActiveUsers.Point? {
+        guard let cursor = activeUsersCursor else { return nil }
+        return active.series.min {
+            abs($0.date.timeIntervalSince(cursor)) < abs($1.date.timeIntervalSince(cursor))
+        }
+    }
+
+    /// 그 자리에서 **켜져 있는** 계열의 값만. 꺼 둔 선의 숫자는 소음이다.
+    private func activeUsersMarks(_ point: FeedbackStore.ActiveUsers.Point) -> [(label: String, value: Int, color: Color)] {
+        var marks: [(label: String, value: Int, color: Color)] = []
+        for series in Self.activeUserSeries where activeUsersSeries.isVisible(series.id) {
+            switch series.id {
+            case "day":   marks.append((series.label, point.day, series.color))
+            case "week":  marks.append((series.label, point.week, series.color))
+            default:      marks.append((series.label, point.month, series.color))
+            }
+        }
+        return marks
+    }
+
+    private func activeUsersReadout(_ point: FeedbackStore.ActiveUsers.Point) -> [ChartReadout.Item] {
+        activeUsersMarks(point).map {
+            ChartReadout.Item(label: $0.label, value: "\($0.value)곳", color: $0.color)
+        }
     }
 
     /// 축의 위끝 — **켜진 계열**의 최댓값. 이게 이 범례가 스위치인 이유다:
@@ -511,10 +561,20 @@ struct StatisticsDashboard: View {
                                 .interpolationMethod(.monotone)
                         }
                     }
+                    if let point = trendPoint(points) {
+                        RuleMark(x: .value("기간", point.date, unit: trendUnit.component))
+                            .foregroundStyle(Color.secondary.opacity(0.35))
+                            .annotation(position: .top, spacing: 4,
+                                        overflowResolution: .init(x: .fit(to: .chart), y: .disabled)) {
+                                ChartReadout(title: trendTitle(point.date),
+                                             items: trendReadout(point))
+                            }
+                    }
                 }
                 .chartYScale(domain: 0...Double(max(1, peak)))
                 .chartYAxis { AxisMarks(position: .leading) }
                 .frame(height: trendHeight)
+                .chartCursor($trendCursor)
 
                 ChartLegend(series: Self.trendChartSeries, selection: $trendSeries)
 
@@ -538,6 +598,38 @@ struct StatisticsDashboard: View {
             if new { peak = max(peak, point.newInstalls) }
         }
         return peak
+    }
+
+    private func trendPoint(_ points: [FeedbackStore.TrendPoint]) -> FeedbackStore.TrendPoint? {
+        guard let cursor = trendCursor else { return nil }
+        return points.min {
+            abs($0.date.timeIntervalSince(cursor)) < abs($1.date.timeIntervalSince(cursor))
+        }
+    }
+
+    /// 가리킨 칸의 이름은 단위를 따른다 — 하루는 "9월 2일", 달은 "2026년 9월".
+    private func trendTitle(_ date: Date) -> String {
+        switch trendUnit {
+        case .day:   return AppFormat.chartDay(date)
+        case .week:  return AppFormat.chartDay(date) + " 주"
+        case .month: return AppFormat.chartMonth(date)
+        case .year:  return AppFormat.chartYear(date)
+        }
+    }
+
+    private func trendReadout(_ point: FeedbackStore.TrendPoint) -> [ChartReadout.Item] {
+        var items: [ChartReadout.Item] = []
+        for series in Self.trendChartSeries where trendSeries.isVisible(series.id) {
+            switch series.id {
+            case "events":
+                items.append(.init(label: series.label, value: "\(point.events)건", color: series.color))
+            case "active":
+                items.append(.init(label: series.label, value: "\(point.activeInstalls)곳", color: series.color))
+            default:
+                items.append(.init(label: series.label, value: "\(point.newInstalls)곳", color: series.color))
+            }
+        }
+        return items
     }
 
     private static let trendChartSeries = [
