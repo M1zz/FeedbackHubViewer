@@ -21,6 +21,11 @@ struct CarryingCapacityCard: View {
     let project: String?
 
     @State private var period: CarryingCapacity.Period = .week
+    /// 지금 켜져 있는 계열. 상한선이 실제 궤적보다 한참 위면 궤적이 바닥에
+    /// 눌리는데, 그때 상한을 잠깐 끄면 궤적 자체를 읽을 수 있다.
+    @State private var series = ChartSeriesSelection()
+    /// 가리키고 있는 칸. 상한선까지 얼마나 남았는지는 눈금으로 못 읽는다.
+    @State private var cursor: Date?
 
     #if os(macOS)
     private let tileColumns = [GridItem(.adaptive(minimum: 150), spacing: 10)]
@@ -35,7 +40,7 @@ struct CarryingCapacityCard: View {
         Card(title: "성장 상한 (carrying capacity)", systemImage: "speedometer") {
             Picker("기간", selection: $period) {
                 ForEach(CarryingCapacity.Period.allCases) { unit in
-                    Text(unit.label).tag(unit)
+                    Text(unit.pickerLabel).tag(unit)
                 }
             }
             .pickerStyle(.segmented)
@@ -97,7 +102,7 @@ struct CarryingCapacityCard: View {
 
     private func tiles(_ result: CarryingCapacity) -> some View {
         LazyVGrid(columns: tileColumns, spacing: 10) {
-            StatTile(title: "\(result.period.label) 신규", value: Self.decimal(result.averageNew), unit: "개",
+            StatTile(title: "\(result.period.label) 신규", value: Self.decimal(result.averageNew), unit: "명",
                      systemImage: "sparkles", tint: .green)
             StatTile(title: "\(result.period.label) 이탈률",
                      value: result.churnRate > 0 ? Self.percent(result.churnRate) : "—", unit: "",
@@ -126,27 +131,31 @@ struct CarryingCapacityCard: View {
                 .foregroundStyle(.secondary)
         } else {
             Chart {
-                ForEach(done) { point in
-                    LineMark(x: .value("기간", point.start, unit: result.period.component),
-                             y: .value("활동 사용자", point.active),
-                             series: .value("계열", "실제"))
-                        .foregroundStyle(Color.blue)
-                        .interpolationMethod(.monotone)
+                if series.isVisible("actual") {
+                    ForEach(done) { point in
+                        LineMark(x: .value("기간", point.start, unit: result.period.component),
+                                 y: .value("활동 사용자", point.active),
+                                 series: .value("계열", "실제"))
+                            .foregroundStyle(Color.blue)
+                            .interpolationMethod(.monotone)
+                    }
+                    if let partial {
+                        PointMark(x: .value("기간", partial.start, unit: result.period.component),
+                                  y: .value("활동 사용자", partial.active))
+                            .foregroundStyle(Color.blue.opacity(0.35))
+                            .symbolSize(28)
+                    }
                 }
-                ForEach(result.projection) { point in
-                    LineMark(x: .value("기간", point.date, unit: result.period.component),
-                             y: .value("활동 사용자", point.active),
-                             series: .value("계열", "전망"))
-                        .foregroundStyle(Color.blue.opacity(0.55))
-                        .lineStyle(StrokeStyle(lineWidth: 1.5, dash: [4, 3]))
+                if series.isVisible("projection") {
+                    ForEach(result.projection) { point in
+                        LineMark(x: .value("기간", point.date, unit: result.period.component),
+                                 y: .value("활동 사용자", point.active),
+                                 series: .value("계열", "전망"))
+                            .foregroundStyle(Color.blue.opacity(0.55))
+                            .lineStyle(StrokeStyle(lineWidth: 1.5, dash: [4, 3]))
+                    }
                 }
-                if let partial {
-                    PointMark(x: .value("기간", partial.start, unit: result.period.component),
-                              y: .value("활동 사용자", partial.active))
-                        .foregroundStyle(Color.blue.opacity(0.35))
-                        .symbolSize(28)
-                }
-                if let capacity = result.capacity {
+                if series.isVisible("capacity"), let capacity = result.capacity {
                     RuleMark(y: .value("상한", capacity))
                         .foregroundStyle(Color.orange)
                         .lineStyle(StrokeStyle(lineWidth: 1, dash: [3, 3]))
@@ -156,37 +165,95 @@ struct CarryingCapacityCard: View {
                                 .foregroundStyle(.orange)
                         }
                 }
+                if let date = cursorDate(result) {
+                    RuleMark(x: .value("기간", date, unit: result.period.component))
+                        .foregroundStyle(Color.secondary.opacity(0.35))
+                        .annotation(position: .top, spacing: 4,
+                                    overflowResolution: .init(x: .fit(to: .chart), y: .disabled)) {
+                            ChartReadout(title: title(for: date, period: result.period),
+                                         items: readout(at: date, result: result))
+                        }
+                }
             }
             .chartYScale(domain: 0...yMaximum(result))
             .chartYAxis { AxisMarks(position: .leading) }
             .frame(height: chartHeight)
+            .chartCursor($cursor)
 
-            FlowLayout(spacing: 12, lineSpacing: 4) {
-                legendDot(.blue, "활동 사용자")
-                legendDot(Color.blue.opacity(0.55), "전망 (지금 속도가 이어질 때)")
-                legendDot(.orange, "상한")
-                if partial != nil { legendDot(Color.blue.opacity(0.35), "진행 중인 \(result.period.unit)") }
+            ChartLegend(series: Self.chartSeries(hasPartial: partial != nil,
+                                                 unit: result.period.unit),
+                        selection: $series)
+        }
+    }
+
+    // MARK: - 가리킨 자리의 값
+
+    /// 가리킨 곳에서 가장 가까운 칸의 시작. 실제 궤적과 전망선은 같은 격자 위에
+    /// 있으므로 하나의 날짜로 둘 다 찾을 수 있다.
+    private func cursorDate(_ result: CarryingCapacity) -> Date? {
+        guard let cursor else { return nil }
+        var dates = result.history.map(\.start)
+        dates.append(contentsOf: result.projection.map(\.date))
+        return dates.min {
+            abs($0.timeIntervalSince(cursor)) < abs($1.timeIntervalSince(cursor))
+        }
+    }
+
+    private func title(for date: Date, period: CarryingCapacity.Period) -> String {
+        switch period {
+        case .day:   return AppFormat.chartDay(date)
+        case .week:  return AppFormat.chartDay(date) + " 주"
+        case .month: return AppFormat.chartMonth(date)
+        }
+    }
+
+    /// 그 칸에서 켜져 있는 계열의 값. 전망선은 관측이 아니므로 그 사실이 이름에
+    /// 이미 들어 있고(“전망”), 실제 궤적이 있는 칸에는 전망을 적지 않는다 —
+    /// 같은 자리에 두 숫자가 있으면 어느 쪽이 일어난 일인지 헷갈린다.
+    private func readout(at date: Date, result: CarryingCapacity) -> [ChartReadout.Item] {
+        var items: [ChartReadout.Item] = []
+        let actual = result.history.first { $0.start == date }
+        if series.isVisible("actual"), let actual {
+            items.append(.init(label: actual.isPartial ? "활동 사용자 (진행 중)" : "활동 사용자",
+                               value: "\(actual.active)명",
+                               color: .blue))
+            if let churn = actual.churnRate {
+                items.append(.init(label: "이탈률", value: Self.percent(churn), color: .red))
             }
-            .font(.caption2)
-            .foregroundStyle(.secondary)
-            .frame(maxWidth: .infinity, alignment: .leading)
+            items.append(.init(label: "신규", value: "\(actual.new)명", color: .green))
         }
+        if series.isVisible("projection"), actual == nil,
+           let projected = result.projection.first(where: { $0.date == date }) {
+            items.append(.init(label: "전망", value: "\(Self.count(projected.active))명",
+                               color: Color.blue.opacity(0.55)))
+        }
+        if series.isVisible("capacity"), let capacity = result.capacity {
+            items.append(.init(label: "상한", value: "\(Self.count(capacity))명", color: .orange))
+        }
+        return items
     }
 
-    /// 상한이 지금보다 훨씬 위면 실제 궤적이 바닥에 눌린다. 둘 다 보이게 잡되
-    /// 여백은 10%만 준다.
+    /// 축은 **켜진 계열**만 보고 잡는다. 상한이 궤적보다 한참 위일 때 상한을 끄면
+    /// 눈금이 궤적 크기로 내려오는 것이 이 카드에서 계열을 끄는 이유다.
+    /// 여백은 10%만.
     private func yMaximum(_ result: CarryingCapacity) -> Double {
-        let observed = Double(result.history.map(\.active).max() ?? 0)
-        let projected = result.projection.map(\.active).max() ?? 0
-        let top = max(observed, projected, result.capacity ?? 0)
-        return max(1, top * 1.1)
+        var tops: [Double] = []
+        if series.isVisible("actual") { tops.append(Double(result.history.map(\.active).max() ?? 0)) }
+        if series.isVisible("projection") { tops.append(result.projection.map(\.active).max() ?? 0) }
+        if series.isVisible("capacity"), let capacity = result.capacity { tops.append(capacity) }
+        return max(1, (tops.max() ?? 0) * 1.1)
     }
 
-    private func legendDot(_ color: Color, _ label: String) -> some View {
-        HStack(spacing: 4) {
-            Circle().fill(color).frame(width: 7, height: 7)
-            Text(label)
-        }
+    /// 진행 중인 칸은 실제 궤적에 딸린 표시라 따로 켜고 끄지 않는다 — 범례에는
+    /// 그런 점이 있다는 사실만 적는다.
+    private static func chartSeries(hasPartial: Bool, unit: String) -> [ChartSeries] {
+        var list = [
+            ChartSeries("actual", hasPartial ? "활동 사용자 (연한 점 = 진행 중인 \(unit))" : "활동 사용자", .blue),
+            ChartSeries("projection", "전망 (지금 속도가 이어질 때)", Color.blue.opacity(0.55), isDashed: true),
+            ChartSeries("capacity", "상한", .orange, isDashed: true)
+        ]
+        if !hasPartial { list[0] = ChartSeries("actual", "활동 사용자", .blue) }
+        return list
     }
 
     // MARK: - 주의와 설명
@@ -210,8 +277,8 @@ struct CarryingCapacityCard: View {
 
     private func footnote(_ result: CarryingCapacity) -> some View {
         VStack(alignment: .leading, spacing: 3) {
-            Text("상한 = \(result.period.label) 신규 ÷ \(result.period.label) 이탈률. 지금 속도로 유입되고 지금 비율로 빠져나가면 활동 사용자는 이 값 근처에서 멈춥니다 — 유입을 늘리거나 이탈을 줄이지 않는 한 그 위로는 가지 않습니다.")
-            Text("최근 \(result.sampleCount)\(result.period.unit)치(진행 중인 \(result.period.unit) 제외)의 평균입니다. 활동 사용자 = 그 기간에 이벤트를 보낸 설치, 신규 = 이 허브에서 처음 활동한 설치, 이탈 = 지난 기간에 활동했는데 이번 기간에 아무것도 보내지 않은 설치.")
+            Text("이건 \(result.period.activityName)의 상한입니다 — 위 활성 사용자 카드의 그 숫자가 결국 멈추는 자리예요. 상한 = \(result.period.label) 신규 ÷ \(result.period.label) 이탈률. 지금 속도로 유입되고 지금 비율로 빠져나가면 활동 사용자는 이 값 근처에서 멈춥니다 — 유입을 늘리거나 이탈을 줄이지 않는 한 그 위로는 가지 않습니다.")
+            Text("선 위를 가리키면 그 \(result.period.unit)의 정확한 값(활동 사용자·이탈률·신규)이 나옵니다. 범례를 누르면 계열이 켜지고 꺼져요. 최근 \(result.sampleCount)\(result.period.unit)치(진행 중인 \(result.period.unit) 제외)의 평균입니다. 활동 사용자 = 그 기간에 이벤트를 보낸 설치, 신규 = 이 허브에서 처음 활동한 설치, 이탈 = 지난 기간에 활동했는데 이번 기간에 아무것도 보내지 않은 설치.")
             Text("앱이 주요 행동만 보내므로, 열어만 보고 아무것도 하지 않은 설치는 활동에 들어오지 않습니다. 스토어 다운로드 수와도 다른 숫자입니다.")
         }
         .font(.caption2)

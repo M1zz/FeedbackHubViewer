@@ -29,6 +29,14 @@ struct StatisticsDashboard: View {
     @State private var trendUnit: FeedbackStore.TrendUnit = .day
     /// How many individual events the 사용 내역 card is showing.
     @State private var eventLogLimit = 20
+    /// 겹쳐 그린 두 차트에서 지금 켜져 있는 계열. 축은 켜진 것에만 맞춰 잡히므로,
+    /// 한 계열만 남기면 그 계열의 그래프가 된다 (`ChartLegend`).
+    @State private var activeUsersSeries = ChartSeriesSelection()
+    @State private var trendSeries = ChartSeriesSelection()
+    /// 지금 가리키고 있는 자리. 눈금 사이의 값은 눈으로 못 읽으므로, 여기에
+    /// 세로선을 긋고 그 자리의 숫자를 적는다 (`ChartReadout`).
+    @State private var activeUsersCursor: Date?
+    @State private var trendCursor: Date?
 
     #if os(macOS)
     private let tileColumns = [GridItem(.adaptive(minimum: 150), spacing: 10)]
@@ -69,22 +77,27 @@ struct StatisticsDashboard: View {
                     VStack(alignment: .leading, spacing: sectionSpacing) {
                         if let notice = store.usageNotice { usageNotice(notice) }
 
-                        if usage.hasUsageData {
-                            userTiles
-                            specCards
-                            weekOverWeek
-                            CarryingCapacityCard(project: scope)
-                            trendCard
-                            eventCard
-                            eventLogCard
-                            metricsCard
-                            flagCard
-                            distributionCards
-                        } else {
-                            noUsageCard
-                            specCards
-                        }
-
+                        // 틀은 어느 앱에서나 같다.
+                        //
+                        // 예전에는 사용 통계가 없으면 카드가 통째로 사라지고
+                        // 안내문 하나만 남았다. 그러면 앱마다 화면의 구성이 달라
+                        // 두 앱을 나란히 읽을 수가 없고, "이 앱은 이 카드가 왜
+                        // 없지"가 매번 새 질문이 된다. 그래서 카드는 언제나 같은
+                        // 자리에 뜨고, 값이 없을 때는 빈칸 대신 **왜 비었는지**가
+                        // 들어간다 — 아직 안 보내는 것과 0인 것은 다른 말이다.
+                        if !usage.hasUsageData { noUsageCard }
+                        userTiles
+                        activeUsersCard
+                        paidCard
+                        specCards
+                        weekOverWeek
+                        CarryingCapacityCard(project: scope)
+                        trendCard
+                        eventCard
+                        eventLogCard
+                        metricsCard
+                        flagCard
+                        distributionCards
                         feedbackCard
                         specGapCard
                     }
@@ -115,9 +128,18 @@ struct StatisticsDashboard: View {
         store.snapshots(for: scope).map(\.metrics)
     }
 
-    /// 앱 자신의 통계 화면이 보여주는 것과 같은 카드들.
+    /// 앱 자신의 통계 화면이 보여주는 것과 같은 카드들. 스펙이 없으면 자리만
+    /// 지키고 무엇을 하면 채워지는지 적는다 — 이 칸이 통째로 없어지면 다른 앱과
+    /// 화면 모양이 달라진다.
     @ViewBuilder
     private var specCards: some View {
+        if spec == nil {
+            Card(title: "앱별 핵심 지표", systemImage: "star.circle") {
+                emptyNote(scope == nil
+                          ? "프로젝트를 하나 고르면 그 앱의 지표가 여기 나옵니다. 앱마다 지표의 뜻이 달라 전체 프로젝트에서는 합칠 수 없어요."
+                          : "이 앱의 통계 스펙이 아직 없습니다. 앱 리포의 docs/usage-spec.json에 라벨과 경계값을 적고 scripts/sync-stats-specs.sh를 돌리면, 앱 자신의 통계 화면과 같은 카드가 여기 그려집니다.")
+            }
+        }
         if let spec {
             // 퍼널만 입력이 다르다: 설치에 남은 상태(`metrics`)가 아니라 일어난 일
             // (이벤트 집계)을 읽는다. 이름별로 이미 접혀 있는 값이라 원본을 훑지 않는다.
@@ -219,19 +241,250 @@ struct StatisticsDashboard: View {
 
     private var userTiles: some View {
         LazyVGrid(columns: tileColumns, spacing: 10) {
-            StatTile(title: "설치 (사용 중인 기기)", value: "\(usage.installs)", unit: "개",
+            StatTile(title: "설치 (사용 중인 기기)", value: "\(usage.installs)", unit: "대",
                      systemImage: "iphone", tint: .accentColor)
-            StatTile(title: "최근 7일 활성", value: "\(usage.active7)", unit: "개",
+            StatTile(title: "최근 7일 활성", value: "\(usage.active7)", unit: "명",
                      systemImage: "bolt.fill", tint: .blue)
-            StatTile(title: "최근 30일 활성", value: "\(usage.active30)", unit: "개",
+            StatTile(title: "최근 30일 활성", value: "\(usage.active30)", unit: "명",
                      systemImage: "calendar", tint: .teal)
-            StatTile(title: "최근 7일 신규", value: "\(usage.new7)", unit: "개",
+            StatTile(title: "최근 7일 신규", value: "\(usage.new7)", unit: "대",
                      systemImage: "sparkles", tint: .green)
             StatTile(title: "누적 실행", value: "\(usage.totalLaunches)", unit: "회",
                      systemImage: "play.circle", tint: .indigo)
             StatTile(title: "누적 주요 행동", value: "\(usage.totalSignificantEvents)", unit: "회",
                      systemImage: "hand.tap", tint: .orange)
         }
+    }
+
+    // MARK: - 활성 사용자 (DAU · WAU · MAU)
+
+    /// 같은 것을 세 가지 창으로 잰 한 장.
+    ///
+    /// 셋을 함께 놓는 이유는 하나만으로는 답이 안 나오기 때문이다. DAU는 오늘
+    /// 하루의 사정(주말, 배포, 푸시 한 번)에 그대로 흔들리고, MAU는 이미 떠난
+    /// 사람도 30일 동안 안고 있어 늦게 떨어진다. 방향은 셋을 겹쳐 봐야 보이고,
+    /// "얼마나 자주 오는가"는 둘의 비(고착도)에서만 나온다.
+    private var activeUsersCard: some View {
+        let active = store.activeUsers(for: scope)
+        return Card(title: "활성 사용자 (DAU · WAU · MAU)", systemImage: "person.3") {
+            if active.isEmpty {
+                emptyNote("최근 30일 안에 도착한 이벤트가 없습니다. 활성 사용자는 이벤트로만 셀 수 있어서, 앱이 UsageEvent를 보내기 시작하면 여기 나옵니다.")
+            } else {
+                ViewThatFits(in: .horizontal) {
+                    HStack(alignment: .top, spacing: 16) { activeUsersFigures(active) }
+                    VStack(alignment: .leading, spacing: 12) { activeUsersFigures(active) }
+                }
+                stickinessRow(active)
+                activeUsersChart(active)
+                footnote("선 위를 가리키면(맥은 마우스를 올리고, 아이폰은 손가락을 대고 밀면) 그 날의 정확한 값이 나옵니다. 범례를 누르면 그 계열이 켜지고 꺼지며, 축은 켜진 것에만 맞춰 다시 잡혀요. 각 창 안에서 이벤트를 보낸 서로 다른 설치를 셉니다. 창이 서로 겹치므로 세 숫자를 더하면 안 돼요 — 오늘 쓴 사람은 주간·월간에도 들어 있습니다. 오늘은 아직 지나지 않은 하루라 DAU는 하루가 끝날 때까지 계속 올라가고, 그래서 어제와 견주는 화살표는 늦은 시각일수록 정확해집니다. 위 '최근 7일 활성' 타일은 스냅샷이 적어 보낸 마지막 활동 시각 기준이라 여기 WAU와 숫자가 다를 수 있어요.")
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func activeUsersFigures(_ active: FeedbackStore.ActiveUsers) -> some View {
+        ForEach(active.windows) { window in
+            Figure(window.span.label, "\(window.current)명",
+                   note: "\(window.span.previousLabel) \(window.previous)명") {
+                DeltaLabel(value: window.delta, polarity: .higherIsBetter)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    /// 고착도 — 월간 활성 사용자가 한 달에 며칠이나 오는가. 낮다고 나쁜 게
+    /// 아니라 앱의 성격이라, 좋고 나쁨을 색으로 말하지 않고 비율만 그린다.
+    @ViewBuilder
+    private func stickinessRow(_ active: FeedbackStore.ActiveUsers) -> some View {
+        if let ratio = active.stickiness {
+            VStack(alignment: .leading, spacing: 3) {
+                HStack(alignment: .firstTextBaseline) {
+                    Text("고착도 (평균 DAU ÷ MAU)")
+                        .font(.callout)
+                    Spacer(minLength: 8)
+                    Text(String(format: "%.0f%%", (ratio * 100).rounded()))
+                        .font(.callout.monospacedDigit().weight(.semibold))
+                }
+                MeterBar(ratio: ratio, height: 5)
+                footnote("최근 30일에 한 번이라도 쓴 사람이 30일 중 평균 \(String(format: "%.1f", ratio * 30))일 씁니다. 매일 여는 도구는 높고, 필요할 때만 여는 도구는 낮아요 — 낮다고 나쁜 게 아니라 앱의 성격입니다. 분자는 오늘이 아니라 지나간 날들의 하루 평균이라, 아직 끝나지 않은 오늘 때문에 아침마다 0으로 떨어지지 않아요.")
+            }
+        }
+    }
+
+    /// 세 창을 하루씩 물러나며 다시 잰 30일 추이. 긴 창이 언제나 위에 놓이는 것은
+    /// 정의상 당연하다 — 짧은 창은 긴 창의 부분집합이다. 그러니 볼 것은 높낮이가
+    /// 아니라 **간격**이다: 세 선이 붙으면 오는 사람이 매일 오는 그 사람들이고,
+    /// 벌어지면 한 번 왔다 안 오는 사람이 그만큼 쌓였다는 뜻이다.
+    /// 세 계열의 이름·색. 차트와 범례가 같은 목록을 읽어야 색이 어긋나지 않는다.
+    ///
+    /// 일간이 강조색이 아니라 주황인 이유: 이 화면의 강조색은 파랑이라 주간 선과
+    /// 구별이 안 됐다. 셋은 순서가 아니라 서로 다른 창이므로 색도 서로 멀어야 한다.
+    private static let activeUserSeries = [
+        ChartSeries("day", "일간 (DAU)", .orange),
+        ChartSeries("week", "주간 (WAU)", .blue),
+        ChartSeries("month", "월간 (MAU)", .teal)
+    ]
+
+    @ViewBuilder
+    private func activeUsersChart(_ active: FeedbackStore.ActiveUsers) -> some View {
+        let peak = activeUsersPeak(active)
+
+        Chart {
+            if activeUsersSeries.isVisible("month") {
+                ForEach(active.series) { point in
+                    LineMark(x: .value("날짜", point.date, unit: .day),
+                             y: .value("사용자", point.month),
+                             series: .value("계열", "월간"))
+                        .foregroundStyle(Color.teal)
+                        .interpolationMethod(.monotone)
+                }
+            }
+            if activeUsersSeries.isVisible("week") {
+                ForEach(active.series) { point in
+                    LineMark(x: .value("날짜", point.date, unit: .day),
+                             y: .value("사용자", point.week),
+                             series: .value("계열", "주간"))
+                        .foregroundStyle(Color.blue)
+                        .interpolationMethod(.monotone)
+                }
+            }
+            if activeUsersSeries.isVisible("day") {
+                ForEach(active.series) { point in
+                    LineMark(x: .value("날짜", point.date, unit: .day),
+                             y: .value("사용자", point.day),
+                             series: .value("계열", "일간"))
+                        .foregroundStyle(Color.orange)
+                        .interpolationMethod(.monotone)
+                }
+            }
+            if let point = activeUsersPoint(active) {
+                RuleMark(x: .value("날짜", point.date, unit: .day))
+                    .foregroundStyle(Color.secondary.opacity(0.35))
+                    .annotation(position: .top, spacing: 4,
+                                overflowResolution: .init(x: .fit(to: .chart), y: .disabled)) {
+                        ChartReadout(title: AppFormat.chartDay(point.date),
+                                     items: activeUsersReadout(point))
+                    }
+                // 어느 선의 값인지 점으로 못박는다. 숫자만 있으면 세 선 중
+                // 어디를 읽은 것인지 다시 눈으로 찾아야 한다.
+                ForEach(activeUsersMarks(point), id: \.label) { mark in
+                    PointMark(x: .value("날짜", point.date, unit: .day),
+                              y: .value("사용자", mark.value))
+                        .foregroundStyle(mark.color)
+                        .symbolSize(36)
+                }
+            }
+        }
+        // 0에서 시작하지 않으면 몇 명 오르내린 것이 절벽처럼 보인다.
+        .chartYScale(domain: 0...Double(max(1, peak)))
+        .chartYAxis { AxisMarks(position: .leading) }
+        .frame(height: trendHeight)
+        .chartCursor($activeUsersCursor)
+
+        ChartLegend(series: Self.activeUserSeries, selection: $activeUsersSeries)
+    }
+
+    /// 가리킨 자리에서 가장 가까운 점. 선택은 픽셀에서 오지만 값은 하루 단위로만
+    /// 있으므로, 사이를 가리켜도 하루에 붙는다.
+    private func activeUsersPoint(_ active: FeedbackStore.ActiveUsers) -> FeedbackStore.ActiveUsers.Point? {
+        guard let cursor = activeUsersCursor else { return nil }
+        return active.series.min {
+            abs($0.date.timeIntervalSince(cursor)) < abs($1.date.timeIntervalSince(cursor))
+        }
+    }
+
+    /// 그 자리에서 **켜져 있는** 계열의 값만. 꺼 둔 선의 숫자는 소음이다.
+    private func activeUsersMarks(_ point: FeedbackStore.ActiveUsers.Point) -> [(label: String, value: Int, color: Color)] {
+        var marks: [(label: String, value: Int, color: Color)] = []
+        for series in Self.activeUserSeries where activeUsersSeries.isVisible(series.id) {
+            switch series.id {
+            case "day":   marks.append((series.label, point.day, series.color))
+            case "week":  marks.append((series.label, point.week, series.color))
+            default:      marks.append((series.label, point.month, series.color))
+            }
+        }
+        return marks
+    }
+
+    private func activeUsersReadout(_ point: FeedbackStore.ActiveUsers.Point) -> [ChartReadout.Item] {
+        activeUsersMarks(point).map {
+            ChartReadout.Item(label: $0.label, value: "\($0.value)명", color: $0.color)
+        }
+    }
+
+    /// 축의 위끝 — **켜진 계열**의 최댓값. 이게 이 범례가 스위치인 이유다:
+    /// 월간을 끄면 눈금이 DAU 크기로 내려와, 바닥에 눌려 있던 선이 제 모양을
+    /// 되찾는다.
+    private func activeUsersPeak(_ active: FeedbackStore.ActiveUsers) -> Int {
+        let day = activeUsersSeries.isVisible("day")
+        let week = activeUsersSeries.isVisible("week")
+        let month = activeUsersSeries.isVisible("month")
+        var peak = 0
+        for point in active.series {
+            if day { peak = max(peak, point.day) }
+            if week { peak = max(peak, point.week) }
+            if month { peak = max(peak, point.month) }
+        }
+        return peak
+    }
+
+    // MARK: - 유료 · 무료
+
+    /// 돈을 낸 사람이 몇이고, 그중 지금 쓰고 있는 사람이 몇인가.
+    ///
+    /// 세 창을 나란히 두는 이유: 전체 유료 비중은 지금까지 판 결과이고, 활성
+    /// 중의 유료 비중은 **지금 이 앱을 떠받치는 사람들**의 구성이다. 둘이
+    /// 벌어지면 유료 사용자가 먼저 빠져나가고 있다는 뜻이라, 같은 화면에
+    /// 있어야 눈에 걸린다.
+    private var paidCard: some View {
+        let split = store.paidSplit(for: scope)
+        return Card(title: "유료 · 무료", systemImage: "creditcard") {
+            if let split, !split.isEmpty {
+                VStack(spacing: 10) {
+                    paidRow("전체 설치", split.all)
+                    paidRow("최근 7일 활성", split.active7)
+                    paidRow("최근 30일 활성", split.active30)
+                }
+                footnote(paidFootnote(split))
+            } else {
+                // 0%가 아니라 "모른다"이다. 유료 여부를 안 보내는 앱을 전부
+                // 무료로 세면 없는 사실을 지어내게 된다.
+                VStack(spacing: 10) {
+                    paidRow("전체 설치", nil)
+                    paidRow("최근 7일 활성", nil)
+                    paidRow("최근 30일 활성", nil)
+                }
+                footnote("이 앱이 유료 여부를 보내지 않습니다. 스냅샷 metrics에 0/1 플래그 하나(예: flag.isPro)를 실어 보내면 여기서 갈립니다 — 어느 키인지는 앱 리포의 docs/usage-spec.json에 paidFlag로 적어 두면 확실해요. 없는 동안은 0%가 아니라 '모름'으로 둡니다.")
+            }
+        }
+    }
+
+    /// `slice`가 nil이면 "아직 모른다" — 막대는 비고 값은 —.
+    private func paidRow(_ label: String, _ slice: FeedbackStore.PaidSplit.Slice?) -> some View {
+        SpecBar(label: label,
+                value: slice?.ratio.map { String(format: "%.0f%%", ($0 * 100).rounded()) } ?? "—",
+                ratio: slice?.ratio ?? 0,
+                hint: slice.map { "유료 \($0.paid)명 · 무료 \($0.free)명" } ?? "유료 여부를 안 보냄")
+    }
+
+    /// 이 숫자가 어디서 나왔는지 — 어떤 키로 갈랐고, 어느 앱을 셌는지.
+    /// 결제 영수증이 아니라 앱이 보낸 플래그라는 사실을 감추면 매출로 읽힌다.
+    private func paidFootnote(_ split: FeedbackStore.PaidSplit) -> String {
+        let keys = split.sources
+            .map { source in
+                let name = source.label ?? source.key
+                return scope == nil ? "\(source.displayName) \(name)(\(source.key))"
+                                    : "\(name)(\(source.key))"
+            }
+            .joined(separator: ", ")
+        var text = "앱이 스냅샷에 실어 보낸 플래그로 갈랐습니다 — \(keys). 결제 영수증이 아니라 앱이 \"유료\"라고 표시해 보낸 설치 수예요. 활성은 위 타일과 같은 기준(스냅샷의 마지막 활동 시각)이라, 유료 + 무료가 그 타일 숫자와 맞습니다."
+        if scope == nil {
+            text += " 유료 여부를 아예 안 보내는 앱은 빠져 있어서 합계가 전체 설치보다 적을 수 있어요."
+        }
+        if split.hasGuessedKey {
+            text += " 이름만 보고 고른 키가 섞여 있습니다. 그 앱 리포의 docs/usage-spec.json에 paidFlag를 적어 두면 추측하지 않아요."
+        }
+        return text
     }
 
     /// This week against the one before it, from the event stream.
@@ -244,14 +497,14 @@ struct StatisticsDashboard: View {
         }
     }
 
+    /// 활동한 사용자는 여기 없다: 7일 창의 활동 설치 수는 위 카드의 WAU와 정의도
+    /// 값도 같은 숫자라, 두 번 적으면 읽는 사람이 다른 것인 줄 알고 비교하게 된다.
     @ViewBuilder
     private var weekOverWeekItems: some View {
-        comparison("활동한 사용자", "\(usage.activeInstalls7)명",
-                   "지난주 \(usage.previousActiveInstalls7)명", usage.activeInstallsDelta)
         comparison("사용 건수", "\(usage.events7)건",
                    "지난주 \(usage.previousEvents7)건", usage.eventsDelta)
-        comparison("신규 설치", "\(usage.new7)개",
-                   "지난주 \(usage.previousNew7)개", usage.newDelta)
+        comparison("신규 설치", "\(usage.new7)대",
+                   "지난주 \(usage.previousNew7)대", usage.newDelta)
     }
 
     /// One metric's 이번 주 · 지난주 · 변화. More usage is good news on all
@@ -280,38 +533,50 @@ struct StatisticsDashboard: View {
             if points.isEmpty {
                 emptyNote("아직 기록된 이벤트가 없습니다.")
             } else {
+                let peak = trendPeak(points)
+
                 Chart {
-                    ForEach(points) { point in
-                        BarMark(x: .value("기간", point.date, unit: trendUnit.component),
-                                y: .value("사용 건수", point.events))
-                            .foregroundStyle(Color.accentColor.opacity(0.35))
+                    if trendSeries.isVisible("events") {
+                        ForEach(points) { point in
+                            BarMark(x: .value("기간", point.date, unit: trendUnit.component),
+                                    y: .value("사용 건수", point.events))
+                                .foregroundStyle(Color.accentColor.opacity(0.35))
+                        }
                     }
-                    ForEach(points) { point in
-                        LineMark(x: .value("기간", point.date, unit: trendUnit.component),
-                                 y: .value("활동한 사용자", point.activeInstalls),
-                                 series: .value("계열", "활동한 사용자"))
-                            .foregroundStyle(Color.blue)
-                            .interpolationMethod(.monotone)
+                    if trendSeries.isVisible("active") {
+                        ForEach(points) { point in
+                            LineMark(x: .value("기간", point.date, unit: trendUnit.component),
+                                     y: .value("활동한 사용자", point.activeInstalls),
+                                     series: .value("계열", "활동한 사용자"))
+                                .foregroundStyle(Color.blue)
+                                .interpolationMethod(.monotone)
+                        }
                     }
-                    ForEach(points) { point in
-                        LineMark(x: .value("기간", point.date, unit: trendUnit.component),
-                                 y: .value("신규 설치", point.newInstalls),
-                                 series: .value("계열", "신규 설치"))
-                            .foregroundStyle(Color.green)
-                            .interpolationMethod(.monotone)
+                    if trendSeries.isVisible("new") {
+                        ForEach(points) { point in
+                            LineMark(x: .value("기간", point.date, unit: trendUnit.component),
+                                     y: .value("신규 설치", point.newInstalls),
+                                     series: .value("계열", "신규 설치"))
+                                .foregroundStyle(Color.green)
+                                .interpolationMethod(.monotone)
+                        }
+                    }
+                    if let point = trendPoint(points) {
+                        RuleMark(x: .value("기간", point.date, unit: trendUnit.component))
+                            .foregroundStyle(Color.secondary.opacity(0.35))
+                            .annotation(position: .top, spacing: 4,
+                                        overflowResolution: .init(x: .fit(to: .chart), y: .disabled)) {
+                                ChartReadout(title: trendTitle(point.date),
+                                             items: trendReadout(point))
+                            }
                     }
                 }
+                .chartYScale(domain: 0...Double(max(1, peak)))
                 .chartYAxis { AxisMarks(position: .leading) }
                 .frame(height: trendHeight)
+                .chartCursor($trendCursor)
 
-                FlowLayout(spacing: 12, lineSpacing: 4) {
-                    legendDot(Color.accentColor.opacity(0.5), "사용 건수")
-                    legendDot(.blue, "활동한 사용자")
-                    legendDot(.green, "신규 설치")
-                }
-                .font(.caption2)
-                .foregroundStyle(.secondary)
-                .frame(maxWidth: .infinity, alignment: .leading)
+                ChartLegend(series: Self.trendChartSeries, selection: $trendSeries)
 
                 Text("발생 시각(occurredAt) 기준입니다. 키보드처럼 나중에 소급 전송된 활동도 실제 사용일에 표시됩니다.")
                     .font(.caption2)
@@ -320,12 +585,58 @@ struct StatisticsDashboard: View {
         }
     }
 
-    private func legendDot(_ color: Color, _ label: String) -> some View {
-        HStack(spacing: 4) {
-            Circle().fill(color).frame(width: 7, height: 7)
-            Text(label)
+    /// 사용 건수는 사람 수보다 한 자릿수 크기 마련이라, 켜 두면 두 선이 바닥에
+    /// 눌린다. 끄면 축이 사람 수에 맞춰 내려온다.
+    private func trendPeak(_ points: [FeedbackStore.TrendPoint]) -> Int {
+        let events = trendSeries.isVisible("events")
+        let active = trendSeries.isVisible("active")
+        let new = trendSeries.isVisible("new")
+        var peak = 0
+        for point in points {
+            if events { peak = max(peak, point.events) }
+            if active { peak = max(peak, point.activeInstalls) }
+            if new { peak = max(peak, point.newInstalls) }
+        }
+        return peak
+    }
+
+    private func trendPoint(_ points: [FeedbackStore.TrendPoint]) -> FeedbackStore.TrendPoint? {
+        guard let cursor = trendCursor else { return nil }
+        return points.min {
+            abs($0.date.timeIntervalSince(cursor)) < abs($1.date.timeIntervalSince(cursor))
         }
     }
+
+    /// 가리킨 칸의 이름은 단위를 따른다 — 하루는 "9월 2일", 달은 "2026년 9월".
+    private func trendTitle(_ date: Date) -> String {
+        switch trendUnit {
+        case .day:   return AppFormat.chartDay(date)
+        case .week:  return AppFormat.chartDay(date) + " 주"
+        case .month: return AppFormat.chartMonth(date)
+        case .year:  return AppFormat.chartYear(date)
+        }
+    }
+
+    private func trendReadout(_ point: FeedbackStore.TrendPoint) -> [ChartReadout.Item] {
+        var items: [ChartReadout.Item] = []
+        for series in Self.trendChartSeries where trendSeries.isVisible(series.id) {
+            switch series.id {
+            case "events":
+                items.append(.init(label: series.label, value: "\(point.events)건", color: series.color))
+            case "active":
+                items.append(.init(label: series.label, value: "\(point.activeInstalls)명", color: series.color))
+            default:
+                items.append(.init(label: series.label, value: "\(point.newInstalls)대", color: series.color))
+            }
+        }
+        return items
+    }
+
+    private static let trendChartSeries = [
+        ChartSeries("events", "사용 건수", Color.accentColor.opacity(0.5)),
+        ChartSeries("active", "활동한 사용자", .blue),
+        ChartSeries("new", "신규 설치", .green)
+    ]
 
     // MARK: - 이벤트 · 지표
 
@@ -347,7 +658,7 @@ struct StatisticsDashboard: View {
                             HStack(spacing: 8) {
                                 Text("\(event.count)건")
                                     .font(.callout.monospacedDigit().weight(.semibold))
-                                Text("설치 \(event.installs)")
+                                Text("\(event.installs)명")
                                     .font(.caption.monospacedDigit())
                                     .foregroundStyle(.secondary)
                                 Spacer(minLength: 4)
@@ -363,7 +674,7 @@ struct StatisticsDashboard: View {
                         if index < events.count - 1 { Divider() }
                     }
                 }
-                Text("이름은 앱이 보낸 그대로입니다. 콜론 뒤는 슬라이스(예: paywall_view:memo).")
+                Text("왼쪽 큰 수는 몇 번 일어났는지(건), 그 옆은 몇 사람이 했는지(명)입니다. 이름은 앱이 보낸 그대로이고, 콜론 뒤는 슬라이스(예: paywall_view:memo).")
                     .font(.caption2)
                     .foregroundStyle(.tertiary)
             }
@@ -481,11 +792,12 @@ struct StatisticsDashboard: View {
         }
     }
 
-    @ViewBuilder
     private var flagCard: some View {
         let shares = store.flagShares(for: scope)
-        if !shares.isEmpty {
-            Card(title: "사용자 비율", systemImage: "person.2") {
+        return Card(title: "사용자 비율", systemImage: "person.2") {
+            if shares.isEmpty {
+                emptyNote("이 앱이 켜짐/꺼짐 지표(flag.*, persona.*)를 보내지 않습니다.")
+            } else {
                 VStack(spacing: 8) {
                     ForEach(shares) { share in
                         VStack(alignment: .leading, spacing: 3) {

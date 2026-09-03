@@ -44,6 +44,32 @@ enum AppFormat {
         return value > 0 ? "+\(value)" : "−\(-value)"
     }
 
+    /// "9월 2일" — 차트가 가리킨 하루. 연도는 뺀다: 축이 이미 어느 해인지 말하고
+    /// 있고, 값 패널은 짧을수록 선을 덜 가린다.
+    static func chartDay(_ date: Date) -> String {
+        chartDayFormatter.string(from: date)
+    }
+
+    /// "2026년 9월" — 달·해 단위 버킷을 가리킬 때.
+    static func chartMonth(_ date: Date) -> String {
+        chartMonthFormatter.string(from: date)
+    }
+
+    static func chartYear(_ date: Date) -> String {
+        chartYearFormatter.string(from: date)
+    }
+
+    private static func formatter(_ template: String) -> DateFormatter {
+        let f = DateFormatter()
+        f.locale = locale
+        f.setLocalizedDateFormatFromTemplate(template)
+        return f
+    }
+
+    private static let chartDayFormatter = formatter("Md")
+    private static let chartMonthFormatter = formatter("yMMM")
+    private static let chartYearFormatter = formatter("y")
+
     private static let countFormatter: NumberFormatter = {
         let f = NumberFormatter()
         f.locale = locale

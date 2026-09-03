@@ -167,6 +167,159 @@ extension FeedbackStore {
         let newInstalls: Int
     }
 
+    /// 일간·주간·월간 활성 사용자 — DAU · WAU · MAU.
+    ///
+    /// 셋은 다른 지표가 아니라 **같은 것을 재는 세 가지 창**이다: 그 창 안에서
+    /// 이벤트를 보낸 서로 다른 `installID`의 수. 창이 서로 겹치므로 세 숫자는
+    /// 절대 더하면 안 되고(오늘 쓴 사람은 이번 주에도 이번 달에도 들어 있다),
+    /// 창 안에서도 합이 아니라 언제나 합집합이다 — 월·화 이틀 쓴 설치는 두 명이
+    /// 아니라 한 명이다.
+    ///
+    /// 화면 위쪽 타일의 "최근 7일 활성"과 이름이 닮았지만 출처가 다르다. 그쪽은
+    /// 스냅샷의 `lastActiveAt`, 즉 설치가 스스로 적어 보낸 마지막 활동 시각이고,
+    /// 여기 WAU는 실제로 도착한 이벤트다. 이벤트를 보내지 않는 앱은 여기서 0으로
+    /// 나오는 것이 맞다.
+    struct ActiveUsers {
+
+        /// 창 하나의 길이.
+        ///
+        /// 월간이 달력의 달이 아니라 30일 고정인 이유: 창끼리 비교하려면 길이가
+        /// 같아야 한다. 2월 MAU와 3월 MAU가 다르게 나오면 그건 사용자가 아니라
+        /// 날짜 수가 달라진 것이고, 그런 변화는 읽는 사람을 속인다.
+        enum Span: String, CaseIterable, Identifiable {
+            case day, week, month
+
+            var id: String { rawValue }
+
+            var days: Int {
+                switch self {
+                case .day: return 1
+                case .week: return 7
+                case .month: return 30
+                }
+            }
+
+            var label: String {
+                switch self {
+                case .day: return "일간 (DAU)"
+                case .week: return "주간 (WAU)"
+                case .month: return "월간 (MAU)"
+                }
+            }
+
+            /// 바로 앞의 같은 길이 창을 부르는 말 — 숫자 밑에 붙는다.
+            var previousLabel: String {
+                switch self {
+                case .day: return "어제"
+                case .week: return "지난 7일"
+                case .month: return "지난 30일"
+                }
+            }
+        }
+
+        /// 한 창의 지금 값과, 바로 앞의 같은 길이 창.
+        struct Window: Identifiable {
+            let span: Span
+            let current: Int
+            let previous: Int
+
+            var id: String { span.id }
+            var delta: Int { current - previous }
+        }
+
+        let day: Window
+        let week: Window
+        let month: Window
+
+        /// 하루씩 물러나며 같은 세 창을 다시 잰 값(오래된 것부터). 오늘 하루의
+        /// 숫자만으로는 오르는 중인지 내리는 중인지 알 수 없다.
+        let series: [Point]
+
+        struct Point: Identifiable {
+            var id: Date { date }
+            let date: Date
+            let day: Int
+            let week: Int
+            let month: Int
+        }
+
+        var windows: [Window] { [day, week, month] }
+
+        /// 하루 평균 DAU — 오늘을 뺀, 지나간 날들만.
+        ///
+        /// 오늘은 아직 끝나지 않은 하루라 이른 아침이면 0이다. 그 0을 고착도에
+        /// 넣으면 "이 앱은 아무도 안 쓴다"가 되는데, 그건 앱이 아니라 시계가 하는
+        /// 말이다. 그래서 비율의 분자는 오늘 하루가 아니라 지나간 날들의 평균이다.
+        var averageDay: Double? {
+            let past = series.dropLast().map(\.day)
+            guard !past.isEmpty else { return nil }
+            return Double(past.reduce(0, +)) / Double(past.count)
+        }
+
+        /// 고착도 — 평균 DAU ÷ MAU. 한 달에 한 번 열어 보는 앱과 매일 여는 앱을
+        /// 가르는 한 숫자다. 0.2면 한 달 안에 쓴 사람이 30일 중 평균 6일 썼다는 뜻.
+        var stickiness: Double? {
+            guard month.current > 0, let averageDay else { return nil }
+            return averageDay / Double(month.current)
+        }
+
+        /// 30일 창에도 그 앞 30일에도 아무도 없으면 보여 줄 것이 없다.
+        var isEmpty: Bool { month.current == 0 && month.previous == 0 }
+
+        /// 추이를 며칠 치 그리는가. 가장 왼쪽 점의 30일 창도 온전히 채워져야 하므로
+        /// 실제로 읽는 과거는 이보다 29일 더 길다.
+        static let trendDays = 30
+    }
+
+    /// 유료 사용자와 무료 사용자, 그리고 그중 지금 살아 있는 사람.
+    ///
+    /// 허브는 결제 영수증을 받지 않는다. 아는 것은 앱이 스냅샷에 실어 보낸 0/1
+    /// 플래그 하나뿐이다 — ClipKeyboard의 `flag.isPro` 같은 것. 그래서 이 숫자는
+    /// "매출"이 아니라 **앱이 유료라고 표시해 보낸 설치 수**이고, 화면에도 어떤
+    /// 키로 갈랐는지 그대로 적는다.
+    ///
+    /// 활성의 정의는 바로 위 타일(`최근 7일 활성`)과 **같은 것**을 쓴다. 스냅샷의
+    /// `lastActiveAt`이다. 이벤트 기반(DAU·WAU·MAU)이 아니라 이쪽인 이유: 유료
+    /// 여부가 스냅샷에 있으므로 같은 레코드에서 두 값을 함께 읽으면 짝이 안 맞는
+    /// 설치가 없다. 덕분에 `유료 + 무료`는 언제나 그 타일의 숫자와 정확히 같고,
+    /// 두 숫자가 어긋나 보이는 일이 생기지 않는다.
+    struct PaidSplit {
+        /// 한 창(전체 / 최근 7일 / 최근 30일)에서 갈린 수.
+        struct Slice {
+            let paid: Int
+            let free: Int
+
+            var total: Int { paid + free }
+            /// 유료 비중. 아무도 없으면 비율이랄 게 없다.
+            var ratio: Double? {
+                guard total > 0 else { return nil }
+                return Double(paid) / Double(total)
+            }
+        }
+
+        /// 이 값을 만든 앱과 그 앱에서 유료를 뜻한 키. 전체 프로젝트에서는
+        /// 앱마다 키가 다르므로 여럿이 된다.
+        struct Source {
+            let project: String
+            let displayName: String
+            let key: String
+            /// 스펙이 그 키에 붙인 이름("Pro 사용자"). 없으면 키 원문을 쓴다.
+            let label: String?
+            /// 스펙이 직접 지정한 키인가, 흔한 이름으로 추측한 것인가.
+            let isDeclared: Bool
+        }
+
+        let sources: [Source]
+        let all: Slice
+        let active7: Slice
+        let active30: Slice
+
+        /// 유료 여부를 보내는 앱이 하나도 없으면 보여 줄 것이 없다.
+        var isEmpty: Bool { sources.isEmpty || all.total == 0 }
+        /// 추측한 키가 하나라도 섞여 있으면 화면에서 그렇다고 말해야 한다.
+        var hasGuessedKey: Bool { sources.contains { !$0.isDeclared } }
+    }
+
     // MARK: - Cache keys
 
     /// What `distribution(for:by:)` was asked for. The keypath identifies the
@@ -266,6 +419,134 @@ extension FeedbackStore {
             }
         )
         return value
+        }
+    }
+
+    /// 일간·주간·월간 활성 사용자(DAU · WAU · MAU).
+    ///
+    /// 일 버킷이 이미 그날의 `installID` 집합을 들고 있으므로 창 하나는 집합
+    /// 합집합 한 번이고, 이벤트 원본 보관 기간과도 무관하다 — 90일이 지나 원본이
+    /// 사라진 날의 사용자도 그 날 버킷에는 남아 있다.
+    ///
+    /// 창은 언제나 **온전한 하루들**이다. `now − 30 × 86,400`이 아니라 오늘과 그
+    /// 앞 29일이라, 몇 초 간격의 두 렌더가 다른 숫자를 내지 않는다.
+    func activeUsers(for project: String?, calendar: Calendar = .current) -> ActiveUsers {
+        memoized(\.activeUsers, project) {
+            let days = rollups.days(for: project, excluding: hiddenProjects)
+
+            /// `offset`일 전에 끝나는 `length`일 창 안의 서로 다른 설치 수.
+            func distinct(length: Int, endingDaysAgo offset: Int) -> Int {
+                var installs: Set<String> = []
+                for key in UsageRollups.windowKeys(days: length, endingDaysAgo: offset,
+                                                   calendar: calendar) {
+                    guard let bucket = days[key] else { continue }
+                    installs.formUnion(bucket.installs)
+                }
+                return installs.count
+            }
+
+            func window(_ span: ActiveUsers.Span) -> ActiveUsers.Window {
+                ActiveUsers.Window(span: span,
+                                   current: distinct(length: span.days, endingDaysAgo: 0),
+                                   previous: distinct(length: span.days, endingDaysAgo: span.days))
+            }
+
+            // 추이는 같은 계산을 하루씩 물러나며 되풀이한 것이다. 30일치라도 한 점당
+            // 최대 30개 버킷의 합집합이고, 그 버킷은 이벤트가 도착할 때 이미 접혀
+            // 있으므로 원본은 한 건도 훑지 않는다.
+            let series = UsageRollups.recentDayKeys(ActiveUsers.trendDays, calendar: calendar)
+                .enumerated()
+                .map { index, entry -> ActiveUsers.Point in
+                    let ago = ActiveUsers.trendDays - 1 - index
+                    return ActiveUsers.Point(
+                        date: entry.date,
+                        day: distinct(length: ActiveUsers.Span.day.days, endingDaysAgo: ago),
+                        week: distinct(length: ActiveUsers.Span.week.days, endingDaysAgo: ago),
+                        month: distinct(length: ActiveUsers.Span.month.days, endingDaysAgo: ago))
+                }
+
+            return ActiveUsers(day: window(.day), week: window(.week), month: window(.month),
+                               series: series)
+        }
+    }
+
+    // MARK: - 유료 · 무료
+
+    /// 앱이 "유료"라고 표시해 보내는 플래그 이름 후보.
+    ///
+    /// 스펙(`paidFlag`)이 1순위이고 이건 그 다음이다. 앱 리포가 아직 스펙에
+    /// 한 줄을 안 적었어도 오늘 화면에 뭔가는 나와야 하기 때문인데, 추측이므로
+    /// 고른 키를 각주에 드러내고 "스펙에 적으라"고 말한다.
+    static let paidFlagCandidates = [
+        "flag.isPro", "flag.pro", "flag.isPaid", "flag.paid",
+        "flag.isPremium", "flag.premium", "flag.subscribed", "flag.isSubscriber",
+        "flag.purchased", "flag.isPlus"
+    ]
+
+    /// 이 프로젝트에서 유료를 뜻하는 키와, 그것을 어떻게 알았는지.
+    /// 스냅샷이 실제로 보낸 적 있는 키만 고른다 — 스펙에 적혀 있어도 앱이
+    /// 아직 안 보내면 전부 무료로 세어 버리기 때문이다.
+    func paidFlagKey(for project: String) -> (key: String, isDeclared: Bool)? {
+        let snaps = snapshots(for: project)
+        guard !snaps.isEmpty else { return nil }
+        let present = Set(snaps.flatMap { $0.metrics.keys })
+        if let declared = ProjectStatsSpecCatalog.spec(for: project)?.paidFlag,
+           present.contains(declared) {
+            return (declared, true)
+        }
+        if let guessed = Self.paidFlagCandidates.first(where: present.contains) {
+            return (guessed, false)
+        }
+        return nil
+    }
+
+    /// 유료·무료로 나눈 설치 수. 유료 여부를 보내는 앱이 없으면 nil.
+    ///
+    /// 전체 프로젝트에서는 앱마다 키가 다르므로 앱별로 갈라서 더한다. 유료 여부를
+    /// 아예 안 보내는 앱은 빠진다 — 그 앱의 설치를 무료로 세면 없는 사실을
+    /// 지어내는 것이고, 유료로 세면 말할 것도 없다. 그래서 이 카드의 합계는 위
+    /// 타일의 설치 수보다 작을 수 있고, 화면에 어느 앱을 셌는지 적는다.
+    func paidSplit(for project: String?) -> PaidSplit? {
+        memoized(\.paidSplit, project) {
+            let now = Date()
+            let weekAgo = now.addingTimeInterval(-7 * 86_400)
+            let monthAgo = now.addingTimeInterval(-30 * 86_400)
+
+            let scope = project.map { [$0] } ?? allProjectKeys
+            var sources: [PaidSplit.Source] = []
+            var all = (paid: 0, free: 0)
+            var week = (paid: 0, free: 0)
+            var month = (paid: 0, free: 0)
+
+            for key in scope {
+                guard let flag = paidFlagKey(for: key) else { continue }
+                sources.append(PaidSplit.Source(
+                    project: key,
+                    displayName: displayName(for: key),
+                    key: flag.key,
+                    label: ProjectStatsSpecCatalog.spec(for: key)?.label(forMetric: flag.key),
+                    isDeclared: flag.isDeclared))
+
+                for snapshot in snapshots(for: key) {
+                    // 0/1 플래그라 "1 이상이면 유료". 앱이 실수로 2를 보내도
+                    // 유료 한 명이지 두 명이 아니다.
+                    let isPaid = (snapshot.metrics[flag.key] ?? 0) >= 1
+                    let active = snapshot.lastActiveAt ?? .distantPast
+                    if isPaid { all.paid += 1 } else { all.free += 1 }
+                    if active >= weekAgo {
+                        if isPaid { week.paid += 1 } else { week.free += 1 }
+                    }
+                    if active >= monthAgo {
+                        if isPaid { month.paid += 1 } else { month.free += 1 }
+                    }
+                }
+            }
+
+            guard !sources.isEmpty else { return nil }
+            return PaidSplit(sources: sources.sorted { $0.displayName < $1.displayName },
+                             all: .init(paid: all.paid, free: all.free),
+                             active7: .init(paid: week.paid, free: week.free),
+                             active30: .init(paid: month.paid, free: month.free))
         }
     }
 

@@ -50,6 +50,10 @@ extension FeedbackStore {
         // Per scope — the key is the project, `nil` meaning 전체 프로젝트.
         var stats: [String?: Stats] = [:]
         var usage: [String?: ProjectUsage] = [:]
+        var activeUsers: [String?: ActiveUsers] = [:]
+        // 값이 옵셔널인 이유는 `carryingCapacity`와 같다 — "유료 여부를 보내는
+        // 앱이 없다"도 계산 결과이지 미계산이 아니다.
+        var paidSplit: [String?: PaidSplit?] = [:]
         var crashSummary: [String?: CrashSummary] = [:]
         var crashIssues: [String?: [CrashIssue]] = [:]
         var eventStats: [String?: [EventStat]] = [:]
@@ -128,6 +132,7 @@ extension FeedbackStore {
         derived.trafficByProject = nil
         derived.overallTraffic = nil
         derived.usage = [:]
+        derived.activeUsers = [:]
         derived.eventStats = [:]
         derived.eventTallies = [:]
         derived.trend = [:]

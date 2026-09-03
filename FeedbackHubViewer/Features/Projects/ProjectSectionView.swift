@@ -72,13 +72,24 @@ struct ProjectSectionView: View {
                     Text(section.rawValue)
                         .font(.headline)
                 }
+                // 두 줄 모두 칸 너비를 제안받아야 한다. 이게 없으면 글자는 제
+                // 이상적인 너비를 그대로 쓰고, 바깥 `frame`은 배경만 칸에 맞춰
+                // 그린다 — 배경 밖으로 글자가 삐져나오고, 맨 끝 칸은 화면
+                // 바깥으로 잘린다. "화면 양옆이 잘리는" 게 이것이었다.
+                .frame(maxWidth: .infinity)
                 Text(countLabel(for: section, count: count))
                     .font(.subheadline)
                     .opacity(isSelected ? 0.9 : 0.7)
+                    .frame(maxWidth: .infinity)
             }
             .lineLimit(1)
-            .minimumScaleFactor(0.7)
+            // 0.7에서 멈추면 좁은 아이폰에서 "App Store 검색"이 못 들어간다.
+            // 줄 하나짜리 보조 문구라 조금 더 줄어도 읽힌다.
+            .minimumScaleFactor(0.6)
             .frame(maxWidth: .infinity)
+            // 글자가 모서리에 닿지 않게. 배경 안쪽 여백이 없으면 딱 맞게
+            // 들어가도 잘린 것처럼 보인다.
+            .padding(.horizontal, 8)
             .padding(.vertical, 10)
             .background(isSelected ? Color.accentColor : Color.secondary.opacity(0.12),
                         in: RoundedRectangle(cornerRadius: 12))
@@ -106,7 +117,7 @@ struct ProjectSectionView: View {
             let unread = store.unreadCount(for: project)
             return unread > 0 ? "\(count)건 · 안 읽음 \(unread)" : "\(count)건"
         case .stats:
-            return count > 0 ? "설치 \(count)개" : "사용 통계"
+            return count > 0 ? "설치 \(count)대" : "사용 통계"
         case .crashes:
             return count > 0 ? "\(count)건" : "없음"
         case .keywords:
@@ -153,7 +164,7 @@ struct ProjectSectionView: View {
             guard usage.hasUsageData else {
                 return "사용 통계 없음 · 피드백 \(store.scopedFeedback.count)건"
             }
-            return "설치 \(usage.installs) · 7일 활성 \(usage.active7) · 이벤트 \(usage.totalEvents)"
+            return "설치 \(usage.installs)대 · 7일 활성 \(usage.active7)명 · 이벤트 \(usage.totalEvents)건"
         case .crashes:
             let summary = store.crashSummary(for: project)
             guard !summary.isEmpty else { return "올라온 진단 없음" }
