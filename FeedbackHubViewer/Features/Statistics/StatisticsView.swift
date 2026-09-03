@@ -29,6 +29,10 @@ struct StatisticsDashboard: View {
     @State private var trendUnit: FeedbackStore.TrendUnit = .day
     /// How many individual events the 사용 내역 card is showing.
     @State private var eventLogLimit = 20
+    /// 겹쳐 그린 두 차트에서 지금 켜져 있는 계열. 축은 켜진 것에만 맞춰 잡히므로,
+    /// 한 계열만 남기면 그 계열의 그래프가 된다 (`ChartLegend`).
+    @State private var activeUsersSeries = ChartSeriesSelection()
+    @State private var trendSeries = ChartSeriesSelection()
 
     #if os(macOS)
     private let tileColumns = [GridItem(.adaptive(minimum: 150), spacing: 10)]
@@ -307,33 +311,47 @@ struct StatisticsDashboard: View {
     /// 정의상 당연하다 — 짧은 창은 긴 창의 부분집합이다. 그러니 볼 것은 높낮이가
     /// 아니라 **간격**이다: 세 선이 붙으면 오는 사람이 매일 오는 그 사람들이고,
     /// 벌어지면 한 번 왔다 안 오는 사람이 그만큼 쌓였다는 뜻이다.
+    /// 세 계열의 이름·색. 차트와 범례가 같은 목록을 읽어야 색이 어긋나지 않는다.
+    ///
+    /// 일간이 강조색이 아니라 주황인 이유: 이 화면의 강조색은 파랑이라 주간 선과
+    /// 구별이 안 됐다. 셋은 순서가 아니라 서로 다른 창이므로 색도 서로 멀어야 한다.
+    private static let activeUserSeries = [
+        ChartSeries("day", "일간 (DAU)", .orange),
+        ChartSeries("week", "주간 (WAU)", .blue),
+        ChartSeries("month", "월간 (MAU)", .teal)
+    ]
+
     @ViewBuilder
     private func activeUsersChart(_ active: FeedbackStore.ActiveUsers) -> some View {
-        let peak = active.series.map(\.month).max() ?? 0
+        let peak = activeUsersPeak(active)
+
         Chart {
-            ForEach(active.series) { point in
-                LineMark(x: .value("날짜", point.date, unit: .day),
-                         y: .value("사용자", point.month),
-                         series: .value("계열", "월간"))
-                    .foregroundStyle(Color.teal)
-                    .interpolationMethod(.monotone)
+            if activeUsersSeries.isVisible("month") {
+                ForEach(active.series) { point in
+                    LineMark(x: .value("날짜", point.date, unit: .day),
+                             y: .value("사용자", point.month),
+                             series: .value("계열", "월간"))
+                        .foregroundStyle(Color.teal)
+                        .interpolationMethod(.monotone)
+                }
             }
-            ForEach(active.series) { point in
-                LineMark(x: .value("날짜", point.date, unit: .day),
-                         y: .value("사용자", point.week),
-                         series: .value("계열", "주간"))
-                    .foregroundStyle(Color.blue)
-                    .interpolationMethod(.monotone)
+            if activeUsersSeries.isVisible("week") {
+                ForEach(active.series) { point in
+                    LineMark(x: .value("날짜", point.date, unit: .day),
+                             y: .value("사용자", point.week),
+                             series: .value("계열", "주간"))
+                        .foregroundStyle(Color.blue)
+                        .interpolationMethod(.monotone)
+                }
             }
-            ForEach(active.series) { point in
-                LineMark(x: .value("날짜", point.date, unit: .day),
-                         y: .value("사용자", point.day),
-                         series: .value("계열", "일간"))
-                    // 강조색이 아니라 주황: 이 화면의 강조색은 파랑이라 주간 선과
-                    // 구별이 안 됐다. 세 선은 순서가 아니라 서로 다른 창이므로
-                    // 색도 서로 최대한 멀어야 한다.
-                    .foregroundStyle(Color.orange)
-                    .interpolationMethod(.monotone)
+            if activeUsersSeries.isVisible("day") {
+                ForEach(active.series) { point in
+                    LineMark(x: .value("날짜", point.date, unit: .day),
+                             y: .value("사용자", point.day),
+                             series: .value("계열", "일간"))
+                        .foregroundStyle(Color.orange)
+                        .interpolationMethod(.monotone)
+                }
             }
         }
         // 0에서 시작하지 않으면 몇 명 오르내린 것이 절벽처럼 보인다.
@@ -341,14 +359,23 @@ struct StatisticsDashboard: View {
         .chartYAxis { AxisMarks(position: .leading) }
         .frame(height: trendHeight)
 
-        FlowLayout(spacing: 12, lineSpacing: 4) {
-            legendDot(.orange, "일간 (DAU)")
-            legendDot(.blue, "주간 (WAU)")
-            legendDot(.teal, "월간 (MAU)")
+        ChartLegend(series: Self.activeUserSeries, selection: $activeUsersSeries)
+    }
+
+    /// 축의 위끝 — **켜진 계열**의 최댓값. 이게 이 범례가 스위치인 이유다:
+    /// 월간을 끄면 눈금이 DAU 크기로 내려와, 바닥에 눌려 있던 선이 제 모양을
+    /// 되찾는다.
+    private func activeUsersPeak(_ active: FeedbackStore.ActiveUsers) -> Int {
+        let day = activeUsersSeries.isVisible("day")
+        let week = activeUsersSeries.isVisible("week")
+        let month = activeUsersSeries.isVisible("month")
+        var peak = 0
+        for point in active.series {
+            if day { peak = max(peak, point.day) }
+            if week { peak = max(peak, point.week) }
+            if month { peak = max(peak, point.month) }
         }
-        .font(.caption2)
-        .foregroundStyle(.secondary)
-        .frame(maxWidth: .infinity, alignment: .leading)
+        return peak
     }
 
     // MARK: - 유료 · 무료
@@ -456,38 +483,40 @@ struct StatisticsDashboard: View {
             if points.isEmpty {
                 emptyNote("아직 기록된 이벤트가 없습니다.")
             } else {
+                let peak = trendPeak(points)
+
                 Chart {
-                    ForEach(points) { point in
-                        BarMark(x: .value("기간", point.date, unit: trendUnit.component),
-                                y: .value("사용 건수", point.events))
-                            .foregroundStyle(Color.accentColor.opacity(0.35))
+                    if trendSeries.isVisible("events") {
+                        ForEach(points) { point in
+                            BarMark(x: .value("기간", point.date, unit: trendUnit.component),
+                                    y: .value("사용 건수", point.events))
+                                .foregroundStyle(Color.accentColor.opacity(0.35))
+                        }
                     }
-                    ForEach(points) { point in
-                        LineMark(x: .value("기간", point.date, unit: trendUnit.component),
-                                 y: .value("활동한 사용자", point.activeInstalls),
-                                 series: .value("계열", "활동한 사용자"))
-                            .foregroundStyle(Color.blue)
-                            .interpolationMethod(.monotone)
+                    if trendSeries.isVisible("active") {
+                        ForEach(points) { point in
+                            LineMark(x: .value("기간", point.date, unit: trendUnit.component),
+                                     y: .value("활동한 사용자", point.activeInstalls),
+                                     series: .value("계열", "활동한 사용자"))
+                                .foregroundStyle(Color.blue)
+                                .interpolationMethod(.monotone)
+                        }
                     }
-                    ForEach(points) { point in
-                        LineMark(x: .value("기간", point.date, unit: trendUnit.component),
-                                 y: .value("신규 설치", point.newInstalls),
-                                 series: .value("계열", "신규 설치"))
-                            .foregroundStyle(Color.green)
-                            .interpolationMethod(.monotone)
+                    if trendSeries.isVisible("new") {
+                        ForEach(points) { point in
+                            LineMark(x: .value("기간", point.date, unit: trendUnit.component),
+                                     y: .value("신규 설치", point.newInstalls),
+                                     series: .value("계열", "신규 설치"))
+                                .foregroundStyle(Color.green)
+                                .interpolationMethod(.monotone)
+                        }
                     }
                 }
+                .chartYScale(domain: 0...Double(max(1, peak)))
                 .chartYAxis { AxisMarks(position: .leading) }
                 .frame(height: trendHeight)
 
-                FlowLayout(spacing: 12, lineSpacing: 4) {
-                    legendDot(Color.accentColor.opacity(0.5), "사용 건수")
-                    legendDot(.blue, "활동한 사용자")
-                    legendDot(.green, "신규 설치")
-                }
-                .font(.caption2)
-                .foregroundStyle(.secondary)
-                .frame(maxWidth: .infinity, alignment: .leading)
+                ChartLegend(series: Self.trendChartSeries, selection: $trendSeries)
 
                 Text("발생 시각(occurredAt) 기준입니다. 키보드처럼 나중에 소급 전송된 활동도 실제 사용일에 표시됩니다.")
                     .font(.caption2)
@@ -496,12 +525,26 @@ struct StatisticsDashboard: View {
         }
     }
 
-    private func legendDot(_ color: Color, _ label: String) -> some View {
-        HStack(spacing: 4) {
-            Circle().fill(color).frame(width: 7, height: 7)
-            Text(label)
+    /// 사용 건수는 사람 수보다 한 자릿수 크기 마련이라, 켜 두면 두 선이 바닥에
+    /// 눌린다. 끄면 축이 사람 수에 맞춰 내려온다.
+    private func trendPeak(_ points: [FeedbackStore.TrendPoint]) -> Int {
+        let events = trendSeries.isVisible("events")
+        let active = trendSeries.isVisible("active")
+        let new = trendSeries.isVisible("new")
+        var peak = 0
+        for point in points {
+            if events { peak = max(peak, point.events) }
+            if active { peak = max(peak, point.activeInstalls) }
+            if new { peak = max(peak, point.newInstalls) }
         }
+        return peak
     }
+
+    private static let trendChartSeries = [
+        ChartSeries("events", "사용 건수", Color.accentColor.opacity(0.5)),
+        ChartSeries("active", "활동한 사용자", .blue),
+        ChartSeries("new", "신규 설치", .green)
+    ]
 
     // MARK: - 이벤트 · 지표
 

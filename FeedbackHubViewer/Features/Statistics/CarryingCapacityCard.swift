@@ -21,6 +21,9 @@ struct CarryingCapacityCard: View {
     let project: String?
 
     @State private var period: CarryingCapacity.Period = .week
+    /// 지금 켜져 있는 계열. 상한선이 실제 궤적보다 한참 위면 궤적이 바닥에
+    /// 눌리는데, 그때 상한을 잠깐 끄면 궤적 자체를 읽을 수 있다.
+    @State private var series = ChartSeriesSelection()
 
     #if os(macOS)
     private let tileColumns = [GridItem(.adaptive(minimum: 150), spacing: 10)]
@@ -126,27 +129,31 @@ struct CarryingCapacityCard: View {
                 .foregroundStyle(.secondary)
         } else {
             Chart {
-                ForEach(done) { point in
-                    LineMark(x: .value("기간", point.start, unit: result.period.component),
-                             y: .value("활동 사용자", point.active),
-                             series: .value("계열", "실제"))
-                        .foregroundStyle(Color.blue)
-                        .interpolationMethod(.monotone)
+                if series.isVisible("actual") {
+                    ForEach(done) { point in
+                        LineMark(x: .value("기간", point.start, unit: result.period.component),
+                                 y: .value("활동 사용자", point.active),
+                                 series: .value("계열", "실제"))
+                            .foregroundStyle(Color.blue)
+                            .interpolationMethod(.monotone)
+                    }
+                    if let partial {
+                        PointMark(x: .value("기간", partial.start, unit: result.period.component),
+                                  y: .value("활동 사용자", partial.active))
+                            .foregroundStyle(Color.blue.opacity(0.35))
+                            .symbolSize(28)
+                    }
                 }
-                ForEach(result.projection) { point in
-                    LineMark(x: .value("기간", point.date, unit: result.period.component),
-                             y: .value("활동 사용자", point.active),
-                             series: .value("계열", "전망"))
-                        .foregroundStyle(Color.blue.opacity(0.55))
-                        .lineStyle(StrokeStyle(lineWidth: 1.5, dash: [4, 3]))
+                if series.isVisible("projection") {
+                    ForEach(result.projection) { point in
+                        LineMark(x: .value("기간", point.date, unit: result.period.component),
+                                 y: .value("활동 사용자", point.active),
+                                 series: .value("계열", "전망"))
+                            .foregroundStyle(Color.blue.opacity(0.55))
+                            .lineStyle(StrokeStyle(lineWidth: 1.5, dash: [4, 3]))
+                    }
                 }
-                if let partial {
-                    PointMark(x: .value("기간", partial.start, unit: result.period.component),
-                              y: .value("활동 사용자", partial.active))
-                        .foregroundStyle(Color.blue.opacity(0.35))
-                        .symbolSize(28)
-                }
-                if let capacity = result.capacity {
+                if series.isVisible("capacity"), let capacity = result.capacity {
                     RuleMark(y: .value("상한", capacity))
                         .foregroundStyle(Color.orange)
                         .lineStyle(StrokeStyle(lineWidth: 1, dash: [3, 3]))
@@ -161,32 +168,33 @@ struct CarryingCapacityCard: View {
             .chartYAxis { AxisMarks(position: .leading) }
             .frame(height: chartHeight)
 
-            FlowLayout(spacing: 12, lineSpacing: 4) {
-                legendDot(.blue, "활동 사용자")
-                legendDot(Color.blue.opacity(0.55), "전망 (지금 속도가 이어질 때)")
-                legendDot(.orange, "상한")
-                if partial != nil { legendDot(Color.blue.opacity(0.35), "진행 중인 \(result.period.unit)") }
-            }
-            .font(.caption2)
-            .foregroundStyle(.secondary)
-            .frame(maxWidth: .infinity, alignment: .leading)
+            ChartLegend(series: Self.chartSeries(hasPartial: partial != nil,
+                                                 unit: result.period.unit),
+                        selection: $series)
         }
     }
 
-    /// 상한이 지금보다 훨씬 위면 실제 궤적이 바닥에 눌린다. 둘 다 보이게 잡되
-    /// 여백은 10%만 준다.
+    /// 축은 **켜진 계열**만 보고 잡는다. 상한이 궤적보다 한참 위일 때 상한을 끄면
+    /// 눈금이 궤적 크기로 내려오는 것이 이 카드에서 계열을 끄는 이유다.
+    /// 여백은 10%만.
     private func yMaximum(_ result: CarryingCapacity) -> Double {
-        let observed = Double(result.history.map(\.active).max() ?? 0)
-        let projected = result.projection.map(\.active).max() ?? 0
-        let top = max(observed, projected, result.capacity ?? 0)
-        return max(1, top * 1.1)
+        var tops: [Double] = []
+        if series.isVisible("actual") { tops.append(Double(result.history.map(\.active).max() ?? 0)) }
+        if series.isVisible("projection") { tops.append(result.projection.map(\.active).max() ?? 0) }
+        if series.isVisible("capacity"), let capacity = result.capacity { tops.append(capacity) }
+        return max(1, (tops.max() ?? 0) * 1.1)
     }
 
-    private func legendDot(_ color: Color, _ label: String) -> some View {
-        HStack(spacing: 4) {
-            Circle().fill(color).frame(width: 7, height: 7)
-            Text(label)
-        }
+    /// 진행 중인 칸은 실제 궤적에 딸린 표시라 따로 켜고 끄지 않는다 — 범례에는
+    /// 그런 점이 있다는 사실만 적는다.
+    private static func chartSeries(hasPartial: Bool, unit: String) -> [ChartSeries] {
+        var list = [
+            ChartSeries("actual", hasPartial ? "활동 사용자 (연한 점 = 진행 중인 \(unit))" : "활동 사용자", .blue),
+            ChartSeries("projection", "전망 (지금 속도가 이어질 때)", Color.blue.opacity(0.55), isDashed: true),
+            ChartSeries("capacity", "상한", .orange, isDashed: true)
+        ]
+        if !hasPartial { list[0] = ChartSeries("actual", "활동 사용자", .blue) }
+        return list
     }
 
     // MARK: - 주의와 설명
