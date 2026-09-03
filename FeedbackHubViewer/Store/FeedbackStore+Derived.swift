@@ -50,6 +50,7 @@ extension FeedbackStore {
         // Per scope — the key is the project, `nil` meaning 전체 프로젝트.
         var stats: [String?: Stats] = [:]
         var usage: [String?: ProjectUsage] = [:]
+        var activeUsers: [String?: ActiveUsers] = [:]
         var crashSummary: [String?: CrashSummary] = [:]
         var crashIssues: [String?: [CrashIssue]] = [:]
         var eventStats: [String?: [EventStat]] = [:]
@@ -128,6 +129,7 @@ extension FeedbackStore {
         derived.trafficByProject = nil
         derived.overallTraffic = nil
         derived.usage = [:]
+        derived.activeUsers = [:]
         derived.eventStats = [:]
         derived.eventTallies = [:]
         derived.trend = [:]

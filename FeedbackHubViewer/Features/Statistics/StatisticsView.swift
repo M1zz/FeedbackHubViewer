@@ -71,6 +71,7 @@ struct StatisticsDashboard: View {
 
                         if usage.hasUsageData {
                             userTiles
+                            activeUsersCard
                             specCards
                             weekOverWeek
                             CarryingCapacityCard(project: scope)
@@ -234,6 +235,109 @@ struct StatisticsDashboard: View {
         }
     }
 
+    // MARK: - 활성 사용자 (DAU · WAU · MAU)
+
+    /// 같은 것을 세 가지 창으로 잰 한 장.
+    ///
+    /// 셋을 함께 놓는 이유는 하나만으로는 답이 안 나오기 때문이다. DAU는 오늘
+    /// 하루의 사정(주말, 배포, 푸시 한 번)에 그대로 흔들리고, MAU는 이미 떠난
+    /// 사람도 30일 동안 안고 있어 늦게 떨어진다. 방향은 셋을 겹쳐 봐야 보이고,
+    /// "얼마나 자주 오는가"는 둘의 비(고착도)에서만 나온다.
+    private var activeUsersCard: some View {
+        let active = store.activeUsers(for: scope)
+        return Card(title: "활성 사용자 (DAU · WAU · MAU)", systemImage: "person.3") {
+            if active.isEmpty {
+                emptyNote("최근 30일 안에 도착한 이벤트가 없습니다.")
+            } else {
+                ViewThatFits(in: .horizontal) {
+                    HStack(alignment: .top, spacing: 16) { activeUsersFigures(active) }
+                    VStack(alignment: .leading, spacing: 12) { activeUsersFigures(active) }
+                }
+                stickinessRow(active)
+                activeUsersChart(active)
+                footnote("각 창 안에서 이벤트를 보낸 서로 다른 설치를 셉니다. 창이 서로 겹치므로 세 숫자를 더하면 안 돼요 — 오늘 쓴 사람은 주간·월간에도 들어 있습니다. 오늘은 아직 지나지 않은 하루라 DAU는 하루가 끝날 때까지 계속 올라가고, 그래서 어제와 견주는 화살표는 늦은 시각일수록 정확해집니다. 위 '최근 7일 활성' 타일은 스냅샷이 적어 보낸 마지막 활동 시각 기준이라 여기 WAU와 숫자가 다를 수 있어요.")
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func activeUsersFigures(_ active: FeedbackStore.ActiveUsers) -> some View {
+        ForEach(active.windows) { window in
+            Figure(window.span.label, "\(window.current)곳",
+                   note: "\(window.span.previousLabel) \(window.previous)곳") {
+                DeltaLabel(value: window.delta, polarity: .higherIsBetter)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    /// 고착도 — 월간 활성 사용자가 한 달에 며칠이나 오는가. 낮다고 나쁜 게
+    /// 아니라 앱의 성격이라, 좋고 나쁨을 색으로 말하지 않고 비율만 그린다.
+    @ViewBuilder
+    private func stickinessRow(_ active: FeedbackStore.ActiveUsers) -> some View {
+        if let ratio = active.stickiness {
+            VStack(alignment: .leading, spacing: 3) {
+                HStack(alignment: .firstTextBaseline) {
+                    Text("고착도 (평균 DAU ÷ MAU)")
+                        .font(.callout)
+                    Spacer(minLength: 8)
+                    Text(String(format: "%.0f%%", (ratio * 100).rounded()))
+                        .font(.callout.monospacedDigit().weight(.semibold))
+                }
+                MeterBar(ratio: ratio, height: 5)
+                footnote("최근 30일에 한 번이라도 쓴 사람이 30일 중 평균 \(String(format: "%.1f", ratio * 30))일 씁니다. 매일 여는 도구는 높고, 필요할 때만 여는 도구는 낮아요 — 낮다고 나쁜 게 아니라 앱의 성격입니다. 분자는 오늘이 아니라 지나간 날들의 하루 평균이라, 아직 끝나지 않은 오늘 때문에 아침마다 0으로 떨어지지 않아요.")
+            }
+        }
+    }
+
+    /// 세 창을 하루씩 물러나며 다시 잰 30일 추이. 긴 창이 언제나 위에 놓이는 것은
+    /// 정의상 당연하다 — 짧은 창은 긴 창의 부분집합이다. 그러니 볼 것은 높낮이가
+    /// 아니라 **간격**이다: 세 선이 붙으면 오는 사람이 매일 오는 그 사람들이고,
+    /// 벌어지면 한 번 왔다 안 오는 사람이 그만큼 쌓였다는 뜻이다.
+    @ViewBuilder
+    private func activeUsersChart(_ active: FeedbackStore.ActiveUsers) -> some View {
+        let peak = active.series.map(\.month).max() ?? 0
+        Chart {
+            ForEach(active.series) { point in
+                LineMark(x: .value("날짜", point.date, unit: .day),
+                         y: .value("사용자", point.month),
+                         series: .value("계열", "월간"))
+                    .foregroundStyle(Color.teal)
+                    .interpolationMethod(.monotone)
+            }
+            ForEach(active.series) { point in
+                LineMark(x: .value("날짜", point.date, unit: .day),
+                         y: .value("사용자", point.week),
+                         series: .value("계열", "주간"))
+                    .foregroundStyle(Color.blue)
+                    .interpolationMethod(.monotone)
+            }
+            ForEach(active.series) { point in
+                LineMark(x: .value("날짜", point.date, unit: .day),
+                         y: .value("사용자", point.day),
+                         series: .value("계열", "일간"))
+                    // 강조색이 아니라 주황: 이 화면의 강조색은 파랑이라 주간 선과
+                    // 구별이 안 됐다. 세 선은 순서가 아니라 서로 다른 창이므로
+                    // 색도 서로 최대한 멀어야 한다.
+                    .foregroundStyle(Color.orange)
+                    .interpolationMethod(.monotone)
+            }
+        }
+        // 0에서 시작하지 않으면 몇 명 오르내린 것이 절벽처럼 보인다.
+        .chartYScale(domain: 0...Double(max(1, peak)))
+        .chartYAxis { AxisMarks(position: .leading) }
+        .frame(height: trendHeight)
+
+        FlowLayout(spacing: 12, lineSpacing: 4) {
+            legendDot(.orange, "일간 (DAU)")
+            legendDot(.blue, "주간 (WAU)")
+            legendDot(.teal, "월간 (MAU)")
+        }
+        .font(.caption2)
+        .foregroundStyle(.secondary)
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
     /// This week against the one before it, from the event stream.
     private var weekOverWeek: some View {
         Card(title: "지난주 대비", systemImage: "arrow.up.arrow.down") {
@@ -244,10 +348,10 @@ struct StatisticsDashboard: View {
         }
     }
 
+    /// 활동한 사용자는 여기 없다: 7일 창의 활동 설치 수는 위 카드의 WAU와 정의도
+    /// 값도 같은 숫자라, 두 번 적으면 읽는 사람이 다른 것인 줄 알고 비교하게 된다.
     @ViewBuilder
     private var weekOverWeekItems: some View {
-        comparison("활동한 사용자", "\(usage.activeInstalls7)곳",
-                   "지난주 \(usage.previousActiveInstalls7)곳", usage.activeInstallsDelta)
         comparison("사용 건수", "\(usage.events7)건",
                    "지난주 \(usage.previousEvents7)건", usage.eventsDelta)
         comparison("신규 설치", "\(usage.new7)곳",

@@ -167,6 +167,110 @@ extension FeedbackStore {
         let newInstalls: Int
     }
 
+    /// 일간·주간·월간 활성 사용자 — DAU · WAU · MAU.
+    ///
+    /// 셋은 다른 지표가 아니라 **같은 것을 재는 세 가지 창**이다: 그 창 안에서
+    /// 이벤트를 보낸 서로 다른 `installID`의 수. 창이 서로 겹치므로 세 숫자는
+    /// 절대 더하면 안 되고(오늘 쓴 사람은 이번 주에도 이번 달에도 들어 있다),
+    /// 창 안에서도 합이 아니라 언제나 합집합이다 — 월·화 이틀 쓴 설치는 두 명이
+    /// 아니라 한 명이다.
+    ///
+    /// 화면 위쪽 타일의 "최근 7일 활성"과 이름이 닮았지만 출처가 다르다. 그쪽은
+    /// 스냅샷의 `lastActiveAt`, 즉 설치가 스스로 적어 보낸 마지막 활동 시각이고,
+    /// 여기 WAU는 실제로 도착한 이벤트다. 이벤트를 보내지 않는 앱은 여기서 0으로
+    /// 나오는 것이 맞다.
+    struct ActiveUsers {
+
+        /// 창 하나의 길이.
+        ///
+        /// 월간이 달력의 달이 아니라 30일 고정인 이유: 창끼리 비교하려면 길이가
+        /// 같아야 한다. 2월 MAU와 3월 MAU가 다르게 나오면 그건 사용자가 아니라
+        /// 날짜 수가 달라진 것이고, 그런 변화는 읽는 사람을 속인다.
+        enum Span: String, CaseIterable, Identifiable {
+            case day, week, month
+
+            var id: String { rawValue }
+
+            var days: Int {
+                switch self {
+                case .day: return 1
+                case .week: return 7
+                case .month: return 30
+                }
+            }
+
+            var label: String {
+                switch self {
+                case .day: return "일간 (DAU)"
+                case .week: return "주간 (WAU)"
+                case .month: return "월간 (MAU)"
+                }
+            }
+
+            /// 바로 앞의 같은 길이 창을 부르는 말 — 숫자 밑에 붙는다.
+            var previousLabel: String {
+                switch self {
+                case .day: return "어제"
+                case .week: return "지난 7일"
+                case .month: return "지난 30일"
+                }
+            }
+        }
+
+        /// 한 창의 지금 값과, 바로 앞의 같은 길이 창.
+        struct Window: Identifiable {
+            let span: Span
+            let current: Int
+            let previous: Int
+
+            var id: String { span.id }
+            var delta: Int { current - previous }
+        }
+
+        let day: Window
+        let week: Window
+        let month: Window
+
+        /// 하루씩 물러나며 같은 세 창을 다시 잰 값(오래된 것부터). 오늘 하루의
+        /// 숫자만으로는 오르는 중인지 내리는 중인지 알 수 없다.
+        let series: [Point]
+
+        struct Point: Identifiable {
+            var id: Date { date }
+            let date: Date
+            let day: Int
+            let week: Int
+            let month: Int
+        }
+
+        var windows: [Window] { [day, week, month] }
+
+        /// 하루 평균 DAU — 오늘을 뺀, 지나간 날들만.
+        ///
+        /// 오늘은 아직 끝나지 않은 하루라 이른 아침이면 0이다. 그 0을 고착도에
+        /// 넣으면 "이 앱은 아무도 안 쓴다"가 되는데, 그건 앱이 아니라 시계가 하는
+        /// 말이다. 그래서 비율의 분자는 오늘 하루가 아니라 지나간 날들의 평균이다.
+        var averageDay: Double? {
+            let past = series.dropLast().map(\.day)
+            guard !past.isEmpty else { return nil }
+            return Double(past.reduce(0, +)) / Double(past.count)
+        }
+
+        /// 고착도 — 평균 DAU ÷ MAU. 한 달에 한 번 열어 보는 앱과 매일 여는 앱을
+        /// 가르는 한 숫자다. 0.2면 한 달 안에 쓴 사람이 30일 중 평균 6일 썼다는 뜻.
+        var stickiness: Double? {
+            guard month.current > 0, let averageDay else { return nil }
+            return averageDay / Double(month.current)
+        }
+
+        /// 30일 창에도 그 앞 30일에도 아무도 없으면 보여 줄 것이 없다.
+        var isEmpty: Bool { month.current == 0 && month.previous == 0 }
+
+        /// 추이를 며칠 치 그리는가. 가장 왼쪽 점의 30일 창도 온전히 채워져야 하므로
+        /// 실제로 읽는 과거는 이보다 29일 더 길다.
+        static let trendDays = 30
+    }
+
     // MARK: - Cache keys
 
     /// What `distribution(for:by:)` was asked for. The keypath identifies the
@@ -266,6 +370,54 @@ extension FeedbackStore {
             }
         )
         return value
+        }
+    }
+
+    /// 일간·주간·월간 활성 사용자(DAU · WAU · MAU).
+    ///
+    /// 일 버킷이 이미 그날의 `installID` 집합을 들고 있으므로 창 하나는 집합
+    /// 합집합 한 번이고, 이벤트 원본 보관 기간과도 무관하다 — 90일이 지나 원본이
+    /// 사라진 날의 사용자도 그 날 버킷에는 남아 있다.
+    ///
+    /// 창은 언제나 **온전한 하루들**이다. `now − 30 × 86,400`이 아니라 오늘과 그
+    /// 앞 29일이라, 몇 초 간격의 두 렌더가 다른 숫자를 내지 않는다.
+    func activeUsers(for project: String?, calendar: Calendar = .current) -> ActiveUsers {
+        memoized(\.activeUsers, project) {
+            let days = rollups.days(for: project, excluding: hiddenProjects)
+
+            /// `offset`일 전에 끝나는 `length`일 창 안의 서로 다른 설치 수.
+            func distinct(length: Int, endingDaysAgo offset: Int) -> Int {
+                var installs: Set<String> = []
+                for key in UsageRollups.windowKeys(days: length, endingDaysAgo: offset,
+                                                   calendar: calendar) {
+                    guard let bucket = days[key] else { continue }
+                    installs.formUnion(bucket.installs)
+                }
+                return installs.count
+            }
+
+            func window(_ span: ActiveUsers.Span) -> ActiveUsers.Window {
+                ActiveUsers.Window(span: span,
+                                   current: distinct(length: span.days, endingDaysAgo: 0),
+                                   previous: distinct(length: span.days, endingDaysAgo: span.days))
+            }
+
+            // 추이는 같은 계산을 하루씩 물러나며 되풀이한 것이다. 30일치라도 한 점당
+            // 최대 30개 버킷의 합집합이고, 그 버킷은 이벤트가 도착할 때 이미 접혀
+            // 있으므로 원본은 한 건도 훑지 않는다.
+            let series = UsageRollups.recentDayKeys(ActiveUsers.trendDays, calendar: calendar)
+                .enumerated()
+                .map { index, entry -> ActiveUsers.Point in
+                    let ago = ActiveUsers.trendDays - 1 - index
+                    return ActiveUsers.Point(
+                        date: entry.date,
+                        day: distinct(length: ActiveUsers.Span.day.days, endingDaysAgo: ago),
+                        week: distinct(length: ActiveUsers.Span.week.days, endingDaysAgo: ago),
+                        month: distinct(length: ActiveUsers.Span.month.days, endingDaysAgo: ago))
+                }
+
+            return ActiveUsers(day: window(.day), week: window(.week), month: window(.month),
+                               series: series)
         }
     }
 
