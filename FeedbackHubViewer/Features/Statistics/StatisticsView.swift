@@ -241,13 +241,13 @@ struct StatisticsDashboard: View {
 
     private var userTiles: some View {
         LazyVGrid(columns: tileColumns, spacing: 10) {
-            StatTile(title: "설치 (사용 중인 기기)", value: "\(usage.installs)", unit: "곳",
+            StatTile(title: "설치 (사용 중인 기기)", value: "\(usage.installs)", unit: "대",
                      systemImage: "iphone", tint: .accentColor)
-            StatTile(title: "최근 7일 활성", value: "\(usage.active7)", unit: "곳",
+            StatTile(title: "최근 7일 활성", value: "\(usage.active7)", unit: "명",
                      systemImage: "bolt.fill", tint: .blue)
-            StatTile(title: "최근 30일 활성", value: "\(usage.active30)", unit: "곳",
+            StatTile(title: "최근 30일 활성", value: "\(usage.active30)", unit: "명",
                      systemImage: "calendar", tint: .teal)
-            StatTile(title: "최근 7일 신규", value: "\(usage.new7)", unit: "곳",
+            StatTile(title: "최근 7일 신규", value: "\(usage.new7)", unit: "대",
                      systemImage: "sparkles", tint: .green)
             StatTile(title: "누적 실행", value: "\(usage.totalLaunches)", unit: "회",
                      systemImage: "play.circle", tint: .indigo)
@@ -284,8 +284,8 @@ struct StatisticsDashboard: View {
     @ViewBuilder
     private func activeUsersFigures(_ active: FeedbackStore.ActiveUsers) -> some View {
         ForEach(active.windows) { window in
-            Figure(window.span.label, "\(window.current)곳",
-                   note: "\(window.span.previousLabel) \(window.previous)곳") {
+            Figure(window.span.label, "\(window.current)명",
+                   note: "\(window.span.previousLabel) \(window.previous)명") {
                 DeltaLabel(value: window.delta, polarity: .higherIsBetter)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -408,7 +408,7 @@ struct StatisticsDashboard: View {
 
     private func activeUsersReadout(_ point: FeedbackStore.ActiveUsers.Point) -> [ChartReadout.Item] {
         activeUsersMarks(point).map {
-            ChartReadout.Item(label: $0.label, value: "\($0.value)곳", color: $0.color)
+            ChartReadout.Item(label: $0.label, value: "\($0.value)명", color: $0.color)
         }
     }
 
@@ -464,7 +464,7 @@ struct StatisticsDashboard: View {
         SpecBar(label: label,
                 value: slice?.ratio.map { String(format: "%.0f%%", ($0 * 100).rounded()) } ?? "—",
                 ratio: slice?.ratio ?? 0,
-                hint: slice.map { "유료 \($0.paid)곳 · 무료 \($0.free)곳" } ?? "유료 여부를 안 보냄")
+                hint: slice.map { "유료 \($0.paid)명 · 무료 \($0.free)명" } ?? "유료 여부를 안 보냄")
     }
 
     /// 이 숫자가 어디서 나왔는지 — 어떤 키로 갈랐고, 어느 앱을 셌는지.
@@ -503,8 +503,8 @@ struct StatisticsDashboard: View {
     private var weekOverWeekItems: some View {
         comparison("사용 건수", "\(usage.events7)건",
                    "지난주 \(usage.previousEvents7)건", usage.eventsDelta)
-        comparison("신규 설치", "\(usage.new7)곳",
-                   "지난주 \(usage.previousNew7)곳", usage.newDelta)
+        comparison("신규 설치", "\(usage.new7)대",
+                   "지난주 \(usage.previousNew7)대", usage.newDelta)
     }
 
     /// One metric's 이번 주 · 지난주 · 변화. More usage is good news on all
@@ -624,9 +624,9 @@ struct StatisticsDashboard: View {
             case "events":
                 items.append(.init(label: series.label, value: "\(point.events)건", color: series.color))
             case "active":
-                items.append(.init(label: series.label, value: "\(point.activeInstalls)곳", color: series.color))
+                items.append(.init(label: series.label, value: "\(point.activeInstalls)명", color: series.color))
             default:
-                items.append(.init(label: series.label, value: "\(point.newInstalls)곳", color: series.color))
+                items.append(.init(label: series.label, value: "\(point.newInstalls)대", color: series.color))
             }
         }
         return items
@@ -658,7 +658,7 @@ struct StatisticsDashboard: View {
                             HStack(spacing: 8) {
                                 Text("\(event.count)건")
                                     .font(.callout.monospacedDigit().weight(.semibold))
-                                Text("설치 \(event.installs)")
+                                Text("\(event.installs)명")
                                     .font(.caption.monospacedDigit())
                                     .foregroundStyle(.secondary)
                                 Spacer(minLength: 4)
@@ -674,7 +674,7 @@ struct StatisticsDashboard: View {
                         if index < events.count - 1 { Divider() }
                     }
                 }
-                Text("이름은 앱이 보낸 그대로입니다. 콜론 뒤는 슬라이스(예: paywall_view:memo).")
+                Text("왼쪽 큰 수는 몇 번 일어났는지(건), 그 옆은 몇 사람이 했는지(명)입니다. 이름은 앱이 보낸 그대로이고, 콜론 뒤는 슬라이스(예: paywall_view:memo).")
                     .font(.caption2)
                     .foregroundStyle(.tertiary)
             }

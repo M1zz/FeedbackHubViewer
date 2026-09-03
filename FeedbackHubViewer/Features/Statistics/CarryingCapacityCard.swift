@@ -70,7 +70,7 @@ struct CarryingCapacityCard: View {
                 Text(result.capacity.map { Self.count($0) } ?? "—")
                     .font(.figure(.largeTitle))
                     .foregroundStyle(result.capacity == nil ? Color.secondary : .accentColor)
-                if result.capacity != nil { Text("곳").font(.caption).foregroundStyle(.secondary) }
+                if result.capacity != nil { Text("명").font(.caption).foregroundStyle(.secondary) }
                 Spacer(minLength: 8)
                 Text(subtitle(result))
                     .font(.caption)
@@ -89,20 +89,20 @@ struct CarryingCapacityCard: View {
         }
     }
 
-    /// 막대 옆에 붙는 한 줄 — 지금 몇 곳이고 상한의 몇 %인가.
+    /// 막대 옆에 붙는 한 줄 — 지금 몇 명이고 상한의 몇 %인가.
     private func subtitle(_ result: CarryingCapacity) -> String {
         guard result.capacity != nil else {
-            return "지금 \(result.currentActive)곳 · 상한을 계산할 수 없음"
+            return "지금 \(result.currentActive)명 · 상한을 계산할 수 없음"
         }
-        guard let fill = result.fill else { return "지금 \(result.currentActive)곳" }
-        return "지금 \(result.currentActive)곳 · 상한의 \(Self.percent(fill))"
+        guard let fill = result.fill else { return "지금 \(result.currentActive)명" }
+        return "지금 \(result.currentActive)명 · 상한의 \(Self.percent(fill))"
     }
 
     // MARK: - 상한을 만든 숫자들
 
     private func tiles(_ result: CarryingCapacity) -> some View {
         LazyVGrid(columns: tileColumns, spacing: 10) {
-            StatTile(title: "\(result.period.label) 신규", value: Self.decimal(result.averageNew), unit: "곳",
+            StatTile(title: "\(result.period.label) 신규", value: Self.decimal(result.averageNew), unit: "명",
                      systemImage: "sparkles", tint: .green)
             StatTile(title: "\(result.period.label) 이탈률",
                      value: result.churnRate > 0 ? Self.percent(result.churnRate) : "—", unit: "",
@@ -111,7 +111,7 @@ struct CarryingCapacityCard: View {
                      value: result.averageLifetime.map { Self.decimal($0) } ?? "—",
                      unit: result.averageLifetime == nil ? "" : result.period.unit,
                      systemImage: "hourglass", tint: .indigo)
-            StatTile(title: "지금 활동 사용자", value: "\(result.currentActive)", unit: "곳",
+            StatTile(title: "지금 활동 사용자", value: "\(result.currentActive)", unit: "명",
                      systemImage: "person.2.fill", tint: .blue)
         }
     }
@@ -160,7 +160,7 @@ struct CarryingCapacityCard: View {
                         .foregroundStyle(Color.orange)
                         .lineStyle(StrokeStyle(lineWidth: 1, dash: [3, 3]))
                         .annotation(position: .top, alignment: .leading) {
-                            Text("상한 \(Self.count(capacity))곳")
+                            Text("상한 \(Self.count(capacity))명")
                                 .font(.caption2)
                                 .foregroundStyle(.orange)
                         }
@@ -215,20 +215,20 @@ struct CarryingCapacityCard: View {
         let actual = result.history.first { $0.start == date }
         if series.isVisible("actual"), let actual {
             items.append(.init(label: actual.isPartial ? "활동 사용자 (진행 중)" : "활동 사용자",
-                               value: "\(actual.active)곳",
+                               value: "\(actual.active)명",
                                color: .blue))
             if let churn = actual.churnRate {
                 items.append(.init(label: "이탈률", value: Self.percent(churn), color: .red))
             }
-            items.append(.init(label: "신규", value: "\(actual.new)곳", color: .green))
+            items.append(.init(label: "신규", value: "\(actual.new)명", color: .green))
         }
         if series.isVisible("projection"), actual == nil,
            let projected = result.projection.first(where: { $0.date == date }) {
-            items.append(.init(label: "전망", value: "\(Self.count(projected.active))곳",
+            items.append(.init(label: "전망", value: "\(Self.count(projected.active))명",
                                color: Color.blue.opacity(0.55)))
         }
         if series.isVisible("capacity"), let capacity = result.capacity {
-            items.append(.init(label: "상한", value: "\(Self.count(capacity))곳", color: .orange))
+            items.append(.init(label: "상한", value: "\(Self.count(capacity))명", color: .orange))
         }
         return items
     }

@@ -117,7 +117,7 @@ struct ProjectSectionView: View {
             let unread = store.unreadCount(for: project)
             return unread > 0 ? "\(count)건 · 안 읽음 \(unread)" : "\(count)건"
         case .stats:
-            return count > 0 ? "설치 \(count)곳" : "사용 통계"
+            return count > 0 ? "설치 \(count)대" : "사용 통계"
         case .crashes:
             return count > 0 ? "\(count)건" : "없음"
         case .keywords:
@@ -164,7 +164,7 @@ struct ProjectSectionView: View {
             guard usage.hasUsageData else {
                 return "사용 통계 없음 · 피드백 \(store.scopedFeedback.count)건"
             }
-            return "설치 \(usage.installs) · 7일 활성 \(usage.active7) · 이벤트 \(usage.totalEvents)"
+            return "설치 \(usage.installs)대 · 7일 활성 \(usage.active7)명 · 이벤트 \(usage.totalEvents)건"
         case .crashes:
             let summary = store.crashSummary(for: project)
             guard !summary.isEmpty else { return "올라온 진단 없음" }

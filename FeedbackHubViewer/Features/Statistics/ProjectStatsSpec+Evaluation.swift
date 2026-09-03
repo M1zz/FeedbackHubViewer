@@ -95,7 +95,7 @@ extension ProjectStatsSpec {
             let maximum = max(counts.max() ?? 0, 1)
             let rows = zip(distribution.buckets, counts).map { bucket, count in
                 Insight.Bar(label: bucket.label,
-                            value: "\(count)곳",
+                            value: "\(count)명",
                             ratio: Double(count) / Double(maximum))
             }
             result.append(.bars(title: distribution.title, note: distribution.note, rows: rows))
@@ -127,7 +127,7 @@ extension ProjectStatsSpec {
                 let count = counts[rule.name] ?? 0
                 guard count > 0 else { return nil }
                 return Insight.Bar(label: rule.name,
-                                   value: "\(count)곳 (\(Self.percent(Double(count) / total)))",
+                                   value: "\(count)명 (\(Self.percent(Double(count) / total)))",
                                    ratio: Double(count) / total,
                                    hint: rule.hint)
             }
@@ -245,7 +245,7 @@ extension ProjectStatsSpec {
             guard let key = tile.metric else { return "—" }
             let matching = Double(snapshots.filter { ($0[key] ?? 0) > 0 }.count)
             if tile.format == .percent { return Self.percent(count > 0 ? matching / count : 0) }
-            return "\(Int(matching))곳 (\(Self.percent(count > 0 ? matching / count : 0)))"
+            return "\(Int(matching))명 (\(Self.percent(count > 0 ? matching / count : 0)))"
         case .sum:
             guard let key = tile.metric else { return "—" }
             let total = snapshots.reduce(0.0) { $0 + ($1[key] ?? 0) }
@@ -269,7 +269,7 @@ extension ProjectStatsSpec {
             guard let name = tile.segment else { return "—" }
             let matching = Double(segmentNames.filter { $0 == name }.count)
             if tile.format == .percent { return Self.percent(count > 0 ? matching / count : 0) }
-            return "\(Int(matching))곳"
+            return "\(Int(matching))명"
         }
     }
 

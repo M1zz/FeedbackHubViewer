@@ -160,7 +160,7 @@ private struct ProjectCardBody: View {
             // 목록의 정렬 기준이 7일 사용량이라, 그 숫자가 여기서 제일 먼저 보인다.
             MetricRow(items: [
                 .init(value: "\(traffic.events7)", unit: "건", label: "7일 사용", tint: .accentColor),
-                .init(value: "\(traffic.installs)", unit: "곳", label: "설치", tint: .primary),
+                .init(value: "\(traffic.installs)", unit: "대", label: "설치", tint: .primary),
                 .init(value: "\(feedbackCount)", unit: "건", label: "피드백", tint: .primary),
                 .init(value: "\(unreadCount)", unit: "건", label: "안 읽음",
                       tint: unreadCount > 0 ? .red : .secondary),
@@ -185,7 +185,7 @@ private struct ProjectCardBody: View {
                            last7Days: Int,
                            latest: Date? = nil) -> String {
         var parts: [String] = []
-        if traffic.activeInstalls7 > 0 { parts.append("7일 활성 \(traffic.activeInstalls7)곳") }
+        if traffic.activeInstalls7 > 0 { parts.append("7일 활성 \(traffic.activeInstalls7)명") }
         if let averageRating { parts.append(String(format: "평균 별점 %.1f", averageRating)) }
         if last7Days > 0 { parts.append("7일 피드백 \(last7Days)건") }
         if let latest { parts.append("마지막 \(AppFormat.relative(latest))") }
