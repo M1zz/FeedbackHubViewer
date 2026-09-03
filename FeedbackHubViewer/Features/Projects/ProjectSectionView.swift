@@ -106,7 +106,7 @@ struct ProjectSectionView: View {
             let unread = store.unreadCount(for: project)
             return unread > 0 ? "\(count)건 · 안 읽음 \(unread)" : "\(count)건"
         case .stats:
-            return count > 0 ? "설치 \(count)곳" : "사용 통계"
+            return count > 0 ? "설치 \(count)개" : "사용 통계"
         case .crashes:
             return count > 0 ? "\(count)건" : "없음"
         case .keywords:
