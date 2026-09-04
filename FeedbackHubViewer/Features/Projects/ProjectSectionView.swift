@@ -71,6 +71,13 @@ struct ProjectSectionView: View {
                         .font(.headline)
                     Text(section.rawValue)
                         .font(.headline)
+                    // 안 읽은 피드백은 뱃지로 붙는다. 밑줄의 작은 글씨로 적으면
+                    // "아직 안 본 게 있다"가 다른 숫자들 사이에 묻힌다.
+                    if section == .feedback {
+                        CountBadge(count: store.unreadCount(for: project),
+                                   systemImage: "envelope.badge.fill",
+                                   tint: .red, name: "안 읽은 피드백")
+                    }
                 }
                 // 두 줄 모두 칸 너비를 제안받아야 한다. 이게 없으면 글자는 제
                 // 이상적인 너비를 그대로 쓰고, 바깥 `frame`은 배경만 칸에 맞춰
@@ -114,8 +121,9 @@ struct ProjectSectionView: View {
     private func countLabel(for section: FeedbackStore.ProjectSection, count: Int) -> String {
         switch section {
         case .feedback:
-            let unread = store.unreadCount(for: project)
-            return unread > 0 ? "\(count)건 · 안 읽음 \(unread)" : "\(count)건"
+            // 안 읽은 수는 위의 뱃지가 말한다 — 여기서 또 적으면 같은 사실이
+            // 한 버튼에 두 번 있다.
+            return "\(count)건"
         case .stats:
             return count > 0 ? "설치 \(count)대" : "사용 통계"
         case .crashes:
@@ -128,6 +136,17 @@ struct ProjectSectionView: View {
             guard project != nil else { return "\(tracked)개 추적" }
             return "\(count)/\(tracked) 잡힘"
         }
+    }
+
+    /// "(지난주 대비 ▲12%)" — 견줄 것이 없으면 아무 말도 하지 않는다.
+    private static func change(_ current: Int, _ previous: Int) -> String {
+        guard previous > 0 else { return current > 0 ? " (이번 주 처음)" : "" }
+        let ratio = Double(current - previous) / Double(previous)
+        if current == previous { return " (지난주와 같음)" }
+        let magnitude = abs(ratio)
+        let amount = magnitude >= 10 ? String(format: "%.0f배", magnitude)
+                                     : String(format: "%.0f%%", (magnitude * 100).rounded())
+        return " (지난주 대비 \(amount) " + (current > previous ? "▲)" : "▼)")
     }
 
     @ViewBuilder
@@ -164,7 +183,12 @@ struct ProjectSectionView: View {
             guard usage.hasUsageData else {
                 return "사용 통계 없음 · 피드백 \(store.scopedFeedback.count)건"
             }
-            return "설치 \(usage.installs)대 · 7일 활성 \(usage.active7)명 · 이벤트 \(usage.totalEvents)건"
+            // 절대값 하나로는 열어 볼 이유가 안 된다. 설치 수는 규모라 그대로
+            // 두고, 움직이는 두 값(사람·건수)은 지난주와 견준 결과를 붙인다.
+            var text = "설치 \(AppFormat.count(usage.installs))대"
+            text += " · 7일 사용자 \(usage.activeInstalls7)명\(Self.change(usage.activeInstalls7, usage.previousActiveInstalls7))"
+            text += " · 7일 사용 \(AppFormat.count(usage.events7))건\(Self.change(usage.events7, usage.previousEvents7))"
+            return text
         case .crashes:
             let summary = store.crashSummary(for: project)
             guard !summary.isEmpty else { return "올라온 진단 없음" }

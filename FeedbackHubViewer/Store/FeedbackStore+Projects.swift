@@ -80,10 +80,57 @@ extension FeedbackStore {
         /// behind the number, drawn as a sparkline on every project row.
         let sparkline: [DayCount]
 
+        // 견줄 상대. 5,000건이라는 수 자체로는 아무 결정도 못 한다 — 지난주보다
+        // 오른 5,000인지 내린 5,000인지가 열어 볼 이유이므로, 앞 창의 값을 같은
+        // 자리에서 함께 들고 다닌다.
+        let previousEvents7: Int
+        let previousActiveInstalls7: Int
+        /// 어제와 그제. **오늘은 세지 않는다**: 아직 끝나지 않은 하루를 온전한
+        /// 하루와 견주면 아침마다 모든 앱이 폭락한 것처럼 보인다.
+        let eventsYesterday: Int
+        let eventsDayBefore: Int
+        /// 이번 7일과 그 앞 7일에 새로 깔린 설치(스냅샷의 `installDate` 기준).
+        let newInstalls7: Int
+        let previousNewInstalls7: Int
+
         var hasUsageData: Bool { installs > 0 || totalEvents > 0 }
 
+        /// 지금 값과 견줄 상대 한 쌍 — 화면이 읽는 단위.
+        struct Change {
+            let current: Int
+            let previous: Int
+
+            var delta: Int { current - previous }
+            /// 비율로 본 변화. 앞 창이 0이면 비율이랄 것이 없다(0에서 10으로 늘어난
+            /// 것은 "몇 %"가 아니라 "처음"이다).
+            var ratio: Double? { previous > 0 ? Double(delta) / Double(previous) : nil }
+            /// 앞 창에는 없다가 이번에 생겼다.
+            var isNew: Bool { previous == 0 && current > 0 }
+            /// 양쪽 다 0 — 견줄 것도 말할 것도 없다.
+            var isEmpty: Bool { previous == 0 && current == 0 }
+        }
+
+        /// 어제 대비 사용 건수.
+        var dayChange: Change { .init(current: eventsYesterday, previous: eventsDayBefore) }
+        /// 지난주 대비 사용 건수.
+        var weekChange: Change { .init(current: events7, previous: previousEvents7) }
+        /// 지난주 대비 활동한 사용자.
+        var activeChange: Change { .init(current: activeInstalls7, previous: previousActiveInstalls7) }
+        /// 지난주 대비 신규 설치.
+        var newInstallChange: Change { .init(current: newInstalls7, previous: previousNewInstalls7) }
+
+        /// 견줄 만한 움직임이 하나라도 있는가. 전부 0이면 변화 칸 대신
+        /// "아직 활동 없음" 한 줄이 낫다.
+        var hasChanges: Bool {
+            !(dayChange.isEmpty && weekChange.isEmpty
+              && activeChange.isEmpty && newInstallChange.isEmpty)
+        }
+
         static let none = Traffic(events7: 0, activeInstalls7: 0, installs: 0,
-                                  totalEvents: 0, sparkline: [])
+                                  totalEvents: 0, sparkline: [],
+                                  previousEvents7: 0, previousActiveInstalls7: 0,
+                                  eventsYesterday: 0, eventsDayBefore: 0,
+                                  newInstalls7: 0, previousNewInstalls7: 0)
     }
 
     /// Traffic per project in one pass. The lists sort against this map rather
@@ -98,10 +145,27 @@ extension FeedbackStore {
         // many *days* the hub has seen, not how many events.
         let axis = UsageRollups.recentDayKeys(14, calendar: calendar)
         let weekKeys = Set(UsageRollups.windowKeys(days: 7, calendar: calendar))
+        let previousWeekKeys = Set(UsageRollups.windowKeys(days: 7, endingDaysAgo: 7,
+                                                           calendar: calendar))
+        // 어제·그제. 오늘을 빼는 이유는 `Traffic.eventsYesterday`에 적어 두었다.
+        let yesterdayKey = UsageRollups.windowKeys(days: 1, endingDaysAgo: 1, calendar: calendar).first
+        let dayBeforeKey = UsageRollups.windowKeys(days: 1, endingDaysAgo: 2, calendar: calendar).first
+
+        let now = Date()
+        let weekAgo = now.addingTimeInterval(-7 * 86_400)
+        let twoWeeksAgo = now.addingTimeInterval(-14 * 86_400)
 
         var installs: [String: Int] = [:]
+        var newInstalls: [String: Int] = [:]
+        var previousNewInstalls: [String: Int] = [:]
         for snapshot in allSnapshots {
             installs[snapshot.projectKey, default: 0] += 1
+            guard let installed = snapshot.installDate else { continue }
+            if installed >= weekAgo {
+                newInstalls[snapshot.projectKey, default: 0] += 1
+            } else if installed >= twoWeeksAgo {
+                previousNewInstalls[snapshot.projectKey, default: 0] += 1
+            }
         }
 
         var result: [String: Traffic] = [:]
@@ -109,18 +173,30 @@ extension FeedbackStore {
             let days = rollups.days(for: key)
             var total = 0
             var events7 = 0
+            var previousEvents7 = 0
             var active: Set<String> = []
+            var previousActive: Set<String> = []
             for (day, bucket) in days {
                 total += bucket.events
-                guard weekKeys.contains(day) else { continue }
-                events7 += bucket.events
-                active.formUnion(bucket.installs)
+                if weekKeys.contains(day) {
+                    events7 += bucket.events
+                    active.formUnion(bucket.installs)
+                } else if previousWeekKeys.contains(day) {
+                    previousEvents7 += bucket.events
+                    previousActive.formUnion(bucket.installs)
+                }
             }
             result[key] = Traffic(events7: events7,
                                   activeInstalls7: active.count,
                                   installs: installs[key] ?? 0,
                                   totalEvents: total,
-                                  sparkline: axis.map { DayCount(date: $0.date, count: days[$0.key]?.events ?? 0) })
+                                  sparkline: axis.map { DayCount(date: $0.date, count: days[$0.key]?.events ?? 0) },
+                                  previousEvents7: previousEvents7,
+                                  previousActiveInstalls7: previousActive.count,
+                                  eventsYesterday: yesterdayKey.map { days[$0]?.events ?? 0 } ?? 0,
+                                  eventsDayBefore: dayBeforeKey.map { days[$0]?.events ?? 0 } ?? 0,
+                                  newInstalls7: newInstalls[key] ?? 0,
+                                  previousNewInstalls7: previousNewInstalls[key] ?? 0)
         }
         return result
         }
@@ -148,7 +224,13 @@ extension FeedbackStore {
                             activeInstalls7: all.reduce(0) { $0 + $1.activeInstalls7 },
                             installs: all.reduce(0) { $0 + $1.installs },
                             totalEvents: all.reduce(0) { $0 + $1.totalEvents },
-                            sparkline: summed)
+                            sparkline: summed,
+                            previousEvents7: all.reduce(0) { $0 + $1.previousEvents7 },
+                            previousActiveInstalls7: all.reduce(0) { $0 + $1.previousActiveInstalls7 },
+                            eventsYesterday: all.reduce(0) { $0 + $1.eventsYesterday },
+                            eventsDayBefore: all.reduce(0) { $0 + $1.eventsDayBefore },
+                            newInstalls7: all.reduce(0) { $0 + $1.newInstalls7 },
+                            previousNewInstalls7: all.reduce(0) { $0 + $1.previousNewInstalls7 })
         return value
         }
     }

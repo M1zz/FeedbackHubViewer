@@ -30,6 +30,7 @@ struct SidebarView: View {
                            unread: store.unreadCount,
                            crashes7: store.crashSummary(for: nil).last7Days,
                            traffic: store.overallTraffic,
+                           capacity: store.carryingCapacity(for: nil, period: .week),
                            isSelected: store.selectedProject == nil) {
                     store.selectedProject = nil
                 }
@@ -44,6 +45,7 @@ struct SidebarView: View {
                                unread: store.unreadCount(for: entry.key),
                                crashes7: store.crashSummary(for: entry.key).last7Days,
                                traffic: traffic[entry.key] ?? .none,
+                               capacity: store.carryingCapacity(for: entry.key, period: .week),
                                isSelected: store.selectedProject == entry.key) {
                         store.selectedProject = entry.key
                     }
@@ -141,6 +143,8 @@ private struct ProjectRow: View {
     /// This week's usage — what the list is ordered by, and the 14-day shape
     /// behind it.
     var traffic: FeedbackStore.Traffic = .none
+    /// 주간 성장 상한. 못 재면 nil이고, 그때는 그 조각만 빠진다.
+    var capacity: CarryingCapacity? = nil
     let isSelected: Bool
     let action: () -> Void
 
@@ -156,16 +160,21 @@ private struct ProjectRow: View {
                         .fontWeight(isSelected ? .semibold : .regular)
                         .lineLimit(2)
                         .fixedSize(horizontal: false, vertical: true)
-                    // 목록이 7일 사용량 순이라 그 숫자는 늘 보이고, 손봐야 할 것
-                    // (안 읽음·진단)은 그 옆에 빨갛게 붙는다.
+                    // 목록이 7일 사용량 순이긴 하지만, 줄에 적는 것은 그 절대값이
+                    // 아니라 **지난주와 견준 결과**다. "7일 사용 5,000건"은 열어 볼
+                    // 이유가 못 되고 "지난주보다 12% 줄었다"는 이유가 된다.
                     HStack(spacing: 6) {
-                        if traffic.events7 > 0 {
-                            Text("7일 사용 \(traffic.events7)건")
-                                .foregroundStyle(.secondary)
+                        if let change = weekChangeText {
+                            Text(change)
+                                .foregroundStyle(changeTint)
                         }
-                        if unread > 0 {
-                            Text("안 읽음 \(unread)")
-                                .foregroundStyle(.red)
+                        // 변화 옆에 위치 하나 — 지금 자리가 이 앱의 평형에서 몇 %인가.
+                        // 오르내림만으로는 "더 자랄 자리가 있는가"에 답하지 못한다.
+                        if let fill = capacity?.fill {
+                            // 넘어선 것을 "248%"로 적으면 좋은 소식처럼 읽힌다 —
+                            // 지금의 유입·이탈로는 못 떠받치는 수라는 뜻인데.
+                            Text(fill > 1 ? "상한 넘어섬" : "상한의 \(Int((fill * 100).rounded()))%")
+                                .foregroundStyle(fill > 1 ? .orange : .secondary)
                         }
                         if crashes7 > 0 {
                             Text("진단 \(crashes7)")
@@ -179,9 +188,16 @@ private struct ProjectRow: View {
                 Spacer(minLength: 4)
 
                 VStack(alignment: .trailing, spacing: 3) {
-                    Text("\(count)건")
-                        .font(.body.monospacedDigit())
-                        .foregroundStyle(.secondary)
+                    // 안 읽은 피드백은 숫자가 아니라 뱃지다 — 옆의 "30건"과 같은
+                    // 활자로 적으면 읽을 것과 구경할 것이 같은 무게로 보인다.
+                    if unread > 0 {
+                        CountBadge(count: unread, systemImage: "envelope.badge.fill",
+                                   tint: .red, name: "안 읽은 피드백")
+                    } else {
+                        Text("\(count)건")
+                            .font(.body.monospacedDigit())
+                            .foregroundStyle(.secondary)
+                    }
                     if traffic.totalEvents > 0 {
                         // The same 14-day shape the phone cards draw: how much
                         // this app is actually being used, at a glance.
@@ -196,7 +212,37 @@ private struct ProjectRow: View {
         .buttonStyle(.plain)
         .listRowBackground(isSelected ? Color.accentColor.opacity(0.12) : Color.clear)
         .accessibilityAddTraits(isSelected ? [.isSelected] : [])
-        .accessibilityLabel("\(name), 피드백 \(count)건, 안 읽음 \(unread)건")
+        .accessibilityLabel(accessibilityText)
     }
 
+    /// 지난주와 견준 사용량 한 마디. 견줄 것이 없으면 아무 말도 하지 않는다 —
+    /// 0에서 0으로 간 것을 "±0%"로 적으면 있지도 않은 안정을 말하게 된다.
+    private var weekChangeText: String? {
+        let change = traffic.weekChange
+        if change.isEmpty { return nil }
+        guard let ratio = change.ratio else { return "이번 주 처음 \(change.current)건" }
+        let magnitude = abs(ratio)
+        let amount = magnitude >= 10 ? String(format: "%.0f배", magnitude)
+                                     : String(format: "%.0f%%", (magnitude * 100).rounded())
+        if change.delta == 0 { return "지난주와 같음" }
+        return "지난주보다 \(amount) " + (change.delta > 0 ? "▲" : "▼")
+    }
+
+    private var changeTint: Color {
+        let delta = traffic.weekChange.delta
+        return delta == 0 ? .secondary : (delta > 0 ? .green : .red)
+    }
+
+    private var accessibilityText: String {
+        var parts = ["\(name)"]
+        if let change = weekChangeText { parts.append(change.replacingOccurrences(of: "▲", with: "늘어남")
+                                                            .replacingOccurrences(of: "▼", with: "줄어듦")) }
+        if let fill = capacity?.fill, let ceiling = capacity?.capacity {
+            parts.append("성장 상한 \(Int(ceiling.rounded()))명 중 \(Int((fill * 100).rounded()))퍼센트")
+        }
+        parts.append("피드백 \(count)건")
+        if unread > 0 { parts.append("안 읽음 \(unread)건") }
+        if crashes7 > 0 { parts.append("최근 7일 진단 \(crashes7)건") }
+        return parts.joined(separator: ", ")
+    }
 }
