@@ -98,9 +98,16 @@ struct RefreshStatus: View {
     @EnvironmentObject private var store: FeedbackStore
 
     var body: some View {
-        if store.isRefreshing {
+        if store.isRefreshing || store.isPublishingSummary {
             HStack(spacing: 6) {
-                if let progress = store.refreshProgress {
+                // 올리기는 새로고침의 마지막 걸음이라 같은 자리에 나온다.
+                // 먼저 묻는 이유는 그때 이미 읽기가 끝나 있기 때문이다 —
+                // 남은 진행 표시를 그대로 두면 다 읽은 것을 아직 읽는
+                // 중이라고 말하게 된다.
+                if store.isPublishingSummary {
+                    ProgressView().controlSize(.small)
+                    Text("iCloud 요약본 올리는 중…")
+                } else if let progress = store.refreshProgress {
                     ProgressView(value: progress.fraction)
                         .progressViewStyle(.linear)
                         .frame(width: 54)
@@ -159,6 +166,12 @@ struct IdentityMenu: View {
                 }
             }
 
+            // 숫자가 어디서 온 것인지. 기기마다 값이 다른 것보다 나쁜 것은
+            // 왜 다른지 알 수 없는 것이라, 이 줄은 잘 되고 있을 때에도 보인다.
+            Section("기기 사이 숫자") {
+                SummaryStatusItems()
+            }
+
             // 켜져 있으면 굳이 말할 것도 없지만, 꺼져 있는 것은 반드시 보여야
             // 한다 — 안 그러면 다른 기기에서 처리한 게 왜 안 넘어오는지 알 길이
             // 없다.
@@ -185,5 +198,30 @@ struct IdentityMenu: View {
             Label("내 계정 ID", systemImage: "person.crop.circle.badge.questionmark")
         }
         .help("Security Role 등록에 쓸 내 CloudKit User Record Name")
+    }
+}
+
+/// 요약본이 지금 어떤 상태인지, 메뉴 한 칸에 들어갈 만큼만.
+///
+/// 실행할 때 iCloud에서 받아온 요약본이 화면의 바탕이므로, 그것이 **언제**
+/// **어느 기기**에서 만들어졌는지는 숨길 것이 아니다. 맥과 아이폰의 숫자가
+/// 같아진 다음에도 사람이 확인할 수 있어야 그 숫자를 믿는다.
+struct SummaryStatusItems: View {
+    @EnvironmentObject private var store: FeedbackStore
+
+    var body: some View {
+        if let notice = store.summaryNotice {
+            Label("이 \(Platform.deviceNoun)에서 읽은 것만 셉니다", systemImage: "icloud.slash")
+            Text(notice)
+        } else if store.isPublishingSummary {
+            Label("iCloud에 올리는 중…", systemImage: "icloud.and.arrow.up")
+        } else if let at = store.summaryUpdatedAt {
+            Label("\(AppFormat.dateTime(at)) · \(store.summaryDevice ?? "다른 기기")",
+                  systemImage: "checkmark.icloud")
+            Text("실행할 때 이 요약본을 받아오고, 새로고침하면 여기가 갱신됩니다. 그래서 어느 기기에서 보든 같은 숫자입니다.")
+        } else {
+            Label("아직 올린 요약본이 없습니다", systemImage: "icloud")
+            Text("한 번 새로고침하면 이 기기가 읽은 것이 iCloud에 올라가고, 다른 기기가 실행할 때 그것을 받아 갑니다.")
+        }
     }
 }

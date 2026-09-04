@@ -50,3 +50,26 @@ extension HubRecord {
 extension String {
     var trimmed: String { trimmingCharacters(in: .whitespacesAndNewlines) }
 }
+
+/// Putting two reads of the same record type together.
+///
+/// The hub is read in pieces — an incremental refresh brings the tail, a
+/// checkpoint brings whatever a long read has managed so far, and the shared
+/// summary brings whatever another 기기 has (see `HubSummary`). All three end
+/// in the same question: two arrays of the same records, which one wins where
+/// they overlap? The record name answers it, every time.
+enum RecordMerge {
+
+    /// Freshly-read records folded into the ones already held, newest first.
+    /// A record that came back again replaces the copy we had — usage
+    /// snapshots are upserted in place, so the newer read is the truer one —
+    /// and everything else is kept.
+    static func byID<T: Identifiable>(_ incoming: [T], into existing: [T],
+                                      newestFirst: (T, T) -> Bool) -> [T] where T.ID == String {
+        guard !incoming.isEmpty else { return existing }
+        guard !existing.isEmpty else { return incoming.sorted(by: newestFirst) }
+        var byID = Dictionary(existing.map { ($0.id, $0) }, uniquingKeysWith: { _, latest in latest })
+        for item in incoming { byID[item.id] = item }
+        return byID.values.sorted(by: newestFirst)
+    }
+}

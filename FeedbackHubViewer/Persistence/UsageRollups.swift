@@ -52,6 +52,14 @@ struct UsageDayBucket: Codable {
     var foldedIDs: Set<String>?
 
     var isClosed: Bool { foldedIDs == nil }
+
+    /// Whether two buckets say the same thing about the day. Compares the sums
+    /// and not `foldedIDs`, which is bookkeeping: a merge that only widened the
+    /// set of names it has already counted changed no number on screen.
+    func isSameSums(as other: UsageDayBucket) -> Bool {
+        events == other.events && installs == other.installs
+            && byEvent == other.byEvent && lastAt == other.lastAt
+    }
 }
 
 /// One project-period above the day — a week, a month or a year — held as the
@@ -151,6 +159,17 @@ struct UsageRollups: Codable {
     var ladderCalendar = UsageRollups.calendarSignature()
 
     var isEmpty: Bool { projects.isEmpty }
+
+    /// 얼마나 담고 있는가 — 두 요약본 중 어느 쪽이 더 완전한지 가늠하는 값.
+    ///
+    /// 정확한 뜻이 있는 숫자가 아니라 비교용이다. `merge`가 칸을 늘리기만
+    /// 하므로(줄이는 경우가 없다) 합친 뒤의 이 값이 상대의 것보다 크다는 것은
+    /// 곧 이쪽에만 있는 것이 있다는 뜻이고, 그것이 올릴지 말지의 기준이다.
+    var weight: Int {
+        projects.values.reduce(0) { running, days in
+            running + days.values.reduce(0) { $0 + $1.events + $1.installs.count }
+        }
+    }
 
     /// Every project that has ever reported an event, including ones whose raw
     /// events have since aged out of the record cache.
@@ -420,6 +439,96 @@ struct UsageRollups: Codable {
             return true
         }
         return rebuildDirtyPeriods(calendar: calendar)
+    }
+
+    // MARK: - Merging two devices' sums
+
+    /// Fold another device's day buckets into these.
+    ///
+    /// Two devices read the same event stream, so neither's sums are wrong —
+    /// they are each *partial*, in different places. A Mac left open all summer
+    /// holds days a phone installed last week never saw; a phone that finished
+    /// a read the Mac abandoned holds the tail of a day the Mac stopped short
+    /// of. Adding them would count the overlap twice, so nothing here adds.
+    /// Every cell takes the more complete of the two:
+    ///
+    ///  · **활동한 설치**는 합집합이다. 같은 installID를 양쪽이 봤어도 한 명이다.
+    ///  · **건수**는 큰 쪽이다. 두 기기가 같은 스트림의 앞뒤를 겹쳐 읽으므로,
+    ///    더 많이 읽은 쪽이 덜 읽은 쪽을 거의 언제나 포함한다. 겹치지 않는
+    ///    구간이 있으면 이 규칙은 적게 세지만, 합이 부풀리는 것보다는 낫다 —
+    ///    다음 새로고침이 못 본 구간을 읽어 오면 그때 올라간다.
+    ///  · **이벤트명별 건수**도 같은 이유로 이름마다 큰 쪽이다.
+    ///
+    /// `foldedIDs`가 열려 있는 하루끼리는 합집합이 곧 정확한 건수다 — 접기는
+    /// 이름 하나에 건수 하나씩 올리므로. 한쪽이라도 닫혀 있으면(오래돼서 이름을
+    /// 버린 날) 더 이상 중복을 가려낼 수 없으므로 그 하루는 닫는다. 열어 둔 채
+    /// 큰 건수만 받아 오면, 그 하루의 이벤트를 다시 읽었을 때 이미 세어 둔
+    /// 것을 또 세게 된다.
+    ///
+    /// 주·월·년 사다리는 여기서 손대지 않는다. 하루가 임의로 바뀌었으니
+    /// 부분 재계산이 성립하지 않는다 — 호출한 쪽이 `rebuildLadder()`로
+    /// 통째로 다시 세운다.
+    ///
+    /// - Returns: 이 쪽이 실제로 달라졌는지. 안 달라졌으면 디스크에 쓸 것도 없다.
+    @discardableResult
+    mutating func merge(_ other: UsageRollups) -> Bool {
+        var changed = false
+
+        for (project, otherDays) in other.projects {
+            var days = projects[project] ?? [:]
+            for (key, incoming) in otherDays {
+                guard var mine = days[key] else {
+                    days[key] = incoming
+                    changed = true
+                    continue
+                }
+                let before = mine
+                switch (mine.foldedIDs, incoming.foldedIDs) {
+                case let (ids?, other?):
+                    // 둘 다 열려 있다: 이름의 합집합이 곧 건수다.
+                    let union = ids.union(other)
+                    mine.foldedIDs = union
+                    mine.events = max(mine.events, union.count)
+                default:
+                    // 한쪽이라도 닫혔다: 중복을 가려낼 방법이 없으니 이 하루도
+                    // 닫고, 더 많이 본 쪽의 건수를 받는다.
+                    mine.foldedIDs = nil
+                    mine.events = max(mine.events, incoming.events)
+                }
+                mine.installs.formUnion(incoming.installs)
+                for (name, count) in incoming.byEvent {
+                    mine.byEvent[name] = max(mine.byEvent[name] ?? 0, count)
+                }
+                if (mine.lastAt ?? .distantPast) < (incoming.lastAt ?? .distantPast) {
+                    mine.lastAt = incoming.lastAt
+                }
+                if !mine.isSameSums(as: before) { changed = true }
+                days[key] = mine
+            }
+            projects[project] = days
+        }
+
+        for (project, otherTotals) in other.eventTotals {
+            var totals = eventTotals[project] ?? [:]
+            for (name, incoming) in otherTotals {
+                guard var mine = totals[name] else {
+                    totals[name] = incoming
+                    changed = true
+                    continue
+                }
+                let before = mine
+                mine.count = max(mine.count, incoming.count)
+                mine.installs.formUnion(incoming.installs)
+                if (mine.lastAt ?? .distantPast) < (incoming.lastAt ?? .distantPast) {
+                    mine.lastAt = incoming.lastAt
+                }
+                if mine.count != before.count || mine.installs != before.installs { changed = true }
+                totals[name] = mine
+            }
+            eventTotals[project] = totals
+        }
+
+        return changed
     }
 
     /// Close days older than `idRetentionDays`: their counts stay, the record

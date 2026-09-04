@@ -13,6 +13,11 @@
 //    FeedbackStore+Projects.swift  the project list's numbers and feedback stats
 //    FeedbackStore+Usage.swift     usage, diagnostics, trends, carrying capacity
 //
+//  Loading has two sources, not one. The disk cache paints what *this* 기기 saw
+//  last; the iCloud 요약본 brings what every other one saw (`HubSummary`). A
+//  launch takes both before it asks CloudKit for anything, which is what makes
+//  the same numbers show up on the Mac and on the phone.
+//
 
 import Foundation
 import SwiftUI
@@ -172,6 +177,23 @@ final class FeedbackStore: ObservableObject {
     /// admin Security Role so it can read feedback. Shown in the toolbar.
     @Published var userRecordName: String?
 
+    // MARK: 기기 사이에서 하나인 요약본
+
+    /// iCloud의 요약본이 만들어진 시각과 그것을 만든 기기. 화면에 그대로
+    /// 나온다 — "이 숫자는 언제, 어디서 온 것인가"에 답이 없으면 기기마다 값이
+    /// 다른 것보다 나을 게 없다.
+    @Published private(set) var summaryUpdatedAt: Date?
+    @Published private(set) var summaryDevice: String?
+    /// 요약본을 주고받지 못하는 이유. `nil`이면 잘 오가고 있다는 뜻이다.
+    @Published private(set) var summaryNotice: String?
+    /// 지금 올리는 중. 새로고침이 끝난 뒤에도 잠깐 이어지므로 따로 둔다.
+    @Published private(set) var isPublishingSummary = false
+    /// 이 기기가 iCloud에 없는 것을 들고 있다 — 다음 기회에 올려야 한다.
+    private var summaryNeedsPush = false
+    /// 다음 올리기는 합치지 말고 덮어쓴다. "캐시 비우고 전체 다시 불러오기"만
+    /// 세운다 (`HubSummary.swift` 머리말의 예외).
+    private var summaryOverwrites = false
+
     // Navigation
 
     /// Which of the selected project's three sections is on screen.
@@ -240,6 +262,9 @@ final class FeedbackStore: ObservableObject {
     let autoRefreshInterval: TimeInterval = 60
 
     private let service = CloudKitService()
+    /// 기기 사이에서 하나인 요약본. 실행할 때 받아오고, 새로고침이 끝나면
+    /// 올린다 — 규칙은 `HubSummary.swift` 머리말에.
+    private let summarySync = HubSummarySync()
     private var autoRefreshTask: Task<Void, Never>?
     private let defaults: UserDefaults
 
@@ -366,7 +391,7 @@ final class FeedbackStore: ObservableObject {
     /// events are not lost: they were folded into `rollups` the moment they
     /// arrived, and every number on screen comes from there. This window is
     /// only what the 사용 내역 list needs to show events one by one.
-    static let rawEventRetentionDays = 90
+    nonisolated static let rawEventRetentionDays = 90
     /// Backstop on the retained window, for an app that reports thousands of
     /// events a day. The rollups are unaffected either way.
     ///
@@ -376,7 +401,7 @@ final class FeedbackStore: ObservableObject {
     /// end — so an unordered read handed back an arbitrary slice of the stream
     /// and the rest was never asked for again. Reads are uncapped now; what is
     /// bounded is what this device *keeps*.
-    private static let eventLimit = 5000
+    private nonisolated static let eventLimit = 5000
     /// Diagnostics are read whole and are small; this is the only cap they get
     /// — again on what is kept, applied after the merge.
     private static let crashLimit = 1000
@@ -402,14 +427,22 @@ final class FeedbackStore: ObservableObject {
         startupTask = Task { [weak self] in
             guard let self else { return }
             let restored = await restore.value
+            // 그 다음이 iCloud의 마지막 요약본이다. 이 기기의 캐시가 먼저
+            // 그려지고 나서 오는 것이라 첫 프레임을 붙잡지 않고, 다른 기기가
+            // 방금 새로고침해 뒀다면 이 기기는 읽을 것이 없다 — 아이폰이
+            // 스냅샷 6,000건을 다시 훑지 않아도 되는 것이 그래서다.
+            let adopted = await self.adoptRemoteSummary()
             // A cache written minutes ago has nothing to add. See
             // `launchRefreshInterval` — this is the difference between opening
             // the hub and waiting for it.
-            if restored, let updated = self.lastUpdated,
+            if restored || adopted, let updated = self.lastUpdated,
                Date().timeIntervalSince(updated) < Self.launchRefreshInterval {
+                // 읽을 것이 없더라도 이 기기만 가진 것이 있으면 올린다. 안
+                // 그러면 저쪽은 이쪽의 지난 기록을 영영 못 받는다.
+                await self.publishSummary(force: true)
                 return
             }
-            await self.load(mode: restored ? .incremental : .full)
+            await self.load(mode: restored || adopted ? .incremental : .full)
         }
     }
 
@@ -468,7 +501,7 @@ final class FeedbackStore: ObservableObject {
                                                           known: isIncremental && watermarks[Self.feedbackSyncKey] != nil
                                                               ? Set(fetchedFeedback.map(\.id)) : nil)
             fetchedFeedback = isIncremental
-                ? Self.merged(outcome.feedback, into: fetchedFeedback, newestFirst: { ($0.createdAt ?? .distantPast) > ($1.createdAt ?? .distantPast) })
+                ? RecordMerge.byID(outcome.feedback, into: fetchedFeedback, newestFirst: { ($0.createdAt ?? .distantPast) > ($1.createdAt ?? .distantPast) })
                 : outcome.feedback
             resolvedRecordType = outcome.resolvedRecordType
             watermarks[Self.feedbackSyncKey] = startedAt
@@ -556,9 +589,15 @@ final class FeedbackStore: ObservableObject {
         // not written yet.
         if changed {
             checkpoint(force: true)
+            summaryNeedsPush = true
         } else if hasUnsavedChanges {
             persistCache()
         }
+
+        // 그리고 iCloud의 요약본을 이번 결과로 갱신한다. 손으로 누른
+        // 새로고침이면 지금, 자동 갱신이면 10분에 한 번 — 그 이유는
+        // `summaryPublishInterval`에.
+        await publishSummary(force: mode == .full)
     }
 
     /// Fold a usage read into what is held. A record type the read could not
@@ -575,8 +614,8 @@ final class FeedbackStore: ObservableObject {
             // back non-empty" says nothing. Compare contents instead, or the
             // cache would be re-encoded once a minute for no reason.
             let next = incremental
-                ? Self.merged(snapshots, into: fetchedSnapshots,
-                              newestFirst: { ($0.lastActiveAt ?? .distantPast) > ($1.lastActiveAt ?? .distantPast) })
+                ? RecordMerge.byID(snapshots, into: fetchedSnapshots,
+                                   newestFirst: { ($0.lastActiveAt ?? .distantPast) > ($1.lastActiveAt ?? .distantPast) })
                 : snapshots
             // Compared *before* assigning, not after: the assignment itself is
             // what drops the derived cache, so an unchanged read has to stop
@@ -600,7 +639,7 @@ final class FeedbackStore: ObservableObject {
                 rollupsChanged = true
                 changed = true
             }
-            let all = Self.merged(events, into: fetchedEvents, newestFirst: { $0.occurredAt > $1.occurredAt })
+            let all = RecordMerge.byID(events, into: fetchedEvents, newestFirst: { $0.occurredAt > $1.occurredAt })
             let window = Self.withinRetention(all)
             // Assigning an identical array would still fire `didSet` and throw
             // away every rollup — the once-a-minute refresh that found nothing
@@ -611,8 +650,8 @@ final class FeedbackStore: ObservableObject {
         }
         if let crashes = usage.crashes {
             let all = incremental
-                ? Self.merged(crashes, into: fetchedCrashes,
-                              newestFirst: { ($0.receivedAt ?? .distantPast) > ($1.receivedAt ?? .distantPast) })
+                ? RecordMerge.byID(crashes, into: fetchedCrashes,
+                                   newestFirst: { ($0.receivedAt ?? .distantPast) > ($1.receivedAt ?? .distantPast) })
                 : crashes
             // Diagnostics stop reading at what this device already has, so a
             // non-empty incremental result is genuinely new. Comparing counts
@@ -631,7 +670,7 @@ final class FeedbackStore: ObservableObject {
     }
 
     /// The slice of the event stream kept as individual records, newest first.
-    private static func withinRetention(_ events: [UsageEvent],
+    private nonisolated static func withinRetention(_ events: [UsageEvent],
                                         calendar: Calendar = .current,
                                         now: Date = Date()) -> [UsageEvent] {
         guard let cutoff = calendar.date(byAdding: .day, value: -rawEventRetentionDays,
@@ -656,18 +695,6 @@ final class FeedbackStore: ObservableObject {
             hasher.combine(snapshot.metrics.count)
         }
         return hasher.finalize()
-    }
-
-    /// Merge freshly-read records into the ones already held, newest first. A
-    /// record that came back again replaces the copy we had (usage snapshots
-    /// are upserted in place), and everything else is kept.
-    private static func merged<T: Identifiable>(_ incoming: [T],
-                                                into existing: [T],
-                                                newestFirst: (T, T) -> Bool) -> [T] where T.ID == String {
-        guard !incoming.isEmpty else { return existing }
-        var byID = Dictionary(existing.map { ($0.id, $0) }, uniquingKeysWith: { _, latest in latest })
-        for item in incoming { byID[item.id] = item }
-        return byID.values.sorted(by: newestFirst)
     }
 
     // MARK: - Disk cache
@@ -713,6 +740,153 @@ final class FeedbackStore: ObservableObject {
         learnAppNames(from: cached.feedback)
         refreshBadge()
         return true
+    }
+
+    // MARK: - iCloud 요약본
+
+    /// iCloud에 있는 마지막 요약본을 받아 이 기기 것과 합친다. 실행할 때 한 번.
+    ///
+    /// 받은 것으로 갈아끼우지 않고 합치는 이유, 그리고 칸마다 무엇이 이기는지는
+    /// `HubSummary.swift` 머리말에 있다. 여기서 하는 일은 그 결과를 화면과
+    /// 디스크에 앉히는 것뿐이다.
+    ///
+    /// - Returns: 화면에 올릴 것이 생겼는지. 그렇다면 뒤따르는 새로고침은
+    ///   전체가 아니라 증분이어도 된다 — 이미 바탕이 있으므로.
+    @discardableResult
+    private func adoptRemoteSummary() async -> Bool {
+        let remote: HubSummary?
+        do {
+            remote = try await summarySync.fetch()
+            summaryNotice = nil
+        } catch let failure as HubSummarySync.Failure {
+            summaryNotice = failure.message
+            return false
+        } catch {
+            summaryNotice = error.localizedDescription
+            return false
+        }
+        // 아무도 올린 적이 없다. 이 기기가 첫 번째이고, 새로고침이 끝나면
+        // 그때 올라간다.
+        guard let remote else {
+            summaryNeedsPush = true
+            return false
+        }
+
+        summaryUpdatedAt = remote.generatedAt
+        summaryDevice = remote.generatedBy
+
+        var (hub, merged, rollupsChanged) = await Self.combine(currentHub, rollups, with: remote)
+        // 합친 뒤에 자른다. 이 기기가 들고 있을 것과 다음에 올릴 것이 같은
+        // 값이어야 하기 때문이다 — 자르기 전의 수로 "내가 더 갖고 있다"를
+        // 판단하면, 잘려 나갈 몫 때문에 실행할 때마다 헛되이 올리게 된다.
+        hub.events = Self.withinRetention(hub.events)
+        hub.crashes = Array(hub.crashes.prefix(Self.crashLimit))
+        let recordsChanged = hub.feedback.count != fetchedFeedback.count
+            || hub.snapshots.count != fetchedSnapshots.count
+            || hub.events.count != fetchedEvents.count
+            || hub.crashes.count != fetchedCrashes.count
+
+        // 이 기기가 저쪽에 없는 것을 들고 있는가. 합친 뒤의 이쪽은 언제나
+        // 저쪽을 포함하므로, 더 많으면 그 차이는 이쪽에만 있는 것이다.
+        summaryNeedsPush = hub.feedback.count > remote.hub.feedback.count
+            || hub.snapshots.count > remote.hub.snapshots.count
+            || hub.events.count > remote.hub.events.count
+            || hub.crashes.count > remote.hub.crashes.count
+            || merged.weight > remote.rollups.weight
+
+        guard recordsChanged || rollupsChanged else { return hasContent }
+
+        if rollupsChanged {
+            rollups = merged
+            persistRollups()
+        }
+        if recordsChanged {
+            fetchedFeedback = hub.feedback
+            fetchedSnapshots = hub.snapshots
+            fetchedEvents = hub.events
+            fetchedCrashes = hub.crashes
+            resolvedRecordType = hub.resolvedRecordType
+            watermarks = hub.watermarks
+            service.restoreIncrementalFilterFields(hub.filterFields)
+            learnAppNames(from: fetchedFeedback)
+            refreshBadge()
+        }
+        // 저쪽이 확인한 시각도 확인한 시각이다. 이 값이 곧 "이 기기가 지금
+        // CloudKit을 다시 읽어야 하는가"의 기준이 된다.
+        if (lastUpdated ?? .distantPast) < remote.generatedAt {
+            lastUpdated = remote.generatedAt
+        }
+        checkpoint(force: true)
+        return true
+    }
+
+    /// 두 벌을 합치는 계산 자체 — 메인 액터 밖에서 돈다.
+    ///
+    /// 레코드 수천 건을 이름으로 맞추고 날짜 버킷의 이름 집합을 합집합하는
+    /// 일이라, 첫 화면이 막 뜬 참에 메인 스레드를 잡고 있을 것이 아니다.
+    /// 값 타입만 오가므로 옮기는 데 드는 것도 없다.
+    private nonisolated static func combine(_ hub: CachedHub,
+                                            _ rollups: UsageRollups,
+                                            with remote: HubSummary) async -> (CachedHub, UsageRollups, Bool) {
+        var hub = hub
+        hub.merge(remote.hub)
+        var merged = rollups
+        let rollupsChanged = merged.merge(remote.rollups)
+        // 하루가 임의로 바뀌었으니 주·월·년은 부분 재계산이 성립하지 않는다.
+        // 통째로 다시 세운다 — 실행할 때 한 번뿐인 값이다.
+        if rollupsChanged { merged.rebuildLadder() }
+        return (hub, merged, rollupsChanged)
+    }
+
+    /// 얼마 만에 한 번 올리는가.
+    ///
+    /// 올리는 것은 메가바이트 단위다. 손으로 누른 새로고침은 그 값을 치를
+    /// 이유가 분명하지만(사람이 지금 맞추겠다고 한 것이다), 1분마다 도는 자동
+    /// 갱신까지 그럴 것은 없다 — 화면의 숫자는 어차피 하루 단위이고, 10분 늦게
+    /// 올라간 요약본과 지금 올라간 요약본은 저쪽 화면에서 구별되지 않는다.
+    private static let summaryPublishInterval: TimeInterval = 10 * 60
+    private var lastSummaryPublish = Date.distantPast
+
+    /// 이 기기가 들고 있는 것을 iCloud의 요약본으로 만든다.
+    ///
+    /// `force`는 스로틀만 건너뛴다 — 올릴 것이 없으면 여전히 아무 일도 하지
+    /// 않는다. 손으로 누른 새로고침(`load(mode: .full)`)과 실행할 때의 밀린
+    /// 올리기가 그것을 쓴다.
+    private func publishSummary(force: Bool = false) async {
+        guard summaryNeedsPush else { return }
+        guard force || Date().timeIntervalSince(lastSummaryPublish) >= Self.summaryPublishInterval else { return }
+        guard !isPublishingSummary else { return }
+
+        isPublishingSummary = true
+        defer { isPublishingSummary = false }
+
+        let overwrite = summaryOverwrites
+        let mine = HubSummary(generatedAt: lastUpdated ?? Date(),
+                              generatedBy: HubSummary.deviceName,
+                              hub: currentHub,
+                              rollups: rollups)
+        do {
+            try await summarySync.publish(mine) { theirs in
+                // 부딪혔다: 그 사이 다른 기기가 올렸다. 덮어쓰기로 지정된
+                // 경우가 아니면 저쪽 것을 이쪽에 합쳐서 다시 올린다.
+                guard !overwrite else { return mine }
+                var resolved = mine
+                resolved.hub.merge(theirs.hub)
+                if resolved.rollups.merge(theirs.rollups) { resolved.rollups.rebuildLadder() }
+                resolved.generatedAt = max(mine.generatedAt, theirs.generatedAt)
+                return resolved
+            }
+            summaryNotice = nil
+            summaryNeedsPush = false
+            summaryOverwrites = false
+            lastSummaryPublish = Date()
+            summaryUpdatedAt = mine.generatedAt
+            summaryDevice = mine.generatedBy
+        } catch let failure as HubSummarySync.Failure {
+            summaryNotice = failure.message
+        } catch {
+            summaryNotice = error.localizedDescription
+        }
     }
 
     /// How often a refresh that is still running writes what it has. Encoding
@@ -780,7 +954,13 @@ final class FeedbackStore: ObservableObject {
     }
 
     /// Throw the cache away and read everything again from CloudKit.
+    ///
+    /// iCloud의 요약본도 이번 읽기 결과로 **덮어쓴다**. 합치면 방금 버린 것이
+    /// 저쪽에서 그대로 돌아오므로, 그러면 이 버튼이 하는 일이 없어진다 —
+    /// 이것은 "이 기기 기준으로 처음부터 다시"라고 사람이 말한 자리다.
     func resetCacheAndReload() async {
+        summaryOverwrites = true
+        summaryNeedsPush = true
         await FeedbackCache.shared.clear()
         await RollupCache.shared.clear()
         // The one path that rebuilds the sums from scratch: without this the

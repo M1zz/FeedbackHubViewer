@@ -58,7 +58,7 @@ enum CloudKitEnvironment: String {
 final class CloudKitService {
 
     /// The CloudKit container that backs the feedback data.
-    static let containerIdentifier = "iCloud.com.Ysoup.FeedbackHub"
+    nonisolated static let containerIdentifier = "iCloud.com.Ysoup.FeedbackHub"
 
     /// The environment this build reads. See `CloudKitEnvironment`.
     static var environment: CloudKitEnvironment { .current }
