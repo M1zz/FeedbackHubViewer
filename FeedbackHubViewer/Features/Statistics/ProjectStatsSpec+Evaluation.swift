@@ -145,9 +145,16 @@ extension ProjectStatsSpec {
     /// 슬라이스는 여기서 합친다. `paywall_cta_tapped:buy`와 `:memo`는 "버튼을 누른
     /// 사람"이라는 한 단계이고, 설치 수를 셀 때는 두 집합의 **합집합**이어야 한다 —
     /// 둘 다 누른 사람을 두 명으로 세면 전환율이 100%를 넘는다.
-    func funnelInsights(for tallies: [String: UsageNameTotal]) -> [Insight] {
+    ///
+    /// `eventCountsAvailable`가 거짓이면 건수를 기준으로 세는 퍼널은 통째로 빠진다.
+    /// 유료·무료로 갈라 볼 때가 그렇다 — 사람 수는 설치 집합의 교집합으로 정확히
+    /// 갈리지만 건수는 못 가르므로(`FeedbackStore+Audience.swift`), 그 퍼널을
+    /// 0으로 그리면 "아무도 안 했다"는 거짓말이 된다.
+    func funnelInsights(for tallies: [String: UsageNameTotal],
+                        eventCountsAvailable: Bool = true) -> [Insight] {
         funnels.compactMap { funnel in
             let basis = funnel.basis ?? .installs
+            guard basis == .installs || eventCountsAvailable else { return nil }
             var steps: [Insight.Step] = []
             var first: Int?
             var previous: Int?

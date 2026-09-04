@@ -19,6 +19,9 @@ struct CarryingCapacityCard: View {
     @EnvironmentObject private var store: FeedbackStore
     /// 이 카드가 설명하는 범위(nil == 전체 프로젝트).
     let project: String?
+    /// 누구를 보고 있는가. 상한은 활동한 설치 집합만으로 나오므로 무리별로
+    /// 정확히 갈린다 — 유료 사용자의 상한과 무료 사용자의 상한은 다른 숫자다.
+    var audience: FeedbackStore.Audience = .all
 
     @State private var period: CarryingCapacity.Period = .week
     /// 지금 켜져 있는 계열. 상한선이 실제 궤적보다 한참 위면 궤적이 바닥에
@@ -46,7 +49,7 @@ struct CarryingCapacityCard: View {
             .pickerStyle(.segmented)
             .labelsHidden()
 
-            if let result = store.carryingCapacity(for: project, period: period) {
+            if let result = store.carryingCapacity(for: project, period: period, audience: audience) {
                 headline(result)
                 tiles(result)
                 chart(result)

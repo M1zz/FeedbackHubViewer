@@ -42,6 +42,10 @@ extension FeedbackStore {
         /// Grouping key (appId, or appName when there is no appId).
         let project: String
         let displayName: String
+        /// 어느 무리의 숫자인가. 전체가 아니면 아래 **건수**들은 0이다 —
+        /// 건수는 설치별로 나뉘어 있지 않아 무리로 가를 수 없다
+        /// (`FeedbackStore+Audience.swift` 머리말).
+        var audience: Audience = .all
 
         let installs: Int
         /// Snapshot-based activity, exactly as the apps report it.
@@ -66,6 +70,8 @@ extension FeedbackStore {
         let sparkline: [FeedbackStore.DayCount]
 
         var hasUsageData: Bool { installs > 0 || totalEvents > 0 }
+        /// 건수를 말할 수 있는가. 무리를 고른 동안은 사람·설치 수만 참이다.
+        var hasEventCounts: Bool { !audience.isFiltered }
         var activeInstallsDelta: Int { activeInstalls7 - previousActiveInstalls7 }
         var eventsDelta: Int { events7 - previousEvents7 }
         var newDelta: Int { new7 - previousNew7 }
@@ -76,7 +82,10 @@ extension FeedbackStore {
         var id: String { name }
         /// The name as the app sent it, slice included ("paywall_view:memo").
         let name: String
-        let count: Int
+        /// 몇 번 일어났는가. 무리를 골라 본 동안은 **nil**이다 — 건수는 설치별로
+        /// 나뉘어 있지 않아 유료·무료로 가를 수 없다. 0으로 두지 않는 이유는
+        /// "아무도 안 했다"와 "셀 수 없다"가 다른 말이기 때문이다.
+        let count: Int?
         /// How many distinct installs produced it.
         let installs: Int
         let lastAt: Date?
@@ -322,17 +331,26 @@ extension FeedbackStore {
 
     // MARK: - Cache keys
 
+    /// 한 화면분의 범위 — 어느 프로젝트를, 어느 무리로 보고 있는가.
+    /// `project == nil`은 전체 프로젝트, `audience == .all`은 전체 사용자다.
+    struct ScopeKey: Hashable {
+        let project: String?
+        let audience: Audience
+    }
+
     /// What `distribution(for:by:)` was asked for. The keypath identifies the
     /// snapshot field, so the four distributions on the stats screen each get
     /// their own entry.
     struct DistributionKey: Hashable {
         let project: String?
+        let audience: Audience
         let field: KeyPath<UsageSnapshot, String>
     }
 
     /// What `trend(for:unit:calendar:)` was asked for.
     struct TrendKey: Hashable {
         let project: String?
+        let audience: Audience
         let unit: TrendUnit
         let calendar: Calendar
     }
@@ -340,6 +358,7 @@ extension FeedbackStore {
     /// What `carryingCapacity(for:period:)` was asked for.
     struct CapacityKey: Hashable {
         let project: String?
+        let audience: Audience
         let period: CarryingCapacity.Period
     }
 
@@ -380,9 +399,9 @@ extension FeedbackStore {
 
     var overallUsage: ProjectUsage { usage(for: nil) }
 
-    func usage(for project: String?) -> ProjectUsage {
-        memoized(\.usage, project) {
-        let snaps = snapshots(for: project)
+    func usage(for project: String?, audience: Audience = .all) -> ProjectUsage {
+        memoized(\.usage, ScopeKey(project: project, audience: audience)) {
+        let snaps = snapshots(for: project, audience: audience)
         let now = Date()
         let weekAgo = now.addingTimeInterval(-7 * 86_400)
         let twoWeeksAgo = now.addingTimeInterval(-14 * 86_400)
@@ -390,7 +409,7 @@ extension FeedbackStore {
 
         // The event side of this comes from the day buckets, so it stays
         // correct however far back the hub goes and costs nothing to read.
-        let days = rollups.days(for: project, excluding: hiddenProjects)
+        let days = self.days(for: project, audience: audience)
         let thisWeek = UsageRollups.window(days, keys: UsageRollups.windowKeys(days: 7))
         let lastWeek = UsageRollups.window(days, keys: UsageRollups.windowKeys(days: 7, endingDaysAgo: 7))
         let totalEvents = days.values.reduce(0) { $0 + $1.events }
@@ -398,6 +417,7 @@ extension FeedbackStore {
         let value = ProjectUsage(
             project: project ?? "",
             displayName: project.map { displayName(for: $0) } ?? "전체 프로젝트",
+            audience: audience,
             installs: snaps.count,
             active7: snaps.filter { ($0.lastActiveAt ?? .distantPast) >= weekAgo }.count,
             active30: snaps.filter { ($0.lastActiveAt ?? .distantPast) >= monthAgo }.count,
@@ -430,9 +450,10 @@ extension FeedbackStore {
     ///
     /// 창은 언제나 **온전한 하루들**이다. `now − 30 × 86,400`이 아니라 오늘과 그
     /// 앞 29일이라, 몇 초 간격의 두 렌더가 다른 숫자를 내지 않는다.
-    func activeUsers(for project: String?, calendar: Calendar = .current) -> ActiveUsers {
-        memoized(\.activeUsers, project) {
-            let days = rollups.days(for: project, excluding: hiddenProjects)
+    func activeUsers(for project: String?, audience: Audience = .all,
+                     calendar: Calendar = .current) -> ActiveUsers {
+        memoized(\.activeUsers, ScopeKey(project: project, audience: audience)) {
+            let days = self.days(for: project, audience: audience)
 
             /// `offset`일 전에 끝나는 `length`일 창 안의 서로 다른 설치 수.
             func distinct(length: Int, endingDaysAgo offset: Int) -> Int {
@@ -632,12 +653,19 @@ extension FeedbackStore {
     /// Event names for one project, most frequent first. All-time, from the
     /// running totals kept alongside the day buckets — so a name that stopped
     /// firing months ago still shows the count it earned.
-    func eventStats(for project: String?) -> [EventStat] {
-        memoized(\.eventStats, project) {
-            rollups.totals(for: project, excluding: hiddenProjects)
-                .map { EventStat(name: $0.key, count: $0.value.count,
+    func eventStats(for project: String?, audience: Audience = .all) -> [EventStat] {
+        memoized(\.eventStats, ScopeKey(project: project, audience: audience)) {
+            // 무리를 고른 동안은 건수가 없으므로 사람 수로 줄을 세운다. 건수로
+            // 정렬해 둔 채 건수를 감추면 순서를 설명할 수 없는 목록이 된다.
+            eventTotals(for: project, audience: audience)
+                .filter { !audience.isFiltered || !$0.value.installs.isEmpty }
+                .map { EventStat(name: $0.key,
+                                 count: audience.isFiltered ? nil : $0.value.count,
                                  installs: $0.value.installs.count, lastAt: $0.value.lastAt) }
-                .sorted { $0.count > $1.count }
+                .sorted { lhs, rhs in
+                    if let l = lhs.count, let r = rhs.count { return l > r }
+                    return lhs.installs > rhs.installs
+                }
         }
     }
 
@@ -646,9 +674,9 @@ extension FeedbackStore {
     /// written as `paywall_cta_tapped` has to union the install sets of every
     /// slice (`:buy`, `:memo`), and summing them would count someone who tapped
     /// both as two people.
-    func eventTallies(for project: String?) -> [String: UsageNameTotal] {
-        memoized(\.eventTallies, project) {
-            rollups.totals(for: project, excluding: hiddenProjects)
+    func eventTallies(for project: String?, audience: Audience = .all) -> [String: UsageNameTotal] {
+        memoized(\.eventTallies, ScopeKey(project: project, audience: audience)) {
+            eventTotals(for: project, audience: audience)
         }
     }
 
@@ -659,9 +687,18 @@ extension FeedbackStore {
     ///
     /// Sorted here rather than in the view, which re-ran the whole sort every
     /// time the card redrew (including on every "더 보기" tap).
-    func eventLog(for project: String?) -> [UsageEvent] {
-        memoized(\.eventLog, project) {
-            events(for: project).sorted { $0.occurredAt > $1.occurredAt }
+    func eventLog(for project: String?, audience: Audience = .all) -> [UsageEvent] {
+        memoized(\.eventLog, ScopeKey(project: project, audience: audience)) {
+            // 원본 한 건에는 `installID`가 붙어 있으므로, 목록만은 무리별로 정확히
+            // 갈린다 — 접힌 건수와 달리 여기서는 한 줄이 곧 한 설치의 행동이다.
+            let ids = installIDs(for: project, audience: audience)
+            return events(for: project)
+                .filter { event in
+                    guard let ids else { return true }
+                    guard let install = event.installID else { return false }
+                    return ids.contains(install)
+                }
+                .sorted { $0.occurredAt > $1.occurredAt }
         }
     }
 
@@ -673,10 +710,10 @@ extension FeedbackStore {
 
     /// Numeric metrics, averaged over the installs that reported them — the
     /// same "설치당 평균" the apps show.
-    func metricAverages(for project: String?) -> [MetricAverage] {
-        memoized(\.metricAverages, project) {
+    func metricAverages(for project: String?, audience: Audience = .all) -> [MetricAverage] {
+        memoized(\.metricAverages, ScopeKey(project: project, audience: audience)) {
             var sums: [String: (total: Double, count: Int)] = [:]
-            for snapshot in snapshots(for: project) {
+            for snapshot in snapshots(for: project, audience: audience) {
                 for (key, value) in snapshot.metrics where !Self.isFlag(key) {
                     let current = sums[key] ?? (0, 0)
                     sums[key] = (current.total + value, current.count + 1)
@@ -692,9 +729,9 @@ extension FeedbackStore {
     }
 
     /// 0/1 flags as a share of this project's installs.
-    func flagShares(for project: String?) -> [FlagShare] {
-        memoized(\.flagShares, project) {
-            let snaps = snapshots(for: project)
+    func flagShares(for project: String?, audience: Audience = .all) -> [FlagShare] {
+        memoized(\.flagShares, ScopeKey(project: project, audience: audience)) {
+            let snaps = snapshots(for: project, audience: audience)
             guard !snaps.isEmpty else { return [] }
             var counts: [String: Int] = [:]
             for snapshot in snaps {
@@ -709,10 +746,11 @@ extension FeedbackStore {
     }
 
     /// Install counts by one snapshot field (version, platform, OS, locale).
-    func distribution(for project: String?, by field: KeyPath<UsageSnapshot, String>) -> [DistributionBucket] {
-        memoized(\.distribution, DistributionKey(project: project, field: field)) {
+    func distribution(for project: String?, audience: Audience = .all,
+                      by field: KeyPath<UsageSnapshot, String>) -> [DistributionBucket] {
+        memoized(\.distribution, DistributionKey(project: project, audience: audience, field: field)) {
             var counts: [String: Int] = [:]
-            for snapshot in snapshots(for: project) {
+            for snapshot in snapshots(for: project, audience: audience) {
                 counts[snapshot[keyPath: field], default: 0] += 1
             }
             return counts
@@ -726,8 +764,10 @@ extension FeedbackStore {
     /// A continuous series with empty buckets filled in, so the chart has no
     /// gaps. Built from `occurredAt`, never the record's creation date:
     /// backfilled days would otherwise all land on the day they were uploaded.
-    func trend(for project: String?, unit: TrendUnit, calendar: Calendar = .current) -> [TrendPoint] {
-        memoized(\.trend, TrendKey(project: project, unit: unit, calendar: calendar)) {
+    func trend(for project: String?, unit: TrendUnit, audience: Audience = .all,
+               calendar: Calendar = .current) -> [TrendPoint] {
+        memoized(\.trend, TrendKey(project: project, audience: audience,
+                                   unit: unit, calendar: calendar)) {
         func bucketStart(_ date: Date) -> Date? {
             calendar.dateInterval(of: unit.component, for: date)?.start
         }
@@ -740,7 +780,7 @@ extension FeedbackStore {
         // and Tuesday is one user — which is why the ladder stores the sets.
         var eventCounts: [Date: Int] = [:]
         var activeInstalls: [Date: Int] = [:]
-        for (key, bucket) in rollups.buckets(unit.granularity, for: project, excluding: hiddenProjects) {
+        for (key, bucket) in periodBuckets(unit.granularity, for: project, audience: audience) {
             guard let start = UsageRollups.date(fromKey: key, granularity: unit.granularity,
                                                 calendar: calendar) else { continue }
             eventCounts[start] = bucket.events
@@ -748,7 +788,7 @@ extension FeedbackStore {
         }
 
         var newInstalls: [Date: Int] = [:]
-        for snapshot in snapshots(for: project) {
+        for snapshot in snapshots(for: project, audience: audience) {
             guard let installed = snapshot.installDate, let start = bucketStart(installed) else { continue }
             newInstalls[start, default: 0] += 1
         }
@@ -781,9 +821,11 @@ extension FeedbackStore {
     /// 추이와 같은 일 버킷에서 나오므로 이벤트 원본 보관 기간과 무관하게 허브가
     /// 아는 모든 과거를 본다.
     func carryingCapacity(for project: String?,
-                          period: CarryingCapacity.Period) -> CarryingCapacity? {
-        memoized(\.carryingCapacity, CapacityKey(project: project, period: period)) {
-            CarryingCapacity.measure(days: rollups.days(for: project, excluding: hiddenProjects),
+                          period: CarryingCapacity.Period,
+                          audience: Audience = .all) -> CarryingCapacity? {
+        memoized(\.carryingCapacity, CapacityKey(project: project, audience: audience,
+                                                 period: period)) {
+            CarryingCapacity.measure(days: days(for: project, audience: audience),
                                      period: period)
         }
     }

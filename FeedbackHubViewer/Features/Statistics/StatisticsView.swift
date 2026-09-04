@@ -13,7 +13,12 @@
 //  vocabulary.
 //
 //  The project it describes is chosen one level up (`ProjectSectionView`), so
-//  this screen has no scope picker and no title of its own.
+//  this screen has no scope picker and no title of its own. It does have one
+//  filter, and only where it can be answered: 전체 · 유료 · 무료
+//  (`FeedbackStore.Audience`). Choosing a group redraws the whole screen for
+//  that group — every 사람·설치 수 is exact — and hides 건수 while it is on,
+//  because an event count cannot be attributed to one install
+//  (`FeedbackStore+Audience.swift`).
 //
 
 import SwiftUI
@@ -27,6 +32,9 @@ struct StatisticsDashboard: View {
     let project: String?
 
     @State private var trendUnit: FeedbackStore.TrendUnit = .day
+    /// 누구를 보고 있는가 — 전체 · 유료 · 무료. 유료 여부를 보내는 앱에서만
+    /// 고르개가 뜬다.
+    @State private var audience: FeedbackStore.Audience = .all
     /// How many individual events the 사용 내역 card is showing.
     @State private var eventLogLimit = 20
     /// 겹쳐 그린 두 차트에서 지금 켜져 있는 계열. 축은 켜진 것에만 맞춰 잡히므로,
@@ -86,12 +94,13 @@ struct StatisticsDashboard: View {
                         // 자리에 뜨고, 값이 없을 때는 빈칸 대신 **왜 비었는지**가
                         // 들어간다 — 아직 안 보내는 것과 0인 것은 다른 말이다.
                         if !usage.hasUsageData { noUsageCard }
+                        audiencePicker
                         userTiles
                         activeUsersCard
-                        paidCard
+                        if audience == .all { paidCard }
                         specCards
                         weekOverWeek
-                        CarryingCapacityCard(project: scope)
+                        CarryingCapacityCard(project: scope, audience: audience)
                         trendCard
                         eventCard
                         eventLogCard
@@ -113,7 +122,7 @@ struct StatisticsDashboard: View {
         }
     }
 
-    private var usage: FeedbackStore.ProjectUsage { store.usage(for: scope) }
+    private var usage: FeedbackStore.ProjectUsage { store.usage(for: scope, audience: audience) }
 
     // MARK: - 앱별 스펙
 
@@ -125,7 +134,7 @@ struct StatisticsDashboard: View {
     }
 
     private var scopedMetrics: [[String: Double]] {
-        store.snapshots(for: scope).map(\.metrics)
+        store.snapshots(for: scope, audience: audience).map(\.metrics)
     }
 
     /// 앱 자신의 통계 화면이 보여주는 것과 같은 카드들. 스펙이 없으면 자리만
@@ -144,7 +153,8 @@ struct StatisticsDashboard: View {
             // 퍼널만 입력이 다르다: 설치에 남은 상태(`metrics`)가 아니라 일어난 일
             // (이벤트 집계)을 읽는다. 이름별로 이미 접혀 있는 값이라 원본을 훑지 않는다.
             ForEach(spec.insights(for: scopedMetrics)
-                    + spec.funnelInsights(for: store.eventTallies(for: scope))) { insight in
+                    + spec.funnelInsights(for: store.eventTallies(for: scope, audience: audience),
+                                          eventCountsAvailable: usage.hasEventCounts)) { insight in
                 switch insight {
                 case .tiles(let title, let note, let items):
                     Card(title: title, systemImage: "star.circle") {
@@ -190,7 +200,7 @@ struct StatisticsDashboard: View {
     @ViewBuilder
     private var specGapCard: some View {
         if let spec {
-            let metrics = spec.unknownMetricKeys(in: scopedMetrics)
+            let metrics = spec.unknownMetricKeys(in: store.snapshots(for: scope).map(\.metrics))
             // 이름별로 이미 접혀 있는 집계에서 뽑는다: 이벤트 원본을 매번 훑으면
             // 이 카드 하나 때문에 전체 레코드를 프레임마다 다시 읽게 된다.
             let events = spec.unknownEventNames(in: store.eventStats(for: scope).map(\.name))
@@ -237,6 +247,49 @@ struct StatisticsDashboard: View {
         }
     }
 
+    // MARK: - 누구를 볼까 (전체 · 유료 · 무료)
+
+    /// 유료 사용자와 무료 사용자를 따로 놓고 보는 고르개.
+    ///
+    /// 평균은 두 무리를 섞은 값이라 어느 쪽도 설명하지 못한다 — 돈을 낸 사람이
+    /// 얼마나 자주 오는지, 무료 사용자가 어디서 멈추는지는 각각을 따로 놓아야
+    /// 보인다. 유료 여부를 보내는 앱에서만 뜬다: 가를 수 없는 화면에 고르개를
+    /// 두면 눌러 본 사람이 "아무도 유료가 아니다"로 읽는다.
+    @ViewBuilder
+    private var audiencePicker: some View {
+        if store.canSplitByAudience(for: scope) {
+            VStack(alignment: .leading, spacing: 6) {
+                Picker("누구를 볼까요", selection: $audience) {
+                    ForEach(FeedbackStore.Audience.allCases) { group in
+                        Text(group.label).tag(group)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+                footnote(audienceNote)
+            }
+            .padding(10)
+            .cardSurface(radius: 10, bordered: false)
+        }
+    }
+
+    /// 고르개 밑의 한 줄 — 무엇을 덮고 있고, 무엇을 못 보여주는지.
+    private var audienceNote: String {
+        let installs = store.audienceInstalls(for: scope)
+        let total = store.usage(for: scope).installs
+        switch audience {
+        case .all:
+            var text = "앱이 보낸 유료 플래그로 유료·무료를 갈라 볼 수 있습니다"
+            if installs.known < total {
+                text += " — 유료 여부를 보내는 설치 \(installs.known)대 기준이라, 안 보내는 앱의 설치 \(total - installs.known)대는 어느 쪽에도 들어가지 않아요"
+            }
+            return text + ". 고르면 이 화면 전체가 그 무리만 놓고 다시 그려집니다."
+        case .paid, .free:
+            let count = audience == .paid ? installs.paid.count : installs.free.count
+            return "\(audience.label) 사용자 \(count)대만 놓고 본 화면입니다. 사람·설치 수는 정확히 갈리지만, 사용 건수는 설치별로 나뉘어 있지 않아 이 동안 감춥니다 — 무리별 건수를 지어내는 대신 아예 안 보여줍니다. 앱이 스스로 센 '누적 주요 행동'은 스냅샷에 설치별로 실려 오므로 여기서도 참이에요. 피드백과 진단도 설치와 이어져 있지 않아 전체 기준입니다."
+        }
+    }
+
     // MARK: - 사용자
 
     private var userTiles: some View {
@@ -265,7 +318,7 @@ struct StatisticsDashboard: View {
     /// 사람도 30일 동안 안고 있어 늦게 떨어진다. 방향은 셋을 겹쳐 봐야 보이고,
     /// "얼마나 자주 오는가"는 둘의 비(고착도)에서만 나온다.
     private var activeUsersCard: some View {
-        let active = store.activeUsers(for: scope)
+        let active = store.activeUsers(for: scope, audience: audience)
         return Card(title: "활성 사용자 (DAU · WAU · MAU)", systemImage: "person.3") {
             if active.isEmpty {
                 emptyNote("최근 30일 안에 도착한 이벤트가 없습니다. 활성 사용자는 이벤트로만 셀 수 있어서, 앱이 UsageEvent를 보내기 시작하면 여기 나옵니다.")
@@ -494,6 +547,9 @@ struct StatisticsDashboard: View {
                 HStack(alignment: .top, spacing: 16) { weekOverWeekItems }
                 VStack(alignment: .leading, spacing: 12) { weekOverWeekItems }
             }
+            if !usage.hasEventCounts {
+                footnote("사용 건수는 \(audience.label) 사용자만 골라 셀 수 없어 빠졌습니다. 신규 설치는 스냅샷 하나가 설치 하나라 정확해요.")
+            }
         }
     }
 
@@ -501,8 +557,10 @@ struct StatisticsDashboard: View {
     /// 값도 같은 숫자라, 두 번 적으면 읽는 사람이 다른 것인 줄 알고 비교하게 된다.
     @ViewBuilder
     private var weekOverWeekItems: some View {
-        comparison("사용 건수", "\(usage.events7)건",
-                   "지난주 \(usage.previousEvents7)건", usage.eventsDelta)
+        if usage.hasEventCounts {
+            comparison("사용 건수", "\(usage.events7)건",
+                       "지난주 \(usage.previousEvents7)건", usage.eventsDelta)
+        }
         comparison("신규 설치", "\(usage.new7)대",
                    "지난주 \(usage.previousNew7)대", usage.newDelta)
     }
@@ -520,7 +578,7 @@ struct StatisticsDashboard: View {
     // MARK: - 기간별 추이
 
     private var trendCard: some View {
-        let points = store.trend(for: scope, unit: trendUnit)
+        let points = store.trend(for: scope, unit: trendUnit, audience: audience)
         return Card(title: "기간별 추이", systemImage: "chart.xyaxis.line") {
             Picker("단위", selection: $trendUnit) {
                 ForEach(FeedbackStore.TrendUnit.allCases) { unit in
@@ -536,7 +594,7 @@ struct StatisticsDashboard: View {
                 let peak = trendPeak(points)
 
                 Chart {
-                    if trendSeries.isVisible("events") {
+                    if usage.hasEventCounts && trendSeries.isVisible("events") {
                         ForEach(points) { point in
                             BarMark(x: .value("기간", point.date, unit: trendUnit.component),
                                     y: .value("사용 건수", point.events))
@@ -576,9 +634,10 @@ struct StatisticsDashboard: View {
                 .frame(height: trendHeight)
                 .chartCursor($trendCursor)
 
-                ChartLegend(series: Self.trendChartSeries, selection: $trendSeries)
+                ChartLegend(series: trendChartSeries, selection: $trendSeries)
 
-                Text("발생 시각(occurredAt) 기준입니다. 키보드처럼 나중에 소급 전송된 활동도 실제 사용일에 표시됩니다.")
+                Text("발생 시각(occurredAt) 기준입니다. 키보드처럼 나중에 소급 전송된 활동도 실제 사용일에 표시됩니다."
+                     + (usage.hasEventCounts ? "" : " 사용 건수 계열은 \(audience.label) 사용자만 골라 셀 수 없어 빠져 있고, 사람·설치 수 두 계열만 그립니다."))
                     .font(.caption2)
                     .foregroundStyle(.tertiary)
             }
@@ -588,7 +647,7 @@ struct StatisticsDashboard: View {
     /// 사용 건수는 사람 수보다 한 자릿수 크기 마련이라, 켜 두면 두 선이 바닥에
     /// 눌린다. 끄면 축이 사람 수에 맞춰 내려온다.
     private func trendPeak(_ points: [FeedbackStore.TrendPoint]) -> Int {
-        let events = trendSeries.isVisible("events")
+        let events = usage.hasEventCounts && trendSeries.isVisible("events")
         let active = trendSeries.isVisible("active")
         let new = trendSeries.isVisible("new")
         var peak = 0
@@ -619,7 +678,7 @@ struct StatisticsDashboard: View {
 
     private func trendReadout(_ point: FeedbackStore.TrendPoint) -> [ChartReadout.Item] {
         var items: [ChartReadout.Item] = []
-        for series in Self.trendChartSeries where trendSeries.isVisible(series.id) {
+        for series in trendChartSeries where trendSeries.isVisible(series.id) {
             switch series.id {
             case "events":
                 items.append(.init(label: series.label, value: "\(point.events)건", color: series.color))
@@ -632,16 +691,23 @@ struct StatisticsDashboard: View {
         return items
     }
 
-    private static let trendChartSeries = [
+    private static let allTrendChartSeries = [
         ChartSeries("events", "사용 건수", Color.accentColor.opacity(0.5)),
         ChartSeries("active", "활동한 사용자", .blue),
         ChartSeries("new", "신규 설치", .green)
     ]
 
+    /// 지금 그릴 수 있는 계열. 무리를 고른 동안은 건수가 빠지므로 범례에도 없다 —
+    /// 켤 수 없는 스위치를 남겨 두면 눌러 보고 "고장 났다"고 읽는다.
+    private var trendChartSeries: [ChartSeries] {
+        usage.hasEventCounts ? Self.allTrendChartSeries
+                             : Self.allTrendChartSeries.filter { $0.id != "events" }
+    }
+
     // MARK: - 이벤트 · 지표
 
     private var eventCard: some View {
-        let events = store.eventStats(for: scope)
+        let events = store.eventStats(for: scope, audience: audience)
         return Card(title: "앱 사용 내용 (이벤트)", systemImage: "list.bullet.rectangle") {
             if events.isEmpty {
                 emptyNote("아직 기록된 이벤트가 없습니다.")
@@ -656,11 +722,17 @@ struct StatisticsDashboard: View {
                                 .font(.callout)
                                 .fixedSize(horizontal: false, vertical: true)
                             HStack(spacing: 8) {
-                                Text("\(event.count)건")
-                                    .font(.callout.monospacedDigit().weight(.semibold))
-                                Text("\(event.installs)명")
-                                    .font(.caption.monospacedDigit())
-                                    .foregroundStyle(.secondary)
+                                // 건수가 없는 동안은 사람 수가 그 자리의 큰 숫자다.
+                                if let count = event.count {
+                                    Text("\(count)건")
+                                        .font(.callout.monospacedDigit().weight(.semibold))
+                                    Text("\(event.installs)명")
+                                        .font(.caption.monospacedDigit())
+                                        .foregroundStyle(.secondary)
+                                } else {
+                                    Text("\(event.installs)명")
+                                        .font(.callout.monospacedDigit().weight(.semibold))
+                                }
                                 Spacer(minLength: 4)
                                 if let last = event.lastAt {
                                     Text("마지막 \(AppFormat.relative(last))")
@@ -674,7 +746,9 @@ struct StatisticsDashboard: View {
                         if index < events.count - 1 { Divider() }
                     }
                 }
-                Text("왼쪽 큰 수는 몇 번 일어났는지(건), 그 옆은 몇 사람이 했는지(명)입니다. 이름은 앱이 보낸 그대로이고, 콜론 뒤는 슬라이스(예: paywall_view:memo).")
+                Text(usage.hasEventCounts
+                     ? "왼쪽 큰 수는 몇 번 일어났는지(건), 그 옆은 몇 사람이 했는지(명)입니다. 이름은 앱이 보낸 그대로이고, 콜론 뒤는 슬라이스(예: paywall_view:memo)."
+                     : "\(audience.label) 사용자 중 몇 사람이 했는지(명)입니다. 건수는 무리별로 가를 수 없어 빠졌고, 그래서 목록도 사람 수 순입니다. 이름은 앱이 보낸 그대로예요.")
                     .font(.caption2)
                     .foregroundStyle(.tertiary)
             }
@@ -685,14 +759,16 @@ struct StatisticsDashboard: View {
     /// cannot check anywhere else: the card above counts them by name, the
     /// chart draws them by day, and neither lets you look at the 50.
     private var eventLogCard: some View {
-        let all = store.eventLog(for: scope)
+        let all = store.eventLog(for: scope, audience: audience)
         let shown = Array(all.prefix(eventLogLimit))
 
         return Card(title: "사용 내역", systemImage: "clock.arrow.circlepath") {
             if all.isEmpty {
                 emptyNote("아직 기록된 이벤트가 없습니다.")
             } else {
-                Text("최근 7일 \(usage.events7)건 · 전체 \(all.count)건")
+                Text(usage.hasEventCounts
+                     ? "최근 7일 \(usage.events7)건 · 전체 \(all.count)건"
+                     : "\(audience.label) 사용자 \(all.count)건 (이 기기가 들고 있는 최근 기록)")
                     .font(.callout.monospacedDigit())
                     .foregroundStyle(.secondary)
 
@@ -721,7 +797,8 @@ struct StatisticsDashboard: View {
                     .buttonStyle(.borderless)
                 }
 
-                Text("발생 시각(occurredAt) 기준 최신순입니다. 설치 ID는 앱이 보낸 익명 식별자의 앞부분이라, 같은 값이면 같은 기기입니다.")
+                Text("발생 시각(occurredAt) 기준 최신순입니다. 설치 ID는 앱이 보낸 익명 식별자의 앞부분이라, 같은 값이면 같은 기기입니다."
+                     + (usage.hasEventCounts ? "" : " 여기는 한 줄이 곧 한 설치의 행동이라 \(audience.label) 사용자만 정확히 골라 낼 수 있어요 — 접힌 건수와 달리 원본에는 설치 ID가 붙어 있습니다."))
                     .font(.caption2)
                     .foregroundStyle(.tertiary)
             }
@@ -762,7 +839,7 @@ struct StatisticsDashboard: View {
     }
 
     private var metricsCard: some View {
-        let metrics = store.metricAverages(for: scope)
+        let metrics = store.metricAverages(for: scope, audience: audience)
         return Card(title: "설치당 평균 지표", systemImage: "number") {
             if metrics.isEmpty {
                 emptyNote("앱이 보낸 지표가 없습니다.")
@@ -793,7 +870,7 @@ struct StatisticsDashboard: View {
     }
 
     private var flagCard: some View {
-        let shares = store.flagShares(for: scope)
+        let shares = store.flagShares(for: scope, audience: audience)
         return Card(title: "사용자 비율", systemImage: "person.2") {
             if shares.isEmpty {
                 emptyNote("이 앱이 켜짐/꺼짐 지표(flag.*, persona.*)를 보내지 않습니다.")
@@ -835,10 +912,10 @@ struct StatisticsDashboard: View {
                                   field: KeyPath<UsageSnapshot, String>,
                                   second: KeyPath<UsageSnapshot, String>? = nil) -> some View {
         Card(title: title, systemImage: systemImage) {
-            distributionRows(store.distribution(for: scope, by: field))
+            distributionRows(store.distribution(for: scope, audience: audience, by: field))
             if let second {
                 Divider()
-                distributionRows(store.distribution(for: scope, by: second))
+                distributionRows(store.distribution(for: scope, audience: audience, by: second))
             }
         }
     }
@@ -922,6 +999,10 @@ struct StatisticsDashboard: View {
                 .chartXAxis(.hidden)
                 .chartXScale(domain: 0...Self.annotationHeadroom(types.map(\.count).max() ?? 0))
                 .frame(height: max(90, CGFloat(types.count) * 30))
+            }
+
+            if audience != .all {
+                footnote("피드백에는 설치 ID가 없어 유료·무료로 가를 수 없습니다. 이 카드만 전체 기준이에요.")
             }
         }
     }

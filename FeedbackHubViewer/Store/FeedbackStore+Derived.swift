@@ -49,18 +49,23 @@ extension FeedbackStore {
 
         // Per scope — the key is the project, `nil` meaning 전체 프로젝트.
         var stats: [String?: Stats] = [:]
-        var usage: [String?: ProjectUsage] = [:]
-        var activeUsers: [String?: ActiveUsers] = [:]
         // 값이 옵셔널인 이유는 `carryingCapacity`와 같다 — "유료 여부를 보내는
         // 앱이 없다"도 계산 결과이지 미계산이 아니다.
         var paidSplit: [String?: PaidSplit?] = [:]
+        var audienceInstalls: [String?: AudienceInstalls] = [:]
         var crashSummary: [String?: CrashSummary] = [:]
         var crashIssues: [String?: [CrashIssue]] = [:]
-        var eventStats: [String?: [EventStat]] = [:]
-        var eventTallies: [String?: [String: UsageNameTotal]] = [:]
-        var eventLog: [String?: [UsageEvent]] = [:]
-        var metricAverages: [String?: [MetricAverage]] = [:]
-        var flagShares: [String?: [FlagShare]] = [:]
+
+        // 무리(전체 · 유료 · 무료)까지 키에 넣는 것들. 같은 프로젝트라도 무리가
+        // 다르면 다른 숫자이므로, 프로젝트만으로 키를 잡으면 고르개를 옮길 때마다
+        // 앞 무리의 값이 그대로 나온다.
+        var usage: [ScopeKey: ProjectUsage] = [:]
+        var activeUsers: [ScopeKey: ActiveUsers] = [:]
+        var eventStats: [ScopeKey: [EventStat]] = [:]
+        var eventTallies: [ScopeKey: [String: UsageNameTotal]] = [:]
+        var eventLog: [ScopeKey: [UsageEvent]] = [:]
+        var metricAverages: [ScopeKey: [MetricAverage]] = [:]
+        var flagShares: [ScopeKey: [FlagShare]] = [:]
         var distribution: [DistributionKey: [DistributionBucket]] = [:]
         var trend: [TrendKey: [TrendPoint]] = [:]
         // The value is itself optional — "잴 활동이 없다"는 계산 결과이지 미계산이
