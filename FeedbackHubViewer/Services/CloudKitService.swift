@@ -155,6 +155,10 @@ final class CloudKitService {
                     onPartial: ((UsageOutcome) -> Void)? = nil) async -> UsageOutcome {
         var outcome = UsageOutcome()
         var problems: [String] = []
+        // Advice is collected apart from the problems so the same instruction
+        // isn't printed once per failed type, and so what is printed matches
+        // the failure that actually happened.
+        var advice: [String] = []
         let startedAt = Date()
         unsortableTypes = []
 
@@ -186,7 +190,9 @@ final class CloudKitService {
                 finished.syncedTypes = [recordType: startedAt]
                 onPartial?(finished)
             } catch {
-                problems.append(usageProblem(recordType, error))
+                let problem = usageProblem(recordType, error)
+                problems.append(problem.text)
+                if let line = problem.advice, !advice.contains(line) { advice.append(line) }
             }
         }
 
@@ -209,23 +215,20 @@ final class CloudKitService {
         }
         if !problems.isEmpty {
             outcome.notice = problems.joined(separator: "\n")
-                + "\n\nCloudKit Console에서 해당 스키마가 이 환경에 배포되어 있고, admin 역할에 read 권한이 있는지 확인하세요."
+                + (advice.isEmpty ? "" : "\n\n" + advice.joined(separator: "\n"))
         }
         return outcome
     }
 
-    private func usageProblem(_ type: String, _ error: Error) -> String {
-        isBenignProbeError(error)
-            ? "\(type) 레코드 타입이 이 환경에 아직 없습니다."
-            : "\(type)을(를) 읽지 못했습니다: \(Self.friendlyDescription(for: error))"
-    }
-
-    private static func friendlyDescription(for error: Error) -> String {
-        let ck = error as NSError
-        if ck.domain == CKErrorDomain, ck.code == CKError.permissionFailure.rawValue {
-            return "읽기 권한이 없습니다 (Security Roles의 admin 역할 확인)"
+    /// One failed type, as a line for the notice plus the advice that line asks
+    /// for — `nil` when the line already carries its own.
+    private func usageProblem(_ type: String, _ error: Error) -> (text: String, advice: String?) {
+        if isBenignProbeError(error) {
+            return ("\(type) 레코드 타입이 이 환경에 아직 없습니다.",
+                    "CloudKit Console에서 해당 스키마가 이 환경에 배포되어 있는지 확인하세요.")
         }
-        return ck.localizedDescription
+        let failure = CloudKitFailure(error)
+        return ("\(type)을(를) 읽지 못했습니다: \(failure.summary)", failure.advice)
     }
 
     /// Fetch feedback from the public database.

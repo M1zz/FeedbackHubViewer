@@ -1356,21 +1356,6 @@ final class FeedbackStore: ObservableObject {
     // MARK: - Errors
 
     private static func friendlyMessage(for error: Error) -> String {
-        let ck = error as NSError
-        if ck.domain == CKErrorDomain {
-            switch ck.code {
-            case CKError.networkUnavailable.rawValue, CKError.networkFailure.rawValue:
-                return "네트워크에 연결할 수 없습니다. 인터넷 연결을 확인하세요."
-            case CKError.notAuthenticated.rawValue:
-                return "iCloud 인증이 필요합니다. 시스템 설정에서 iCloud에 로그인하세요."
-            case CKError.permissionFailure.rawValue:
-                return "이 데이터에 접근할 권한이 없습니다. CloudKit 대시보드의 공개 DB 보안 역할(Security Roles)을 확인하세요."
-            case CKError.invalidArguments.rawValue:
-                return "쿼리 인자가 올바르지 않습니다. CloudKit 대시보드에서 해당 필드가 Queryable/Sortable로 설정됐는지 확인하세요. (\(ck.localizedDescription))"
-            default:
-                return "CloudKit 오류: \(ck.localizedDescription)"
-            }
-        }
-        return error.localizedDescription
+        CloudKitFailure(error).message
     }
 }
