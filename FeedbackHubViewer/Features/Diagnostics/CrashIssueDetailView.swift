@@ -17,9 +17,15 @@ struct CrashIssueDetailView: View {
     var projectLabel: String?
 
     var body: some View {
+        // 최소 크기는 **맥에만**. 맥의 시트는 제 크기를 스스로 정하므로 콜스택이
+        // 한 줄에 들어갈 만큼은 넓어야 하지만, 아이폰의 시트 너비는 화면이 정한다
+        // — 화면보다 넓은 최소 너비를 주면 시트가 넓어지는 대신 그 안의 내용이
+        // 가운데 놓인 채 **양옆이 잘린다**. 460은 아이폰 너비(390~430)보다 넓다.
+        #if os(macOS)
         content
             .frame(minWidth: 460, minHeight: 520)
-        #if os(iOS)
+        #else
+        content
             .presentationDetents([.large])
         #endif
     }
