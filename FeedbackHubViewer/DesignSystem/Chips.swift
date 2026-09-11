@@ -27,16 +27,36 @@ struct Tag: View {
         // An explicit icon + text rather than `Label`: inside a custom layout
         // `Label` decides on its own that there is no room for the title and
         // renders the icon alone.
-        HStack(spacing: 3) {
-            if let systemImage { Image(systemName: systemImage) }
-            Text(text)
+        //
+        // 좁아지면 **아이콘부터 버린다**. 값이 태그의 내용이고 아이콘은 그
+        // 값이 무엇인지 거드는 장식이라, 둘 중 하나만 남길 수 있다면 남아야
+        // 하는 것은 값이다 — 접근성 글씨 크기에서 "🏷 두번알림"이 "🏷 …"이
+        // 되던 자리에 "두번알림"이 온다.
+        ViewThatFits(in: .horizontal) {
+            label(withIcon: true)
+            label(withIcon: false)
         }
         .font(font)
-        .fixedSize()
+        // 제 너비를 **우기지 않는다**. 예전에는 `fixedSize()`로 이상적인 너비를
+        // 요구했는데, 글씨를 키운 기기나 좁은 화면에서는 그 너비가 칸보다 넓어
+        // 태그 하나가 줄을, 줄이 화면 전체를 밀어냈다 — 화면보다 넓어진 내용은
+        // 가운데 놓인 채 **양옆이 똑같이 잘린다**. 자리가 있으면 제 너비대로,
+        // 없으면 줄여 쓰다가 잘라 쓴다. 잘리는 것은 태그 하나로 끝난다.
+        .lineLimit(1)
+        .minimumScaleFactor(0.7)
+        .truncationMode(.tail)
         .padding(.horizontal, isCompact ? 6 : 8)
         .padding(.vertical, isCompact ? 2 : 3)
         .background((tint ?? .secondary).opacity(tint == nil ? 0.12 : 0.14), in: Capsule())
         .foregroundStyle(tint ?? .secondary)
+    }
+
+    @ViewBuilder
+    private func label(withIcon: Bool) -> some View {
+        HStack(spacing: 3) {
+            if withIcon, let systemImage { Image(systemName: systemImage) }
+            Text(text)
+        }
     }
 }
 
@@ -52,7 +72,10 @@ struct FilterChip: View {
         Button(action: action) {
             Text(title)
                 .font(.callout)
-                .fixedSize()
+                // `Tag`와 같은 이유로 너비를 우기지 않는다.
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+                .truncationMode(.tail)
                 .padding(.horizontal, 10)
                 .padding(.vertical, 5)
                 .background(isSelected ? Color.accentColor : Color.secondary.opacity(0.12),
@@ -106,19 +129,29 @@ struct StatusChip: View {
 
     var body: some View {
         if status.isHandled {
-            HStack(spacing: 3) {
-                Image(systemName: status.systemImage)
-                if showsLabel {
-                    Text(status.label)
-                }
+            // 여기서는 아이콘이 남는다. 태그와 반대인 이유는 이 칩의 내용이
+            // 곧 아이콘(✓·✕)이기 때문이다 — 이름은 그 뜻을 풀어 쓴 것이라,
+            // 자리가 없으면 이름을 접고 표시만 남기는 편이 읽힌다.
+            ViewThatFits(in: .horizontal) {
+                chip(withLabel: showsLabel)
+                chip(withLabel: false)
             }
             .font(.caption2.weight(.medium))
-            .fixedSize()
+            .lineLimit(1)
+            .minimumScaleFactor(0.7)
+            .truncationMode(.tail)
             .padding(.horizontal, showsLabel ? 6 : 3)
             .padding(.vertical, 2)
             .background(status.tint.opacity(0.15), in: Capsule())
             .foregroundStyle(status.tint)
             .accessibilityLabel(status.label)
+        }
+    }
+
+    private func chip(withLabel: Bool) -> some View {
+        HStack(spacing: 3) {
+            Image(systemName: status.systemImage)
+            if withLabel { Text(status.label) }
         }
     }
 }

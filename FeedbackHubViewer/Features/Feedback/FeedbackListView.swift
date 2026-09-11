@@ -17,6 +17,8 @@ struct FeedbackListView: View {
     /// iOS only: the search field replaces the header row while it is open, so
     /// nothing takes up space until search is actually asked for.
     @State private var isSearching = false
+    /// 접근성 글씨 크기에서는 같은 줄에 아이콘과 이름을 다 둘 수 없다.
+    @Environment(\.dynamicTypeSize) private var typeSize
 
     /// A pending "표시된 항목 모두 …" request, awaiting confirmation. Marking
     /// dozens of records at once is worth one question.
@@ -85,7 +87,14 @@ struct FeedbackListView: View {
                 Button {
                     store.markAllRead(project: store.selectedProject)
                 } label: {
-                    Label("모두 읽음", systemImage: "envelope.open")
+                    // 큰 글씨에서는 이름만. 아이콘까지 넣으면 둘 다 들어가지
+                    // 못해 "✉ …"가 되는데, 그러면 무엇을 하는 버튼인지가
+                    // 사라진다.
+                    if typeSize.isAccessibilitySize {
+                        Text("모두 읽음")
+                    } else {
+                        Label("모두 읽음", systemImage: "envelope.open")
+                    }
                 }
                 .buttonStyle(.bordered)
             } else if store.scopedPendingCount > 0 {
@@ -115,10 +124,18 @@ struct FeedbackListView: View {
             .buttonStyle(.bordered)
             #endif
 
+            // `fixedSize()`가 아니다. 이 줄의 양 끝(왼쪽 태그와 이 메뉴)이 둘 다
+            // 제 너비를 우기면 좁은 화면·큰 글씨에서 줄이 화면보다 넓어지고,
+            // 그러면 줄이 아니라 화면 전체의 양옆이 잘린다. 좁아지면 이름을
+            // 줄여 쓰다가 아이콘만 남긴다 — 자리가 없을 때 사라져야 하는 것은
+            // 버튼이 아니라 그 이름이다.
             optionsMenu
-                .fixedSize()
+                .layoutPriority(1)
         }
-        .lineLimit(1)
+        // 큰 글씨에서는 한 줄을 고집하지 않는다. 한 줄만 허용하면 남는 길이
+        // "모두…"뿐이지만, 두 줄이면 "모두 / 읽음"이 그대로 읽힌다.
+        .lineLimit(typeSize.isAccessibilitySize ? 2 : 1)
+        .minimumScaleFactor(0.8)
     }
 
     #if os(iOS)
@@ -203,11 +220,19 @@ struct FeedbackListView: View {
                 }
             }
         } label: {
-            Label(hasActiveFilters ? "정렬 · 필터 사용 중" : "정렬 · 필터",
-                  systemImage: hasActiveFilters
-                      ? "line.3.horizontal.decrease.circle.fill"
-                      : "line.3.horizontal.decrease.circle")
-                .font(.body)
+            let icon = hasActiveFilters
+                ? "line.3.horizontal.decrease.circle.fill"
+                : "line.3.horizontal.decrease.circle"
+            // 자리가 없으면 이름을 접고 아이콘만 남는다. 글자를 끝까지 우겨
+            // 넣는 대신 줄이는 쪽을 고르는 것 — 우기면 이 줄이 아니라 화면이
+            // 잘린다.
+            ViewThatFits(in: .horizontal) {
+                Label(hasActiveFilters ? "정렬 · 필터 사용 중" : "정렬 · 필터", systemImage: icon)
+                Label("정렬 · 필터", systemImage: icon)
+                Image(systemName: icon)
+                    .accessibilityLabel("정렬 · 필터")
+            }
+            .font(.body)
         }
         #if os(macOS)
         .menuStyle(.borderlessButton)
@@ -382,11 +407,18 @@ struct FeedbackListView: View {
             VStack(spacing: 1) {
                 Image(systemName: status.isHandled ? status.systemImage : "circle")
                     .font(.title2)
-                Text(status.isHandled ? status.label : "반영함")
-                    .font(.caption2)
+                // 큰 글씨에서는 동그라미만 남긴다. 이 칸은 행의 오른쪽 끝에
+                // 붙박여 있어 넓어질 자리가 없고, 그 안에서 이름은 "반…"이
+                // 된다 — 음성 안내는 아래 `accessibilityLabel`이 온전히 읽는다.
+                if !typeSize.isAccessibilitySize {
+                    Text(status.isHandled ? status.label : "반영함")
+                        .font(.caption2)
+                }
             }
             .foregroundStyle(status.isHandled ? status.tint : Color.secondary)
-            .frame(width: 54, height: 54)
+            // 고정 크기가 아니라 최소 크기다: 큰 글씨에서 동그라미 자체가
+            // 54보다 커지면 고정 칸은 그것을 잘라 낸다.
+            .frame(minWidth: 54, minHeight: 54)
             .contentShape(Rectangle())
         }
         .buttonStyle(.borderless)

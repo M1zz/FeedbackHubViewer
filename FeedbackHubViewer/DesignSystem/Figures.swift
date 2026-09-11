@@ -58,6 +58,11 @@ struct Figure: View {
             Text(title)
                 .font(.caption2)
                 .foregroundStyle(.secondary)
+                // 이름은 두 줄까지 접힌다. 아래 `lineLimit(1)`은 숫자를 위한
+                // 것이고(자릿수가 늘어도 줄을 바꾸지 않아야 한다), 이름까지
+                // 한 줄로 묶으면 좁은 칸에서 "아직 나는 이슈"가 "아직…"이 되어
+                // 무엇을 세는 숫자인지가 사라진다.
+                .lineLimit(2)
             HStack(spacing: 5) {
                 Text(value)
                     .font(.figure(textStyle))

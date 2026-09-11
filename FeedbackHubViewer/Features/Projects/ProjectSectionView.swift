@@ -14,6 +14,8 @@ import SwiftUI
 struct ProjectSectionView: View {
     @EnvironmentObject private var store: FeedbackStore
     @EnvironmentObject private var keywords: KeywordStore
+    /// 섹션 칸을 몇 줄로 접을지가 여기에 달렸다.
+    @Environment(\.dynamicTypeSize) private var typeSize
     /// nil == 전체 프로젝트.
     let project: String?
     /// The Mac's third column follows this; a phone pushes the detail instead.
@@ -51,7 +53,12 @@ struct ProjectSectionView: View {
     /// target on a phone. A segmented control put the same choices in half the
     /// height and none of the meaning.
     private var sectionBar: some View {
-        HStack(spacing: 6) {
+        // 칸이 아니라 **격자**다. `HStack`은 아이들이 요구하는 너비를 합쳐서
+        // 제 너비로 삼으므로, 글씨를 키운 기기나 좁은 화면에서 네 칸이 화면보다
+        // 넓어지면 그 줄이 화면 전체를 밀어냈다 — 맨 끝 칸이 잘리는 데서 끝나지
+        // 않고, 아래 목록까지 가운데로 밀려 양옆이 함께 잘렸다. 격자는 받은
+        // 너비를 절대 넘지 않고, 한 줄에 못 담으면 다음 줄로 접는다.
+        LazyVGrid(columns: sectionColumns, spacing: 6) {
             ForEach(FeedbackStore.ProjectSection.allCases) { section in
                 sectionButton(section)
             }
@@ -59,25 +66,42 @@ struct ProjectSectionView: View {
         .hubHeaderBar()
     }
 
+    /// 네 칸이 기본, 글씨 크기를 접근성 단계까지 키웠으면 두 칸씩 두 줄.
+    /// 그 크기에서 네 칸은 아이콘 하나와 글자 두어 자로 쪼그라들어, 무엇을
+    /// 고르는 버튼인지 읽을 수 없게 된다.
+    private var sectionColumns: [GridItem] {
+        let count = typeSize.isAccessibilitySize ? 2 : 4
+        return Array(repeating: GridItem(.flexible(), spacing: 6), count: count)
+    }
+
     private func sectionButton(_ section: FeedbackStore.ProjectSection) -> some View {
         let isSelected = store.projectSection == section
         let count = count(for: section)
+        let unread = section == .feedback ? store.unreadCount(for: project) : 0
         return Button {
             store.projectSection = section
         } label: {
             VStack(spacing: 3) {
                 HStack(spacing: 6) {
-                    Image(systemName: section.systemImage)
-                        .font(.headline)
-                    Text(section.rawValue)
-                        .font(.headline)
                     // 안 읽은 피드백은 뱃지로 붙는다. 밑줄의 작은 글씨로 적으면
                     // "아직 안 본 게 있다"가 다른 숫자들 사이에 묻힌다.
-                    if section == .feedback {
-                        CountBadge(count: store.unreadCount(for: project),
-                                   systemImage: "envelope.badge.fill",
+                    //
+                    // 아이콘 **옆이 아니라 자리에** 붙는다. 칸 너비는 넷으로
+                    // 나뉘어 있고 아이콘도 뱃지도 줄어들 줄을 모르니, 둘을 다
+                    // 넣으면 줄어드는 것은 이름뿐이라 "피드백"이 "피…"가 된다.
+                    // 뱃지가 있는 동안에는 뱃지가 곧 그 칸의 아이콘이다.
+                    if unread > 0 {
+                        CountBadge(count: unread, systemImage: "envelope.badge.fill",
                                    tint: .red, name: "안 읽은 피드백")
+                    } else if !typeSize.isAccessibilitySize {
+                        // 접근성 글씨 크기에서는 아이콘도 뺀다. 아이콘은 글씨와
+                        // 함께 커지면서 줄어들지는 않는 유일한 조각이라, 그
+                        // 크기에서는 아이콘 하나가 이름 전체를 삼킨다.
+                        Image(systemName: section.systemImage)
+                            .font(.headline)
                     }
+                    Text(section.rawValue)
+                        .font(.headline)
                 }
                 // 두 줄 모두 칸 너비를 제안받아야 한다. 이게 없으면 글자는 제
                 // 이상적인 너비를 그대로 쓰고, 바깥 `frame`은 배경만 칸에 맞춰
