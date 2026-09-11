@@ -50,7 +50,14 @@ final class KeywordStore: ObservableObject {
     private let directory = AppStoreDirectory.shared
     private var checkTask: Task<Void, Never>?
     private var restoreTask: Task<Void, Never>?
+    private var linkTask: Task<Void, Never>?
     private var loaded = false
+
+    /// Bundle ids a lookup has already covered this launch, answered or not.
+    /// In memory on purpose: "not on the App Store" is true until it isn't, and
+    /// a launch is a short enough memory that a newly shipped app shows up
+    /// without anyone clearing anything.
+    private var askedLinks: Set<String> = []
 
     /// How far along a check is. Searches are the only slow part and there are
     /// exactly as many as there are distinct terms, so unlike the CloudKit
@@ -119,10 +126,7 @@ final class KeywordStore: ObservableObject {
             // showed "App Store에서 찾지 못했습니다" for apps that are plainly
             // on the store, and left 자동 찾기 with nothing to start from.
             // One request per launch, and only while something is unlinked.
-            if bundleIds.contains(where: { self.history.links[$0] == nil }) {
-                await self.resolveLinks(bundleIds: bundleIds)
-                self.persist()
-            }
+            self.syncLinks(bundleIds: bundleIds)
             guard self.needsDailyCheck else { return }
             self.check(bundleIds: bundleIds)
         }
@@ -163,7 +167,13 @@ final class KeywordStore: ObservableObject {
             progress = nil
         }
 
-        await resolveLinks(bundleIds: bundleIds)
+        // A check is the once-a-day moment to ask again about the ids the store
+        // had no answer for: an app that was in review yesterday is on sale
+        // today, and nothing else would ever go back and look. After whatever
+        // `syncLinks` has in flight, so the two never ask the same question at
+        // the same time.
+        await linkTask?.value
+        await resolveLinks(bundleIds: bundleIds, retryUnanswered: true)
         let mine = Set(history.links.values)
         // Every rank this pass could record would be empty, and it would then
         // mark today as checked and not try again until tomorrow. Better to do
@@ -210,18 +220,65 @@ final class KeywordStore: ObservableObject {
         persist()
     }
 
+    /// Resolve whatever the hub knows about and the links do not — now, and
+    /// again every time the hub's project list moves.
+    ///
+    /// The list is not a launch-time constant, which is the whole reason this
+    /// exists. An app reports for the first time while the window is already
+    /// open: the refresh brings its records in, a card appears for it, and the
+    /// links were resolved minutes earlier from a list that did not have it
+    /// yet. Its icon then stayed the dashed placeholder — the symbol that says
+    /// "not on the App Store" — until the next launch, for an app plainly on
+    /// the store. Called from `start(bundleIds:)` and from the project list
+    /// itself, and cheap to call: it asks only about ids no request has
+    /// covered yet, and does nothing at all when there are none.
+    func syncLinks(bundleIds: [String]) {
+        guard bundleIds.contains(where: needsLink) else { return }
+        let previous = linkTask
+        linkTask = Task { [weak self] in
+            // Serialised rather than dropped when one is already running: the
+            // caller may be the very refresh that added the id this one is
+            // missing, and a dropped call has nothing to bring it back.
+            _ = await previous?.value
+            guard let self else { return }
+            await self.restoreTask?.value
+            guard bundleIds.contains(where: self.needsLink) else { return }
+            await self.resolveLinks(bundleIds: bundleIds)
+            self.persist()
+        }
+    }
+
+    /// An id worth a request: on the hub's list, not linked, and not already
+    /// asked about since launch.
+    private func needsLink(_ bundleId: String) -> Bool {
+        bundleId != Feedback.unclassifiedProject
+            && history.links[bundleId] == nil
+            && !askedLinks.contains(bundleId)
+    }
+
     /// Turn bundle ids into App Store apps, for the ids not already linked.
     ///
     /// Looked up in the first tracked storefront: an app is the same `trackId`
     /// in every store it is sold in, so one storefront answers for all of them.
     /// An id that resolves nowhere is simply an app that is not on the App
     /// Store — a Development-only build, or one still in review.
-    private func resolveLinks(bundleIds: [String]) async {
-        let unlinked = bundleIds.filter { history.links[$0] == nil }
+    ///
+    /// `retryUnanswered` is what the daily check passes: silence is remembered
+    /// so that a Development-only app does not cost a request every time the
+    /// project list moves, and forgotten once a day so that one shipping since
+    /// yesterday is picked up.
+    private func resolveLinks(bundleIds: [String], retryUnanswered: Bool = false) async {
+        if retryUnanswered { askedLinks.removeAll() }
+        let unlinked = bundleIds.filter(needsLink)
         guard !unlinked.isEmpty else { return }
         let country = countries.first ?? "kr"
         do {
             let apps = try await directory.lookup(bundleIds: unlinked, country: country)
+            // Asked *and answered* — the ids the store said nothing about are
+            // in here too, and that silence is the answer. Only recorded when
+            // the request itself came back: a throttled one is not an answer
+            // about anything, and must not be read as one.
+            askedLinks.formUnion(unlinked)
             for app in apps {
                 guard let bundleId = app.bundleId else { continue }
                 history.links[bundleId] = app.id
@@ -240,6 +297,7 @@ final class KeywordStore: ObservableObject {
             let country = self.countries.first ?? "kr"
             do {
                 let apps = try await self.directory.lookup(bundleIds: bundleIds, country: country)
+                self.askedLinks.formUnion(bundleIds)
                 for app in apps {
                     guard let bundleId = app.bundleId else { continue }
                     self.history.links[bundleId] = app.id

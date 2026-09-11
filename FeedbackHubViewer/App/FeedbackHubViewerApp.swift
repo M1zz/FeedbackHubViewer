@@ -36,6 +36,14 @@ struct FeedbackHubViewerApp: App {
                     await store.awaitRestore()
                     keywords.start(bundleIds: store.allProjectKeys)
                 }
+                // 그리고 그 뒤로도. 위의 목록은 캐시가 그려진 순간의 것이고,
+                // 앱이 처음 리포트를 보내면 그 앱은 **새로고침이 끝난 뒤에야**
+                // 목록에 들어온다 — 아이콘을 그때 다시 묻지 않으면 다음 실행
+                // 때까지 점선 자리표시자로 남는다. 이미 물어본 것은 다시 묻지
+                // 않으므로(`syncLinks`) 새로고침마다 요청이 늘지 않는다.
+                .onChange(of: store.allProjectKeys) { _, keys in
+                    keywords.syncLinks(bundleIds: keys)
+                }
         }
         #if os(macOS)
         .windowToolbarStyle(.unified)
