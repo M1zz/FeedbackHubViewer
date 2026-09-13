@@ -257,10 +257,14 @@ struct StatisticsDashboard: View {
     /// 두면 눌러 본 사람이 "아무도 유료가 아니다"로 읽는다.
     @ViewBuilder
     private var audiencePicker: some View {
-        if store.canSplitByAudience(for: scope) {
+        let installs = store.audienceInstalls(for: scope)
+        if installs.known > 0 {
+            let bands = installs.available
             VStack(alignment: .leading, spacing: 6) {
                 Picker("누구를 볼까요", selection: $audience) {
-                    ForEach(FeedbackStore.Audience.allCases) { group in
+                    // 있는 띠만 건다. 체험을 안 보내는 앱에 체험 칸을 두면
+                    // 눌러 본 사람이 "체험자가 0명"으로 읽는다.
+                    ForEach(bands) { group in
                         Text(group.label).tag(group)
                     }
                 }
@@ -270,6 +274,11 @@ struct StatisticsDashboard: View {
             }
             .padding(10)
             .cardSurface(radius: 10, bordered: false)
+            // 프로젝트를 옮기면 없던 띠가 골라진 채로 남을 수 있다 — 그러면
+            // 화면이 빈 무리를 그리므로 전체로 되돌린다.
+            .onChange(of: bands) { _, new in
+                if !new.contains(audience) { audience = .all }
+            }
         }
     }
 
@@ -279,14 +288,17 @@ struct StatisticsDashboard: View {
         let total = store.usage(for: scope).installs
         switch audience {
         case .all:
-            var text = "앱이 보낸 유료 플래그로 유료·무료를 갈라 볼 수 있습니다"
+            var text = "앱이 보낸 권한 플래그로 갈라 볼 수 있습니다"
+            if !installs.hasTrialBand && !installs.hasCompedBand {
+                text += " — 유료·무료 둘뿐입니다. 앱이 flag.isTrial·flag.isComped를 같이 보내면 체험과 무상(그랜드파더·프로모션)도 따로 갈립니다"
+            }
             if installs.known < total {
-                text += " — 유료 여부를 보내는 설치 \(installs.known)대 기준이라, 안 보내는 앱의 설치 \(total - installs.known)대는 어느 쪽에도 들어가지 않아요"
+                text += " — 권한을 보내는 설치 \(installs.known)대 기준이라, 안 보내는 앱의 설치 \(total - installs.known)대는 어느 띠에도 들어가지 않아요"
             }
             return text + ". 고르면 이 화면 전체가 그 무리만 놓고 다시 그려집니다."
-        case .paid, .free:
-            let count = audience == .paid ? installs.paid.count : installs.free.count
-            return "\(audience.label) 사용자 \(count)대만 놓고 본 화면입니다. 사람·설치 수는 정확히 갈리지만, 사용 건수는 설치별로 나뉘어 있지 않아 이 동안 감춥니다 — 무리별 건수를 지어내는 대신 아예 안 보여줍니다. 앱이 스스로 센 '누적 주요 행동'은 스냅샷에 설치별로 실려 오므로 여기서도 참이에요. 피드백과 진단도 설치와 이어져 있지 않아 전체 기준입니다."
+        case .paid, .trial, .comped, .free:
+            let count = installs.count(for: audience)
+            return "\(audience.label) — \(audience.blurb) \(count)대만 놓고 본 화면입니다. 사람·설치 수는 정확히 갈리지만, 사용 건수는 설치별로 나뉘어 있지 않아 이 동안 감춥니다 — 무리별 건수를 지어내는 대신 아예 안 보여줍니다. 앱이 스스로 센 '누적 주요 행동'은 스냅샷에 설치별로 실려 오므로 여기서도 참이에요. 피드백과 진단도 설치와 이어져 있지 않아 전체 기준입니다."
         }
     }
 
@@ -498,6 +510,13 @@ struct StatisticsDashboard: View {
                     paidRow("최근 7일 활성", split.active7)
                     paidRow("최근 30일 활성", split.active30)
                 }
+                if let warning = paidSanityWarning(split) {
+                    Label(warning, systemImage: "exclamationmark.triangle.fill")
+                        .font(.caption)
+                        .foregroundStyle(.orange)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.top, 2)
+                }
                 footnote(paidFootnote(split))
             } else {
                 // 0%가 아니라 "모른다"이다. 유료 여부를 안 보내는 앱을 전부
@@ -507,17 +526,46 @@ struct StatisticsDashboard: View {
                     paidRow("최근 7일 활성", nil)
                     paidRow("최근 30일 활성", nil)
                 }
-                footnote("이 앱이 유료 여부를 보내지 않습니다. 스냅샷 metrics에 0/1 플래그 하나(예: flag.isPro)를 실어 보내면 여기서 갈립니다 — 어느 키인지는 앱 리포의 docs/usage-spec.json에 paidFlag로 적어 두면 확실해요. 없는 동안은 0%가 아니라 '모름'으로 둡니다.")
+                footnote("이 앱이 권한을 보내지 않습니다. 스냅샷 metrics에 0/1 플래그를 실어 보내면 여기서 갈립니다 — flag.isPaid(지금 유효한 결제), flag.isTrial(체험 중), flag.isComped(그랜드파더·프로모션·가족 공유처럼 돈 안 내고 열린 접근). 이름이 다르면 앱 리포의 docs/usage-spec.json에 paidFlag·trialFlag·compedFlag로 적어 두세요. 하나로 합쳐 보내면 안 됩니다 — \"기능이 열려 있다\"를 유료로 세면 신규 설치까지 유료가 됩니다. 없는 동안은 0%가 아니라 '모름'으로 둡니다.")
             }
         }
     }
 
     /// `slice`가 nil이면 "아직 모른다" — 막대는 비고 값은 —.
+    ///
+    /// 막대가 재는 것은 **유료 비중 하나**다. 체험·무상은 돈을 안 낸 사람이라
+    /// 막대에 섞으면 매출로 읽히므로, 숫자로만 옆에 적는다.
     private func paidRow(_ label: String, _ slice: FeedbackStore.PaidSplit.Slice?) -> some View {
         SpecBar(label: label,
                 value: slice?.ratio.map { String(format: "%.0f%%", ($0 * 100).rounded()) } ?? "—",
                 ratio: slice?.ratio ?? 0,
-                hint: slice.map { "유료 \($0.paid)명 · 무료 \($0.free)명" } ?? "유료 여부를 안 보냄")
+                hint: slice.map(Self.bandHint) ?? "권한을 안 보냄")
+    }
+
+    /// "유료 12명 · 체험 3명 · 무상 2명 · 무료 40명" — 없는 띠는 적지 않는다.
+    private static func bandHint(_ slice: FeedbackStore.PaidSplit.Slice) -> String {
+        var parts = ["유료 \(slice.paid)명"]
+        if slice.trial > 0 { parts.append("체험 \(slice.trial)명") }
+        if slice.comped > 0 { parts.append("무상 \(slice.comped)명") }
+        parts.append("무료 \(slice.free)명")
+        return parts.joined(separator: " · ")
+    }
+
+    /// 유료 숫자가 못 미더울 때 카드 위에 뜨는 한 줄.
+    ///
+    /// 단정하지 않고 묻는다 — 유료 다운로드 앱이라면 첫 실행부터 100% 유료가
+    /// 맞기 때문이다. 하지만 프리미엄 앱에서 이 줄이 뜨면 거의 틀림없이 앱이
+    /// 결제가 아니라 접근 권한을 보내고 있다.
+    private func paidSanityWarning(_ split: FeedbackStore.PaidSplit) -> String? {
+        let suspects = split.suspectSources
+        guard !suspects.isEmpty else { return nil }
+        let detail = suspects.map { source in
+            let pct = Int(((source.sanity.ratio ?? 0) * 100).rounded())
+            return scope == nil ? "\(source.displayName) \(pct)%" : "\(pct)%"
+        }.joined(separator: ", ")
+        return "첫 실행부터 유료로 잡히는 설치가 \(detail)입니다. 유료 다운로드 앱이 아니라면, "
+             + "보내는 값이 결제가 아니라 기능 접근 권한(체험·그랜드파더 포함)일 수 있어요 — "
+             + "결제만 flag.isPaid로 보내고 나머지는 flag.isTrial·flag.isComped로 나눠 주세요."
     }
 
     /// 이 숫자가 어디서 나왔는지 — 어떤 키로 갈랐고, 어느 앱을 셌는지.
@@ -530,12 +578,22 @@ struct StatisticsDashboard: View {
                                     : "\(name)(\(source.key))"
             }
             .joined(separator: ", ")
-        var text = "앱이 스냅샷에 실어 보낸 플래그로 갈랐습니다 — \(keys). 결제 영수증이 아니라 앱이 \"유료\"라고 표시해 보낸 설치 수예요. 활성은 위 타일과 같은 기준(스냅샷의 마지막 활동 시각)이라, 유료 + 무료가 그 타일 숫자와 맞습니다."
+        var text = "앱이 스냅샷에 실어 보낸 플래그로 갈랐습니다 — \(keys). 결제 영수증이 아니라 앱이 \"유료\"라고 표시해 보낸 설치 수예요. 막대는 유료 비중만 재고, 체험·무상은 돈을 안 낸 사람이라 옆에 숫자로만 적습니다. 활성은 위 타일과 같은 기준(스냅샷의 마지막 활동 시각)이라, 네 띠의 합이 그 타일 숫자와 맞습니다."
         if scope == nil {
-            text += " 유료 여부를 아예 안 보내는 앱은 빠져 있어서 합계가 전체 설치보다 적을 수 있어요."
+            text += " 권한을 아예 안 보내는 앱은 빠져 있어서 합계가 전체 설치보다 적을 수 있어요."
+        }
+        let bandless = split.bandlessSources
+        if !bandless.isEmpty {
+            let names = scope == nil ? " (" + bandless.map(\.displayName).joined(separator: ", ") + ")" : ""
+            text += " 체험·무상을 안 보내는 앱\(names)에서는 그 사람들이 유료나 무료 중 한쪽에 섞여 있습니다 — flag.isTrial·flag.isComped를 같이 보내면 갈립니다."
+        }
+        let ambiguous = split.ambiguousSources
+        if !ambiguous.isEmpty {
+            let names = scope == nil ? " (" + ambiguous.map(\.displayName).joined(separator: ", ") + ")" : ""
+            text += " \"Pro\"·\"Premium\"처럼 뜻이 겹치는 이름으로 갈린 앱\(names)이 있습니다 — 그런 값은 대개 결제가 아니라 접근 권한이라 유료가 부풀 수 있어요."
         }
         if split.hasGuessedKey {
-            text += " 이름만 보고 고른 키가 섞여 있습니다. 그 앱 리포의 docs/usage-spec.json에 paidFlag를 적어 두면 추측하지 않아요."
+            text += " 이름만 보고 고른 키가 섞여 있습니다. 그 앱 리포의 docs/usage-spec.json에 paidFlag·trialFlag·compedFlag를 적어 두면 추측하지 않아요."
         }
         return text
     }

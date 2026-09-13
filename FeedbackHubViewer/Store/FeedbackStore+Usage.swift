@@ -293,20 +293,36 @@ extension FeedbackStore {
     /// 설치가 없다. 덕분에 `유료 + 무료`는 언제나 그 타일의 숫자와 정확히 같고,
     /// 두 숫자가 어긋나 보이는 일이 생기지 않는다.
     struct PaidSplit {
-        /// 한 창(전체 / 최근 7일 / 최근 30일)에서 갈린 수.
+        /// 한 창(전체 / 최근 7일 / 최근 30일)에서 띠별로 갈린 수.
+        /// 네 값은 서로 겹치지 않아서 더하면 `total`이 된다.
         struct Slice {
             let paid: Int
+            let trial: Int
+            let comped: Int
             let free: Int
 
-            var total: Int { paid + free }
+            var total: Int { paid + trial + comped + free }
             /// 유료 비중. 아무도 없으면 비율이랄 게 없다.
             var ratio: Double? {
                 guard total > 0 else { return nil }
                 return Double(paid) / Double(total)
             }
+            /// 돈을 안 내고 열린 사람들 — 체험 + 무상. 유료와 섞이면
+            /// 매출로 읽히므로 따로 셀 수 있어야 한다.
+            var unpaidAccess: Int { trial + comped }
+
+            func count(for audience: Audience) -> Int {
+                switch audience {
+                case .all:    return total
+                case .paid:   return paid
+                case .trial:  return trial
+                case .comped: return comped
+                case .free:   return free
+                }
+            }
         }
 
-        /// 이 값을 만든 앱과 그 앱에서 유료를 뜻한 키. 전체 프로젝트에서는
+        /// 이 값을 만든 앱과 그 앱에서 권한을 읽은 키들. 전체 프로젝트에서는
         /// 앱마다 키가 다르므로 여럿이 된다.
         struct Source {
             let project: String
@@ -314,8 +330,14 @@ extension FeedbackStore {
             let key: String
             /// 스펙이 그 키에 붙인 이름("Pro 사용자"). 없으면 키 원문을 쓴다.
             let label: String?
-            /// 스펙이 직접 지정한 키인가, 흔한 이름으로 추측한 것인가.
+            /// 스펙이 직접 지정한 키인가, 규약·이름으로 찾아낸 것인가.
             let isDeclared: Bool
+            /// 유료로 고른 키가 접근 권한과 헷갈리는 이름인가.
+            let isAmbiguous: Bool
+            /// 체험·무상까지 규약대로 보내는가.
+            let hasBands: Bool
+            /// 이 앱의 유료 숫자가 믿을 만한가.
+            let sanity: PaidSanity
         }
 
         let sources: [Source]
@@ -323,10 +345,42 @@ extension FeedbackStore {
         let active7: Slice
         let active30: Slice
 
-        /// 유료 여부를 보내는 앱이 하나도 없으면 보여 줄 것이 없다.
+        /// 권한을 보내는 앱이 하나도 없으면 보여 줄 것이 없다.
         var isEmpty: Bool { sources.isEmpty || all.total == 0 }
-        /// 추측한 키가 하나라도 섞여 있으면 화면에서 그렇다고 말해야 한다.
+        /// 이름만 보고 고른 키가 하나라도 섞여 있으면 화면에서 그렇다고 말해야 한다.
         var hasGuessedKey: Bool { sources.contains { !$0.isDeclared } }
+        /// 뜻이 겹치는 이름으로 갈린 앱.
+        var ambiguousSources: [Source] { sources.filter(\.isAmbiguous) }
+        /// 유료 숫자가 못 미더운 앱 — 첫 실행부터 거의 전부가 유료인 곳.
+        var suspectSources: [Source] { sources.filter(\.sanity.isImplausible) }
+        /// 체험·무상을 아직 안 보내는 앱.
+        var bandlessSources: [Source] { sources.filter { !$0.hasBands } }
+    }
+
+    /// 유료로 갈린 숫자가 믿을 만한가 — **첫 실행(launchCount == 1)부터 유료인
+    /// 설치의 비율**로 잰다.
+    ///
+    /// 결제 화면을 보기도 전에 유료로 찍힌다면, 앱이 보내는 값이 결제가 아니라
+    /// 접근 권한일 가능성이 크다. 실제로 그래서 한 앱의 첫 실행 설치 3,619대 중
+    /// 3,595대(99.3%)가 유료로 기록됐고, 몇 주 동안 아무도 몰랐다. 같은 규약을
+    /// 쓰는 앱이 늘수록 사람 눈으로는 못 잡으니 여기서 센다.
+    ///
+    /// 유료 다운로드 앱이라면 100%가 정상이므로, 화면은 단정하지 않고 묻는다.
+    struct PaidSanity {
+        let firstLaunchInstalls: Int
+        let firstLaunchPaid: Int
+
+        var ratio: Double? {
+            guard firstLaunchInstalls > 0 else { return nil }
+            return Double(firstLaunchPaid) / Double(firstLaunchInstalls)
+        }
+
+        /// 표본이 충분한데 첫 실행부터 거의 전부가 유료인가.
+        /// 기준: 30대 이상 · 90% 이상. 실측에서 멀쩡한 앱은 5.0%, 고장 난 앱은
+        /// 99.3%라 사이가 넓다 — 좁힐 이유가 생기기 전까지는 이 정도로 둔다.
+        var isImplausible: Bool {
+            firstLaunchInstalls >= 30 && (ratio ?? 0) >= 0.9
+        }
     }
 
     // MARK: - Cache keys
@@ -491,34 +545,114 @@ extension FeedbackStore {
         }
     }
 
-    // MARK: - 유료 · 무료
+    // MARK: - 유료 · 체험 · 무상 · 무료
 
-    /// 앱이 "유료"라고 표시해 보내는 플래그 이름 후보.
+    /// 앱이 스냅샷 `metrics`에 실어 보내는 권한 플래그의 **규약**.
     ///
-    /// 스펙(`paidFlag`)이 1순위이고 이건 그 다음이다. 앱 리포가 아직 스펙에
-    /// 한 줄을 안 적었어도 오늘 화면에 뭔가는 나와야 하기 때문인데, 추측이므로
-    /// 고른 키를 각주에 드러내고 "스펙에 적으라"고 말한다.
+    /// 셋으로 나눈 이유는 `FeedbackStore+Audience.swift` 머리말에 있다. 짧게
+    /// 말하면, 0/1 하나로는 "돈을 냈다"와 "지금 기능이 열려 있다"를 구분할 수
+    /// 없고 그 둘을 섞으면 유료가 부풀기 때문이다.
+    enum EntitlementFlag {
+        /// 지금 유효한 결제가 있는가. 이것만이 매출과 이어진다.
+        static let paid = "flag.isPaid"
+        /// 체험 기간 중인가 — 아직 안 냈고, 곧 결정할 사람.
+        static let trial = "flag.isTrial"
+        /// 돈을 안 내고 열린 접근인가 — 그랜드파더·프로모션 코드·가족 공유·내부 테스터.
+        static let comped = "flag.isComped"
+    }
+
+    /// 규약이 생기기 전에 쓰이던 이름들. 스펙에도 안 적고 `flag.isPaid`도
+    /// 안 보내는 앱에서 오늘 화면에 뭔가는 나와야 해서 남겨 둔다.
+    ///
+    /// 차례가 중요하다 — 뜻이 분명한 이름이 앞이다. 뒤쪽 `isPro`·`isPremium`
+    /// 무리는 실무에서 대개 **결제**가 아니라 **접근 권한**을 뜻해서, 이 이름으로
+    /// 갈린 숫자는 유료를 부풀린다. 그래서 골랐으면 `isAmbiguous`로 표시하고
+    /// 화면에 그렇다고 적는다.
     static let paidFlagCandidates = [
-        "flag.isPro", "flag.pro", "flag.isPaid", "flag.paid",
-        "flag.isPremium", "flag.premium", "flag.subscribed", "flag.isSubscriber",
-        "flag.purchased", "flag.isPlus"
+        "flag.isPaid", "flag.paid", "flag.purchased",
+        "flag.subscribed", "flag.isSubscriber",
+        "flag.isPro", "flag.pro", "flag.isPremium", "flag.premium", "flag.isPlus"
     ]
 
-    /// 이 프로젝트에서 유료를 뜻하는 키와, 그것을 어떻게 알았는지.
-    /// 스냅샷이 실제로 보낸 적 있는 키만 고른다 — 스펙에 적혀 있어도 앱이
+    /// 뜻이 겹치는 이름들 — "Pro"는 산 사람일 수도, 그냥 열린 사람일 수도 있다.
+    static let ambiguousPaidNames: Set<String> = [
+        "flag.isPro", "flag.pro", "flag.isPremium", "flag.premium", "flag.isPlus"
+    ]
+
+    /// 한 앱에서 권한을 어떻게 읽어 낼지 — 어느 키를 어떤 근거로 골랐는가.
+    struct Entitlement {
+        struct Flag: Hashable {
+            let key: String
+            /// 스펙이 직접 지정한 키인가, 규약·이름으로 찾아낸 것인가.
+            let isDeclared: Bool
+        }
+
+        /// 유료를 뜻하는 키. 이게 없으면 이 앱은 아예 가를 수 없다.
+        let paid: Flag
+        let trial: Flag?
+        let comped: Flag?
+        /// 유료로 고른 키가 접근 권한과 헷갈리는 이름인가(`flag.isPro` 같은).
+        let isAmbiguous: Bool
+
+        /// 규약대로 띠를 갖췄는가 — 체험이나 무상 중 하나라도 보내는가.
+        var hasBands: Bool { trial != nil || comped != nil }
+
+        /// 이 설치가 어느 띠인가. 차례는 유료 > 무상 > 체험 > 무료
+        /// (`FeedbackStore+Audience.swift` 머리말).
+        func band(of snapshot: UsageSnapshot) -> Band {
+            func on(_ flag: Flag?) -> Bool {
+                guard let flag else { return false }
+                // 0/1 플래그라 "1 이상이면 켜짐". 앱이 실수로 2를 보내도
+                // 한 명이지 두 명이 아니다.
+                return (snapshot.metrics[flag.key] ?? 0) >= 1
+            }
+            if on(paid) { return .paid }
+            if on(comped) { return .comped }
+            if on(trial) { return .trial }
+            return .free
+        }
+
+        enum Band { case paid, trial, comped, free }
+    }
+
+    /// 이 프로젝트에서 권한을 읽어 낼 방법. 유료 키조차 못 찾으면 nil —
+    /// 그 앱의 설치는 어느 띠에도 넣지 않는다.
+    ///
+    /// 스냅샷이 **실제로 보낸 적 있는** 키만 고른다. 스펙에 적혀 있어도 앱이
     /// 아직 안 보내면 전부 무료로 세어 버리기 때문이다.
-    func paidFlagKey(for project: String) -> (key: String, isDeclared: Bool)? {
+    func entitlement(for project: String) -> Entitlement? {
         let snaps = snapshots(for: project)
         guard !snaps.isEmpty else { return nil }
         let present = Set(snaps.flatMap { $0.metrics.keys })
-        if let declared = ProjectStatsSpecCatalog.spec(for: project)?.paidFlag,
-           present.contains(declared) {
-            return (declared, true)
+        let spec = ProjectStatsSpecCatalog.spec(for: project)
+
+        /// 스펙이 적어 둔 이름이 1순위, 규약 이름이 2순위.
+        func resolve(_ declared: String?, convention: String) -> Entitlement.Flag? {
+            if let declared, present.contains(declared) {
+                return .init(key: declared, isDeclared: true)
+            }
+            if present.contains(convention) {
+                return .init(key: convention, isDeclared: false)
+            }
+            return nil
         }
-        if let guessed = Self.paidFlagCandidates.first(where: present.contains) {
-            return (guessed, false)
+
+        var paid = resolve(spec?.paidFlag, convention: EntitlementFlag.paid)
+        if paid == nil, let guessed = Self.paidFlagCandidates.first(where: present.contains) {
+            paid = .init(key: guessed, isDeclared: false)
         }
-        return nil
+        guard let paid else { return nil }
+
+        return Entitlement(
+            paid: paid,
+            trial: resolve(spec?.trialFlag, convention: EntitlementFlag.trial),
+            comped: resolve(spec?.compedFlag, convention: EntitlementFlag.comped),
+            isAmbiguous: !paid.isDeclared && Self.ambiguousPaidNames.contains(paid.key))
+    }
+
+    /// 옛 이름. 유료 키만 궁금한 자리를 위해 남겨 둔다.
+    func paidFlagKey(for project: String) -> (key: String, isDeclared: Bool)? {
+        entitlement(for: project).map { ($0.paid.key, $0.paid.isDeclared) }
     }
 
     /// 유료·무료로 나눈 설치 수. 유료 여부를 보내는 앱이 없으면 nil.
@@ -535,39 +669,60 @@ extension FeedbackStore {
 
             let scope = project.map { [$0] } ?? allProjectKeys
             var sources: [PaidSplit.Source] = []
-            var all = (paid: 0, free: 0)
-            var week = (paid: 0, free: 0)
-            var month = (paid: 0, free: 0)
+            /// 띠별 누적 — 유료 · 체험 · 무상 · 무료.
+            var all = (paid: 0, trial: 0, comped: 0, free: 0)
+            var week = all
+            var month = all
 
             for key in scope {
-                guard let flag = paidFlagKey(for: key) else { continue }
+                guard let entitlement = entitlement(for: key) else { continue }
+
+                var firstLaunch = 0
+                var firstLaunchPaid = 0
+
+                for snapshot in snapshots(for: key) {
+                    let band = entitlement.band(of: snapshot)
+                    let active = snapshot.lastActiveAt ?? .distantPast
+
+                    func add(to tally: inout (paid: Int, trial: Int, comped: Int, free: Int)) {
+                        switch band {
+                        case .paid:   tally.paid += 1
+                        case .trial:  tally.trial += 1
+                        case .comped: tally.comped += 1
+                        case .free:   tally.free += 1
+                        }
+                    }
+                    add(to: &all)
+                    if active >= weekAgo { add(to: &week) }
+                    if active >= monthAgo { add(to: &month) }
+
+                    // 신뢰도: 아직 한 번밖에 안 연 설치가 벌써 유료인가.
+                    if snapshot.launchCount == 1 {
+                        firstLaunch += 1
+                        if band == .paid { firstLaunchPaid += 1 }
+                    }
+                }
+
                 sources.append(PaidSplit.Source(
                     project: key,
                     displayName: displayName(for: key),
-                    key: flag.key,
-                    label: ProjectStatsSpecCatalog.spec(for: key)?.label(forMetric: flag.key),
-                    isDeclared: flag.isDeclared))
-
-                for snapshot in snapshots(for: key) {
-                    // 0/1 플래그라 "1 이상이면 유료". 앱이 실수로 2를 보내도
-                    // 유료 한 명이지 두 명이 아니다.
-                    let isPaid = (snapshot.metrics[flag.key] ?? 0) >= 1
-                    let active = snapshot.lastActiveAt ?? .distantPast
-                    if isPaid { all.paid += 1 } else { all.free += 1 }
-                    if active >= weekAgo {
-                        if isPaid { week.paid += 1 } else { week.free += 1 }
-                    }
-                    if active >= monthAgo {
-                        if isPaid { month.paid += 1 } else { month.free += 1 }
-                    }
-                }
+                    key: entitlement.paid.key,
+                    label: ProjectStatsSpecCatalog.spec(for: key)?.label(forMetric: entitlement.paid.key),
+                    isDeclared: entitlement.paid.isDeclared,
+                    isAmbiguous: entitlement.isAmbiguous,
+                    hasBands: entitlement.hasBands,
+                    sanity: PaidSanity(firstLaunchInstalls: firstLaunch,
+                                       firstLaunchPaid: firstLaunchPaid)))
             }
 
             guard !sources.isEmpty else { return nil }
+            func slice(_ t: (paid: Int, trial: Int, comped: Int, free: Int)) -> PaidSplit.Slice {
+                .init(paid: t.paid, trial: t.trial, comped: t.comped, free: t.free)
+            }
             return PaidSplit(sources: sources.sorted { $0.displayName < $1.displayName },
-                             all: .init(paid: all.paid, free: all.free),
-                             active7: .init(paid: week.paid, free: week.free),
-                             active30: .init(paid: month.paid, free: month.free))
+                             all: slice(all),
+                             active7: slice(week),
+                             active30: slice(month))
         }
     }
 

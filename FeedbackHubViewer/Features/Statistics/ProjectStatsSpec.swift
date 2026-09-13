@@ -47,13 +47,26 @@ struct ProjectStatsSpec: Decodable {
     var segments: SegmentSpec?
     /// 이벤트를 순서대로 세워 단계별로 몇이 남는지 본다(페이월 → 결제).
     var funnels: [FunnelSpec] = []
-    /// 이 앱에서 "돈을 낸 사람"을 뜻하는 0/1 플래그 키(`flag.isPro` 같은 것).
+    /// 이 앱에서 **지금 유효한 결제가 있는 사람**을 뜻하는 0/1 플래그 키.
     ///
-    /// 이름을 앱이 정하는 값이라 뷰어가 짐작할 수 없다. 적어 두면 유료·무료를
-    /// 그 키로 정확히 가르고, 없으면 흔한 이름들로 추측한다
-    /// (`FeedbackStore.paidFlagKey`). 추측한 경우에도 화면에는 어떤 키로 갈랐는지
-    /// 그대로 적으므로, 틀린 키를 골랐다면 눈에 보인다.
+    /// 규약 이름은 `flag.isPaid`이고, 그 이름으로 보내면 안 적어도 알아본다.
+    /// 다른 이름을 쓴다면 여기 적어야 한다. 둘 다 없으면 흔한 이름들로 추측하는데
+    /// (`FeedbackStore.paidFlagCandidates`), `flag.isPro` 같은 이름은 실무에서
+    /// 대개 결제가 아니라 **접근 권한**을 뜻해서 유료를 부풀린다. 그래서 추측으로
+    /// 고른 경우 화면이 "이름만 보고 골랐다"고 밝힌다.
+    ///
+    /// ⚠️ 여기에 "기능이 열려 있는가"를 넣지 말 것. 한 앱이 그랬다가 신규 설치의
+    ///    99%가 유료로 기록됐다 — 결제 ∪ 그랜드파더 ∪ 체험을 한 값에 담았기
+    ///    때문이다. 그런 것들은 아래 두 줄로 따로 보낸다.
     var paidFlag: String?
+
+    /// 체험 기간 중인 설치를 뜻하는 0/1 플래그 키. 규약 이름은 `flag.isTrial`.
+    /// 아직 돈을 안 낸 사람이라 유료에 섞이면 매출로 읽힌다.
+    var trialFlag: String?
+
+    /// 돈을 안 내고 접근이 열린 설치 — 그랜드파더·프로모션 코드·가족 공유·내부
+    /// 테스터. 규약 이름은 `flag.isComped`. 영구 면제라 전환 대상이 아니다.
+    var compedFlag: String?
 
     static let supportedVersion = 1
 
@@ -63,7 +76,7 @@ struct ProjectStatsSpec: Decodable {
     enum CodingKeys: String, CodingKey {
         case specVersion, appId, appName, metricLabels, metricPrefixLabels
         case eventLabels, tileGroups, distributions, shares, derived, segments, funnels
-        case paidFlag
+        case paidFlag, trialFlag, compedFlag
     }
 
     init(from decoder: Decoder) throws {
@@ -81,6 +94,8 @@ struct ProjectStatsSpec: Decodable {
         segments = try c.decodeIfPresent(SegmentSpec.self, forKey: .segments)
         funnels = try c.decodeIfPresent([FunnelSpec].self, forKey: .funnels) ?? []
         paidFlag = try c.decodeIfPresent(String.self, forKey: .paidFlag)
+        trialFlag = try c.decodeIfPresent(String.self, forKey: .trialFlag)
+        compedFlag = try c.decodeIfPresent(String.self, forKey: .compedFlag)
     }
 
     struct MetricLabel: Decodable {
