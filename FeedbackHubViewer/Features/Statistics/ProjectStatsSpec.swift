@@ -47,13 +47,23 @@ struct ProjectStatsSpec: Decodable {
     var segments: SegmentSpec?
     /// 이벤트를 순서대로 세워 단계별로 몇이 남는지 본다(페이월 → 결제).
     var funnels: [FunnelSpec] = []
+    /// 이 앱에서 **지금 유료 기능을 쓸 수 있는 사람**을 뜻하는 0/1 플래그 키.
+    ///
+    /// 규약 이름은 `flag.hasAccess`. 이게 이 화면의 큰 숫자다 — 거의 모든 앱이
+    /// 이미 이 값을 보내고 있기 때문이다. 안 적고 `flag.hasAccess`도 안 보내면
+    /// 흔한 이름들로 찾는데(`FeedbackStore.accessFlagCandidates`), `flag.isPro`
+    /// 같은 옛 이름이 실제로 재고 있던 값이 바로 이것이라 그 추측은 대개 맞다.
+    /// 아래 `paidFlag`가 있으면 그것도 접근의 근거가 되므로, 셋 중 하나라도
+    /// 켜져 있으면 열린 것으로 본다.
+    var accessFlag: String?
+
     /// 이 앱에서 **지금 유효한 결제가 있는 사람**을 뜻하는 0/1 플래그 키.
     ///
     /// 규약 이름은 `flag.isPaid`이고, 그 이름으로 보내면 안 적어도 알아본다.
     /// 다른 이름을 쓴다면 여기 적어야 한다. 둘 다 없으면 흔한 이름들로 추측하는데
-    /// (`FeedbackStore.paidFlagCandidates`), `flag.isPro` 같은 이름은 실무에서
-    /// 대개 결제가 아니라 **접근 권한**을 뜻해서 유료를 부풀린다. 그래서 추측으로
-    /// 고른 경우 화면이 "이름만 보고 골랐다"고 밝힌다.
+    /// 위 `accessFlag`와 달리 **추측하지 않는다.** `flag.isPro` 같은 옛 이름은
+    /// 실무에서 대개 결제가 아니라 접근 권한을 뜻하므로, 결제 자리에 넣으면
+    /// 유료가 부풀기 때문이다. 그 이름들은 전부 접근 쪽으로 간다.
     ///
     /// ⚠️ 여기에 "기능이 열려 있는가"를 넣지 말 것. 한 앱이 그랬다가 신규 설치의
     ///    99%가 유료로 기록됐다 — 결제 ∪ 그랜드파더 ∪ 체험을 한 값에 담았기
@@ -64,7 +74,7 @@ struct ProjectStatsSpec: Decodable {
     /// 아직 돈을 안 낸 사람이라 유료에 섞이면 매출로 읽힌다.
     var trialFlag: String?
 
-    /// 돈을 안 내고 접근이 열린 설치 — 그랜드파더·프로모션 코드·가족 공유·내부
+    /// 돈을 안 내고 접근이 열린 설치 — 그랜드파더·가족 공유·내부
     /// 테스터. 규약 이름은 `flag.isComped`. 영구 면제라 전환 대상이 아니다.
     var compedFlag: String?
 
@@ -76,7 +86,7 @@ struct ProjectStatsSpec: Decodable {
     enum CodingKeys: String, CodingKey {
         case specVersion, appId, appName, metricLabels, metricPrefixLabels
         case eventLabels, tileGroups, distributions, shares, derived, segments, funnels
-        case paidFlag, trialFlag, compedFlag
+        case accessFlag, paidFlag, trialFlag, compedFlag
     }
 
     init(from decoder: Decoder) throws {
@@ -93,6 +103,7 @@ struct ProjectStatsSpec: Decodable {
         derived = try c.decodeIfPresent([DerivedSpec].self, forKey: .derived) ?? []
         segments = try c.decodeIfPresent(SegmentSpec.self, forKey: .segments)
         funnels = try c.decodeIfPresent([FunnelSpec].self, forKey: .funnels) ?? []
+        accessFlag = try c.decodeIfPresent(String.self, forKey: .accessFlag)
         paidFlag = try c.decodeIfPresent(String.self, forKey: .paidFlag)
         trialFlag = try c.decodeIfPresent(String.self, forKey: .trialFlag)
         compedFlag = try c.decodeIfPresent(String.self, forKey: .compedFlag)

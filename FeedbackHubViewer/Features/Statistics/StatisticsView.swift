@@ -97,7 +97,7 @@ struct StatisticsDashboard: View {
                         audiencePicker
                         userTiles
                         activeUsersCard
-                        if audience == .all { paidCard }
+                        if audience == .all { accessCard }
                         specCards
                         weekOverWeek
                         CarryingCapacityCard(project: scope, audience: audience)
@@ -187,7 +187,7 @@ struct StatisticsDashboard: View {
                             footnote("주황 칸은 앞 단계보다 수가 많아요. 퍼널이 성립하려면 각 칸이 앞 칸에 포함돼야 하는데, 이벤트 이름만으로는 '앞을 거쳐서 왔다'를 강제할 수 없어요 — 그 자리는 다른 경로로도 닿습니다. 경로를 구분하려면 앱이 이벤트에 슬라이스를 붙여 보내야 해요.")
                         }
                         if steps.contains(where: \.isMissing) {
-                            footnote("회색 칸은 그 이벤트가 이 앱에서 **한 번도 도착한 적이 없다**는 뜻이에요. 아무도 거기까지 못 간 게 아니라 앱이 그 이벤트를 아직 안 보내는 거라, 스펙이 아니라 앱을 고쳐야 답이 나옵니다.")
+                            footnote("회색 칸은 그 이벤트가 이 앱에서 한 번도 도착한 적이 없다는 뜻이에요. 아무도 거기까지 못 간 게 아니라 앱이 그 이벤트를 아직 안 보내는 거라, 스펙이 아니라 앱을 고쳐야 답이 나옵니다.")
                         }
                     }
                 }
@@ -251,20 +251,19 @@ struct StatisticsDashboard: View {
 
     /// 유료 사용자와 무료 사용자를 따로 놓고 보는 고르개.
     ///
-    /// 평균은 두 무리를 섞은 값이라 어느 쪽도 설명하지 못한다 — 돈을 낸 사람이
-    /// 얼마나 자주 오는지, 무료 사용자가 어디서 멈추는지는 각각을 따로 놓아야
-    /// 보인다. 유료 여부를 보내는 앱에서만 뜬다: 가를 수 없는 화면에 고르개를
-    /// 두면 눌러 본 사람이 "아무도 유료가 아니다"로 읽는다.
+    /// 평균은 두 무리를 섞은 값이라 어느 쪽도 설명하지 못한다 — 유료 기능을 쓸
+    /// 수 있는 사람이 얼마나 자주 오는지, 무료 기능만 쓰는 사람이 어디서 멈추는지는
+    /// 각각을 따로 놓아야 보인다. 권한을 보내는 앱에서만 뜬다: 가를 수 없는 화면에
+    /// 고르개를 두면 눌러 본 사람이 "아무도 유료 기능을 안 쓴다"로 읽는다.
+    ///
+    /// 칸은 언제나 셋이다 — 전체 · 유료기능 · 무료기능. 앱에 따라 나타났다
+    /// 사라지는 칸이 없으므로 프로젝트를 옮겨도 고른 것이 그대로 남는다.
     @ViewBuilder
     private var audiencePicker: some View {
-        let installs = store.audienceInstalls(for: scope)
-        if installs.known > 0 {
-            let bands = installs.available
+        if store.audienceInstalls(for: scope).known > 0 {
             VStack(alignment: .leading, spacing: 6) {
                 Picker("누구를 볼까요", selection: $audience) {
-                    // 있는 띠만 건다. 체험을 안 보내는 앱에 체험 칸을 두면
-                    // 눌러 본 사람이 "체험자가 0명"으로 읽는다.
-                    ForEach(bands) { group in
+                    ForEach(FeedbackStore.Audience.allCases) { group in
                         Text(group.label).tag(group)
                     }
                 }
@@ -274,11 +273,6 @@ struct StatisticsDashboard: View {
             }
             .padding(10)
             .cardSurface(radius: 10, bordered: false)
-            // 프로젝트를 옮기면 없던 띠가 골라진 채로 남을 수 있다 — 그러면
-            // 화면이 빈 무리를 그리므로 전체로 되돌린다.
-            .onChange(of: bands) { _, new in
-                if !new.contains(audience) { audience = .all }
-            }
         }
     }
 
@@ -288,15 +282,14 @@ struct StatisticsDashboard: View {
         let total = store.usage(for: scope).installs
         switch audience {
         case .all:
-            var text = "앱이 보낸 권한 플래그로 갈라 볼 수 있습니다"
-            if !installs.hasTrialBand && !installs.hasCompedBand {
-                text += " — 유료·무료 둘뿐입니다. 앱이 flag.isTrial·flag.isComped를 같이 보내면 체험과 무상(그랜드파더·프로모션)도 따로 갈립니다"
-            }
+            var text = "앱이 보낸 권한 플래그로 갈라 볼 수 있습니다 — 유료 기능을 쓸 수 있는 설치와 무료 기능만 쓰는 설치"
             if installs.known < total {
-                text += " — 권한을 보내는 설치 \(installs.known)대 기준이라, 안 보내는 앱의 설치 \(total - installs.known)대는 어느 띠에도 들어가지 않아요"
+                // 안 보내는 것은 앱 단위가 아니라 설치 단위다 — 규약을 아는 앱도
+                // 구버전 설치는 안 보낸다. 그런 설치는 무료기능이 아니라 모름이다.
+                text += " — 권한을 보내는 설치 \(installs.known)대 기준이라, 안 보내는 설치 \(total - installs.known)대는 어느 쪽에도 들어가지 않아요(무료기능이 아니라 모름)"
             }
             return text + ". 고르면 이 화면 전체가 그 무리만 놓고 다시 그려집니다."
-        case .paid, .trial, .comped, .free:
+        case .paidFeatures, .freeFeatures:
             let count = installs.count(for: audience)
             return "\(audience.label) — \(audience.blurb) \(count)대만 놓고 본 화면입니다. 사람·설치 수는 정확히 갈리지만, 사용 건수는 설치별로 나뉘어 있지 않아 이 동안 감춥니다 — 무리별 건수를 지어내는 대신 아예 안 보여줍니다. 앱이 스스로 센 '누적 주요 행동'은 스냅샷에 설치별로 실려 오므로 여기서도 참이에요. 피드백과 진단도 설치와 이어져 있지 않아 전체 기준입니다."
         }
@@ -493,84 +486,62 @@ struct StatisticsDashboard: View {
         return peak
     }
 
-    // MARK: - 유료 · 무료
+    // MARK: - 유료기능 · 무료기능
 
-    /// 돈을 낸 사람이 몇이고, 그중 지금 쓰고 있는 사람이 몇인가.
+    /// 유료 기능을 쓸 수 있는 사람이 몇이고, 그중 지금 쓰고 있는 사람이 몇인가.
     ///
-    /// 세 창을 나란히 두는 이유: 전체 유료 비중은 지금까지 판 결과이고, 활성
-    /// 중의 유료 비중은 **지금 이 앱을 떠받치는 사람들**의 구성이다. 둘이
-    /// 벌어지면 유료 사용자가 먼저 빠져나가고 있다는 뜻이라, 같은 화면에
-    /// 있어야 눈에 걸린다.
-    private var paidCard: some View {
-        let split = store.paidSplit(for: scope)
-        return Card(title: "유료 · 무료", systemImage: "creditcard") {
+    /// 세 창을 나란히 두는 이유: 전체 비중은 지금까지 쌓인 결과이고, 활성 중의
+    /// 비중은 **지금 이 앱을 떠받치는 사람들**의 구성이다. 둘이 벌어지면 유료
+    /// 기능을 쓰던 사람이 먼저 빠져나가고 있다는 뜻이라, 같은 화면에 있어야
+    /// 눈에 걸린다.
+    private var accessCard: some View {
+        let split = store.accessSplit(for: scope)
+        return Card(title: "유료기능 · 무료기능", systemImage: "lock.open") {
             if let split, !split.isEmpty {
                 VStack(spacing: 10) {
-                    paidRow("전체 설치", split.all)
-                    paidRow("최근 7일 활성", split.active7)
-                    paidRow("최근 30일 활성", split.active30)
+                    accessRow("전체 설치", split.all)
+                    accessRow("최근 7일 활성", split.active7)
+                    accessRow("최근 30일 활성", split.active30)
                 }
-                if let warning = paidSanityWarning(split) {
-                    Label(warning, systemImage: "exclamationmark.triangle.fill")
-                        .font(.caption)
-                        .foregroundStyle(.orange)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.top, 2)
-                }
-                footnote(paidFootnote(split))
+                footnote(accessFootnote(split))
             } else {
-                // 0%가 아니라 "모른다"이다. 유료 여부를 안 보내는 앱을 전부
-                // 무료로 세면 없는 사실을 지어내게 된다.
+                // 0%가 아니라 "모른다"이다. 권한을 안 보내는 앱을 전부
+                // 무료기능으로 세면 없는 사실을 지어내게 된다.
                 VStack(spacing: 10) {
-                    paidRow("전체 설치", nil)
-                    paidRow("최근 7일 활성", nil)
-                    paidRow("최근 30일 활성", nil)
+                    accessRow("전체 설치", nil)
+                    accessRow("최근 7일 활성", nil)
+                    accessRow("최근 30일 활성", nil)
                 }
-                footnote("이 앱이 권한을 보내지 않습니다. 스냅샷 metrics에 0/1 플래그를 실어 보내면 여기서 갈립니다 — flag.isPaid(지금 유효한 결제), flag.isTrial(체험 중), flag.isComped(그랜드파더·프로모션·가족 공유처럼 돈 안 내고 열린 접근). 이름이 다르면 앱 리포의 docs/usage-spec.json에 paidFlag·trialFlag·compedFlag로 적어 두세요. 하나로 합쳐 보내면 안 됩니다 — \"기능이 열려 있다\"를 유료로 세면 신규 설치까지 유료가 됩니다. 없는 동안은 0%가 아니라 '모름'으로 둡니다.")
+                footnote("이 앱이 권한을 보내지 않습니다. 스냅샷 metrics에 flag.hasAccess(지금 유료 기능을 쓸 수 있는가)를 0/1로 실어 보내면 여기서 갈립니다. 이름이 다르면 앱 리포의 docs/usage-spec.json에 accessFlag로 적어 두면 돼요. 없는 동안은 0%가 아니라 '모름'으로 둡니다.")
             }
         }
     }
 
-    /// `slice`가 nil이면 "아직 모른다" — 막대는 비고 값은 —.
-    ///
-    /// 막대가 재는 것은 **유료 비중 하나**다. 체험·무상은 돈을 안 낸 사람이라
-    /// 막대에 섞으면 매출로 읽히므로, 숫자로만 옆에 적는다.
-    private func paidRow(_ label: String, _ slice: FeedbackStore.PaidSplit.Slice?) -> some View {
+    /// `slice`가 nil이거나 표본이 너무 얇으면 "아직 모른다" — 막대는 비고 값은 —.
+    private func accessRow(_ label: String, _ slice: FeedbackStore.AccessSplit.Slice?) -> some View {
         SpecBar(label: label,
                 value: slice?.ratio.map { String(format: "%.0f%%", ($0 * 100).rounded()) } ?? "—",
                 ratio: slice?.ratio ?? 0,
-                hint: slice.map(Self.bandHint) ?? "권한을 안 보냄")
+                hint: slice.map(Self.accessHint) ?? "권한을 안 보냄",
+                isMuted: slice?.ratio == nil)
     }
 
-    /// "유료 12명 · 체험 3명 · 무상 2명 · 무료 40명" — 없는 띠는 적지 않는다.
-    private static func bandHint(_ slice: FeedbackStore.PaidSplit.Slice) -> String {
-        var parts = ["유료 \(slice.paid)명"]
-        if slice.trial > 0 { parts.append("체험 \(slice.trial)명") }
-        if slice.comped > 0 { parts.append("무상 \(slice.comped)명") }
-        parts.append("무료 \(slice.free)명")
-        return parts.joined(separator: " · ")
-    }
-
-    /// 유료 숫자가 못 미더울 때 카드 위에 뜨는 한 줄.
+    /// "유료기능 5,719명 · 무료기능 36명".
     ///
-    /// 단정하지 않고 묻는다 — 유료 다운로드 앱이라면 첫 실행부터 100% 유료가
-    /// 맞기 때문이다. 하지만 프리미엄 앱에서 이 줄이 뜨면 거의 틀림없이 앱이
-    /// 결제가 아니라 접근 권한을 보내고 있다.
-    private func paidSanityWarning(_ split: FeedbackStore.PaidSplit) -> String? {
-        let suspects = split.suspectSources
-        guard !suspects.isEmpty else { return nil }
-        let detail = suspects.map { source in
-            let pct = Int(((source.sanity.ratio ?? 0) * 100).rounded())
-            return scope == nil ? "\(source.displayName) \(pct)%" : "\(pct)%"
-        }.joined(separator: ", ")
-        return "첫 실행부터 유료로 잡히는 설치가 \(detail)입니다. 유료 다운로드 앱이 아니라면, "
-             + "보내는 값이 결제가 아니라 기능 접근 권한(체험·그랜드파더 포함)일 수 있어요 — "
-             + "결제만 flag.isPaid로 보내고 나머지는 flag.isTrial·flag.isComped로 나눠 주세요."
+    /// 모름은 **있으면 반드시 적는다.** 둘의 합이 타일보다 작을 때 그 차이가
+    /// 어디로 갔는지 말해 주지 않으면, 보는 사람은 숫자가 샌 줄로 읽는다.
+    private static func accessHint(_ slice: FeedbackStore.AccessSplit.Slice) -> String {
+        var parts = ["유료기능 \(slice.paidFeatures)명", "무료기능 \(slice.freeFeatures)명"]
+        if slice.unknown > 0 { parts.append("모름 \(slice.unknown)명") }
+        let text = parts.joined(separator: " · ")
+        // 막대를 못 그린 줄에는 **왜 못 그렸는지**가 셈보다 먼저 와야 한다.
+        guard slice.isTooThin else { return text }
+        return "\(slice.scanned)대 중 \(slice.total)대만 권한을 보내 비중은 아직 모릅니다 — \(text)"
     }
 
     /// 이 숫자가 어디서 나왔는지 — 어떤 키로 갈랐고, 어느 앱을 셌는지.
     /// 결제 영수증이 아니라 앱이 보낸 플래그라는 사실을 감추면 매출로 읽힌다.
-    private func paidFootnote(_ split: FeedbackStore.PaidSplit) -> String {
+    private func accessFootnote(_ split: FeedbackStore.AccessSplit) -> String {
         let keys = split.sources
             .map { source in
                 let name = source.label ?? source.key
@@ -578,22 +549,12 @@ struct StatisticsDashboard: View {
                                     : "\(name)(\(source.key))"
             }
             .joined(separator: ", ")
-        var text = "앱이 스냅샷에 실어 보낸 플래그로 갈랐습니다 — \(keys). 결제 영수증이 아니라 앱이 \"유료\"라고 표시해 보낸 설치 수예요. 막대는 유료 비중만 재고, 체험·무상은 돈을 안 낸 사람이라 옆에 숫자로만 적습니다. 활성은 위 타일과 같은 기준(스냅샷의 마지막 활동 시각)이라, 네 띠의 합이 그 타일 숫자와 맞습니다."
-        if scope == nil {
-            text += " 권한을 아예 안 보내는 앱은 빠져 있어서 합계가 전체 설치보다 적을 수 있어요."
-        }
-        let bandless = split.bandlessSources
-        if !bandless.isEmpty {
-            let names = scope == nil ? " (" + bandless.map(\.displayName).joined(separator: ", ") + ")" : ""
-            text += " 체험·무상을 안 보내는 앱\(names)에서는 그 사람들이 유료나 무료 중 한쪽에 섞여 있습니다 — flag.isTrial·flag.isComped를 같이 보내면 갈립니다."
-        }
-        let ambiguous = split.ambiguousSources
-        if !ambiguous.isEmpty {
-            let names = scope == nil ? " (" + ambiguous.map(\.displayName).joined(separator: ", ") + ")" : ""
-            text += " \"Pro\"·\"Premium\"처럼 뜻이 겹치는 이름으로 갈린 앱\(names)이 있습니다 — 그런 값은 대개 결제가 아니라 접근 권한이라 유료가 부풀 수 있어요."
+        var text = "앱이 스냅샷에 실어 보낸 플래그로 갈랐습니다 — \(keys). 막대가 재는 것은 유료 기능을 쓸 수 있는 설치의 비중이지 매출이 아니에요. 결제 영수증은 허브에 오지 않습니다. 활성은 위 타일과 같은 기준(스냅샷의 마지막 활동 시각)이라, 유료기능·무료기능·모름을 더하면 그 타일 숫자와 정확히 같습니다."
+        if split.all.unknown > 0 {
+            text += " 권한을 안 실어 보낸 설치 \(split.all.unknown)대는 무료기능이 아니라 모름이라 막대의 분모에 안 들어갑니다 — 그 앱이 권한을 아예 안 보내거나, 아직 구버전인 설치예요."
         }
         if split.hasGuessedKey {
-            text += " 이름만 보고 고른 키가 섞여 있습니다. 그 앱 리포의 docs/usage-spec.json에 paidFlag·trialFlag·compedFlag를 적어 두면 추측하지 않아요."
+            text += " 이름만 보고 고른 키가 섞여 있습니다(flag.isPro 같은 옛 이름은 대개 \"쓸 수 있는가\"를 뜻해서 여기 씁니다). 그 앱 리포의 docs/usage-spec.json에 accessFlag를 적어 두면 추측하지 않아요."
         }
         return text
     }
@@ -1150,8 +1111,8 @@ private struct SpecBar<Trailing: View>: View {
 
 extension SpecBar where Trailing == Text {
     /// The plain form: one value on the right and nothing else.
-    init(label: String, value: String, ratio: Double, hint: String? = nil) {
-        self.init(label: label, ratio: ratio, hint: hint) {
+    init(label: String, value: String, ratio: Double, hint: String? = nil, isMuted: Bool = false) {
+        self.init(label: label, ratio: ratio, hint: hint, isMuted: isMuted) {
             Text(value).font(.callout.monospacedDigit().weight(.semibold))
         }
     }

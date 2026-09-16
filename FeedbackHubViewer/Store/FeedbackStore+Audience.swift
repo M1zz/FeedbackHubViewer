@@ -2,38 +2,53 @@
 //  FeedbackStore+Audience.swift
 //  FeedbackHubViewer
 //
-//  같은 통계 화면을 한 무리에만 맞춰 다시 그리는 장치 — 전체 · 유료 · 체험 · 무상 · 무료.
+//  같은 통계 화면을 한 무리에만 맞춰 다시 그리는 장치 — 전체 · 유료기능 · 무료기능.
 //
-//  왜 필요한가: 평균은 여러 무리를 섞은 값이라 어느 쪽도 설명하지 못한다. 돈을 낸
-//  사람이 얼마나 자주 오는지, 무료 사용자가 어디까지 쓰다 멈추는지는 각각을 따로
-//  놓고 봐야 나온다.
+//  왜 필요한가: 평균은 여러 무리를 섞은 값이라 어느 쪽도 설명하지 못한다. 유료
+//  기능을 쓸 수 있는 사람이 얼마나 자주 오는지, 무료 범위에서 쓰는 사람이 어디까지
+//  쓰다 멈추는지는 각각을 따로 놓고 봐야 나온다.
 //
-//  한때 이 화면은 유료·무료 **둘**로만 갈랐고, 가르는 근거도 앱이 보낸 0/1 하나였다.
-//  그게 조용히 틀렸다: 한 앱이 그 자리에 "지금 기능이 열려 있는가"(결제 ∪ 그랜드파더
-//  ∪ 체험 ∪ 내부 빌드)를 실어 보냈고, 신규 설치의 99%가 유료로 기록됐다. 플래그
-//  하나로는 **돈을 냈다**와 **열려 있다**를 구분할 수 없다 — 이름이 `isPro`여도
-//  마찬가지다. 그래서 규약을 셋으로 나눈다(`FeedbackStore.EntitlementFlag`):
+//  ── 이 화면이 두 번 틀렸고, 두 번 다 같은 이유였다 ──
 //
-//      flag.isPaid    지금 유효한 결제가 있는가 — 이것만 매출과 이어진다
-//      flag.isTrial   체험 기간 중인가 — 아직 안 냈고, 곧 결정할 사람
-//      flag.isComped  돈 안 내고 열린 접근인가 — 그랜드파더·프로모션·가족 공유·테스터
+//  처음엔 앱이 보낸 0/1 하나를 **결제**로 읽었다. 그런데 한 앱이 그 자리에
+//  "지금 기능이 열려 있는가"(결제 ∪ 그랜드파더 ∪ 체험 ∪ 내부 빌드)를 실어
+//  보냈고, 신규 설치의 99%가 유료로 기록됐다. 그래서 규약을 셋으로 나누고
+//  (`flag.isPaid` · `flag.isTrial` · `flag.isComped`), 그 셋을 안 보내는 설치는
+//  어느 띠에도 안 넣기로 했다. 이번엔 8,201대 중 5,726대가 **모름**이 됐다.
 //
-//  띠는 서로 겹치지 않게 **유료 > 무상 > 체험 > 무료** 차례로 정한다. 무상이 체험보다
-//  앞서는 이유: 무상은 영구 면제라 체험이 끝나도 그대로다. "왜 돈을 안 내고 쓰는가"에
-//  답하는 쪽이 무상이므로, 둘 다 켜져 있으면 무상이 그 사람을 더 잘 설명한다.
+//  둘 다 같은 잘못이었다 — **가진 값에 안 맞는 질문을 물었다.** 앱이 보내는
+//  0/1이 실제로 재는 것은 "지금 쓸 수 있는가"지 "돈을 냈는가"가 아니다. 그 값을
+//  결제로 읽으면 거짓이 되고, 결제만 물으면 대부분이 모름이 된다. 질문을 값에
+//  맞추면 둘 다 아니다:
+//
+//      유료기능 / 무료기능  — 지금 유료 기능을 쓸 수 있는가
+//
+//  이 질문에는 거의 모든 앱이 이미 답하고 있어서 모름이 52대(0.6%)로 줄었다.
+//  옛 이름(`flag.isPro` 등)도 버릴 것이 아니라 제자리를 찾아 준 것이다 —
+//  결제 자리에선 거짓말이지만 "쓸 수 있는가" 자리에선 참이다.
+//
+//  왜 결제·체험·무상까지 안 쪼개는가: 쪼개 봤는데 그 셋을 말해 주는 앱이 거의
+//  없었다. 대부분의 칸이 비거나 "아는 일부만 놓고 센 값"이라는 단서가 줄줄이
+//  붙었고, 그러면 고르개가 고를 수 없는 것을 고르게 한다.
+//
+//  실측이 그 말을 뒷받침한다: ClipKeyboard의 무료 한도는 단축어 10개인데, 한도를
+//  넘긴 65대는 **전부** `flag.isPro`가 켜져 있었고(앞뒤가 맞는다), 한도 안에서
+//  쓰는 5,690대 중에서도 5,654대가 켜져 있었다. 결제라면 설명이 안 되지만,
+//  접근이라면 설명이 된다 — 5.0.0부터 모두에게 열어 둔 것이다.
 //
 //  그리고 —
 //
-//   · 권한을 **안 보내는 앱의 설치는 어느 띠에도 들어가지 않는다.** 무료로 세면
-//     없는 사실을 지어내는 것이다. 띠의 합 < 전체가 정상이고, 화면은 얼마나
-//     덮고 있는지(`AudienceInstalls.known`)를 적는다.
+//   · 권한을 **안 보내는 설치는 어느 쪽에도 들어가지 않는다.** "무료기능"으로 세면
+//     없는 사실을 지어내는 것이다. 이 판단은 앱이 아니라 **설치 하나하나**에
+//     대해서 한다 — 한 앱 안에서도 버전 세대는 섞이고, 앱을 단위로 보면 새 키를
+//     보내는 36대 때문에 구버전 5,710대가 통째로 뒤집힌다(실제로 그랬다).
 //
 //   · **건수(events)는 무리별로 가를 수 없다.** 일 버킷은 그날의 건수와 그날
 //     활동한 `installID` 집합을 따로 들고 있을 뿐, 설치별 건수를 들고 있지 않다
 //     (`UsageDayBucket`). 사람 수는 집합의 교집합으로 정확히 갈리지만 건수는
 //     못 나눈다. 그래서 걸러 낸 버킷의 `events`는 0이고, 화면은 무리를 고른
 //     동안 건수를 **아예 보여주지 않는다** — 전체 건수를 그대로 두면 사람 수는
-//     유료인데 건수는 전체인 한 장이 되어, 둘을 나눈 값이 전부 거짓말이 된다.
+//     유료기능인데 건수는 전체인 한 장이 되어, 둘을 나눈 값이 전부 거짓말이 된다.
 //
 //  설치·사람 수 쪽은 전부 정확하다: 스냅샷은 설치 하나가 한 줄이고, 일 버킷의
 //  설치 집합과 교집합을 잡으면 그 무리가 그날 몇 명 왔는지가 그대로 나온다.
@@ -45,42 +60,36 @@ extension FeedbackStore {
 
     // MARK: - 무리
 
-    /// 통계를 어느 무리에 맞춰 볼 것인가.
+    /// 통계를 어느 무리에 맞춰 볼 것인가 — 전체 · 유료기능 · 무료기능.
     ///
-    /// `allCases` 차례는 화면의 고르개 차례이자 "결제에 가까운 순서"다 —
-    /// 전체 · 유료 · 체험 · 무상 · 무료.
+    /// 셋뿐이고, 더 잘게 쪼개지 않는다. 한때 여기에 결제·체험·무상까지 달아
+    /// 봤는데, 그 셋을 말해 주는 앱이 거의 없어서 대부분 빈 칸이거나 "아는
+    /// 일부만 놓고 센 값"이라는 단서가 줄줄이 붙었다. 고르개는 고를 수 있는
+    /// 것만 있어야 한다.
     enum Audience: String, CaseIterable, Identifiable, Hashable {
-        /// 권한을 안 보내는 앱까지 포함한, 있는 그대로의 전부.
+        /// 권한을 안 보내는 설치까지 포함한, 있는 그대로의 전부.
         case all
-        /// 지금 유효한 결제가 있는 설치.
-        case paid
-        /// 체험 기간 중인 설치 — 아직 안 냈고, 곧 결정한다.
-        case trial
-        /// 돈을 안 내고 접근이 열린 설치 — 그랜드파더·프로모션·가족 공유·테스터.
-        case comped
-        /// 권한을 보내는 앱에서, 위 어느 것도 아닌 설치.
-        case free
+        /// 유료 기능을 쓸 수 있는 설치.
+        case paidFeatures
+        /// 무료 기능만 쓰고 있는 설치.
+        case freeFeatures
 
         var id: String { rawValue }
 
         var label: String {
             switch self {
-            case .all:    return "전체"
-            case .paid:   return "유료"
-            case .trial:  return "체험"
-            case .comped: return "무상"
-            case .free:   return "무료"
+            case .all:          return "전체"
+            case .paidFeatures: return "유료기능"
+            case .freeFeatures: return "무료기능"
             }
         }
 
-        /// 고르개 밑줄에서 이 띠가 무엇인지 한 마디로.
+        /// 고르개 밑줄에서 이 무리가 무엇인지 한 마디로.
         var blurb: String {
             switch self {
-            case .all:    return "있는 그대로의 전부"
-            case .paid:   return "지금 유효한 결제가 있는 설치"
-            case .trial:  return "체험 기간 중이라 아직 결제하지 않은 설치"
-            case .comped: return "그랜드파더·프로모션·가족 공유처럼 돈을 안 내고 열린 설치"
-            case .free:   return "권한이 열리지 않은 설치"
+            case .all:          return "있는 그대로의 전부"
+            case .paidFeatures: return "유료 기능을 쓸 수 있는 설치"
+            case .freeFeatures: return "무료 기능만 쓰고 있는 설치"
             }
         }
 
@@ -88,63 +97,51 @@ extension FeedbackStore {
         var isFiltered: Bool { self != .all }
     }
 
-    /// 한 범위에서 띠별로 갈린 설치 ID.
-    ///
-    /// 네 집합은 서로 겹치지 않는다 — 한 설치는 한 띠에만 들어간다.
+    /// 한 범위에서 갈린 설치 ID. 셋은 서로 겹치지 않는다.
     struct AudienceInstalls {
-        var paid: Set<String> = []
-        var trial: Set<String> = []
-        var comped: Set<String> = []
-        var free: Set<String> = []
+        var paidFeatures: Set<String> = []
+        var freeFeatures: Set<String> = []
+        /// 권한을 말해 주는 키를 하나도 안 보낸 설치.
+        /// "무료기능"이 아니라 **모름**이다.
+        var unknown: Set<String> = []
 
-        /// 권한을 보내는 앱의 설치 수 — 이 화면이 덮고 있는 범위.
-        var known: Int { paid.count + trial.count + comped.count + free.count }
-
-        /// 체험·무상을 실제로 보내는 앱이 있는가. 없으면 그 띠는 고르개에서 뺀다 —
-        /// 아무도 없는 칸을 눌러 보게 하면 "체험자가 0명"으로 읽힌다.
-        var hasTrialBand = false
-        var hasCompedBand = false
+        /// 갈린 설치 수 — 이 화면이 덮고 있는 범위.
+        var known: Int { paidFeatures.count + freeFeatures.count }
 
         /// `nil`이면 거르지 않는다(전체).
         func ids(for audience: Audience) -> Set<String>? {
             switch audience {
-            case .all:    return nil
-            case .paid:   return paid
-            case .trial:  return trial
-            case .comped: return comped
-            case .free:   return free
+            case .all:          return nil
+            case .paidFeatures: return paidFeatures
+            case .freeFeatures: return freeFeatures
             }
         }
 
         func count(for audience: Audience) -> Int {
-            ids(for: audience)?.count ?? known
-        }
-
-        /// 이 범위에서 눌러 볼 만한 띠 — 실제로 누군가 들어 있는 칸만.
-        var available: [Audience] {
-            var result: [Audience] = [.all, .paid]
-            if hasTrialBand { result.append(.trial) }
-            if hasCompedBand { result.append(.comped) }
-            result.append(.free)
-            return result
+            ids(for: audience)?.count ?? (known + unknown.count)
         }
     }
 
-    /// 이 범위의 설치를 띠로 갈라 놓은 것. 권한을 보내는 앱의 설치만 들어간다.
+    /// 이 범위의 설치를 갈라 놓은 것.
     /// 전체 프로젝트에서는 앱마다 키가 다르므로 앱별로 갈라 모은다.
     func audienceInstalls(for project: String?) -> AudienceInstalls {
         memoized(\.audienceInstalls, project) {
             var result = AudienceInstalls()
             for key in project.map({ [$0] }) ?? allProjectKeys {
-                guard let entitlement = entitlement(for: key) else { continue }
-                if entitlement.trial != nil { result.hasTrialBand = true }
-                if entitlement.comped != nil { result.hasCompedBand = true }
+                // 권한을 아예 못 읽는 앱의 설치도 모름에 넣는다 — 그래야
+                // `known + unknown`이 이 범위의 설치 수와 맞고, 화면이 얼마를
+                // 덮고 있는지를 어림이 아니라 셈으로 말할 수 있다.
+                guard let entitlement = entitlement(for: key) else {
+                    for snapshot in snapshots(for: key) {
+                        result.unknown.insert(snapshot.installID)
+                    }
+                    continue
+                }
                 for snapshot in snapshots(for: key) {
-                    switch entitlement.band(of: snapshot) {
-                    case .paid:   result.paid.insert(snapshot.installID)
-                    case .trial:  result.trial.insert(snapshot.installID)
-                    case .comped: result.comped.insert(snapshot.installID)
-                    case .free:   result.free.insert(snapshot.installID)
+                    switch entitlement.isUnlocked(snapshot) {
+                    case true?:  result.paidFeatures.insert(snapshot.installID)
+                    case false?: result.freeFeatures.insert(snapshot.installID)
+                    case nil:    result.unknown.insert(snapshot.installID)
                     }
                 }
             }
@@ -158,9 +155,9 @@ extension FeedbackStore {
         return audienceInstalls(for: project).ids(for: audience)
     }
 
-    /// 이 범위에서 띠를 가를 수 있는가 — 권한을 보내는 앱이 하나라도 있는가.
+    /// 이 범위에서 무리를 가를 수 있는가 — 권한을 읽을 수 있는 앱이 하나라도 있는가.
     /// 못 가르는 앱에서는 고르개 자체를 띄우지 않는다: 고를 수 없는 것을 고르게
-    /// 하는 것보다, 왜 못 가르는지 카드 하나가 말해 주는 편이 낫다(`paidCard`).
+    /// 하는 것보다, 왜 못 가르는지 카드 하나가 말해 주는 편이 낫다(`accessCard`).
     func canSplitByAudience(for project: String?) -> Bool {
         audienceInstalls(for: project).known > 0
     }
