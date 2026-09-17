@@ -335,6 +335,8 @@ extension FeedbackStore {
                 case .all:          return scanned
                 case .paidFeatures: return paidFeatures
                 case .freeFeatures: return freeFeatures
+                // 이 카드는 접근 축만 센다. 결제 축은 `audienceInstalls` 에서.
+                case .paying, .legacyPaid, .addOn, .trial, .comped, .unpaid: return 0
                 }
             }
         }
@@ -545,6 +547,12 @@ extension FeedbackStore {
         static let trial = "flag.isTrial"
         /// 돈을 안 내고 열린 접근인가 — 그랜드파더·가족 공유·내부 테스터.
         static let comped = "flag.isComped"
+        /// 유료 기능을 열지 않는 작은 결제를 한 적 있는가 — 칸 추가·기기 추가 같은 것.
+        /// 접근의 근거가 아니다. 결제 축에서 "안 냄"과 가르는 데만 쓴다.
+        static let addOn = "flag.boughtAddOn"
+        /// 결제가 켜진 설치 중, 그 결제가 앱이 유료 다운로드였던 시절의 구매인가.
+        /// 결제의 **안쪽**을 가르는 키다 — 이것만 켜지고 `flag.isPaid`가 꺼진 설치는 없다.
+        static let legacyPaid = "flag.isLegacyPaid"
     }
 
     /// 규약이 생기기 전에 쓰이던 이름들. **접근** 후보다.
@@ -576,6 +584,10 @@ extension FeedbackStore {
         let paid: Flag?
         let trial: Flag?
         let comped: Flag?
+        /// 기능을 안 여는 작은 결제. `isUnlocked`에는 **안 들어간다** — 칸을 샀다고 열리지 않는다.
+        var addOn: Flag? = nil
+        /// 결제 중 옛 유료 다운로드. 결제 축에서 Pro 결제와 가르는 데만 쓴다.
+        var legacyPaid: Flag? = nil
 
         /// 이 설치에서 유료 기능이 열려 있는가.
         ///
@@ -597,6 +609,36 @@ extension FeedbackStore {
                 if value >= 1 { unlocked = true }
             }
             return sawAny ? unlocked : nil
+        }
+
+        /// 이 설치가 결제 축에서 어디에 드는가. `nil`은 **모름** — 결제 키를 안 보냈다.
+        ///
+        /// 돈에 가까운 쪽이 이긴다: Pro 결제(옛 유료 구매) → 부가 결제 → 체험 → 무상 → 안 냄.
+        /// 체험·무상·부가 결제 키를 안 보낸 설치는 그 칸이 아니라고 본다 — 기준인
+        /// 결제 키를 보냈다면 그 앱은 규약을 아는 버전이고, 이 셋은 켜질 때만 뜻이 있다.
+        /// 예외가 부가 결제·옛 유료 구매인데, 늦게 생긴 키라 안 보낸 수를 따로 센다(`reportsSplit`).
+        func paymentKind(_ snapshot: UsageSnapshot) -> Audience? {
+            guard let paid, let paidValue = snapshot.metrics[paid.key] else { return nil }
+            func on(_ flag: Flag?) -> Bool { flag.flatMap { snapshot.metrics[$0.key] }.map { $0 >= 1 } ?? false }
+            if paidValue >= 1 { return on(legacyPaid) ? .legacyPaid : .paying }
+            if on(addOn) { return .addOn }
+            if on(trial) { return .trial }
+            if on(comped) { return .comped }
+            return .unpaid
+        }
+
+        /// 이 설치가 `kind` 칸을 옆 칸과 가르는 키를 보냈는가 — 안 냄은 부가 결제 키를,
+        /// Pro 결제는 옛 유료 구매 키를. 앱이 그 키를 아예 모르면 참으로 둔다 — 그런 것을
+        /// 팔지 않았던 앱에서 "안 보냄"은 섞일 사람이 없다는 뜻이다.
+        func reportsSplit(of kind: Audience, _ snapshot: UsageSnapshot) -> Bool {
+            let splitter: Flag?
+            switch kind {
+            case .unpaid: splitter = addOn
+            case .paying: splitter = legacyPaid
+            default:      return true
+            }
+            guard let splitter else { return true }
+            return snapshot.metrics[splitter.key] != nil
         }
 
     }
@@ -626,6 +668,16 @@ extension FeedbackStore {
         let paid = resolve(spec?.paidFlag, convention: EntitlementFlag.paid)
         let trial = resolve(spec?.trialFlag, convention: EntitlementFlag.trial)
         let comped = resolve(spec?.compedFlag, convention: EntitlementFlag.comped)
+        /// 칸을 가르는 늦게 생긴 키는 스펙에 적혀 있으면 **아직 아무도 안 보내도** 고른다.
+        /// 위 권한 키와 반대인 이유: 권한 키는 안 보낸 설치를 "안 열림"으로 세게 되지만, 이 키는
+        /// 안 보낸 설치를 "섞였을 수 있음"으로 센다(`reportsSplit`). 앱이 막 보내기 시작한 때가
+        /// 바로 그 각주가 필요한 때다.
+        func resolveSplitter(_ declared: String?, convention: String) -> Entitlement.Flag? {
+            if let declared { return .init(key: declared, isDeclared: true) }
+            return present.contains(convention) ? .init(key: convention, isDeclared: false) : nil
+        }
+        let addOn = resolveSplitter(spec?.addOnFlag, convention: EntitlementFlag.addOn)
+        let legacyPaid = resolveSplitter(spec?.legacyPaidFlag, convention: EntitlementFlag.legacyPaid)
 
         var access = resolve(spec?.accessFlag, convention: EntitlementFlag.access)
         if access == nil, let guessed = Self.accessFlagCandidates.first(where: present.contains) {
@@ -633,7 +685,7 @@ extension FeedbackStore {
         }
 
         guard access != nil || paid != nil || trial != nil || comped != nil else { return nil }
-        return Entitlement(access: access, paid: paid, trial: trial, comped: comped)
+        return Entitlement(access: access, paid: paid, trial: trial, comped: comped, addOn: addOn, legacyPaid: legacyPaid)
     }
     /// 유료 기능을 쓸 수 있는 설치와 무료 기능만 쓰는 설치. 권한을 읽을 수 있는
     /// 앱이 하나도 없으면 nil.

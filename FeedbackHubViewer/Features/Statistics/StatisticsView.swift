@@ -98,6 +98,7 @@ struct StatisticsDashboard: View {
                         userTiles
                         activeUsersCard
                         if audience == .all { accessCard }
+                        if audience == .all, store.canSplitByPayment(for: scope) { paymentCard }
                         specCards
                         weekOverWeek
                         CarryingCapacityCard(project: scope, audience: audience)
@@ -320,23 +321,49 @@ struct StatisticsDashboard: View {
     /// 각각을 따로 놓아야 보인다. 권한을 보내는 앱에서만 뜬다: 가를 수 없는 화면에
     /// 고르개를 두면 눌러 본 사람이 "아무도 유료 기능을 안 쓴다"로 읽는다.
     ///
-    /// 칸은 언제나 셋이다 — 전체 · 유료기능 · 무료기능. 앱에 따라 나타났다
+    /// 칸은 접근 축이 언제나 셋이다 — 전체 · 유료기능 · 무료기능. 앱에 따라 나타났다
     /// 사라지는 칸이 없으므로 프로젝트를 옮겨도 고른 것이 그대로 남는다.
+    ///
+    /// 결제 축(Pro 결제 · 옛 유료 구매 · 부가 결제 · 체험 · 무상 · 안 냄)은 **둘째 줄**이고, 결제 키를
+    /// 보내는 범위에서만 뜬다. 한 줄에 섞으면 결제를 모르는 앱에서 다섯 칸이 빈 채로
+    /// 눌린다. 두 줄은 한 선택을 나눠 쓴다 — 한쪽을 고르면 다른 줄은 비어 보인다.
     @ViewBuilder
     private var audiencePicker: some View {
-        if store.audienceInstalls(for: scope).known > 0 {
+        let installs = store.audienceInstalls(for: scope)
+        if installs.known > 0 || installs.paymentKnown > 0 {
             VStack(alignment: .leading, spacing: 6) {
-                Picker("누구를 볼까요", selection: $audience) {
-                    ForEach(FeedbackStore.Audience.allCases) { group in
-                        Text(group.label).tag(group)
+                if installs.known > 0 {
+                    Picker("누구를 볼까요", selection: $audience) {
+                        ForEach(FeedbackStore.Audience.accessCases) { group in
+                            Text(group.label).tag(group)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .labelsHidden()
+                }
+                if installs.paymentKnown > 0 {
+                    HStack(spacing: 8) {
+                        Text("결제로")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        Picker("결제로 볼까요", selection: $audience) {
+                            ForEach(FeedbackStore.Audience.paymentCases) { group in
+                                Text("\(group.label) \(installs.count(for: group))").tag(group)
+                            }
+                        }
+                        .pickerStyle(.segmented)
+                        .labelsHidden()
                     }
                 }
-                .pickerStyle(.segmented)
-                .labelsHidden()
                 footnote(audienceNote)
             }
             .padding(10)
             .cardSurface(radius: 10, bordered: false)
+            .onChange(of: scope) {
+                // 결제 축은 범위마다 뜨고 안 뜬다. 안 뜨는 범위로 옮겼는데 고른 것이
+                // 남아 있으면, 고르개도 없이 화면이 걸러진 채로 남는다.
+                if audience.axis == .payment, !store.canSplitByPayment(for: scope) { audience = .all }
+            }
         }
     }
 
@@ -344,6 +371,7 @@ struct StatisticsDashboard: View {
     private var audienceNote: String {
         let installs = store.audienceInstalls(for: scope)
         let total = store.usage(for: scope).installs
+        let caveat = "사람·설치 수는 정확히 갈리지만, 사용 건수는 설치별로 나뉘어 있지 않아 이 동안 감춥니다 — 무리별 건수를 지어내는 대신 아예 안 보여줍니다. 앱이 스스로 센 '누적 주요 행동'은 스냅샷에 설치별로 실려 오므로 여기서도 참이에요. 피드백과 진단도 설치와 이어져 있지 않아 전체 기준입니다."
         switch audience {
         case .all:
             var text = "앱이 보낸 권한 플래그로 갈라 볼 수 있습니다 — 유료 기능을 쓸 수 있는 설치와 무료 기능만 쓰는 설치"
@@ -352,10 +380,23 @@ struct StatisticsDashboard: View {
                 // 구버전 설치는 안 보낸다. 그런 설치는 무료기능이 아니라 모름이다.
                 text += " — 권한을 보내는 설치 \(installs.known)대 기준이라, 안 보내는 설치 \(total - installs.known)대는 어느 쪽에도 들어가지 않아요(무료기능이 아니라 모름)"
             }
+            if installs.paymentKnown > 0 {
+                text += ". 둘째 줄은 돈을 낸 방식이고, 결제 플래그(flag.isPaid)를 보내는 설치 \(installs.paymentKnown)대만 갈립니다"
+            }
             return text + ". 고르면 이 화면 전체가 그 무리만 놓고 다시 그려집니다."
         case .paidFeatures, .freeFeatures:
             let count = installs.count(for: audience)
-            return "\(audience.label) — \(audience.blurb) \(count)대만 놓고 본 화면입니다. 사람·설치 수는 정확히 갈리지만, 사용 건수는 설치별로 나뉘어 있지 않아 이 동안 감춥니다 — 무리별 건수를 지어내는 대신 아예 안 보여줍니다. 앱이 스스로 센 '누적 주요 행동'은 스냅샷에 설치별로 실려 오므로 여기서도 참이에요. 피드백과 진단도 설치와 이어져 있지 않아 전체 기준입니다."
+            return "\(audience.label) — \(audience.blurb) \(count)대만 놓고 본 화면입니다. " + caveat
+        case .paying, .legacyPaid, .addOn, .trial, .comped, .unpaid:
+            let count = installs.count(for: audience)
+            var text = "\(audience.label) — \(audience.blurb) \(count)대만 놓고 본 화면입니다. 한 설치는 한 칸에만 들고, 여럿에 해당하면 돈에 가까운 쪽(Pro 결제 · 옛 유료 구매 → 부가 결제 → 체험 → 무상)에 듭니다."
+            if !installs.paymentUnknown.isEmpty {
+                text += " 결제 플래그를 안 보내는 설치 \(installs.paymentUnknown.count)대는 어느 칸에도 없어요(안 냄이 아니라 모름)."
+            }
+            if let missing = installs.unreported[audience], !missing.isEmpty {
+                text += " 이 중 \(missing.count)대는 " + Self.unreportedNote(audience)
+            }
+            return text + " " + caveat
         }
     }
 
@@ -578,6 +619,59 @@ struct StatisticsDashboard: View {
                 }
                 footnote("이 앱이 권한을 보내지 않습니다. 스냅샷 metrics에 flag.hasAccess(지금 유료 기능을 쓸 수 있는가)를 0/1로 실어 보내면 여기서 갈립니다. 이름이 다르면 앱 리포의 docs/usage-spec.json에 accessFlag로 적어 두면 돼요. 없는 동안은 0%가 아니라 '모름'으로 둡니다.")
             }
+        }
+    }
+
+    /// 돈을 낸 방식별로 몇 명이고, 그중 지금 오는 사람이 몇인가.
+    ///
+    /// 위 카드(유료기능 · 무료기능)는 **열렸는가**를 재고, 이 카드는 **어떻게 열렸는가**를
+    /// 잰다. 둘이 다르다는 것이 이 카드가 따로 있는 이유다 — 유료기능 대부분이 무상이면
+    /// 그건 매출이 아니라 옛 약속이다.
+    private var paymentCard: some View {
+        let installs = store.audienceInstalls(for: scope)
+        let monthAgo = Date().addingTimeInterval(-30 * 86_400)
+        let active30 = Set(store.snapshots(for: scope)
+            .filter { ($0.lastActiveAt ?? .distantPast) >= monthAgo }
+            .map(\.installID))
+        let known = installs.paymentKnown
+        let activeKnown = FeedbackStore.Audience.paymentCases
+            .reduce(0) { $0 + (installs.payment[$1] ?? []).intersection(active30).count }
+        return Card(title: "결제 종류", systemImage: "creditcard") {
+            VStack(spacing: 10) {
+                ForEach(FeedbackStore.Audience.paymentCases) { kind in
+                    let ids = installs.payment[kind] ?? []
+                    let active = ids.intersection(active30).count
+                    let ratio = known > 0 ? Double(ids.count) / Double(known) : 0
+                    let activeRatio = activeKnown > 0 ? Double(active) / Double(activeKnown) : 0
+                    SpecBar(label: kind.label,
+                            value: String(format: "%.1f%%", ratio * 100),
+                            ratio: ratio,
+                            hint: "\(ids.count)명 · 최근 30일 활성 \(active)명(활성 중 \(String(format: "%.1f%%", activeRatio * 100)))")
+                }
+            }
+            footnote(paymentNote(installs))
+        }
+    }
+
+    /// 결제 종류 카드의 각주 — 분모가 무엇이고, 무엇이 빠졌는가.
+    private func paymentNote(_ installs: FeedbackStore.AudienceInstalls) -> String {
+        var note = "앱이 보낸 결제 플래그(flag.isPaid · flag.isLegacyPaid · flag.boughtAddOn · flag.isTrial · flag.isComped)로 갈랐습니다. 비율의 분모는 결제 플래그를 보낸 설치 \(installs.paymentKnown)대예요. 한 설치는 한 칸에만 들고, 여럿에 해당하면 돈에 가까운 쪽에 듭니다. 영수증이 아니라 앱이 보낸 값이라 매출과는 대조해 봐야 해요."
+        if !installs.paymentUnknown.isEmpty {
+            note += " 결제 플래그를 안 보내는 설치 \(installs.paymentUnknown.count)대는 안 냄이 아니라 모름이라 빠졌습니다."
+        }
+        for kind in FeedbackStore.Audience.paymentCases {
+            guard let missing = installs.unreported[kind], !missing.isEmpty else { continue }
+            note += " \(kind.label) 중 \(missing.count)대는 " + Self.unreportedNote(kind)
+        }
+        return note
+    }
+
+    /// 칸을 옆 칸과 가르는 늦게 생긴 키를 안 보낸 설치에 붙이는 말.
+    private static func unreportedNote(_ kind: FeedbackStore.Audience) -> String {
+        switch kind {
+        case .paying: return "옛 유료 구매 플래그를 아직 안 보내는 버전이라, 앱이 유료 다운로드였던 시절에 산 사람이 섞여 있을 수 있어요."
+        case .unpaid: return "부가 결제 플래그를 아직 안 보내는 버전이라, 칸 추가처럼 작은 결제만 한 사람이 섞여 있을 수 있어요."
+        default:      return "이 칸을 가르는 플래그를 아직 안 보내는 버전이에요."
         }
     }
 

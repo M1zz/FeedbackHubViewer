@@ -84,6 +84,16 @@ struct ProjectStatsSpec: Decodable {
     /// 테스터. 규약 이름은 `flag.isComped`. 영구 면제라 전환 대상이 아니다.
     var compedFlag: String?
 
+    /// 유료 기능을 **열지 않는** 작은 결제(칸 추가·기기 추가 같은 것)를 한 설치를 뜻하는
+    /// 0/1 플래그 키. 규약 이름은 `flag.boughtAddOn`. 접근의 근거가 아니고, 결제 축에서
+    /// 돈을 낸 사람을 "안 냄"과 가르는 데만 쓴다.
+    var addOnFlag: String?
+
+    /// 결제가 켜진 설치 중 **앱이 유료 다운로드였던 시절에 산** 설치를 뜻하는 0/1 플래그 키.
+    /// 규약 이름은 `flag.isLegacyPaid`. 돈은 냈지만 지금의 인앱 결제와 무관해서, 결제 축에서
+    /// Pro 결제와 가른다 — 섞이면 매출과 대조할 때 전환율이 부푼다.
+    var legacyPaidFlag: String?
+
     static let supportedVersion = 1
 
     // 합성된 Decodable은 기본값이 있는 프로퍼티라도 키가 없으면 실패한다. 스펙은 앱마다
@@ -92,7 +102,7 @@ struct ProjectStatsSpec: Decodable {
     enum CodingKeys: String, CodingKey {
         case specVersion, appId, appName, metricLabels, metricPrefixLabels
         case eventLabels, tileGroups, distributions, shares, derived, segments, funnels
-        case accessFlag, paidFlag, trialFlag, compedFlag
+        case accessFlag, paidFlag, trialFlag, compedFlag, addOnFlag, legacyPaidFlag
         case monetization
         case cards
     }
@@ -117,6 +127,8 @@ struct ProjectStatsSpec: Decodable {
         paidFlag = try c.decodeIfPresent(String.self, forKey: .paidFlag)
         trialFlag = try c.decodeIfPresent(String.self, forKey: .trialFlag)
         compedFlag = try c.decodeIfPresent(String.self, forKey: .compedFlag)
+        addOnFlag = try c.decodeIfPresent(String.self, forKey: .addOnFlag)
+        legacyPaidFlag = try c.decodeIfPresent(String.self, forKey: .legacyPaidFlag)
     }
 
     struct MetricLabel: Decodable {

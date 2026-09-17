@@ -9,6 +9,11 @@
   "specVersion": 1,
   "appId": "com.Ysoup.TokenMemo",
   "appName": "ClipKeyboard",
+  "paidFlag": "flag.isPaid",
+  "trialFlag": "flag.isTrial",
+  "compedFlag": "flag.isComped",
+  "addOnFlag": "flag.boughtAddOn",
+  "legacyPaidFlag": "flag.isLegacyPaid",
 
   "metricLabels": {
     "shortcuts": { "label": "단축어 수" },
@@ -26,7 +31,12 @@
     "clips": { "label": "클립보드 기록 수" },
     "flag.keyboardActive": { "label": "키보드를 켠 설치", "excludeFromAverages": true },
     "flag.syncOn": { "label": "동기화를 켠 설치", "excludeFromAverages": true },
-    "flag.isPro": { "label": "Pro 사용자", "excludeFromAverages": true }
+    "flag.isPro": { "label": "기능 열림 (결제 아님)", "excludeFromAverages": true },
+    "flag.isPaid": { "label": "Pro 결제", "excludeFromAverages": true },
+    "flag.isTrial": { "label": "체험 중", "excludeFromAverages": true },
+    "flag.isComped": { "label": "무상 (그랜드파더·가족 공유·내부)", "excludeFromAverages": true },
+    "flag.boughtAddOn": { "label": "부가 결제 (칸 추가·두 대째)", "excludeFromAverages": true },
+    "flag.isLegacyPaid": { "label": "옛 유료 구매 (v4.0 이전 다운로드)", "excludeFromAverages": true }
   },
   "metricPrefixLabels": {
     "persona.": "고른 페르소나"
@@ -60,7 +70,7 @@
         { "label": "키보드 입력 횟수", "kind": "sum", "metric": "keyboardUses" },
         { "label": "켠 사용자당 평균 입력", "kind": "sumPerMatchingInstall", "metric": "keyboardUses", "condition": "flag.keyboardActive", "format": "decimal1" },
         { "label": "절약한 시간 합계", "kind": "sum", "metric": "timeSavedMin", "unit": "분" },
-        { "label": "Pro 사용자", "kind": "installsWithMetric", "metric": "flag.isPro" },
+        { "label": "기능이 열린 사용자", "kind": "installsWithMetric", "metric": "flag.isPro" },
         { "label": "동기화를 켠 사용자", "kind": "installsWithMetric", "metric": "flag.syncOn" }
       ]
     }
