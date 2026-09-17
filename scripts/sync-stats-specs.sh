@@ -17,7 +17,8 @@ DEST="FeedbackHubViewer/Specs"
 
 SPECS=(
   "$WORKSPACE/ClipKeyboard/docs/engineering/usage-spec.json|clipkeyboard.usage-spec.json"
-  "$WORKSPACE/Rereminder/docs/usage-spec.json|rereminder.usage-spec.json"
+  # 두번알림 리포는 code/ 가 아니라 Auto/두번알림 에 있다 (예전 경로는 없어서 늘 건너뛰었다)
+  "$WORKSPACE/../Auto/두번알림/docs/usage-spec.json|rereminder.usage-spec.json"
 )
 
 check_only=false
