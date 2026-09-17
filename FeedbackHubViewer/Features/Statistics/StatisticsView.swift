@@ -98,6 +98,9 @@ struct StatisticsDashboard: View {
                         userTiles
                         activeUsersCard
                         if audience == .all { accessCard }
+                        // 수익 카드는 무리 고르개와 무관하게 언제나 전체 설치를
+                        // 본다 — "유료기능만 놓고 본 잠재 고객"은 정의상 0이다.
+                        if audience == .all { MonetizationCards(project: scope) }
                         specCards
                         weekOverWeek
                         CarryingCapacityCard(project: scope, audience: audience)
@@ -1079,7 +1082,9 @@ private struct SpecTile: View {
 
 /// 스펙이 만든 막대 한 줄 — 분포·비중·무리 크기·퍼널 한 칸이 전부 이 모양이다:
 /// 이름과 값이 마주 보는 한 줄, 그 아래 막대, 그 아래 각주.
-private struct SpecBar<Trailing: View>: View {
+/// 통계 화면의 막대 한 줄. 수익 카드(`MonetizationCards`)도 같은 조각을 쓴다 —
+/// 같은 뜻의 줄은 같은 모양이어야 두 카드를 나란히 읽을 수 있다.
+struct SpecBar<Trailing: View>: View {
     let label: String
     let ratio: Double
     var hint: String?
@@ -1111,8 +1116,9 @@ private struct SpecBar<Trailing: View>: View {
 
 extension SpecBar where Trailing == Text {
     /// The plain form: one value on the right and nothing else.
-    init(label: String, value: String, ratio: Double, hint: String? = nil, isMuted: Bool = false) {
-        self.init(label: label, ratio: ratio, hint: hint, isMuted: isMuted) {
+    init(label: String, value: String, ratio: Double, hint: String? = nil,
+         tint: Color = .accentColor, isMuted: Bool = false) {
+        self.init(label: label, ratio: ratio, hint: hint, tint: tint, isMuted: isMuted) {
             Text(value).font(.callout.monospacedDigit().weight(.semibold))
         }
     }

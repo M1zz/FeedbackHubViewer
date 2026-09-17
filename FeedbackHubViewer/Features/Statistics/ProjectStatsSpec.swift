@@ -47,6 +47,8 @@ struct ProjectStatsSpec: Decodable {
     var segments: SegmentSpec?
     /// 이벤트를 순서대로 세워 단계별로 몇이 남는지 본다(페이월 → 결제).
     var funnels: [FunnelSpec] = []
+    /// 이 앱이 **어떻게 돈을 버는가**를 관측하는 절. 없으면 수익 카드가 안 뜬다.
+    var monetization: MonetizationSpec?
     /// 이 앱에서 **지금 유료 기능을 쓸 수 있는 사람**을 뜻하는 0/1 플래그 키.
     ///
     /// 규약 이름은 `flag.hasAccess`. 이게 이 화면의 큰 숫자다 — 거의 모든 앱이
@@ -87,6 +89,7 @@ struct ProjectStatsSpec: Decodable {
         case specVersion, appId, appName, metricLabels, metricPrefixLabels
         case eventLabels, tileGroups, distributions, shares, derived, segments, funnels
         case accessFlag, paidFlag, trialFlag, compedFlag
+        case monetization
     }
 
     init(from decoder: Decoder) throws {
@@ -103,6 +106,7 @@ struct ProjectStatsSpec: Decodable {
         derived = try c.decodeIfPresent([DerivedSpec].self, forKey: .derived) ?? []
         segments = try c.decodeIfPresent(SegmentSpec.self, forKey: .segments)
         funnels = try c.decodeIfPresent([FunnelSpec].self, forKey: .funnels) ?? []
+        monetization = try c.decodeIfPresent(MonetizationSpec.self, forKey: .monetization)
         accessFlag = try c.decodeIfPresent(String.self, forKey: .accessFlag)
         paidFlag = try c.decodeIfPresent(String.self, forKey: .paidFlag)
         trialFlag = try c.decodeIfPresent(String.self, forKey: .trialFlag)
@@ -179,6 +183,94 @@ struct ProjectStatsSpec: Decodable {
             let label: String
             let metric: String
         }
+    }
+
+    /// 수익 설계를 **관측**하기 위한 절.
+    ///
+    /// 가격표는 여기 적지 않는다. 값은 App Store Connect가 진실이고, 뷰어가 받는
+    /// 것은 설치가 보낸 지표와 이벤트뿐이라 값을 적어 봤자 대조할 상대가 없다.
+    /// 여기 적는 것은 **값을 정당화하거나 무너뜨리는 세 가지 사실**이다:
+    ///
+    ///   1. 쐐기에 닿는 사람이 몇인가(`activation`) — 가격표보다 먼저다. 가치를
+    ///      못 받은 사람에게는 어떤 값도 비싸다.
+    ///   2. 값을 낼 이유가 생긴 사람이 몇인가(`wall`) — 한도에 닿았는데 아직
+    ///      안 열린 설치. 이게 실제로 팔 수 있는 모수다.
+    ///   3. 그 순간에 화면이 실제로 떴는가(`moments`) — 설계한 벽이 코드에서
+    ///      실제로 서 있는지는 이벤트가 도착해야만 알 수 있다.
+    struct MonetizationSpec: Decodable {
+        var note: String?
+        var activation: ActivationSpec?
+        var wall: WallSpec?
+        var moments: [MomentSpec] = []
+        /// 순간마다 "눌렀다 · 냈다"를 셀 때 쓸 이벤트 기본형.
+        var tappedEvent: String?
+        var purchasedEvent: String?
+
+        enum CodingKeys: String, CodingKey {
+            case note, activation, wall, moments, tappedEvent, purchasedEvent
+        }
+
+        init(from decoder: Decoder) throws {
+            let c = try decoder.container(keyedBy: CodingKeys.self)
+            note = try c.decodeIfPresent(String.self, forKey: .note)
+            activation = try c.decodeIfPresent(ActivationSpec.self, forKey: .activation)
+            wall = try c.decodeIfPresent(WallSpec.self, forKey: .wall)
+            moments = try c.decodeIfPresent([MomentSpec].self, forKey: .moments) ?? []
+            tappedEvent = try c.decodeIfPresent(String.self, forKey: .tappedEvent)
+            purchasedEvent = try c.decodeIfPresent(String.self, forKey: .purchasedEvent)
+        }
+    }
+
+    /// 설치에서 **가치를 받은 상태**까지 가는 사다리.
+    ///
+    /// `target`·`floor`는 그 앱이 스스로 정한 선이다(철수 기준 문서 같은 것).
+    /// 뷰어는 그 선을 판단하지 않고 그대로 그어 준다 — 선이 있어야 7%가
+    /// "낮다"가 아니라 "기준의 7분의 1"로 읽힌다.
+    struct ActivationSpec: Decodable {
+        let title: String
+        var note: String?
+        /// 이 앱이 목표로 삼은 마지막 단계 도달률(0~1).
+        var target: Double?
+        /// 이 밑이면 가격이 아니라 제품 문제라고 그 앱이 정해 둔 선(0~1).
+        var floor: Double?
+        let steps: [Step]
+
+        /// 한 칸. `metric`이 없으면 "설치 전부"(첫 칸).
+        struct Step: Decodable {
+            let label: String
+            var metric: String?
+            /// 이 값 이상이면 이 칸에 든다. 기본 1 — 0/1 플래그를 그냥 쓸 수 있게.
+            var atLeast: Double?
+            var hint: String?
+        }
+    }
+
+    /// 무료로 쓸 수 있는 한도와, 거기까지의 거리.
+    ///
+    /// 결제가 필요해지는 자리는 기능이 아니라 **한도**다. 그래서 잠재 고객은
+    /// "이 기능을 안 쓰는 사람"이 아니라 "한도에 닿았는데 아직 안 열린 사람"이다.
+    struct WallSpec: Decodable {
+        let title: String
+        var note: String?
+        /// 사람이 읽는 한도의 이름 — "단축어", "알림".
+        let label: String
+        /// 한도를 재는 스냅샷 지표.
+        let metric: String
+        /// 무료로 가질 수 있는 최대 개수. 이 수까지는 무료다.
+        let limit: Int
+        /// 한도에서 몇 칸 안쪽부터 "곧 막힌다"로 볼 것인가. 기본 1.
+        var nearBy: Int?
+    }
+
+    /// 결제 화면이 뜨기로 **설계된** 순간 하나.
+    ///
+    /// 이벤트가 한 건도 없으면 "아무도 안 왔다"가 아니라 "그 벽이 아직 안 섰다"다.
+    /// 둘은 고칠 곳이 달라서(가격 대 코드) 화면이 반드시 갈라 말해야 한다.
+    struct MomentSpec: Decodable {
+        let label: String
+        /// 노출 이벤트. 슬라이스까지 적으면 그 슬라이스만 센다.
+        let event: String
+        var note: String?
     }
 
     struct DerivedSpec: Decodable {

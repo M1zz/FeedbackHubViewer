@@ -52,6 +52,7 @@ extension FeedbackStore {
         // 값이 옵셔널인 이유는 `carryingCapacity`와 같다 — "유료 여부를 보내는
         // 앱이 없다"도 계산 결과이지 미계산이 아니다.
         var accessSplit: [String?: AccessSplit?] = [:]
+        var monetization: [String?: Monetization] = [:]
         var audienceInstalls: [String?: AudienceInstalls] = [:]
         var crashSummary: [String?: CrashSummary] = [:]
         var crashIssues: [String?: [CrashIssue]] = [:]
