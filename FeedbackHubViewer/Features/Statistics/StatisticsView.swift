@@ -98,9 +98,6 @@ struct StatisticsDashboard: View {
                         userTiles
                         activeUsersCard
                         if audience == .all { accessCard }
-                        // 수익 카드는 무리 고르개와 무관하게 언제나 전체 설치를
-                        // 본다 — "유료기능만 놓고 본 잠재 고객"은 정의상 0이다.
-                        if audience == .all { MonetizationCards(project: scope) }
                         specCards
                         weekOverWeek
                         CarryingCapacityCard(project: scope, audience: audience)
@@ -140,11 +137,30 @@ struct StatisticsDashboard: View {
         store.snapshots(for: scope, audience: audience).map(\.metrics)
     }
 
-    /// 앱 자신의 통계 화면이 보여주는 것과 같은 카드들. 스펙이 없으면 자리만
-    /// 지키고 무엇을 하면 채워지는지 적는다 — 이 칸이 통째로 없어지면 다른 앱과
-    /// 화면 모양이 달라진다.
+    /// 이 앱의 대시보드. 스펙이 없으면 자리만 지키고 무엇을 하면 채워지는지
+    /// 적는다 — 이 칸이 통째로 없어지면 다른 앱과 화면 모양이 달라진다. **어떤 카드를 어떤 차례로 그릴지는 스펙이 정한다** —
+    /// 이 뷰는 모양 셋(tiles · bars · funnel)만 알고 종류는 모른다
+    /// (`ProjectStatsSpec+Dashboard.swift`).
+    ///
+    /// 그래서 앱마다 다른 화면이 Swift 한 줄 없이 만들어지고, 새 카드 종류가
+    /// 늘어도 여기는 안 바뀐다. 정말 새 *모양*이 필요할 때만 여기 분기가 는다.
     @ViewBuilder
     private var specCards: some View {
+        // 깨진 스펙은 **없는 스펙과 다르게** 말한다. 하나는 쓰는 일이고 하나는
+        // 고치는 일인데, 둘 다 "아직 없습니다"로 뜨면 오타 한 글자를 며칠 못 찾는다.
+        ForEach(ProjectStatsSpecCatalog.failures) { failure in
+            Card(title: "스펙을 못 읽었습니다", systemImage: "exclamationmark.triangle") {
+                Text(failure.file)
+                    .font(.callout.monospaced())
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                Text(failure.reason)
+                    .font(.caption)
+                    .foregroundStyle(.orange)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                footnote("이 앱의 카드가 통째로 안 뜨는 이유입니다. 스펙이 없는 것과는 다른 일이에요 — 원본은 그 앱 리포의 docs/usage-spec.json이고, 고친 뒤 scripts/sync-stats-specs.sh를 돌리면 됩니다.")
+            }
+        }
         if spec == nil {
             Card(title: "앱별 핵심 지표", systemImage: "star.circle") {
                 emptyNote(scope == nil
@@ -152,54 +168,99 @@ struct StatisticsDashboard: View {
                           : "이 앱의 통계 스펙이 아직 없습니다. 앱 리포의 docs/usage-spec.json에 라벨과 경계값을 적고 scripts/sync-stats-specs.sh를 돌리면, 앱 자신의 통계 화면과 같은 카드가 여기 그려집니다.")
             }
         }
-        if let spec {
-            // 퍼널만 입력이 다르다: 설치에 남은 상태(`metrics`)가 아니라 일어난 일
-            // (이벤트 집계)을 읽는다. 이름별로 이미 접혀 있는 값이라 원본을 훑지 않는다.
-            ForEach(spec.insights(for: scopedMetrics)
-                    + spec.funnelInsights(for: store.eventTallies(for: scope, audience: audience),
-                                          eventCountsAvailable: usage.hasEventCounts)) { insight in
-                switch insight {
-                case .tiles(let title, let note, let items):
-                    Card(title: title, systemImage: "star.circle") {
-                        LazyVGrid(columns: tileColumns, spacing: 10) {
-                            ForEach(items) { item in
-                                SpecTile(label: item.label, value: item.value, hint: item.hint)
-                            }
-                        }
-                        if let note { footnote(note) }
+        ForEach(store.dashboard(for: scope, audience: audience)) { section in
+            if let title = section.title { sectionHeading(title) }
+            ForEach(section.insights) { insight in
+                specCard(insight)
+            }
+        }
+    }
+
+    /// 묶음 이름. 카드가 아니라 카드 위의 한 줄이라, 카드 틀을 안 쓴다.
+    private func sectionHeading(_ title: String) -> some View {
+        Text(title)
+            .font(.headline)
+            .foregroundStyle(.secondary)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.top, 4)
+    }
+
+    @ViewBuilder
+    private func specCard(_ insight: ProjectStatsSpec.Insight) -> some View {
+        let frame = insight.frame
+        Card(title: frame.title, systemImage: frame.icon) {
+            switch insight {
+            case .tiles(_, let items):
+                LazyVGrid(columns: tileColumns, spacing: 10) {
+                    ForEach(items) { item in
+                        SpecTile(label: item.label, value: item.value, hint: item.hint)
                     }
-                case .bars(let title, let note, let rows):
-                    Card(title: title, systemImage: "chart.bar") {
-                        VStack(spacing: 8) {
-                            ForEach(rows) { row in
-                                SpecBar(label: row.label, value: row.value,
-                                        ratio: row.ratio, hint: row.hint)
-                            }
-                        }
-                        if let note { footnote(note) }
+                }
+            case .bars(_, let rows):
+                VStack(spacing: 8) {
+                    ForEach(rows) { row in
+                        // 뜻이 다른 줄 사이에서 한 번 끊는다(할 일 / 아닌 것).
+                        if row.startsGroup { Divider().padding(.vertical, 2) }
+                        SpecBar(label: row.label,
+                                value: row.isMissing ? "—" : row.value,
+                                ratio: row.ratio,
+                                hint: row.hint,
+                                tint: Self.tint(row.tone),
+                                isMuted: row.isMissing || row.tone == .muted)
                     }
-                case .funnel(let title, let note, let steps):
-                    Card(title: title, systemImage: "arrow.down.right.circle") {
-                        VStack(spacing: 8) {
-                            ForEach(steps) { step in
-                                SpecFunnelStep(step: step)
-                            }
-                        }
-                        if let note { footnote(note) }
-                        if steps.contains(where: \.exceedsPrevious) {
-                            footnote("주황 칸은 앞 단계보다 수가 많아요. 퍼널이 성립하려면 각 칸이 앞 칸에 포함돼야 하는데, 이벤트 이름만으로는 '앞을 거쳐서 왔다'를 강제할 수 없어요 — 그 자리는 다른 경로로도 닿습니다. 경로를 구분하려면 앱이 이벤트에 슬라이스를 붙여 보내야 해요.")
-                        }
-                        if steps.contains(where: \.isMissing) {
-                            footnote("회색 칸은 그 이벤트가 이 앱에서 한 번도 도착한 적이 없다는 뜻이에요. 아무도 거기까지 못 간 게 아니라 앱이 그 이벤트를 아직 안 보내는 거라, 스펙이 아니라 앱을 고쳐야 답이 나옵니다.")
-                        }
+                }
+            case .funnel(_, let steps, let goal):
+                VStack(spacing: 8) {
+                    ForEach(steps) { step in
+                        SpecFunnelStep(step: step)
                     }
+                }
+                if let goal { goalNote(goal, steps: steps) }
+            }
+            if let note = frame.note { footnote(note) }
+            // 카드가 스스로 내린 결론. 숫자를 보고 나서 읽을 말이라 맨 밑이다.
+            if let verdict = frame.verdict {
+                Label(verdict, systemImage: "info.circle")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            if case .funnel(_, let steps, _) = insight {
+                if steps.contains(where: \.exceedsPrevious) {
+                    footnote("주황 칸은 앞 단계보다 수가 많아요. 퍼널이 성립하려면 각 칸이 앞 칸에 포함돼야 하는데, 이벤트 이름만으로는 '앞을 거쳐서 왔다'를 강제할 수 없어요 — 그 자리는 다른 경로로도 닿습니다. 경로를 구분하려면 앱이 이벤트에 슬라이스를 붙여 보내야 해요.")
+                }
+                if steps.contains(where: \.isMissing) {
+                    footnote("회색 칸은 그 이벤트·지표가 이 앱에서 한 번도 도착한 적이 없다는 뜻이에요. 아무도 거기까지 못 간 게 아니라 앱이 아직 안 보내는 거라, 스펙이 아니라 앱을 고쳐야 답이 나옵니다.")
                 }
             }
         }
     }
 
-    /// 스펙이 아직 이름을 붙이지 않은 지표·이벤트. 앱이 새 값을 보내기 시작했다는 뜻이고,
-    /// 여기 뜨면 그 앱 리포의 `docs/usage-spec.json`에 라벨을 더할 차례다.
+    /// 앱이 스스로 그어 둔 선. 선이 있어야 7%가 "낮다"가 아니라
+    /// "하한의 7분의 1"로 읽힌다.
+    @ViewBuilder
+    private func goalNote(_ goal: ProjectStatsSpec.Insight.Goal,
+                          steps: [ProjectStatsSpec.Insight.Step]) -> some View {
+        let parts = [goal.target.map { "목표 \(Int($0 * 100))%" },
+                     goal.floor.map { "하한 \(Int($0 * 100))%" }].compactMap { $0 }
+        if !parts.isEmpty {
+            footnote("이 앱이 정해 둔 선 — " + parts.joined(separator: " · "))
+        }
+    }
+
+    /// 줄의 뜻을 색으로. 스펙은 색이 아니라 뜻만 적고, 고르는 것은 여기다 —
+    /// 앱이 색을 고르기 시작하면 같은 뜻이 앱마다 다른 색이 된다.
+    private static func tint(_ tone: ProjectStatsSpec.Insight.Tone) -> Color {
+        switch tone {
+        case .normal: return .accentColor
+        case .hot:    return .orange
+        case .warn:   return .yellow
+        case .muted:  return Color.secondary.opacity(0.35)
+        }
+    }
+
+    /// 스펙이 이름을 안 붙인 지표·이벤트. 앱이 새 지표를 보내기 시작했다는
+    /// 신호이자, 스펙이 뒤처졌다는 신호다 — 조용히 감추지 않는다.
     @ViewBuilder
     private var specGapCard: some View {
         if let spec {
@@ -250,9 +311,9 @@ struct StatisticsDashboard: View {
         }
     }
 
-    // MARK: - 누구를 볼까 (전체 · 유료 · 무료)
+    // MARK: - 누구를 볼까 (전체 · 유료기능 · 무료기능)
 
-    /// 유료 사용자와 무료 사용자를 따로 놓고 보는 고르개.
+    /// 유료 기능을 쓸 수 있는 사람과 아닌 사람을 따로 놓고 보는 고르개.
     ///
     /// 평균은 두 무리를 섞은 값이라 어느 쪽도 설명하지 못한다 — 유료 기능을 쓸
     /// 수 있는 사람이 얼마나 자주 오는지, 무료 기능만 쓰는 사람이 어디서 멈추는지는

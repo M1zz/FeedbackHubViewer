@@ -49,6 +49,10 @@ struct ProjectStatsSpec: Decodable {
     var funnels: [FunnelSpec] = []
     /// 이 앱이 **어떻게 돈을 버는가**를 관측하는 절. 없으면 수익 카드가 안 뜬다.
     var monetization: MonetizationSpec?
+    /// 그릴 카드를 차례대로 직접 적은 것. 적었으면 이게 전부이고, 위의 절들은
+    /// 그때 안 쓰인다(두 벌이 섞이면 같은 카드가 두 번 그려진다).
+    /// 화면이 쓰는 최종 목록은 `cards`다 — `ProjectStatsSpec+Dashboard.swift`.
+    var declaredCards: [DashboardCardSpec] = []
     /// 이 앱에서 **지금 유료 기능을 쓸 수 있는 사람**을 뜻하는 0/1 플래그 키.
     ///
     /// 규약 이름은 `flag.hasAccess`. 이게 이 화면의 큰 숫자다 — 거의 모든 앱이
@@ -90,6 +94,7 @@ struct ProjectStatsSpec: Decodable {
         case eventLabels, tileGroups, distributions, shares, derived, segments, funnels
         case accessFlag, paidFlag, trialFlag, compedFlag
         case monetization
+        case cards
     }
 
     init(from decoder: Decoder) throws {
@@ -107,6 +112,7 @@ struct ProjectStatsSpec: Decodable {
         segments = try c.decodeIfPresent(SegmentSpec.self, forKey: .segments)
         funnels = try c.decodeIfPresent([FunnelSpec].self, forKey: .funnels) ?? []
         monetization = try c.decodeIfPresent(MonetizationSpec.self, forKey: .monetization)
+        declaredCards = try c.decodeIfPresent([DashboardCardSpec].self, forKey: .cards) ?? []
         accessFlag = try c.decodeIfPresent(String.self, forKey: .accessFlag)
         paidFlag = try c.decodeIfPresent(String.self, forKey: .paidFlag)
         trialFlag = try c.decodeIfPresent(String.self, forKey: .trialFlag)
@@ -122,6 +128,9 @@ struct ProjectStatsSpec: Decodable {
     }
 
     struct TileGroupSpec: Decodable {
+        /// 카드 겉 정보. 안 적으면 그 종류의 기본 아이콘을 쓰고, 안 묶인다.
+        var icon: String?
+        var section: String?
         let title: String
         var note: String?
         let tiles: [TileSpec]
@@ -161,6 +170,9 @@ struct ProjectStatsSpec: Decodable {
     }
 
     struct DistributionSpec: Decodable {
+        /// 카드 겉 정보. 안 적으면 그 종류의 기본 아이콘을 쓰고, 안 묶인다.
+        var icon: String?
+        var section: String?
         let title: String
         let metric: String
         var note: String?
@@ -175,6 +187,9 @@ struct ProjectStatsSpec: Decodable {
     }
 
     struct ShareSpec: Decodable {
+        /// 카드 겉 정보. 안 적으면 그 종류의 기본 아이콘을 쓰고, 안 묶인다.
+        var icon: String?
+        var section: String?
         let title: String
         var note: String?
         let parts: [Part]
@@ -185,26 +200,42 @@ struct ProjectStatsSpec: Decodable {
         }
     }
 
-    /// 수익 설계를 **관측**하기 위한 절.
+    /// 수익 설계를 관측하는 절. **짧게 쓰는 법**이지 다른 기능이 아니다 —
+    /// `cards`에 `ladder`·`wall`·`moments` 세 장을 직접 적은 것과 같은 곳으로
+    /// 모인다(`ProjectStatsSpec+Dashboard.swift`).
     ///
-    /// 가격표는 여기 적지 않는다. 값은 App Store Connect가 진실이고, 뷰어가 받는
-    /// 것은 설치가 보낸 지표와 이벤트뿐이라 값을 적어 봤자 대조할 상대가 없다.
-    /// 여기 적는 것은 **값을 정당화하거나 무너뜨리는 세 가지 사실**이다:
-    ///
-    ///   1. 쐐기에 닿는 사람이 몇인가(`activation`) — 가격표보다 먼저다. 가치를
-    ///      못 받은 사람에게는 어떤 값도 비싸다.
-    ///   2. 값을 낼 이유가 생긴 사람이 몇인가(`wall`) — 한도에 닿았는데 아직
-    ///      안 열린 설치. 이게 실제로 팔 수 있는 모수다.
-    ///   3. 그 순간에 화면이 실제로 떴는가(`moments`) — 설계한 벽이 코드에서
-    ///      실제로 서 있는지는 이벤트가 도착해야만 알 수 있다.
+    /// 가격은 여기 안 적는다. 값은 App Store Connect가 진실이고 뷰어가 받는 것은
+    /// 설치가 보낸 지표와 이벤트뿐이라, 적어 봤자 대조할 상대가 없다. 여기 적는
+    /// 것은 **값을 정당화하거나 무너뜨리는 세 가지 사실**이다.
     struct MonetizationSpec: Decodable {
         var note: String?
-        var activation: ActivationSpec?
+        /// 쐐기에 닿는 사람이 몇인가. 가격표보다 먼저 봐야 할 숫자다.
+        var activation: LadderSpec?
+        /// 값을 낼 이유가 생긴 사람이 몇인가.
         var wall: WallSpec?
-        var moments: [MomentSpec] = []
-        /// 순간마다 "눌렀다 · 냈다"를 셀 때 쓸 이벤트 기본형.
+        /// 설계한 벽이 실제로 섰는가.
+        var moments: [MomentsSpec.Moment] = []
         var tappedEvent: String?
         var purchasedEvent: String?
+
+        /// 이 절에서 나오는 카드 셋. 전부 "수익" 묶음에 들어간다.
+        var ladder: LadderSpec? { activation.map { stamped($0) } }
+        var wallCard: WallSpec? { wall.map { stamped($0) } }
+        var momentsCard: MomentsSpec? {
+            guard !moments.isEmpty else { return nil }
+            return stamped(MomentsSpec(
+                chrome: .init(title: "결제 화면이 뜬 순간", note: note, section: Self.section),
+                moments: moments, tappedEvent: tappedEvent, purchasedEvent: purchasedEvent))
+        }
+
+        static let section = "수익"
+        /// 묶음 이름을 안 적었으면 "수익"으로 찍어 준다. 적었으면 그대로 둔다 —
+        /// 앱이 자기 화면을 다르게 묶고 싶을 수 있다.
+        private func stamped<T: DashboardCardStamped>(_ card: T) -> T {
+            var copy = card
+            if copy.chrome.section == nil { copy.chrome.section = Self.section }
+            return copy
+        }
 
         enum CodingKeys: String, CodingKey {
             case note, activation, wall, moments, tappedEvent, purchasedEvent
@@ -213,64 +244,12 @@ struct ProjectStatsSpec: Decodable {
         init(from decoder: Decoder) throws {
             let c = try decoder.container(keyedBy: CodingKeys.self)
             note = try c.decodeIfPresent(String.self, forKey: .note)
-            activation = try c.decodeIfPresent(ActivationSpec.self, forKey: .activation)
+            activation = try c.decodeIfPresent(LadderSpec.self, forKey: .activation)
             wall = try c.decodeIfPresent(WallSpec.self, forKey: .wall)
-            moments = try c.decodeIfPresent([MomentSpec].self, forKey: .moments) ?? []
+            moments = try c.decodeIfPresent([MomentsSpec.Moment].self, forKey: .moments) ?? []
             tappedEvent = try c.decodeIfPresent(String.self, forKey: .tappedEvent)
             purchasedEvent = try c.decodeIfPresent(String.self, forKey: .purchasedEvent)
         }
-    }
-
-    /// 설치에서 **가치를 받은 상태**까지 가는 사다리.
-    ///
-    /// `target`·`floor`는 그 앱이 스스로 정한 선이다(철수 기준 문서 같은 것).
-    /// 뷰어는 그 선을 판단하지 않고 그대로 그어 준다 — 선이 있어야 7%가
-    /// "낮다"가 아니라 "기준의 7분의 1"로 읽힌다.
-    struct ActivationSpec: Decodable {
-        let title: String
-        var note: String?
-        /// 이 앱이 목표로 삼은 마지막 단계 도달률(0~1).
-        var target: Double?
-        /// 이 밑이면 가격이 아니라 제품 문제라고 그 앱이 정해 둔 선(0~1).
-        var floor: Double?
-        let steps: [Step]
-
-        /// 한 칸. `metric`이 없으면 "설치 전부"(첫 칸).
-        struct Step: Decodable {
-            let label: String
-            var metric: String?
-            /// 이 값 이상이면 이 칸에 든다. 기본 1 — 0/1 플래그를 그냥 쓸 수 있게.
-            var atLeast: Double?
-            var hint: String?
-        }
-    }
-
-    /// 무료로 쓸 수 있는 한도와, 거기까지의 거리.
-    ///
-    /// 결제가 필요해지는 자리는 기능이 아니라 **한도**다. 그래서 잠재 고객은
-    /// "이 기능을 안 쓰는 사람"이 아니라 "한도에 닿았는데 아직 안 열린 사람"이다.
-    struct WallSpec: Decodable {
-        let title: String
-        var note: String?
-        /// 사람이 읽는 한도의 이름 — "단축어", "알림".
-        let label: String
-        /// 한도를 재는 스냅샷 지표.
-        let metric: String
-        /// 무료로 가질 수 있는 최대 개수. 이 수까지는 무료다.
-        let limit: Int
-        /// 한도에서 몇 칸 안쪽부터 "곧 막힌다"로 볼 것인가. 기본 1.
-        var nearBy: Int?
-    }
-
-    /// 결제 화면이 뜨기로 **설계된** 순간 하나.
-    ///
-    /// 이벤트가 한 건도 없으면 "아무도 안 왔다"가 아니라 "그 벽이 아직 안 섰다"다.
-    /// 둘은 고칠 곳이 달라서(가격 대 코드) 화면이 반드시 갈라 말해야 한다.
-    struct MomentSpec: Decodable {
-        let label: String
-        /// 노출 이벤트. 슬라이스까지 적으면 그 슬라이스만 센다.
-        let event: String
-        var note: String?
     }
 
     struct DerivedSpec: Decodable {
@@ -292,6 +271,9 @@ struct ProjectStatsSpec: Decodable {
     }
 
     struct SegmentSpec: Decodable {
+        /// 카드 겉 정보. 안 적으면 그 종류의 기본 아이콘을 쓰고, 안 묶인다.
+        var icon: String?
+        var section: String?
         let title: String
         var note: String?
         /// 위에서부터 처음 걸리는 규칙 하나로 정해진다 — 그래야 한 설치가 한 무리에만
@@ -321,6 +303,9 @@ struct ProjectStatsSpec: Decodable {
     /// 단계는 이벤트의 **기본형**으로 적는다. 앱이 슬라이스를 붙여 보내면
     /// (`paywall_cta_tapped:buy`, `:memo`) 같은 기본형끼리 합쳐서 한 단계로 센다.
     struct FunnelSpec: Decodable {
+        /// 카드 겉 정보. 안 적으면 그 종류의 기본 아이콘을 쓰고, 안 묶인다.
+        var icon: String?
+        var section: String?
         let title: String
         var note: String?
         /// 무엇을 셀지. 기본은 `installs` — "몇 명이 여기까지 왔나"가 전환율이고,
@@ -367,7 +352,7 @@ struct ProjectStatsSpec: Decodable {
 /// 번들에 들어 있는 앱별 스펙 전부. 앱을 켜는 동안 한 번만 읽는다.
 enum ProjectStatsSpecCatalog {
 
-    private static let all: [ProjectStatsSpec] = load()
+    private static var all: [ProjectStatsSpec] { loaded.specs }
 
     /// 이 프로젝트 키에 맞는 스펙. `appId`로 먼저 찾고, 이름으로 기록된 프로젝트도 받는다.
     static func spec(for projectKey: String) -> ProjectStatsSpec? {
@@ -375,15 +360,67 @@ enum ProjectStatsSpecCatalog {
             ?? all.first { $0.appName == projectKey }
     }
 
-    private static func load() -> [ProjectStatsSpec] {
+    /// 읽다가 **실패한** 스펙 — 파일 이름과 그 이유.
+    ///
+    /// 왜 남기는가: 예전에는 `try?` 하나로 조용히 버렸다. 스펙이 커질수록(카드
+    /// 종류·묶음·수익 절) 오타 한 글자로 그 앱의 대시보드가 통째로 사라지는데,
+    /// 화면에는 "스펙이 아직 없습니다"가 떠서 **없는 것과 깨진 것이 같아 보인다.**
+    /// 둘은 할 일이 정반대다 — 하나는 쓰는 것이고 하나는 고치는 것이다.
+    static let failures: [Failure] = loaded.failures
+
+    struct Failure: Identifiable {
+        let file: String
+        let reason: String
+        var id: String { file }
+    }
+
+    private static let loaded = load()
+
+    private static func load() -> (specs: [ProjectStatsSpec], failures: [Failure]) {
         let urls = Bundle.main.urls(forResourcesWithExtension: "json", subdirectory: nil) ?? []
         let decoder = JSONDecoder()
-        return urls.compactMap { url in
+        var specs: [ProjectStatsSpec] = []
+        var failures: [Failure] = []
+
+        for url in urls {
+            // 스펙이 아닌 JSON 도 번들에 있다. 그런 파일까지 실패로 세면 경보가
+            // 소음이 되므로, `appId` 가 있는 파일만 스펙으로 본다.
             guard let data = try? Data(contentsOf: url),
-                  let spec = try? decoder.decode(ProjectStatsSpec.self, from: data),
-                  spec.specVersion == ProjectStatsSpec.supportedVersion
-            else { return nil }
-            return spec
+                  let probe = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  probe["appId"] != nil
+            else { continue }
+
+            do {
+                let spec = try decoder.decode(ProjectStatsSpec.self, from: data)
+                guard spec.specVersion == ProjectStatsSpec.supportedVersion else {
+                    failures.append(.init(file: url.lastPathComponent,
+                                          reason: "이 뷰어가 모르는 specVersion \(spec.specVersion)입니다 "
+                                                + "(아는 것은 \(ProjectStatsSpec.supportedVersion))."))
+                    continue
+                }
+                specs.append(spec)
+            } catch {
+                failures.append(.init(file: url.lastPathComponent, reason: Self.explain(error)))
+            }
+        }
+        return (specs, failures)
+    }
+
+    /// 디코딩 오류를 고칠 수 있는 말로. 경로가 있어야 스펙의 **어느 줄**인지 안다.
+    private static func explain(_ error: Error) -> String {
+        guard let error = error as? DecodingError else { return error.localizedDescription }
+        func path(_ context: DecodingError.Context) -> String {
+            context.codingPath.map(\.stringValue).filter { !$0.isEmpty }.joined(separator: " → ")
+        }
+        switch error {
+        case .keyNotFound(let key, let context):
+            return "\(path(context)) 에 \"\(key.stringValue)\" 가 없습니다."
+        case .typeMismatch(_, let context), .valueNotFound(_, let context):
+            return "\(path(context)) 의 값이 기대한 모양이 아닙니다. \(context.debugDescription)"
+        case .dataCorrupted(let context):
+            return "\(path(context)): \(context.debugDescription)"
+        @unknown default:
+            return error.localizedDescription
         }
     }
 }

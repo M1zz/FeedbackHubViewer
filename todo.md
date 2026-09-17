@@ -1,6 +1,30 @@
 # todo
 
 ## 완료
+- [x] **앱마다 다른 대시보드를 스펙만으로 구성**(`ProjectStatsSpec+Dashboard.swift`):
+      예전에는 카드의 종류도 차례도 묶음도 Swift에 박혀 있었다. `tileGroups`를 먼저 그리고 그 다음
+      `distributions`… 하는 식이라 앱이 자기 화면의 순서를 정할 수 없었고, 새 종류 하나에 스펙·평가·
+      뷰 세 파일을 함께 고쳐야 했다. 이제 카드를 한 줄로 세운다:
+      · `"cards": [{ "kind": …, "section": …, "title": … }]` — 적은 차례가 그리는 차례,
+        `section`이 같은 카드끼리 묶인다. 겉 정보(title·note·icon·section)는 모든 종류가 같은 자리
+      · 종류 여덟: tiles · distribution · share · segments · funnel · ladder · wall · moments
+      · **옛 스펙은 한 글자도 안 고쳐도 된다** — `cards`가 없으면 옛 절들을 지금까지의 차례로 푼다.
+        옛 절은 *짧게 쓰는 법*이지 다른 기능이 아니라, 두 길이 같은 곳으로 모여 화면에 분기가 없다.
+        `monetization` 절 = ladder+wall+moments 세 장을 "수익" 묶음에 넣은 것
+      · **모양은 안 늘린다**(tiles · bars · funnel 셋). 앱마다 모양이 달라지면 두 앱을 나란히 못
+        읽는다. 새 종류는 셋 중 하나로 번역돼야 하고, 그래서 뷰는 안 고친다
+      · 입력은 `Context` 자루 하나로 모았다(지표·이벤트·건수 가능 여부·설치별 권한). 어제 수익
+        카드가 권한을 필요로 해서 스펙 밖·스토어 안에 따로 살았던 이유가 이거였다 — 이제 없다
+      · 스펙은 **색이 아니라 뜻**을 적는다(`normal`·`hot`·`warn`·`muted`). 앱이 색을 고르면
+        같은 뜻이 앱마다 다른 색이 된다
+      실측 검증: ClipKeyboard 9장(수익 3 + 나머지 6) · 두번알림 8장이 옛 스펙 그대로 나오고,
+      새 `cards` 형식으로 쓴 스펙도 묶음 차례(수익 → 쓰임새 → 안 묶임)까지 그대로 나온다
+- [x] **깨진 스펙을 조용히 버리던 것**(`ProjectStatsSpecCatalog.load`): `try?` 하나로 묻혀서,
+      오타 한 글자에 그 앱 대시보드가 통째로 사라지고 화면에는 "스펙이 아직 없습니다"가 떴다.
+      **없는 것과 깨진 것은 할 일이 정반대인데**(쓰는 일 / 고치는 일) 같아 보였다. 이제 파일 이름과
+      고칠 수 있는 이유가 카드로 뜬다 — `cards[0] 에 "limit" 가 없습니다`,
+      `Cannot initialize CardKind from invalid String value leaderboard`.
+      스펙이 아닌 JSON은 `appId` 유무로 걸러 경보가 소음이 되지 않게 했다
 - [x] **수익 관측 대시보드**(`FeedbackStore+Monetization.swift` · `MonetizationCards.swift` ·
       스펙의 `monetization` 절): 가격표가 맞는지가 아니라 **가격표가 서 있을 땅이 있는지**를 잰다.
       값은 스펙에 안 적는다 — App Store Connect가 진실이고 뷰어에는 대조할 상대가 없어서, 적어 두면
