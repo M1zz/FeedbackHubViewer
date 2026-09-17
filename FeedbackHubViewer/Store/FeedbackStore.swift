@@ -1294,6 +1294,18 @@ final class FeedbackStore: ObservableObject {
     /// human-readable name.
     @Published private(set) var learnedAppNames: [String: String] = [:] { didSet { invalidateLabels() } }
 
+    /// `appId → App Store 이름`, from the listing the 키워드 screen already
+    /// resolves (`KeywordStore.storeNames`), handed over by the app scene.
+    ///
+    /// 앱이 스스로 보내는 `appName`은 개발할 때 붙인 이름이라 스토어와 다른 일이
+    /// 흔하다 — "Rainbow Workshop"은 스토어에서 "무지개 공방", "일정 밀도"는
+    /// "욕망의 무지개"다. 사람이 이 화면에서 찾는 이름은 스토어에 걸린 이름이므로
+    /// 앱이 보낸 이름보다 앞선다. 스토어에 없는 앱(개발 빌드·심사 중)은 여기
+    /// 없어서 앱이 보낸 이름으로 남는다.
+    var storeAppNames: [String: String] = [:] {
+        didSet { if storeAppNames != oldValue { invalidateLabels() } }
+    }
+
     /// Manual `appId → 앱 이름` overrides for apps whose records never include an
     /// `appName` at all. Edit this to name legacy-only projects.
     /// 예: ["com.Ysoup.OldApp": "옛날앱"]
@@ -1325,11 +1337,13 @@ final class FeedbackStore: ObservableObject {
     }
 
     /// Human-readable name for a project key (an `appId`, an `appName`, or the
-    /// unclassified bucket). Manual overrides win, then learned names, then the
-    /// key itself (so a bare appId is still shown rather than hidden).
+    /// unclassified bucket). Manual overrides win, then the App Store name, then
+    /// learned names, then the key itself (so a bare appId is still shown rather
+    /// than hidden).
     func displayName(for key: String) -> String {
         if key == Feedback.unclassifiedProject { return key }
         if let override = appNameOverrides[key], !override.isEmpty { return override }
+        if let store = storeAppNames[key], !store.isEmpty { return store }
         if let learned = learnedAppNames[key], !learned.isEmpty { return learned }
         return key
     }

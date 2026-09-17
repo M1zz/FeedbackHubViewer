@@ -44,6 +44,14 @@ struct FeedbackHubViewerApp: App {
                 .onChange(of: store.allProjectKeys) { _, keys in
                     keywords.syncLinks(bundleIds: keys)
                 }
+                // 앱 이름은 스토어에 걸린 이름으로. 두 스토어가 나누는 것은 여기
+                // 이 이름표 하나뿐이다(`FeedbackStore.storeAppNames`).
+                //
+                // 넘겨받은 값에서 읽는다 - `$history`는 값이 바뀌기 **전에** 울려서,
+                // 그 순간 `keywords.history`를 읽으면 한 박자 늦은 이름이 된다.
+                .onReceive(keywords.$history) { history in
+                    store.storeAppNames = history.storeNames
+                }
         }
         #if os(macOS)
         .windowToolbarStyle(.unified)

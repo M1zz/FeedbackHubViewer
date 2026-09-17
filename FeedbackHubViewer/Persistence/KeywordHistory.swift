@@ -399,3 +399,13 @@ actor KeywordCache {
         CacheFile.remove(fileURL)
     }
 }
+
+extension KeywordHistory {
+    /// `bundleId → App Store 이름` for every linked project — what the hub shows
+    /// as each app's name (`FeedbackStore.storeAppNames`).
+    var storeNames: [String: String] {
+        links.reduce(into: [:]) { names, link in
+            if let name = apps[String(link.value)]?.name { names[link.key] = name }
+        }
+    }
+}

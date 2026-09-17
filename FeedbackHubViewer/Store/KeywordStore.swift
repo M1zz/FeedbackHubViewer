@@ -46,6 +46,7 @@ final class KeywordStore: ObservableObject {
 
     private static let countriesKey = "keywordCountries"
     private static let lastCheckDayKey = "keywordLastCheckDay"
+    private static let lastListingRefreshDayKey = "keywordLastListingRefreshDay"
 
     private let directory = AppStoreDirectory.shared
     private var checkTask: Task<Void, Never>?
@@ -127,9 +128,24 @@ final class KeywordStore: ObservableObject {
             // on the store, and left 자동 찾기 with nothing to start from.
             // One request per launch, and only while something is unlinked.
             self.syncLinks(bundleIds: bundleIds)
+            // 이미 이어진 앱의 이름·아이콘도 하루 한 번 다시 읽는다. 링크는 한 번 이으면
+            // 다시 묻지 않아서, 스토어에서 이름을 바꾼 앱이 옛 이름으로 영영 남았다
+            // ("벅터벅터" → "벅뚜벅뚜"). 이름은 허브 전체의 앱 이름이 되므로 낡으면 안 된다.
+            // 키워드가 없어도 돈다 - 요청은 앱 20개당 하나다.
+            if self.needsListingRefresh {
+                UserDefaults.standard.set(UsageRollups.dayKey(Date()), forKey: Self.lastListingRefreshDayKey)
+                await self.linkTask?.value
+                self.refreshLinks(bundleIds: Array(Set(bundleIds).union(self.history.links.keys))
+                    .filter { $0 != Feedback.unclassifiedProject })
+            }
             guard self.needsDailyCheck else { return }
             self.check(bundleIds: bundleIds)
         }
+    }
+
+    /// Whether the store listings (names, icons) have been re-read today.
+    private var needsListingRefresh: Bool {
+        UserDefaults.standard.string(forKey: Self.lastListingRefreshDayKey) != UsageRollups.dayKey(Date())
     }
 
     /// Whether today's check has run. Stored as a day key rather than a date so
