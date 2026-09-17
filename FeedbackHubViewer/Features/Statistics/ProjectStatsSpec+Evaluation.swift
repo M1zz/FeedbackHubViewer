@@ -352,20 +352,28 @@ extension ProjectStatsSpec {
     private func wallInsight(_ spec: WallSpec, in context: Context) -> Insight? {
         guard !context.installs.isEmpty else { return nil }
         let near = max(1, spec.nearBy ?? 1)
-        var blocked = 0, nearing = 0, roomLeft = 0, notStarted = 0, open = 0, unknown = 0
+        var blocked = 0, nearing = 0, roomLeft = 0, notStarted = 0, open = 0
+        /// 모름은 두 갈래다 — 권한을 못 읽거나, 한도를 재는 지표를 안 보내거나.
+        /// 둘 다 "어느 칸에도 못 넣는다"는 점은 같지만 고칠 것이 달라서 따로 센다.
+        var noEntitlement = 0, noMetric = 0
 
         for (index, metrics) in context.installs.enumerated() {
             switch context.unlocked.indices.contains(index) ? context.unlocked[index] : nil {
             case true?: open += 1; continue
-            case nil:   unknown += 1; continue
+            case nil:   noEntitlement += 1; continue
             case false?: break
             }
-            let value = Int(metrics[spec.metric] ?? 0)
+            // 지표를 **안 보낸** 설치를 0으로 읽으면 "아직 시작 안 함"이 된다.
+            // 안 보낸 것과 0인 것은 다른 말이다 — 한도 지표를 새 버전만 보내는
+            // 앱에서는 그 차이가 설치의 95%가 되기도 한다.
+            guard let raw = metrics[spec.metric] else { noMetric += 1; continue }
+            let value = Int(raw)
             if value >= spec.limit { blocked += 1 }
             else if value >= spec.limit - near { nearing += 1 }
             else if value >= 1 { roomLeft += 1 }
             else { notStarted += 1 }
         }
+        let unknown = noEntitlement + noMetric
 
         let scanned = blocked + nearing + roomLeft + notStarted + open + unknown
         guard scanned > 0 else { return nil }
@@ -386,14 +394,22 @@ extension ProjectStatsSpec {
                 "유료 기능이 이미 열려 있어 값을 낼 이유가 없는 설치", startsGroup: true)
         ]
         if unknown > 0 {
-            rows.append(row("모름", unknown, .muted, "권한을 안 보내는 설치"))
+            var why: [String] = []
+            if noEntitlement > 0 { why.append("권한을 안 보냄 \(noEntitlement)대") }
+            if noMetric > 0 { why.append("\(spec.metric)을 안 보냄 \(noMetric)대") }
+            rows.append(row("모름", unknown, .muted,
+                            why.joined(separator: " · ") + " — 0이 아니라 못 셉니다"))
         }
 
         var frame = spec.frame(default: "person.badge.clock")
         let sellable = blocked + nearing
         var verdict = "지금 값을 낼 이유가 있는 사람은 \(scanned)대 중 \(sellable)명"
                     + "(\(Self.percent(Double(sellable) / Double(scanned))))입니다."
-        if open > sellable * 5, open > 0 {
+        if noMetric > scanned / 2 {
+            verdict += " 다만 한도를 재는 \(spec.metric)을 보내는 설치가 "
+                     + "\(scanned - noMetric)/\(scanned)대뿐이라, 이 숫자는 그 일부만 놓고 센 "
+                     + "하한입니다. 나머지는 0이 아니라 못 셉니다."
+        } else if open > sellable * 5, open > 0 {
             verdict += " 유료 기능이 이미 열린 설치가 \(open)대로 그보다 훨씬 많아요 — "
                      + "가격표보다 먼저, 그 권한이 어떻게 열렸는지를 보셔야 합니다."
         }
