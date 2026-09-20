@@ -12,13 +12,18 @@
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
-WORKSPACE="$(cd .. && pwd)"
+# 이 리포는 workspace/code/FeedbackHubViewer 에 있고, 앱 리포는 workspace/Auto/ 에 있다.
+# 그래서 두 칸 올라가야 workspace 다 (한 칸은 code/ 까지밖에 못 간다).
+WORKSPACE="$(cd ../.. && pwd)"
 DEST="FeedbackHubViewer/Specs"
 
+# 두 앱 모두 code/ 가 아니라 workspace/Auto/ 아래에 있고, 디렉터리 이름은 한글이다.
+# ⚠️ 예전에는 여기가 "$WORKSPACE/ClipKeyboard/..." 와 "$WORKSPACE/../Auto/두번알림/..." 이었다.
+#    둘 다 없는 경로라 스크립트는 늘 "없음 … 건너뜀"만 찍고 지나갔고, --check 가 드리프트를
+#    한 번도 못 잡았다. 스펙이 앱 코드와 어긋난 채 몇 달을 갔던 것이 그 탓이다.
 SPECS=(
-  "$WORKSPACE/ClipKeyboard/docs/engineering/usage-spec.json|clipkeyboard.usage-spec.json"
-  # 두번알림 리포는 code/ 가 아니라 Auto/두번알림 에 있다 (예전 경로는 없어서 늘 건너뛰었다)
-  "$WORKSPACE/../Auto/두번알림/docs/usage-spec.json|rereminder.usage-spec.json"
+  "$WORKSPACE/Auto/클립키보드/docs/engineering/usage-spec.json|clipkeyboard.usage-spec.json"
+  "$WORKSPACE/Auto/두번알림/docs/usage-spec.json|rereminder.usage-spec.json"
 )
 
 check_only=false
