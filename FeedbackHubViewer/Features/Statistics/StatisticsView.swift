@@ -80,6 +80,10 @@ struct StatisticsDashboard: View {
                     systemImage: "chart.bar",
                     description: Text(store.noticeMessage ?? "아직 수집된 데이터가 없습니다.")
                 )
+            } else if scope == nil {
+                // 전체 프로젝트는 합이 아니라 앱끼리의 비교다 — 더한 숫자는
+                // 어느 앱에 대해서도 말하지 않는다(`ProjectComparisonView`).
+                ProjectComparisonView()
             } else {
                 ScrollView {
                     VStack(alignment: .leading, spacing: sectionSpacing) {
