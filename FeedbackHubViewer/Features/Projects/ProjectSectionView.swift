@@ -14,7 +14,7 @@ import SwiftUI
 struct ProjectSectionView: View {
     @EnvironmentObject private var store: FeedbackStore
     @EnvironmentObject private var keywords: KeywordStore
-    @EnvironmentObject private var purchases: InAppPurchaseStore
+    @EnvironmentObject private var purchases: AppStoreConnectStore
     /// 섹션 칸을 몇 줄로 접을지가 여기에 달렸다.
     @Environment(\.dynamicTypeSize) private var typeSize
     /// nil == 전체 프로젝트.
@@ -241,7 +241,7 @@ struct ProjectSectionView: View {
             return text
         case .purchases:
             guard purchases.isConfigured else { return "App Store Connect 키를 넣으면 상품과 판매가 나옵니다" }
-            guard let project else { return "앱별 최근 \(InAppPurchaseStore.salesDays)일 판매 순위" }
+            guard let project else { return "앱별 최근 \(AppStoreConnectStore.salesDays)일 판매 순위" }
             guard let products = purchases.products(for: project) else { return "App Store Connect 상품" }
             return "상품 \(products.count)개 · 판매 중 \(products.filter(\.isOnSale).count)개"
         }

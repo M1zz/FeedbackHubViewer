@@ -36,6 +36,13 @@ struct KeywordsView: View {
                 if linkedApp != nil && standings.isEmpty { startCard }
                 addCard
                 if !standings.isEmpty { rankCard }
+                // ASO 카드들 — 한 앱을 볼 때만. 순위(어디 서 있나) → 메타데이터(무엇을 걸어
+                // 뒀나) → 노출 · 전환(그래서 사람이 왔나) 차례로 읽힌다.
+                if let project, linkedApp != nil {
+                    if !standings.isEmpty { RankTrendCard(project: project) }
+                    StoreMetadataCard(project: project)
+                    StoreFunnelCard(project: project)
+                }
                 // Shown even when empty. Competitors are read out of the
                 // results for the terms you track, so with no terms this card
                 // is blank — and a card that just disappears leaves you to

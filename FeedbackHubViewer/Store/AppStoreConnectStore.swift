@@ -1,8 +1,9 @@
 //
-//  InAppPurchaseStore.swift
+//  AppStoreConnectStore.swift
 //  FeedbackHubViewer
 //
-//  "앱 내 구입" 화면의 상태 — 앱마다 스토어에 걸린 상품과, 최근 30일 판매.
+//  App Store Connect에서 읽은 것의 상태 — 앱마다 스토어에 걸린 상품과 최근 30일 판매
+//  ("앱 내 구입"), 스토어 메타데이터와 노출 · 전환(키워드 화면의 ASO 카드들).
 //
 //  `KeywordStore`처럼 `FeedbackStore`와 따로 선다. 읽는 곳(App Store Connect)도
 //  실패하는 이유(키·권한)도 CloudKit과 겹치지 않는다. 둘이 나누는 것은 번들 ID뿐이다.
@@ -15,7 +16,7 @@ import Foundation
 import SwiftUI
 
 @MainActor
-final class InAppPurchaseStore: ObservableObject {
+final class AppStoreConnectStore: ObservableObject {
 
     @Published private(set) var credentials: AppStoreConnectCredentials?
     /// 번들 ID → 그 앱의 상품 상태.
@@ -24,6 +25,32 @@ final class InAppPurchaseStore: ObservableObject {
     @Published private(set) var sales: SalesWindow?
     @Published private(set) var isLoadingSales = false
     @Published private(set) var salesError: String?
+
+    /// 번들 ID → 스토어 메타데이터(이름 · 부제 · 키워드 · 프로모션 텍스트).
+    @Published private(set) var metadata: [String: LoadState<StoreMetadata>] = [:]
+    /// 번들 ID → 최근 30일 노출 · 전환.
+    @Published private(set) var funnels: [String: LoadState<FunnelResult>] = [:]
+
+    enum LoadState<Value> {
+        case loading
+        case loaded(Value)
+        case failed(String)
+
+        var value: Value? {
+            if case .loaded(let value) = self { return value }
+            return nil
+        }
+        var isLoading: Bool {
+            if case .loading = self { return true }
+            return false
+        }
+    }
+
+    /// 리포트 요청이 없으면 퍼널 대신 그렇다고 말한다 — 만들면 1~2일 뒤부터 쌓인다.
+    enum FunnelResult {
+        case noRequest
+        case ready(StoreFunnel)
+    }
 
     enum CatalogState {
         case loading
@@ -55,6 +82,9 @@ final class InAppPurchaseStore: ObservableObject {
         sales = nil
         salesError = nil
         reportCache = [:]
+        metadata = [:]
+        funnels = [:]
+        apps = [:]
     }
 
     func signOut() {
@@ -65,6 +95,79 @@ final class InAppPurchaseStore: ObservableObject {
         sales = nil
         salesError = nil
         reportCache = [:]
+        metadata = [:]
+        funnels = [:]
+        apps = [:]
+    }
+
+    // MARK: - 앱 찾기
+
+    private var apps: [String: ConnectApp] = [:]
+
+    /// 번들 ID → App Store Connect 앱. 한 번 찾으면 이번 실행 동안 다시 안 묻는다.
+    private func resolveApp(_ bundleID: String) async throws -> ConnectApp {
+        if let app = apps[bundleID] ?? connectApp(for: bundleID) { return app }
+        guard let client else { throw AppStoreConnect.Failure.missing("App Store Connect 키") }
+        let app = try await client.app(bundleID: bundleID)
+        apps[bundleID] = app
+        return app
+    }
+
+    // MARK: - 메타데이터
+
+    func loadMetadata(bundleID: String, force: Bool = false) async {
+        guard let client else { return }
+        if !force, let state = metadata[bundleID], !(state.value == nil && !state.isLoading) { return }
+        metadata[bundleID] = .loading
+        do {
+            let app = try await resolveApp(bundleID)
+            metadata[bundleID] = .loaded(try await client.metadata(appID: app.id))
+        } catch {
+            metadata[bundleID] = .failed(error.localizedDescription)
+        }
+    }
+
+    /// 고치고 나서 다시 읽는다 — 스토어가 받아들인 값이 화면에 남아야 한다.
+    func saveMetadata(bundleID: String, edit: MetadataEdit) async throws {
+        guard let client, let current = metadata[bundleID]?.value else { return }
+        let draft = current.draft?.locales[edit.locale]
+        let live = current.live.locales[edit.locale]
+        try await client.save(edit,
+                              appInfoLocalizationID: current.draft?.isAppInfoEditable == true ? draft?.appInfoLocalizationID : nil,
+                              versionLocalizationID: current.draft?.isVersionEditable == true ? draft?.versionLocalizationID : nil,
+                              promoVersionLocalizationID: live?.versionLocalizationID)
+        await loadMetadata(bundleID: bundleID, force: true)
+    }
+
+    // MARK: - 노출 · 전환
+
+    func loadFunnel(bundleID: String, force: Bool = false) async {
+        guard let client else { return }
+        if !force, let state = funnels[bundleID], !(state.value == nil && !state.isLoading) { return }
+        funnels[bundleID] = .loading
+        do {
+            let app = try await resolveApp(bundleID)
+            guard let request = try await client.analyticsRequestID(appID: app.id) else {
+                funnels[bundleID] = .loaded(.noRequest)
+                return
+            }
+            let funnel = try await client.funnel(requestID: request, appID: app.id, days: Self.salesDays)
+            funnels[bundleID] = .loaded(.ready(funnel))
+        } catch {
+            funnels[bundleID] = .failed(error.localizedDescription)
+        }
+    }
+
+    /// 리포트 요청을 만든다. 첫 데이터는 1~2일 뒤에 나온다.
+    func requestAnalytics(bundleID: String) async {
+        guard let client else { return }
+        do {
+            let app = try await resolveApp(bundleID)
+            try await client.createAnalyticsRequest(appID: app.id)
+            await loadFunnel(bundleID: bundleID, force: true)
+        } catch {
+            funnels[bundleID] = .failed(error.localizedDescription)
+        }
     }
 
     // MARK: - 상품

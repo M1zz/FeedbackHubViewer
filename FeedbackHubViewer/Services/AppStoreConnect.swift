@@ -224,7 +224,7 @@ actor AppStoreConnect {
     // MARK: 인증
 
     /// 20분이 한도라 15분짜리를 만들어 두고 돌려 쓴다.
-    private func bearer() throws -> String {
+    func bearer() throws -> String {
         if let token, token.expires > Date().addingTimeInterval(60) { return token.value }
         let key = try P256.Signing.PrivateKey(
             pemRepresentation: credentials.privateKey.trimmingCharacters(in: .whitespacesAndNewlines))
@@ -255,7 +255,7 @@ actor AppStoreConnect {
 
     // MARK: 요청
 
-    private func send(_ url: URL, accept: String = "application/json") async throws -> (Data, Int) {
+    func send(_ url: URL, accept: String = "application/json") async throws -> (Data, Int) {
         var request = URLRequest(url: url)
         request.setValue("Bearer \(try bearer())", forHTTPHeaderField: "Authorization")
         request.setValue(accept, forHTTPHeaderField: "Accept")
@@ -264,9 +264,21 @@ actor AppStoreConnect {
         return (data, status)
     }
 
-    private func check(_ data: Data, _ status: Int) throws {
+    /// 본문이 있는 요청(PATCH · POST). 바꾸는 요청은 이것 하나로만 나간다.
+    func write(_ method: String, _ path: String, body: [String: Any]) async throws -> Data {
+        var request = URLRequest(url: url(path))
+        request.httpMethod = method
+        request.setValue("Bearer \(try bearer())", forHTTPHeaderField: "Authorization")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+        let (data, response) = try await URLSession.shared.data(for: request)
+        try check(data, (response as? HTTPURLResponse)?.statusCode ?? 0)
+        return data
+    }
+
+    func check(_ data: Data, _ status: Int) throws {
         guard !(200..<300).contains(status) else { return }
-        let detail = (try? JSONDecoder().decode(ErrorDocument.self, from: data))?.errors.first
+        let detail = (try? JSONDecoder().decode(ASCErrorDocument.self, from: data))?.errors.first
             .map { $0.detail ?? $0.title ?? "" }
         switch status {
         case 401: throw Failure.unauthorized
@@ -275,7 +287,7 @@ actor AppStoreConnect {
         }
     }
 
-    private func url(_ path: String, _ query: [String: String] = [:]) -> URL {
+    func url(_ path: String, _ query: [String: String] = [:]) -> URL {
         var components = URLComponents(url: Self.base.appendingPathComponent(path), resolvingAgainstBaseURL: false)!
         if !query.isEmpty {
             components.queryItems = query.sorted { $0.key < $1.key }.map { URLQueryItem(name: $0.key, value: $0.value) }
@@ -284,13 +296,13 @@ actor AppStoreConnect {
     }
 
     /// 목록 요청 — 다음 쪽이 있으면 끝까지 따라간다.
-    private func list(_ path: String, _ query: [String: String] = [:]) async throws -> Document {
+    func list(_ path: String, _ query: [String: String] = [:]) async throws -> ASCDocument {
         var next: URL? = url(path, query)
-        var merged = Document(data: [], included: [])
+        var merged = ASCDocument(data: [], included: [])
         while let current = next {
             let (data, status) = try await send(current)
             try check(data, status)
-            guard let page = try? JSONDecoder().decode(Document.self, from: data) else { throw Failure.decoding }
+            guard let page = try? JSONDecoder().decode(ASCDocument.self, from: data) else { throw Failure.decoding }
             merged.data += page.data
             merged.included += page.included
             next = page.next
@@ -356,7 +368,7 @@ actor AppStoreConnect {
     /// 지금 적용 중인 가격. 한국 가격이 따로 정해져 있으면 그것, 아니면 기준 국가의 가격.
     private func price(for product: StoreProduct) async throws -> String? {
         let today = Self.day.string(from: Date())
-        func isCurrent(_ resource: Resource) -> Bool {
+        func isCurrent(_ resource: ASCResource) -> Bool {
             let start = resource.string("startDate") ?? "0000-00-00"
             let end = resource.string("endDate") ?? "9999-99-99"
             return start <= today && today < end
@@ -406,14 +418,14 @@ actor AppStoreConnect {
         return Self.formatPrice(chosen, point: "inAppPurchasePricePoint", in: doc)
     }
 
-    private func single(_ path: String) async throws -> Resource {
+    func single(_ path: String) async throws -> ASCResource {
         let (data, status) = try await send(url(path))
         try check(data, status)
-        guard let doc = try? JSONDecoder().decode(SingleDocument.self, from: data) else { throw Failure.decoding }
+        guard let doc = try? JSONDecoder().decode(ASCSingleDocument.self, from: data) else { throw Failure.decoding }
         return doc.data
     }
 
-    private static func formatPrice(_ price: Resource, point: String, in doc: Document) -> String? {
+    private static func formatPrice(_ price: ASCResource, point: String, in doc: ASCDocument) -> String? {
         guard let pointID = price.relationshipID(point),
               let pricePoint = doc.included.first(where: { $0.id == pointID }),
               let amount = pricePoint.string("customerPrice").flatMap(Double.init) else { return nil }
@@ -508,21 +520,21 @@ actor AppStoreConnect {
 
 // MARK: - JSON:API
 
-private struct ErrorDocument: Decodable {
+struct ASCErrorDocument: Decodable {
     struct Item: Decodable { let title: String?; let detail: String? }
     let errors: [Item]
 }
 
-private struct SingleDocument: Decodable {
-    let data: Resource
+struct ASCSingleDocument: Decodable {
+    let data: ASCResource
 }
 
-private struct Document: Decodable {
-    var data: [Resource]
-    var included: [Resource]
+struct ASCDocument: Decodable {
+    var data: [ASCResource]
+    var included: [ASCResource]
     var next: URL?
 
-    init(data: [Resource], included: [Resource]) {
+    init(data: [ASCResource], included: [ASCResource]) {
         self.data = data
         self.included = included
     }
@@ -532,16 +544,16 @@ private struct Document: Decodable {
 
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
-        data = try c.decode([Resource].self, forKey: .data)
-        included = try c.decodeIfPresent([Resource].self, forKey: .included) ?? []
+        data = try c.decode([ASCResource].self, forKey: .data)
+        included = try c.decodeIfPresent([ASCResource].self, forKey: .included) ?? []
         next = try c.decodeIfPresent(Links.self, forKey: .links)?.next
     }
 }
 
-private struct Resource: Decodable {
+struct ASCResource: Decodable {
     let id: String
     let type: String
-    let attributes: [String: JSONValue]?
+    let attributes: [String: ASCValue]?
     let relationships: [String: Relationship]?
 
     struct Relationship: Decodable {
@@ -562,6 +574,11 @@ private struct Resource: Decodable {
         return nil
     }
 
+    func bool(_ key: String) -> Bool? {
+        if case .bool(let value)? = attributes?[key] { return value }
+        return nil
+    }
+
     func int(_ key: String) -> Int? {
         if case .number(let value)? = attributes?[key] { return Int(value) }
         return nil
@@ -570,7 +587,7 @@ private struct Resource: Decodable {
     func relationshipID(_ key: String) -> String? { relationships?[key]?.data?.id }
 }
 
-private enum JSONValue: Decodable {
+enum ASCValue: Decodable {
     case string(String), number(Double), bool(Bool), null, other
 
     init(from decoder: Decoder) throws {

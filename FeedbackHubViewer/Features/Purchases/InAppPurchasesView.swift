@@ -16,7 +16,7 @@ import UniformTypeIdentifiers
 
 struct InAppPurchasesView: View {
     @EnvironmentObject private var store: FeedbackStore
-    @EnvironmentObject private var purchases: InAppPurchaseStore
+    @EnvironmentObject private var purchases: AppStoreConnectStore
     /// nil == 전체 프로젝트.
     let project: String?
 
@@ -77,7 +77,7 @@ struct InAppPurchasesView: View {
 
     private var header: some View {
         HStack(spacing: 12) {
-            Text("App Store Connect에서 읽은 값입니다. 판매는 최근 \(InAppPurchaseStore.salesDays)일(어제까지, 태평양 시간 기준)이에요.")
+            Text("App Store Connect에서 읽은 값입니다. 판매는 최근 \(AppStoreConnectStore.salesDays)일(어제까지, 태평양 시간 기준)이에요.")
                 .font(.body)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -103,7 +103,7 @@ struct InAppPurchasesView: View {
 // MARK: - 한 앱
 
 private struct ProjectPurchases: View {
-    @EnvironmentObject private var purchases: InAppPurchaseStore
+    @EnvironmentObject private var purchases: AppStoreConnectStore
     let project: String
     let tileColumns: [GridItem]
 
@@ -217,7 +217,7 @@ private struct ProjectPurchases: View {
 /// 판매를 붙인다. App Store Connect에 없는 프로젝트(개발 중·다른 계정)는 줄에서 빠진다.
 private struct PurchaseComparison: View {
     @EnvironmentObject private var store: FeedbackStore
-    @EnvironmentObject private var purchases: InAppPurchaseStore
+    @EnvironmentObject private var purchases: AppStoreConnectStore
 
     private var keys: [String] {
         store.allProjectKeys.filter { $0 != Feedback.unclassifiedProject }
@@ -226,7 +226,7 @@ private struct PurchaseComparison: View {
     private struct Row: Identifiable {
         let id: String
         let name: String
-        let totals: InAppPurchaseStore.SalesWindow.Totals
+        let totals: AppStoreConnectStore.SalesWindow.Totals
         let onSale: Int
     }
 
@@ -297,7 +297,7 @@ private struct PurchaseComparison: View {
         let peak = ranked.first?.1.value ?? 0
         return Card(title: title, systemImage: systemImage) {
             if ranked.isEmpty {
-                Text("최근 \(InAppPurchaseStore.salesDays)일에 해당하는 앱이 없습니다.")
+                Text("최근 \(AppStoreConnectStore.salesDays)일에 해당하는 앱이 없습니다.")
                     .font(.body)
                     .foregroundStyle(.secondary)
             } else {
@@ -334,7 +334,7 @@ private struct PurchaseComparison: View {
 
 /// 판매 리포트를 왜 못 보여 주는지 — 판매자 번호가 없거나, 받는 중이거나, 거절당했거나.
 private struct SalesStatus: View {
-    @EnvironmentObject private var purchases: InAppPurchaseStore
+    @EnvironmentObject private var purchases: AppStoreConnectStore
 
     var body: some View {
         if purchases.credentials?.hasVendorNumber != true {
@@ -355,7 +355,7 @@ private struct SalesStatus: View {
                     .foregroundStyle(.tertiary)
             }
         } else if purchases.isLoadingSales {
-            ProgressView("최근 \(InAppPurchaseStore.salesDays)일 판매 리포트를 받는 중…")
+            ProgressView("최근 \(AppStoreConnectStore.salesDays)일 판매 리포트를 받는 중…")
                 .font(.body)
                 .frame(maxWidth: .infinity)
         }
@@ -365,7 +365,7 @@ private struct SalesStatus: View {
 // MARK: - 키 입력
 
 private struct ConnectKeyForm: View {
-    @EnvironmentObject private var purchases: InAppPurchaseStore
+    @EnvironmentObject private var purchases: AppStoreConnectStore
     let onSaved: () -> Void
 
     @State private var issuerID = ""
