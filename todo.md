@@ -9,7 +9,10 @@
 - [ ] Rereminder en-US — 부제 `Speech & Presentation Timer`, 키워드 `talk,presenter,speaker,lecture,meeting,countdown,pre-alert,vibration,class,sermon,debate,warning`
 - [ ] StickyPresenterRemote ko — 부제 `발표 타이머 · 슬라이드 리모컨`, 키워드 `발표 리모컨,프레젠테이션,PPT,키노트,프레젠터,발표도구,발표연습,원격,애플워치,강의,회의,스티키` (PPT · 키노트 · 애플워치 지원 여부 확인)
 - [ ] 달빛 ko — 키워드 `화이트 노이즈,마음의 안정,안식,평안,싱잉볼,평온,숙면,불면증,유도,진정,빗소리,파도소리,수면유도,잠잘때,자장가,명상음악` (빗소리 이하 검증 안 함)
-- [ ] 네 앱 모두 새 버전을 만들어야 키워드 · 부제를 고칠 수 있음. 출시 1~2주 뒤 순위 추이 · 노출 · 전환으로 효과 확인
+- [x] 새 버전 만듦(App Store Connect, 제출 준비 중): 클립키보드 5.1.6 · 두번알림 2.2.9 · StickyPresenterRemote 1.0.9. 달빛은 4.1.1이 이미 있었음
+- [ ] 수정안 입력은 사용자 확인 뒤. 각 앱 리포의 MARKETING_VERSION을 새 버전에 맞춰 빌드를 올려야 제출 가능
+      (로컬 Rereminder 리포는 2.2.5 — 스토어는 2.2.8이라 리포가 뒤처져 있음)
+- [ ] 출시 1~2주 뒤 순위 추이 · 노출 · 전환으로 효과 확인
 
 ## App Store Connect 연결을 설정으로 (2026-09-24)
 - [x] "연결 안 됨"이던 까닭: 앱 키체인에 키가 없음(스크립트로만 확인했음). 연결 폼을 설정으로 옮김 —
