@@ -12,8 +12,16 @@
   "paidFlag": "flag.isPaid",
   "trialFlag": "flag.isTrial",
   "compedFlag": "flag.isComped",
-  "addOnFlag": "flag.boughtAddOn",
   "legacyPaidFlag": "flag.isLegacyPaid",
+  "purchases": {
+    "$comment": "지금 파는 것을 SKU가 아니라 '산 것'으로 적는다. Pro = pro · pro.halfoff · pro.upgrade(값만 다른 같은 것), 칸 추가 = slots5 · slots5.pack(소모성이라 팩 수를 보낸다), 두 대째 = twodevice. 칸은 2³ = 8개. 체험·무상·옛 유료 다운로드는 산 것이 아니라서 칸이 아니라 표식이다. flag.schema 2 이전 버전은 기준선 밖(모름)이다.",
+    "since": 2,
+    "products": [
+      { "key": "own.pro", "label": "Pro" },
+      { "key": "own.slots", "label": "칸 추가" },
+      { "key": "own.twodevice", "label": "두 대째" }
+    ]
+  },
 
   "metricLabels": {
     "shortcuts": { "label": "단축어 수 (샘플 포함)" },
@@ -37,7 +45,11 @@
     "flag.isTrial": { "label": "체험 중", "excludeFromAverages": true },
     "flag.isComped": { "label": "무상 (그랜드파더·가족 공유·내부)", "excludeFromAverages": true },
     "flag.boughtAddOn": { "label": "부가 결제 (칸 추가·두 대째)", "excludeFromAverages": true },
-    "flag.isLegacyPaid": { "label": "옛 유료 구매 (v4.0 이전 다운로드)", "excludeFromAverages": true }
+    "flag.isLegacyPaid": { "label": "옛 유료 구매 (v4.0 이전 다운로드)", "excludeFromAverages": true },
+    "own.pro": { "label": "Pro를 산 설치", "excludeFromAverages": true },
+    "own.slots": { "label": "칸 추가를 산 설치", "excludeFromAverages": true },
+    "own.twodevice": { "label": "두 대째를 산 설치", "excludeFromAverages": true },
+    "flag.schema": { "label": "통계 규약 버전", "excludeFromAverages": true }
   },
   "metricPrefixLabels": {
     "persona.": "고른 페르소나"

@@ -50,27 +50,28 @@
 //     동안 건수를 **아예 보여주지 않는다** — 전체 건수를 그대로 두면 사람 수는
 //     유료기능인데 건수는 전체인 한 장이 되어, 둘을 나눈 값이 전부 거짓말이 된다.
 //
-//  ── 두 번째 축: 돈을 낸 방식 ──
+//  ── 두 번째 축: 무엇을 샀는가 ──
 //
 //  위에서 결제·체험·무상을 버린 이유는 "그 셋을 말해 주는 앱이 거의 없어서"였다.
-//  그래서 그 축은 **없애지 않고 따로 세웠다** — 접근 축(유료기능 · 무료기능)은
-//  거의 모든 앱에서 뜨고, 결제 축은 `flag.isPaid`를 보내는 설치에서만 뜬다. 한
-//  고르개에 섞으면 대부분의 앱에서 빈 칸이 줄줄이 생기지만, 줄을 나누면 결제 줄은
-//  말할 수 있는 앱에서만 나타난다.
+//  그래서 그 축은 **없애지 않고 따로 세웠다** — 접근 축은 거의 모든 앱에서 뜨고, 이
+//  줄은 스펙에 `purchases`를 적은 앱에서만 뜬다.
 //
-//      Pro 결제 · 옛 유료 구매 · 부가 결제 · 체험 · 무상 · 안 냄
+//  처음엔 이 줄을 "돈을 낸 방식" 여섯 칸(Pro 결제 · 옛 유료 구매 · 부가 결제 · 체험 · 무상 ·
+//  안 냄)으로 세웠다. 그것도 틀렸다. 한 칸이 여러 상품을 한 비트에 접고 있어서 "Pro만 산
+//  사람"과 "칸도 사고 Pro도 산 사람"이 안 갈렸고, 두번알림은 `flag.isPro`(맥 · TestFlight ·
+//  그랜드파더 · 구매의 합집합)를 결제로 보내서 **아무도 안 샀는데 26대가 결제**로 잡혔다.
 //
-//  한 설치는 **하나에만** 든다. 돈에 가까운 쪽이 이긴다 — Pro를 샀으면 체험 중이어도
-//  Pro 결제, 칸만 샀으면 체험 중이어도 부가 결제다. 옛 유료 구매는 앱이 유료 다운로드였던
-//  시절에 산 사람이라 돈은 냈지만 지금의 인앱 결제와 무관하다 — Pro 결제에 섞이면 매출과
-//  대조할 때 전환율이 부푼다(`flag.isLegacyPaid`). 무상은 돈 없이 열린 사람
-//  (그랜드파더·가족 공유·내부 빌드)이고, 안 냄은 아무것도 해당하지 않는 사람이다.
+//  그래서 질문을 바꿨다 — **지금 파는 것 가운데 무엇을 샀는가.** 앱은 산 것마다 한 칸씩
+//  (`own.pro` · `own.slots` …) 보내고, 뷰어는 그 조합으로 가른다. 파는 것이 n개면 칸은 2ⁿ개,
+//  한 설치는 정확히 한 칸에 든다. 체험 · 무상 · 옛 유료 다운로드는 **산 것이 아니라서**
+//  칸이 아니라 "돈 없이 열림" 표식이다 — 칸에 섞으면 같은 잘못을 되풀이한다.
 //
-//  기준은 `flag.isPaid` 하나다. 그 키를 안 보낸 설치는 이 축에서 **모름**이다 —
-//  접근 축에서 무료기능이어도 결제 축에서 "안 냄"으로 세지 않는다. 부가 결제
-//  (`flag.boughtAddOn`)와 옛 유료 구매(`flag.isLegacyPaid`)는 늦게 생긴 키라, 안 보내는
-//  설치는 각각 안 냄 · Pro 결제에 들어가되 그 수를 고르개 밑에 적는다 — 거기 섞여 있을 수
-//  있다는 뜻이다.
+//  옛 값은 지우지 않고 **기준선** 밖으로 뺀다: 규약을 아는 버전은 `flag.schema`를 함께
+//  보내고, 그 값이 스펙의 `since`보다 작거나 없는 설치는 이 줄에서 모름이다. 스냅샷은
+//  설치당 한 줄이고 최신으로 덮이므로, 업데이트한 설치부터 차례로 기준선 안으로 들어온다.
+//
+//  칸의 뜻이 앱마다 달라서(한 앱의 "Pro"와 다른 앱의 "Pro"는 다른 물건이다) 이 줄은
+//  **프로젝트 하나를 볼 때만** 뜬다.
 //
 //  설치·사람 수 쪽은 전부 정확하다: 스냅샷은 설치 하나가 한 줄이고, 일 버킷의
 //  설치 집합과 교집합을 잡으면 그 무리가 그날 몇 명 왔는지가 그대로 나온다.
@@ -85,55 +86,35 @@ extension FeedbackStore {
     /// 통계를 어느 무리에 맞춰 볼 것인가.
     ///
     /// 두 축이다(머리말). 접근 축 — 전체 · 유료기능 · 무료기능 — 은 권한을 보내는
-    /// 거의 모든 앱에서 뜨고, 결제 축 — Pro 결제 · 옛 유료 구매 · 부가 결제 · 체험 · 무상 · 안 냄 —
-    /// 은 `flag.isPaid`를 보내는 앱에서만 뜬다.
-    enum Audience: String, CaseIterable, Identifiable, Hashable {
+    /// 거의 모든 앱에서 뜨고, 산 것 축 — 파는 것의 조합 2ⁿ칸 — 은 스펙에 `purchases`를
+    /// 적은 앱 하나를 볼 때만 뜬다.
+    enum Audience: Hashable, Identifiable {
         /// 권한을 안 보내는 설치까지 포함한, 있는 그대로의 전부.
         case all
         /// 유료 기능을 쓸 수 있는 설치.
         case paidFeatures
         /// 무료 기능만 쓰고 있는 설치.
         case freeFeatures
+        /// 지금 파는 것 가운데 이 조합을 산 설치(`PurchaseCell`).
+        case purchased(PurchaseCell)
 
-        /// 유료 기능을 여는 결제가 지금 유효한 설치.
-        case paying
-        /// 앱이 유료 다운로드였던 시절에 사서 열린 설치. 돈은 냈지만 지금 매출과 무관하다.
-        case legacyPaid
-        /// 기능을 열지 않는 작은 결제만 한 설치(칸 추가 · 두 대째 같은 것).
-        case addOn
-        /// 결제 없이 체험 기간 중인 설치.
-        case trial
-        /// 돈 없이 열린 설치 — 그랜드파더 · 가족 공유 · 내부 빌드.
-        case comped
-        /// 위 어느 것에도 해당하지 않는 설치.
-        case unpaid
+        enum Axis { case access, purchase }
 
-        enum Axis { case access, payment }
-
-        var id: String { rawValue }
+        var id: Self { self }
 
         var axis: Axis {
-            switch self {
-            case .all, .paidFeatures, .freeFeatures: return .access
-            case .paying, .legacyPaid, .addOn, .trial, .comped, .unpaid: return .payment
-            }
+            if case .purchased = self { return .purchase }
+            return .access
         }
 
         static let accessCases: [Audience] = [.all, .paidFeatures, .freeFeatures]
-        /// 결제 축의 차례 — 돈에 가까운 쪽부터. 한 설치가 여럿에 해당하면 앞의 것이 이긴다.
-        static let paymentCases: [Audience] = [.paying, .legacyPaid, .addOn, .trial, .comped, .unpaid]
 
         var label: String {
             switch self {
-            case .all:          return "전체"
-            case .paidFeatures: return "유료기능"
-            case .freeFeatures: return "무료기능"
-            case .paying:       return "Pro 결제"
-            case .legacyPaid:   return "옛 유료 구매"
-            case .addOn:        return "부가 결제"
-            case .trial:        return "체험"
-            case .comped:       return "무상"
-            case .unpaid:       return "안 냄"
+            case .all:              return "전체"
+            case .paidFeatures:     return "유료기능"
+            case .freeFeatures:     return "무료기능"
+            case .purchased(let c): return c.label
             }
         }
 
@@ -143,17 +124,45 @@ extension FeedbackStore {
             case .all:          return "있는 그대로의 전부"
             case .paidFeatures: return "유료 기능을 쓸 수 있는 설치"
             case .freeFeatures: return "무료 기능만 쓰고 있는 설치"
-            case .paying:       return "유료 기능을 여는 결제가 유효한 설치"
-            case .legacyPaid:   return "앱이 유료 다운로드였던 시절에 사서 열린 설치"
-            case .addOn:        return "기능은 안 열리는 작은 결제만 한 설치"
-            case .trial:        return "결제 없이 체험 중인 설치"
-            case .comped:       return "돈 없이 열린 설치(그랜드파더·가족 공유·내부 빌드)"
-            case .unpaid:       return "아무 결제도 체험도 없는 설치"
+            case .purchased(let c):
+                return c.mask == 0 ? "지금 파는 것을 하나도 안 산 설치" : "\(c.label)을(를) 산 설치"
             }
         }
 
         /// 설치를 골라 내는가. 이게 참인 동안은 건수를 말할 수 없다(위 머리말).
         var isFiltered: Bool { self != .all }
+    }
+
+    /// 산 것 축의 한 칸 — 파는 것 n개 중 무엇을 샀는가를 비트로 적은 것.
+    ///
+    /// `label`은 스펙의 상품 이름에서 만들어지므로 같은 프로젝트 안에서만 뜻이 있다.
+    struct PurchaseCell: Hashable {
+        /// i번째 비트가 켜져 있으면 스펙의 i번째 상품을 샀다.
+        let mask: Int
+        let label: String
+
+        init(mask: Int, products: [ProjectStatsSpec.PurchasesSpec.Product]) {
+            self.mask = mask
+            let names = products.indices.filter { mask & (1 << $0) != 0 }.map { products[$0].label }
+            label = names.isEmpty ? "안 삼" : names.joined(separator: " + ")
+        }
+
+        /// 산 것의 개수.
+        var count: Int { mask.nonzeroBitCount }
+
+        /// 파는 것 n개의 칸 전부, 많이 산 쪽부터. 같은 개수면 스펙에 적은 상품 차례대로.
+        /// 맨 끝이 "안 삼"이다.
+        static func all(for products: [ProjectStatsSpec.PurchasesSpec.Product]) -> [PurchaseCell] {
+            // 칸은 2ⁿ개라 상품이 늘면 금세 읽을 수 없다. 여섯(64칸)에서 멈춘다.
+            let n = min(products.count, 6)
+            /// 앞 상품이 켜진 조합이 먼저 오도록 비트를 거꾸로 읽은 값.
+            func order(_ mask: Int) -> Int {
+                (0..<n).reduce(0) { $0 | ((mask >> $1) & 1) << (n - 1 - $1) }
+            }
+            return (0..<(1 << n))
+                .sorted { ($0.nonzeroBitCount, order($0)) > ($1.nonzeroBitCount, order($1)) }
+                .map { PurchaseCell(mask: $0, products: products) }
+        }
     }
 
     /// 한 범위에서 갈린 설치 ID. 축마다 서로 겹치지 않는다.
@@ -164,27 +173,28 @@ extension FeedbackStore {
         /// "무료기능"이 아니라 **모름**이다.
         var unknown: Set<String> = []
 
-        /// 결제 축. 키는 `Audience.paymentCases` 중 하나.
-        var payment: [Audience: Set<String>] = [:]
-        /// 결제 축에서 모름 — `flag.isPaid`를 안 보낸 설치.
-        var paymentUnknown: Set<String> = []
-        /// 칸에 들었지만 그 칸을 가르는 늦게 생긴 키를 안 보낸 설치 — 다른 칸의 사람이 섞였을 수
-        /// 있다. 안 냄에는 부가 결제가, Pro 결제에는 옛 유료 구매가 섞일 수 있다.
-        var unreported: [Audience: Set<String>] = [:]
+        /// 산 것 축의 칸 차례. 비었으면 이 범위는 산 것으로 못 가른다.
+        var cells: [PurchaseCell] = []
+        /// 칸마다 든 설치. 키는 `PurchaseCell.mask`.
+        var purchased: [Int: Set<String>] = [:]
+        /// 산 것 축에서 모름 — 기준선(`flag.schema`) 이전 버전이라 산 것을 믿을 수 없는 설치.
+        var purchaseUnknown: Set<String> = []
+        /// 기준선 안의 설치 중 돈 없이 열린 설치(체험 · 무상 · 옛 유료 다운로드).
+        /// 칸이 아니라 표식이라 어느 칸과도 겹칠 수 있다.
+        var unlockedWithoutBuying: Set<String> = []
 
         /// 갈린 설치 수 — 이 화면이 덮고 있는 범위.
         var known: Int { paidFeatures.count + freeFeatures.count }
-        /// 결제 축에서 갈린 설치 수.
-        var paymentKnown: Int { payment.values.reduce(0) { $0 + $1.count } }
+        /// 산 것 축에서 갈린 설치 수 — 기준선 안의 설치.
+        var purchaseKnown: Int { purchased.values.reduce(0) { $0 + $1.count } }
 
         /// `nil`이면 거르지 않는다(전체).
         func ids(for audience: Audience) -> Set<String>? {
             switch audience {
-            case .all:          return nil
-            case .paidFeatures: return paidFeatures
-            case .freeFeatures: return freeFeatures
-            case .paying, .legacyPaid, .addOn, .trial, .comped, .unpaid:
-                return payment[audience] ?? []
+            case .all:              return nil
+            case .paidFeatures:     return paidFeatures
+            case .freeFeatures:     return freeFeatures
+            case .purchased(let c): return purchased[c.mask] ?? []
             }
         }
 
@@ -193,37 +203,50 @@ extension FeedbackStore {
         }
     }
 
+    /// 칸 하나의 표본이 이보다 작으면 비율을 흐리게 적는다 — 한두 대가 옮겨도 뒤집히는 숫자다.
+    static let thinPurchaseCell = 30
+
     /// 이 범위의 설치를 갈라 놓은 것.
-    /// 전체 프로젝트에서는 앱마다 키가 다르므로 앱별로 갈라 모은다.
+    /// 전체 프로젝트에서는 앱마다 키가 다르므로 앱별로 갈라 모은다. 산 것 축은 프로젝트
+    /// 하나를 볼 때만 채운다(머리말).
     func audienceInstalls(for project: String?) -> AudienceInstalls {
         memoized(\.audienceInstalls, project) {
             var result = AudienceInstalls()
             for key in project.map({ [$0] }) ?? allProjectKeys {
+                let rules = self.entitlement(for: key)
                 // 권한을 아예 못 읽는 앱의 설치도 모름에 넣는다 — 그래야
                 // `known + unknown`이 이 범위의 설치 수와 맞고, 화면이 얼마를
                 // 덮고 있는지를 어림이 아니라 셈으로 말할 수 있다.
-                guard let entitlement = entitlement(for: key) else {
-                    for snapshot in snapshots(for: key) {
-                        result.unknown.insert(snapshot.installID)
-                        result.paymentUnknown.insert(snapshot.installID)
+                for snapshot in snapshots(for: key) {
+                    let unlocked: Bool? = rules.flatMap { $0.isUnlocked(snapshot) }
+                    switch unlocked {
+                    case true?:  result.paidFeatures.insert(snapshot.installID)
+                    case false?: result.freeFeatures.insert(snapshot.installID)
+                    case nil:    result.unknown.insert(snapshot.installID)
                     }
+                }
+            }
+
+            guard let project, let spec = ProjectStatsSpecCatalog.spec(for: project)?.purchases,
+                  !spec.products.isEmpty else { return result }
+            result.cells = PurchaseCell.all(for: spec.products)
+            let products = Array(spec.products.prefix(6))
+            let rules = self.entitlement(for: project)
+            for snapshot in snapshots(for: project) {
+                let id = snapshot.installID
+                // 기준선: 규약을 아는 버전만 믿는다. 옛 버전의 값은 지우지 않고 모름으로 둔다.
+                guard let schema = snapshot.metrics[spec.schemaKey], schema >= spec.since else {
+                    result.purchaseUnknown.insert(id)
                     continue
                 }
-                for snapshot in snapshots(for: key) {
-                    let id = snapshot.installID
-                    switch entitlement.isUnlocked(snapshot) {
-                    case true?:  result.paidFeatures.insert(id)
-                    case false?: result.freeFeatures.insert(id)
-                    case nil:    result.unknown.insert(id)
-                    }
-                    if let kind = entitlement.paymentKind(snapshot) {
-                        result.payment[kind, default: []].insert(id)
-                        if !entitlement.reportsSplit(of: kind, snapshot) {
-                            result.unreported[kind, default: []].insert(id)
-                        }
-                    } else {
-                        result.paymentUnknown.insert(id)
-                    }
+                // 기준선 안의 버전이 상품 키를 안 보냈으면 안 산 것이다 — 그 버전은 규약을 안다.
+                // 개수로 오는 것(소모성)은 1 이상이면 샀다.
+                let mask = products.indices.reduce(0) { mask, i in
+                    (snapshot.metrics[products[i].key] ?? 0) >= 1 ? mask | (1 << i) : mask
+                }
+                result.purchased[mask, default: []].insert(id)
+                if rules?.isUnlockedWithoutBuying(snapshot) == true {
+                    result.unlockedWithoutBuying.insert(id)
                 }
             }
             return result
@@ -236,9 +259,12 @@ extension FeedbackStore {
         return audienceInstalls(for: project).ids(for: audience)
     }
 
-    /// 이 범위에서 결제 축으로 가를 수 있는가 — `flag.isPaid`를 보낸 설치가 하나라도 있는가.
-    func canSplitByPayment(for project: String?) -> Bool {
-        audienceInstalls(for: project).paymentKnown > 0
+    /// 이 범위에서 산 것으로 가를 수 있는가 — 스펙에 파는 것이 적혀 있는 앱 하나를 보고 있는가.
+    ///
+    /// 기준선 안의 설치가 아직 한 대도 없어도 참이다: 새 규약을 막 내보낸 때가 바로 "아직
+    /// 0대"라는 사실을 보여줘야 하는 때다. 그걸 숨기면 카드가 왜 없는지가 새 질문이 된다.
+    func canSplitByPurchase(for project: String?) -> Bool {
+        !audienceInstalls(for: project).cells.isEmpty
     }
 
     /// 이 범위에서 무리를 가를 수 있는가 — 권한을 읽을 수 있는 앱이 하나라도 있는가.

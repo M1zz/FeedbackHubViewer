@@ -1,5 +1,20 @@
 # todo
 
+## 산 것으로 다시 쌓기 — 규약 2 (2026-09-19)
+- [x] 원인: 두번알림 `flag.isPro` = `StoreManager.isProUser` = 맥(항상 true) ∪ TestFlight·샌드박스 ∪ 그랜드파더 ∪ 실제 구매.
+      스펙이 이 값을 "이미 결제한 사람" 타일과 "결제함" 세그먼트로 읽어서 아무도 안 샀는데 26대가 결제로 잡혔다
+- [x] **초기화는 지우지 않고 기준선으로**: 앱이 `flag.schema = 2`를 보내고, 뷰어는 스펙 `purchases.since` 이상인
+      설치만 산 것으로 가른다. 그 전 버전은 모름. CloudKit 원본·로컬 캐시는 손대지 않음(사용 기록은 멀쩡하다)
+- [x] **산 것마다 한 칸(`own.*`), 칸은 2ⁿ** — 결제 축 여섯 칸(Pro 결제·옛 유료·부가·체험·무상·안 냄)을 걷어냈다.
+      체험·무상·옛 유료 다운로드는 칸이 아니라 "돈 없이 열림" 표식. 프로젝트 하나를 볼 때만 뜬다. 30대 미만 칸은 흐리게
+- [x] ClipKeyboard 앱: `own.pro` · `own.slots`(팩 수) · `own.twodevice` · `flag.schema` (TestFlight는 0) — 8칸
+- [x] 두번알림 앱: `own.pro` · `flag.isPaid` · `flag.isComped` · `flag.schema` (샌드박스는 0) — 2칸.
+      스펙의 타일·세그먼트를 `own.pro`로, `flag.isPro` 라벨을 "Pro가 열린 설치 (결제 아님)"로
+- [x] 뷰어·두 앱 빌드 확인, 스펙 해석·칸 차례는 스크립트로 확인
+- [ ] 두 앱을 새 버전으로 내보내야 칸이 차기 시작한다 — 그 전까지 산 것 카드는 전부 0대(모름만 있음)
+- [ ] 화면을 띄워 눈으로 확인하지 못함(실행 중인 뷰어를 안 끄려고)
+- [x] 뷰어(dev) 커밋·푸시 (2026-09-24). ClipKeyboard(spec/monetization-clause) · Rereminder(spec/cards-migration)는 아직
+
 ## 앱 이름을 스토어 이름으로 (2026-09-17)
 - [x] **앱이 보낸 이름 대신 App Store 이름** — 우선순위: 수동 지정 → 스토어 이름 → 앱이 보낸 이름 → 번들 ID.
       키워드 화면이 이미 잇는 번들 ID ↔ 스토어 링크(`keywords.json`)를 재사용한다(`FeedbackStore.storeAppNames`).

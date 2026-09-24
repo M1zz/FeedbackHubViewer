@@ -98,7 +98,7 @@ struct StatisticsDashboard: View {
                         userTiles
                         activeUsersCard
                         if audience == .all { accessCard }
-                        if audience == .all, store.canSplitByPayment(for: scope) { paymentCard }
+                        if audience == .all, store.canSplitByPurchase(for: scope) { purchaseCard }
                         specCards
                         weekOverWeek
                         CarryingCapacityCard(project: scope, audience: audience)
@@ -324,13 +324,13 @@ struct StatisticsDashboard: View {
     /// 칸은 접근 축이 언제나 셋이다 — 전체 · 유료기능 · 무료기능. 앱에 따라 나타났다
     /// 사라지는 칸이 없으므로 프로젝트를 옮겨도 고른 것이 그대로 남는다.
     ///
-    /// 결제 축(Pro 결제 · 옛 유료 구매 · 부가 결제 · 체험 · 무상 · 안 냄)은 **둘째 줄**이고, 결제 키를
-    /// 보내는 범위에서만 뜬다. 한 줄에 섞으면 결제를 모르는 앱에서 다섯 칸이 빈 채로
-    /// 눌린다. 두 줄은 한 선택을 나눠 쓴다 — 한쪽을 고르면 다른 줄은 비어 보인다.
+    /// 산 것 축(파는 것의 조합 2ⁿ칸)은 **둘째 줄**이고, 스펙에 파는 것을 적은 앱 하나를 볼
+    /// 때만 뜬다. 칸이 여덟을 넘기도 해서 나란히 세우지 않고 메뉴로 접는다. 두 줄은 한 선택을
+    /// 나눠 쓴다 — 한쪽을 고르면 다른 줄은 비어 보인다.
     @ViewBuilder
     private var audiencePicker: some View {
         let installs = store.audienceInstalls(for: scope)
-        if installs.known > 0 || installs.paymentKnown > 0 {
+        if installs.known > 0 || !installs.cells.isEmpty {
             VStack(alignment: .leading, spacing: 6) {
                 if installs.known > 0 {
                     Picker("누구를 볼까요", selection: $audience) {
@@ -341,28 +341,52 @@ struct StatisticsDashboard: View {
                     .pickerStyle(.segmented)
                     .labelsHidden()
                 }
-                if installs.paymentKnown > 0 {
-                    HStack(spacing: 8) {
-                        Text("결제로")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                        Picker("결제로 볼까요", selection: $audience) {
-                            ForEach(FeedbackStore.Audience.paymentCases) { group in
-                                Text("\(group.label) \(installs.count(for: group))").tag(group)
-                            }
-                        }
-                        .pickerStyle(.segmented)
-                        .labelsHidden()
-                    }
+                if !installs.cells.isEmpty {
+                    purchaseMenu(installs)
                 }
                 footnote(audienceNote)
             }
             .padding(10)
             .cardSurface(radius: 10, bordered: false)
             .onChange(of: scope) {
-                // 결제 축은 범위마다 뜨고 안 뜬다. 안 뜨는 범위로 옮겼는데 고른 것이
-                // 남아 있으면, 고르개도 없이 화면이 걸러진 채로 남는다.
-                if audience.axis == .payment, !store.canSplitByPayment(for: scope) { audience = .all }
+                // 산 것 칸은 프로젝트마다 뜻이 다르다(한 앱의 "Pro"는 다른 앱의 "Pro"가 아니다).
+                // 범위를 옮기면 고른 칸을 들고 가지 않는다.
+                if audience.axis == .purchase { audience = .all }
+            }
+        }
+    }
+
+    /// 산 것 축의 메뉴. 한 대도 없는 칸은 고를 수 없게 두고(고르면 빈 화면이다), 표본이 얇은
+    /// 칸은 고를 수는 있되 그렇다고 적는다.
+    private func purchaseMenu(_ installs: FeedbackStore.AudienceInstalls) -> some View {
+        HStack(spacing: 8) {
+            Text("산 것으로")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Menu {
+                ForEach(installs.cells, id: \.mask) { cell in
+                    let count = installs.purchased[cell.mask]?.count ?? 0
+                    Button {
+                        audience = .purchased(cell)
+                    } label: {
+                        let thin = count < FeedbackStore.thinPurchaseCell ? " · 표본 적음" : ""
+                        if audience == .purchased(cell) {
+                            Label("\(cell.label) \(count)대\(thin)", systemImage: "checkmark")
+                        } else {
+                            Text("\(cell.label) \(count)대\(thin)")
+                        }
+                    }
+                    .disabled(count == 0)
+                }
+            } label: {
+                Text(audience.axis == .purchase ? audience.label : "고르기")
+                    .font(.caption.weight(.medium))
+            }
+            .fixedSize()
+            if audience.axis == .purchase {
+                Button("해제") { audience = .all }
+                    .font(.caption)
+                    .buttonStyle(.borderless)
             }
         }
     }
@@ -380,21 +404,25 @@ struct StatisticsDashboard: View {
                 // 구버전 설치는 안 보낸다. 그런 설치는 무료기능이 아니라 모름이다.
                 text += " — 권한을 보내는 설치 \(installs.known)대 기준이라, 안 보내는 설치 \(total - installs.known)대는 어느 쪽에도 들어가지 않아요(무료기능이 아니라 모름)"
             }
-            if installs.paymentKnown > 0 {
-                text += ". 둘째 줄은 돈을 낸 방식이고, 결제 플래그(flag.isPaid)를 보내는 설치 \(installs.paymentKnown)대만 갈립니다"
+            if !installs.cells.isEmpty {
+                text += ". 둘째 줄은 지금 파는 것 가운데 무엇을 샀는가이고, 새 규약(flag.schema)을 보내는 설치 \(installs.purchaseKnown)대만 갈립니다"
             }
             return text + ". 고르면 이 화면 전체가 그 무리만 놓고 다시 그려집니다."
         case .paidFeatures, .freeFeatures:
             let count = installs.count(for: audience)
             return "\(audience.label) — \(audience.blurb) \(count)대만 놓고 본 화면입니다. " + caveat
-        case .paying, .legacyPaid, .addOn, .trial, .comped, .unpaid:
-            let count = installs.count(for: audience)
-            var text = "\(audience.label) — \(audience.blurb) \(count)대만 놓고 본 화면입니다. 한 설치는 한 칸에만 들고, 여럿에 해당하면 돈에 가까운 쪽(Pro 결제 · 옛 유료 구매 → 부가 결제 → 체험 → 무상)에 듭니다."
-            if !installs.paymentUnknown.isEmpty {
-                text += " 결제 플래그를 안 보내는 설치 \(installs.paymentUnknown.count)대는 어느 칸에도 없어요(안 냄이 아니라 모름)."
+        case .purchased(let cell):
+            let ids = installs.purchased[cell.mask] ?? []
+            var text = "\(audience.label) — \(audience.blurb) \(ids.count)대만 놓고 본 화면입니다. 한 설치는 산 것의 조합 하나에만 듭니다."
+            let free = ids.intersection(installs.unlockedWithoutBuying).count
+            if free > 0 {
+                text += " 그중 \(free)대는 체험·무상·옛 유료 다운로드로 돈 없이 열려 있어요."
             }
-            if let missing = installs.unreported[audience], !missing.isEmpty {
-                text += " 이 중 \(missing.count)대는 " + Self.unreportedNote(audience)
+            if ids.count < FeedbackStore.thinPurchaseCell {
+                text += " 표본이 \(FeedbackStore.thinPurchaseCell)대에 못 미쳐서, 한두 대가 옮겨도 숫자가 뒤집힙니다."
+            }
+            if !installs.purchaseUnknown.isEmpty {
+                text += " 새 규약 이전 버전 \(installs.purchaseUnknown.count)대는 어느 칸에도 없어요(안 삼이 아니라 모름)."
             }
             return text + " " + caveat
         }
@@ -622,57 +650,47 @@ struct StatisticsDashboard: View {
         }
     }
 
-    /// 돈을 낸 방식별로 몇 명이고, 그중 지금 오는 사람이 몇인가.
+    /// 산 것의 조합마다 몇 명이고, 그중 지금 오는 사람이 몇인가.
     ///
-    /// 위 카드(유료기능 · 무료기능)는 **열렸는가**를 재고, 이 카드는 **어떻게 열렸는가**를
-    /// 잰다. 둘이 다르다는 것이 이 카드가 따로 있는 이유다 — 유료기능 대부분이 무상이면
-    /// 그건 매출이 아니라 옛 약속이다.
-    private var paymentCard: some View {
+    /// 위 카드(유료기능 · 무료기능)는 **열렸는가**를 재고, 이 카드는 **무엇을 샀는가**를
+    /// 잰다. 둘이 다르다는 것이 이 카드가 따로 있는 이유다 — 유료기능 대부분이 "안 삼"이면
+    /// 그건 매출이 아니라 옛 약속이다. 칸은 비어 있어도 전부 적는다: "아무도 이 조합을 안
+    /// 샀다"도 답이다.
+    private var purchaseCard: some View {
         let installs = store.audienceInstalls(for: scope)
         let monthAgo = Date().addingTimeInterval(-30 * 86_400)
         let active30 = Set(store.snapshots(for: scope)
             .filter { ($0.lastActiveAt ?? .distantPast) >= monthAgo }
             .map(\.installID))
-        let known = installs.paymentKnown
-        let activeKnown = FeedbackStore.Audience.paymentCases
-            .reduce(0) { $0 + (installs.payment[$1] ?? []).intersection(active30).count }
-        return Card(title: "결제 종류", systemImage: "creditcard") {
+        let known = installs.purchaseKnown
+        let activeKnown = installs.purchased.values.reduce(0) { $0 + $1.intersection(active30).count }
+        return Card(title: "산 것 조합", systemImage: "creditcard") {
             VStack(spacing: 10) {
-                ForEach(FeedbackStore.Audience.paymentCases) { kind in
-                    let ids = installs.payment[kind] ?? []
+                ForEach(installs.cells, id: \.mask) { cell in
+                    let ids = installs.purchased[cell.mask] ?? []
                     let active = ids.intersection(active30).count
+                    let free = ids.intersection(installs.unlockedWithoutBuying).count
                     let ratio = known > 0 ? Double(ids.count) / Double(known) : 0
                     let activeRatio = activeKnown > 0 ? Double(active) / Double(activeKnown) : 0
-                    SpecBar(label: kind.label,
-                            value: String(format: "%.1f%%", ratio * 100),
+                    SpecBar(label: cell.label,
+                            value: known > 0 ? String(format: "%.1f%%", ratio * 100) : "—",
                             ratio: ratio,
-                            hint: "\(ids.count)명 · 최근 30일 활성 \(active)명(활성 중 \(String(format: "%.1f%%", activeRatio * 100)))")
+                            hint: "\(ids.count)명 · 최근 30일 활성 \(active)명(활성 중 \(String(format: "%.1f%%", activeRatio * 100)))"
+                                + (free > 0 ? " · 돈 없이 열림 \(free)명" : ""),
+                            isMuted: ids.count < FeedbackStore.thinPurchaseCell)
                 }
             }
-            footnote(paymentNote(installs))
+            footnote(purchaseNote(installs))
         }
     }
 
-    /// 결제 종류 카드의 각주 — 분모가 무엇이고, 무엇이 빠졌는가.
-    private func paymentNote(_ installs: FeedbackStore.AudienceInstalls) -> String {
-        var note = "앱이 보낸 결제 플래그(flag.isPaid · flag.isLegacyPaid · flag.boughtAddOn · flag.isTrial · flag.isComped)로 갈랐습니다. 비율의 분모는 결제 플래그를 보낸 설치 \(installs.paymentKnown)대예요. 한 설치는 한 칸에만 들고, 여럿에 해당하면 돈에 가까운 쪽에 듭니다. 영수증이 아니라 앱이 보낸 값이라 매출과는 대조해 봐야 해요."
-        if !installs.paymentUnknown.isEmpty {
-            note += " 결제 플래그를 안 보내는 설치 \(installs.paymentUnknown.count)대는 안 냄이 아니라 모름이라 빠졌습니다."
-        }
-        for kind in FeedbackStore.Audience.paymentCases {
-            guard let missing = installs.unreported[kind], !missing.isEmpty else { continue }
-            note += " \(kind.label) 중 \(missing.count)대는 " + Self.unreportedNote(kind)
+    /// 산 것 조합 카드의 각주 — 분모가 무엇이고, 무엇이 빠졌는가.
+    private func purchaseNote(_ installs: FeedbackStore.AudienceInstalls) -> String {
+        var note = "앱이 산 것마다 보낸 값(own.*)으로 갈랐습니다. 파는 것이 n개면 칸은 2ⁿ개이고, 한 설치는 한 칸에만 듭니다. 비율의 분모는 새 규약(flag.schema)을 보낸 설치 \(installs.purchaseKnown)대예요. 체험·무상·옛 유료 다운로드는 산 것이 아니라서 칸이 아니라 '돈 없이 열림'으로만 적습니다. 표본이 \(FeedbackStore.thinPurchaseCell)대에 못 미치는 칸은 흐리게 그렸어요. 영수증이 아니라 앱이 보낸 값이라 매출과는 대조해 봐야 해요."
+        if !installs.purchaseUnknown.isEmpty {
+            note += " 새 규약 이전 버전 \(installs.purchaseUnknown.count)대는 옛 값이 결제와 접근을 섞어 보내서 믿지 않고 뺐습니다 — 안 삼이 아니라 모름이에요. 업데이트하는 대로 칸에 들어옵니다."
         }
         return note
-    }
-
-    /// 칸을 옆 칸과 가르는 늦게 생긴 키를 안 보낸 설치에 붙이는 말.
-    private static func unreportedNote(_ kind: FeedbackStore.Audience) -> String {
-        switch kind {
-        case .paying: return "옛 유료 구매 플래그를 아직 안 보내는 버전이라, 앱이 유료 다운로드였던 시절에 산 사람이 섞여 있을 수 있어요."
-        case .unpaid: return "부가 결제 플래그를 아직 안 보내는 버전이라, 칸 추가처럼 작은 결제만 한 사람이 섞여 있을 수 있어요."
-        default:      return "이 칸을 가르는 플래그를 아직 안 보내는 버전이에요."
-        }
     }
 
     /// `slice`가 nil이거나 표본이 너무 얇으면 "아직 모른다" — 막대는 비고 값은 —.
