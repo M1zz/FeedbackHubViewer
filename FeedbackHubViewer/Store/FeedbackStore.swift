@@ -46,6 +46,9 @@ final class FeedbackStore: ObservableObject {
         /// still one thing you look at *inside* a project, which is what this
         /// enum means.
         case keywords = "키워드"
+        /// App Store Connect에 걸린 상품과 판매 — 키워드처럼 허브 밖을 읽는다
+        /// (`InAppPurchaseStore`).
+        case purchases = "앱 내 구입"
         var id: String { rawValue }
         var systemImage: String {
             switch self {
@@ -53,6 +56,7 @@ final class FeedbackStore: ObservableObject {
             case .stats: return "chart.bar"
             case .crashes: return "exclamationmark.triangle"
             case .keywords: return "magnifyingglass"
+            case .purchases: return "creditcard"
             }
         }
     }

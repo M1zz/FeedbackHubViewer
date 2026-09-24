@@ -16,12 +16,15 @@ struct FeedbackHubViewerApp: App {
     /// source entirely (see `KeywordStore`) and must not be disturbed by — or
     /// disturb — anything the CloudKit refresh does.
     @StateObject private var keywords = KeywordStore()
+    /// App Store Connect — 상품과 판매. 키가 있을 때만 읽는다(`InAppPurchaseStore`).
+    @StateObject private var purchases = InAppPurchaseStore()
 
     var body: some Scene {
         WindowGroup {
             rootView
                 .environmentObject(store)
                 .environmentObject(keywords)
+                .environmentObject(purchases)
                 .task {
                     // Paint the cached hub, then check CloudKit for changes on
                     // a task the store owns — the window never waits for it.

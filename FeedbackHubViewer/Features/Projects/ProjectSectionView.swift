@@ -14,6 +14,7 @@ import SwiftUI
 struct ProjectSectionView: View {
     @EnvironmentObject private var store: FeedbackStore
     @EnvironmentObject private var keywords: KeywordStore
+    @EnvironmentObject private var purchases: InAppPurchaseStore
     /// 섹션 칸을 몇 줄로 접을지가 여기에 달렸다.
     @Environment(\.dynamicTypeSize) private var typeSize
     /// nil == 전체 프로젝트.
@@ -70,7 +71,13 @@ struct ProjectSectionView: View {
     /// 그 크기에서 네 칸은 아이콘 하나와 글자 두어 자로 쪼그라들어, 무엇을
     /// 고르는 버튼인지 읽을 수 없게 된다.
     private var sectionColumns: [GridItem] {
-        let count = typeSize.isAccessibilitySize ? 2 : 4
+        #if os(macOS)
+        let wide = FeedbackStore.ProjectSection.allCases.count
+        #else
+        // 아이폰에서 다섯 칸은 이름이 두어 자로 줄어든다. 셋·둘로 두 줄.
+        let wide = 3
+        #endif
+        let count = typeSize.isAccessibilitySize ? 2 : wide
         return Array(repeating: GridItem(.flexible(), spacing: 6), count: count)
     }
 
@@ -138,6 +145,7 @@ struct ProjectSectionView: View {
         case .stats: return store.usage(for: project).installs
         case .crashes: return store.crashSummary(for: project).total
         case .keywords: return keywords.standings(for: project).filter(\.isRanked).count
+        case .purchases: return project.flatMap { purchases.products(for: $0)?.count } ?? 0
         }
     }
 
@@ -159,6 +167,9 @@ struct ProjectSectionView: View {
             // fraction there is a zero that means nothing. Count the terms.
             guard project != nil else { return "\(tracked)개 추적" }
             return "\(count)/\(tracked) 잡힘"
+        case .purchases:
+            guard purchases.isConfigured else { return "연결 안 됨" }
+            return count > 0 ? "상품 \(count)개" : "App Store Connect"
         }
     }
 
@@ -184,6 +195,8 @@ struct ProjectSectionView: View {
             CrashListView(project: project)
         case .keywords:
             KeywordsView(project: project)
+        case .purchases:
+            InAppPurchasesView(project: project)
         }
     }
 
@@ -226,6 +239,11 @@ struct ProjectSectionView: View {
             var text = "키워드 \(standings.count)개 · \(ranked.count)개 잡힘"
             if let best { text += " · 최고 \(best)위" }
             return text
+        case .purchases:
+            guard purchases.isConfigured else { return "App Store Connect 키를 넣으면 상품과 판매가 나옵니다" }
+            guard let project else { return "앱별 최근 \(InAppPurchaseStore.salesDays)일 판매 순위" }
+            guard let products = purchases.products(for: project) else { return "App Store Connect 상품" }
+            return "상품 \(products.count)개 · 판매 중 \(products.filter(\.isOnSale).count)개"
         }
     }
 }
