@@ -181,7 +181,8 @@ struct StoreMetadataCard: View {
     var body: some View {
         Card(title: "스토어 메타데이터", systemImage: "text.magnifyingglass") {
             if !connect.isConfigured {
-                note("App Store Connect 키를 넣으면 이름 · 부제 · 키워드 필드를 읽어 추적 중인 키워드와 대조합니다. \"앱 내 구입\" 섹션에서 넣을 수 있어요.")
+                note("App Store Connect 키를 넣으면 이름 · 부제 · 키워드 필드를 읽어 추적 중인 키워드와 대조합니다.")
+                OpenSettingsButton(title: "설정 열기").font(.body)
             } else {
                 switch connect.metadata[project] {
                 case nil, .loading?:
@@ -558,6 +559,7 @@ struct StoreFunnelCard: View {
         Card(title: "App Store 노출 · 전환 (최근 \(AppStoreConnectStore.salesDays)일)", systemImage: "eye") {
             if !connect.isConfigured {
                 note("App Store Connect 키를 넣으면 검색 노출 → 페이지 조회 → 첫 다운로드를 경로별로 보여 줍니다.")
+                OpenSettingsButton(title: "설정 열기").font(.body)
             } else {
                 switch connect.funnels[project] {
                 case nil, .loading?:

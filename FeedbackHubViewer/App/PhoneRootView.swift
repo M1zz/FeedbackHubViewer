@@ -39,5 +39,6 @@ struct PhoneRootView: View {
 #Preview {
     PhoneRootView()
         .environmentObject(FeedbackStore())
+        .environmentObject(AppStoreConnectStore())
 }
 #endif

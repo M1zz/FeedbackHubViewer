@@ -12,15 +12,12 @@
 //
 
 import SwiftUI
-import UniformTypeIdentifiers
 
 struct InAppPurchasesView: View {
     @EnvironmentObject private var store: FeedbackStore
     @EnvironmentObject private var purchases: AppStoreConnectStore
     /// nil == 전체 프로젝트.
     let project: String?
-
-    @State private var isEditingKey = false
 
     #if os(macOS)
     private let tileColumns = [GridItem(.adaptive(minimum: 180), spacing: 10)]
@@ -35,8 +32,14 @@ struct InAppPurchasesView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 if !purchases.isConfigured {
-                    Card(title: "App Store Connect 연결", systemImage: "key") {
-                        ConnectKeyForm(onSaved: {})
+                    Card(title: "App Store Connect 연결 안 됨", systemImage: "key") {
+                        Text("설정에서 App Store Connect API 키(Issuer ID · Key ID · .p8)를 넣으면 상품과 판매가 여기 나옵니다. 키는 이 기기의 키체인에만 저장돼요.")
+                            .font(.body)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                        OpenSettingsButton(title: "설정 열기")
+                            .buttonStyle(.borderedProminent)
+                            .font(.body)
                     }
                 } else {
                     header
@@ -48,23 +51,6 @@ struct InAppPurchasesView: View {
                 }
             }
             .padding(contentPadding)
-        }
-        .sheet(isPresented: $isEditingKey) {
-            NavigationStack {
-                ScrollView {
-                    ConnectKeyForm(onSaved: { isEditingKey = false })
-                        .padding()
-                }
-                .navigationTitle("App Store Connect 키")
-                .toolbar {
-                    ToolbarItem(placement: .cancellationAction) {
-                        Button("닫기") { isEditingKey = false }
-                    }
-                }
-            }
-            #if os(macOS)
-            .frame(minWidth: 520, minHeight: 520)
-            #endif
         }
         .task(id: project) {
             guard purchases.isConfigured else { return }
@@ -90,11 +76,7 @@ struct InAppPurchasesView: View {
             } label: {
                 Label("다시 읽기", systemImage: "arrow.clockwise")
             }
-            Button {
-                isEditingKey = true
-            } label: {
-                Label("키 설정", systemImage: "key")
-            }
+            OpenSettingsButton(title: "키 설정")
         }
         .font(.body)
     }
@@ -339,7 +321,7 @@ private struct SalesStatus: View {
     var body: some View {
         if purchases.credentials?.hasVendorNumber != true {
             Card(title: "판매 리포트", systemImage: "chart.bar.doc.horizontal") {
-                Text("판매자 번호를 넣으면 최근 30일 결제 건수와 수익금이 나옵니다. App Store Connect의 \"판매 및 추세\" 화면 왼쪽 위에 있는 숫자예요. 오른쪽 위 \"키 설정\"에서 넣을 수 있습니다.")
+                Text("판매자 번호를 넣으면 최근 30일 결제 건수와 수익금이 나옵니다. App Store Connect의 \"판매 및 추세\" 화면 왼쪽 위에 있는 숫자예요. 설정에서 넣을 수 있습니다.")
                     .font(.body)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -358,125 +340,6 @@ private struct SalesStatus: View {
             ProgressView("최근 \(AppStoreConnectStore.salesDays)일 판매 리포트를 받는 중…")
                 .font(.body)
                 .frame(maxWidth: .infinity)
-        }
-    }
-}
-
-// MARK: - 키 입력
-
-private struct ConnectKeyForm: View {
-    @EnvironmentObject private var purchases: AppStoreConnectStore
-    let onSaved: () -> Void
-
-    @State private var issuerID = ""
-    @State private var keyID = ""
-    @State private var privateKey = ""
-    @State private var vendorNumber = ""
-    @State private var error: String?
-    @State private var isImporting = false
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("App Store Connect → 사용자 및 액세스 → 통합 → App Store Connect API에서 팀 키를 만들고, 아래 세 값을 넣어 주세요. 키는 이 기기의 키체인에만 저장됩니다.")
-                .font(.body)
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-
-            field("Issuer ID", text: $issuerID, prompt: "57246542-96fe-1a63-e053-0824d011072a")
-            field("Key ID", text: $keyID, prompt: "2X9R4HXF34")
-
-            VStack(alignment: .leading, spacing: 6) {
-                HStack {
-                    Text("개인 키 (.p8)").font(.headline)
-                    Spacer()
-                    Button("파일에서 불러오기") { isImporting = true }
-                        .font(.body)
-                }
-                TextEditor(text: $privateKey)
-                    .font(.body.monospaced())
-                    .frame(minHeight: 110)
-                    .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.secondary.opacity(0.3)))
-                Text("키는 만들 때 한 번만 내려받을 수 있습니다. 잃어버렸으면 새로 만들어야 해요.")
-                    .font(.body)
-                    .foregroundStyle(.tertiary)
-            }
-
-            field("판매자 번호 (선택)", text: $vendorNumber, prompt: "8xxxxxxx")
-            Text("판매 리포트용입니다. \"판매 및 추세\" 화면 왼쪽 위에 있어요. 판매 리포트까지 읽으려면 키 역할이 Admin 또는 Finance여야 합니다.")
-                .font(.body)
-                .foregroundStyle(.tertiary)
-                .fixedSize(horizontal: false, vertical: true)
-
-            if let error {
-                Text(error)
-                    .font(.body)
-                    .foregroundStyle(.orange)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-
-            HStack {
-                Button("저장") { save() }
-                    .buttonStyle(.borderedProminent)
-                if purchases.isConfigured {
-                    Button("키 지우기", role: .destructive) {
-                        purchases.signOut()
-                        onSaved()
-                    }
-                }
-            }
-            .font(.body)
-        }
-        .onAppear {
-            guard let saved = purchases.credentials else { return }
-            issuerID = saved.issuerID
-            keyID = saved.keyID
-            privateKey = saved.privateKey
-            vendorNumber = saved.vendorNumber ?? ""
-        }
-        .fileImporter(isPresented: $isImporting,
-                      allowedContentTypes: [UTType(filenameExtension: "p8") ?? .data, .data]) { result in
-            guard case .success(let url) = result else { return }
-            let scoped = url.startAccessingSecurityScopedResource()
-            defer { if scoped { url.stopAccessingSecurityScopedResource() } }
-            if let text = try? String(contentsOf: url, encoding: .utf8) {
-                privateKey = text
-                // AuthKey_2X9R4HXF34.p8 — 파일 이름에 Key ID가 들어 있다.
-                let name = url.deletingPathExtension().lastPathComponent
-                if keyID.isEmpty, name.hasPrefix("AuthKey_") {
-                    keyID = String(name.dropFirst("AuthKey_".count))
-                }
-            } else {
-                error = "파일을 읽지 못했습니다."
-            }
-        }
-    }
-
-    private func field(_ title: String, text: Binding<String>, prompt: String) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(title).font(.headline)
-            TextField(title, text: text, prompt: Text(prompt))
-                .textFieldStyle(.roundedBorder)
-                .font(.body.monospaced())
-                .autocorrectionDisabled()
-                #if os(iOS)
-                .textInputAutocapitalization(.never)
-                #endif
-        }
-    }
-
-    private func save() {
-        let vendor = vendorNumber.trimmingCharacters(in: .whitespaces)
-        let credentials = AppStoreConnectCredentials(
-            issuerID: issuerID.trimmingCharacters(in: .whitespaces),
-            keyID: keyID.trimmingCharacters(in: .whitespaces),
-            privateKey: privateKey,
-            vendorNumber: vendor.isEmpty ? nil : vendor)
-        do {
-            try purchases.save(credentials)
-            error = nil
-            onSaved()
-        } catch {
-            self.error = error.localizedDescription
         }
     }
 }

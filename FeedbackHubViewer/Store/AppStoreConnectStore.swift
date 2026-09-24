@@ -19,6 +19,8 @@ import SwiftUI
 final class AppStoreConnectStore: ObservableObject {
 
     @Published private(set) var credentials: AppStoreConnectCredentials?
+    /// 아이폰 · 아이패드의 설정 시트. 맥은 설정 창(`Settings` 장면)이라 안 쓴다.
+    @Published var isShowingSettings = false
     /// 번들 ID → 그 앱의 상품 상태.
     @Published private(set) var catalogs: [String: CatalogState] = [:]
     /// 최근 30일 판매(계정 전체). nil이면 아직 안 받았다.

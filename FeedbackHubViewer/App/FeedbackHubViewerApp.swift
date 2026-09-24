@@ -67,6 +67,14 @@ struct FeedbackHubViewerApp: App {
             }
         }
         #endif
+
+        #if os(macOS)
+        // ⌘, — App Store Connect 키를 넣는 곳.
+        Settings {
+            SettingsView()
+                .environmentObject(purchases)
+        }
+        #endif
     }
 
     @ViewBuilder
