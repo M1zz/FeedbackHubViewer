@@ -8,7 +8,7 @@
 //  키보드 5,000대와 알림 앱 2,000대를 합친 7,000대는 할 일을 알려 주지 않지만,
 //  "어느 앱이 가장 많이 깔렸고, 어느 앱이 가장 자주 쓰이고, 어느 앱이 크는
 //  중인가"는 다음에 어디에 시간을 쓸지를 알려 준다. 그래서 이 화면의 모든 카드는
-//  한 지표로 앱들을 줄 세운 것이다.
+//  한 지표로 앱들을 줄 세운 것이다. 잠재 고객은 유료 기능이 안 열린 설치 전부다.
 //
 //  숫자는 한 프로젝트 화면(`StatisticsDashboard`)과 같은 계산에서 나온다 —
 //  여기서 3위인 앱을 열면 같은 숫자가 보여야 한다.
@@ -51,6 +51,14 @@ struct ProjectComparisonView: View {
                             note: "지금 사용 중인 기기(스냅샷을 보낸 설치) 수입니다. 지운 기기는 남지 않아요.") {
                         Metric(value: Double($0.installs), text: "\($0.installs)대",
                                hint: "최근 30일 활성 \($0.active30)명")
+                    }
+                    ranking(rows, title: "잠재 고객이 많은 앱", systemImage: "person.badge.clock",
+                            note: "잠재 고객은 유료 기능이 안 열린 설치 전부입니다. 앱이 보낸 권한 플래그로 가르고, 권한을 안 보내는 설치는 0이 아니라 모름이라 세지 않아요. 권한을 전혀 안 보내는 앱은 줄에서 빠집니다.") {
+                        guard let prospects = $0.prospects else { return nil }
+                        let known = $0.installs - $0.prospectsUnknown
+                        var hint = "권한을 아는 \(known)대 중 " + Self.percent(prospects, of: known)
+                        if $0.prospectsUnknown > 0 { hint += " · 모름 \($0.prospectsUnknown)대" }
+                        return Metric(value: Double(prospects), text: "\(prospects)명", hint: hint)
                     }
                     ranking(rows, title: "가장 활발한 앱 (MAU)", systemImage: "person.3",
                             note: "최근 30일 안에 이벤트를 보낸 서로 다른 설치 수입니다. 이벤트를 안 보내는 앱은 여기서 0이에요.") {
@@ -105,6 +113,10 @@ struct ProjectComparisonView: View {
         let stickiness: Double?
         let feedback: Int
         let rating: Double?
+        /// 잠재 고객 — 유료 기능이 안 열린 설치. 권한을 안 보내는 앱은 nil(0이 아니라 모름).
+        let prospects: Int?
+        /// 권한을 안 보내 잠재 고객인지 모르는 설치.
+        let prospectsUnknown: Int
     }
 
     private var rows: [Row] {
@@ -117,6 +129,7 @@ struct ProjectComparisonView: View {
                 guard usage.hasUsageData || !items.isEmpty else { return nil }
                 let active = store.activeUsers(for: key)
                 let ratings = items.compactMap(\.rating)
+                let access = store.accessSplit(for: key)?.all
                 return Row(key: key,
                            name: usage.displayName,
                            installs: usage.installs,
@@ -129,7 +142,9 @@ struct ProjectComparisonView: View {
                            mau: active.month.current,
                            stickiness: active.stickiness,
                            feedback: items.count,
-                           rating: ratings.isEmpty ? nil : Double(ratings.reduce(0, +)) / Double(ratings.count))
+                           rating: ratings.isEmpty ? nil : Double(ratings.reduce(0, +)) / Double(ratings.count),
+                           prospects: (access?.total ?? 0) > 0 ? access?.freeFeatures : nil,
+                           prospectsUnknown: access?.unknown ?? 0)
             }
     }
 
@@ -142,6 +157,9 @@ struct ProjectComparisonView: View {
         return LazyVGrid(columns: tileColumns, spacing: 10) {
             LeaderTile(title: "가장 많이 설치됨", systemImage: "iphone", tint: .accentColor,
                        winner: rows.max { $0.installs < $1.installs }.map { ($0.name, "\($0.installs)대") })
+            LeaderTile(title: "잠재 고객이 가장 많음", systemImage: "person.badge.clock", tint: .orange,
+                       winner: rows.filter { ($0.prospects ?? 0) > 0 }.max { ($0.prospects ?? 0) < ($1.prospects ?? 0) }
+                        .map { ($0.name, "\($0.prospects ?? 0)명") })
             LeaderTile(title: "가장 활발함 (MAU)", systemImage: "bolt.fill", tint: .blue,
                        winner: rows.filter { $0.mau > 0 }.max { $0.mau < $1.mau }.map { ($0.name, "\($0.mau)명") })
             LeaderTile(title: "가장 빨리 큼 (7일 신규)", systemImage: "sparkles", tint: .green,
@@ -221,6 +239,11 @@ struct ProjectComparisonView: View {
         #else
         return content
         #endif
+    }
+
+    private static func percent(_ part: Int, of whole: Int) -> String {
+        guard whole > 0 else { return "—" }
+        return String(format: "%.0f%%", (Double(part) / Double(whole) * 100).rounded())
     }
 
     /// "(▲12%)" — 견줄 것이 없으면 아무 말도 하지 않는다.

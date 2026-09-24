@@ -343,19 +343,22 @@ extension ProjectStatsSpec {
         return nil
     }
 
-    /// 한도까지의 거리 — **값을 낼 이유가 생긴 사람이 몇인가.**
+    /// 잠재 고객과, 그들이 한도에서 얼마나 떨어져 있는가.
     ///
-    /// 결제가 필요해지는 자리는 기능이 아니라 한도다. 그래서 잠재 고객은 "이 기능을
-    /// 안 쓰는 사람"이 아니라 "한도에 닿았는데 아직 안 열린 사람"이다. 이미 열린
-    /// 설치는 값을 낼 이유가 없으므로 모수에서 빼고 따로 센다 — 그 칸이 크면 손댈
-    /// 곳은 가격표가 아니라 그 위다.
+    /// **잠재 고객 = 유료 기능이 안 열린 설치 전부**다(2026-09-24에 정한 정의). 한도에
+    /// 닿았는지는 잠재 고객인가를 가르지 않고, 그 안에서 **얼마나 가까운가**를 가른다 —
+    /// 막힌 사람이 가장 가깝고, 아직 시작 안 한 사람이 가장 멀다. 그래서 한도 지표를
+    /// 안 보낸 무료 설치도 잠재 고객이다: 거리를 모를 뿐 열리지 않은 것은 안다.
+    /// 이미 열린 설치는 값을 낼 이유가 없으므로 따로 센다 — 그 칸이 크면 손댈 곳은
+    /// 가격표가 아니라 그 위다.
     private func wallInsight(_ spec: WallSpec, in context: Context) -> Insight? {
         guard !context.installs.isEmpty else { return nil }
         let near = max(1, spec.nearBy ?? 1)
         var blocked = 0, nearing = 0, roomLeft = 0, notStarted = 0, open = 0
-        /// 모름은 두 갈래다 — 권한을 못 읽거나, 한도를 재는 지표를 안 보내거나.
-        /// 둘 다 "어느 칸에도 못 넣는다"는 점은 같지만 고칠 것이 달라서 따로 센다.
-        var noEntitlement = 0, noMetric = 0
+        /// 권한을 못 읽은 설치는 잠재 고객인지조차 모른다.
+        var noEntitlement = 0
+        /// 무료인 건 알지만 한도 지표를 안 보내 거리를 모르는 설치 — 잠재 고객이다.
+        var noMetric = 0
 
         for (index, metrics) in context.installs.enumerated() {
             switch context.unlocked.indices.contains(index) ? context.unlocked[index] : nil {
@@ -373,9 +376,9 @@ extension ProjectStatsSpec {
             else if value >= 1 { roomLeft += 1 }
             else { notStarted += 1 }
         }
-        let unknown = noEntitlement + noMetric
-
-        let scanned = blocked + nearing + roomLeft + notStarted + open + unknown
+        let prospects = blocked + nearing + roomLeft + notStarted + noMetric
+        let known = prospects + open
+        let scanned = known + noEntitlement
         guard scanned > 0 else { return nil }
         func row(_ label: String, _ count: Int, _ tone: Insight.Tone,
                  _ hint: String, startsGroup: Bool = false) -> Insight.Bar {
@@ -389,28 +392,31 @@ extension ProjectStatsSpec {
             row("곧 막힘", nearing, .warn, "한도까지 얼마 안 남은 설치"),
             row("아직 여유", roomLeft, .normal, "쓰고는 있지만 한도가 아직 먼 설치"),
             row("아직 시작 안 함", notStarted, .muted,
-                "\(spec.label)를 하나도 안 만든 설치. 값을 낼 이유가 아직 없습니다"),
-            row("팔 대상 아님 (이미 열림)", open, .muted,
-                "유료 기능이 이미 열려 있어 값을 낼 이유가 없는 설치", startsGroup: true)
+                "\(spec.label)를 하나도 안 만든 설치. 잠재 고객 중 가장 먼 사람입니다")
         ]
-        if unknown > 0 {
-            var why: [String] = []
-            if noEntitlement > 0 { why.append("권한을 안 보냄 \(noEntitlement)대") }
-            if noMetric > 0 { why.append("\(spec.metric)을 안 보냄 \(noMetric)대") }
-            rows.append(row("모름", unknown, .muted,
-                            why.joined(separator: " · ") + " — 0이 아니라 못 셉니다"))
+        if noMetric > 0 {
+            rows.append(row("한도까지 거리 모름", noMetric, .muted,
+                            "유료 기능이 안 열린 것은 알지만 \(spec.metric)을 안 보내는 설치(구버전). 잠재 고객에는 듭니다"))
+        }
+        rows.append(row("잠재 고객 아님 (이미 열림)", open, .muted,
+                        "유료 기능이 이미 열려 있어 값을 낼 이유가 없는 설치", startsGroup: true))
+        if noEntitlement > 0 {
+            rows.append(row("모름", noEntitlement, .muted,
+                            "권한을 안 보냄 \(noEntitlement)대 — 잠재 고객인지조차 못 셉니다"))
         }
 
         var frame = spec.frame(default: "person.badge.clock")
         let sellable = blocked + nearing
-        var verdict = "지금 값을 낼 이유가 있는 사람은 \(scanned)대 중 \(sellable)명"
-                    + "(\(Self.percent(Double(sellable) / Double(scanned))))입니다."
-        if noMetric > scanned / 2 {
-            verdict += " 다만 한도를 재는 \(spec.metric)을 보내는 설치가 "
-                     + "\(scanned - noMetric)/\(scanned)대뿐이라, 이 숫자는 그 일부만 놓고 센 "
-                     + "하한입니다. 나머지는 0이 아니라 못 셉니다."
-        } else if open > sellable * 5, open > 0 {
-            verdict += " 유료 기능이 이미 열린 설치가 \(open)대로 그보다 훨씬 많아요 — "
+        var verdict = "잠재 고객(유료 기능이 안 열린 설치)은 권한을 아는 \(known)대 중 \(prospects)명"
+                    + "(\(Self.percent(Double(prospects) / Double(max(1, known)))))입니다."
+        if prospects > 0 {
+            verdict += " 그중 한도에 닿았거나 곧 닿는 사람이 \(sellable)명으로 가장 가깝습니다."
+        }
+        if noMetric > prospects / 2, noMetric > 0 {
+            verdict += " 다만 잠재 고객 \(noMetric)명은 \(spec.metric)을 안 보내 한도까지의 거리를 "
+                     + "모릅니다. 가까운 사람 수는 하한이에요."
+        } else if open > prospects, open > 0 {
+            verdict += " 유료 기능이 이미 열린 설치가 \(open)대로 잠재 고객보다 많아요 — "
                      + "가격표보다 먼저, 그 권한이 어떻게 열렸는지를 보셔야 합니다."
         }
         frame.verdict = verdict
