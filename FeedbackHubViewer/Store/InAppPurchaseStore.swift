@@ -143,6 +143,10 @@ final class InAppPurchaseStore: ObservableObject {
             var units = 0
             var firstDownloads = 0
             var purchases = 0
+            /// 0원에 받은 인앱 상품(프로모션 · 오퍼 코드).
+            var freeRedemptions = 0
+            /// 코드 이름 → 그 코드로 0원에 받은 건수.
+            var codes: [String: Int] = [:]
             /// 통화 → 개발자 수익 합계.
             var proceeds: [String: Double] = [:]
 
@@ -152,10 +156,19 @@ final class InAppPurchaseStore: ObservableObject {
                 return parts.isEmpty ? "—" : parts.joined(separator: " · ")
             }
 
+            /// "LEEO 6,093건 · LEEO2 550건" — 많은 코드부터.
+            var codesLabel: String {
+                codes.sorted { $0.value > $1.value }
+                    .map { "\($0.key) \(AppFormat.count($0.value))건" }
+                    .joined(separator: " · ")
+            }
+
             mutating func add(_ other: Totals) {
                 units += other.units
                 firstDownloads += other.firstDownloads
                 purchases += other.purchases
+                freeRedemptions += other.freeRedemptions
+                for (code, count) in other.codes { codes[code, default: 0] += count }
                 for (currency, amount) in other.proceeds { proceeds[currency, default: 0] += amount }
             }
         }
@@ -169,6 +182,10 @@ final class InAppPurchaseStore: ObservableObject {
                 totals.units += line.units
                 if line.isFirstDownload { totals.firstDownloads += line.units }
                 if line.isPurchase { totals.purchases += line.units }
+                if line.isFreeRedemption {
+                    totals.freeRedemptions += line.units
+                    totals.codes[line.promoCode.isEmpty ? "코드 없음" : line.promoCode, default: 0] += line.units
+                }
                 totals.proceeds[line.proceedsCurrency, default: 0] += Double(line.units) * line.proceedsPerUnit
                 byItem[line.appleID] = totals
             }

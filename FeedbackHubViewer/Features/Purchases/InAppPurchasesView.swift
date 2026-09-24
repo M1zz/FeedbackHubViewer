@@ -130,15 +130,28 @@ private struct ProjectPurchases: View {
 
     private func summary(_ app: ConnectApp, _ products: [StoreProduct]) -> some View {
         let totals = purchases.sales?.totals(app: app, products: products)
-        return LazyVGrid(columns: tileColumns, spacing: 10) {
+        return VStack(alignment: .leading, spacing: 10) {
+        LazyVGrid(columns: tileColumns, spacing: 10) {
             StatTile(title: "판매 중인 상품", value: "\(products.filter(\.isOnSale).count)",
                      unit: "/ \(products.count)개", systemImage: "bag", tint: .accentColor)
-            StatTile(title: "최근 30일 결제", value: totals.map { "\($0.purchases)" } ?? "—",
+            StatTile(title: "최근 30일 유료 결제", value: totals.map { "\($0.purchases)" } ?? "—",
                      unit: "건", systemImage: "creditcard", tint: .green)
+            StatTile(title: "최근 30일 코드로 0원", value: totals.map { "\($0.freeRedemptions)" } ?? "—",
+                     unit: "건", systemImage: "gift", tint: .pink)
             StatTile(title: "최근 30일 수익금", value: totals?.proceedsLabel ?? "—",
                      systemImage: "wonsign.circle", tint: .orange)
             StatTile(title: "최근 30일 첫 다운로드", value: totals.map { "\($0.firstDownloads)" } ?? "—",
                      unit: "회", systemImage: "arrow.down.circle", tint: .blue)
+        }
+        if let totals, totals.freeRedemptions > 0 {
+            // 0원 코드가 돈 낸 결제보다 많으면 그게 이 앱의 가장 큰 사실이다 —
+            // 유료기능이 열린 사람 대부분이 여기서 왔다는 뜻이라, 타일 밑에 말로 적는다.
+            Label("0원으로 받은 \(totals.freeRedemptions)건은 오퍼 · 프로모션 코드입니다 — \(totals.codesLabel). 유료 결제 \(totals.purchases)건과 따로 셉니다.",
+                  systemImage: "gift")
+                .font(.body)
+                .foregroundStyle(totals.freeRedemptions > totals.purchases ? AnyShapeStyle(.pink) : AnyShapeStyle(.secondary))
+                .fixedSize(horizontal: false, vertical: true)
+        }
         }
     }
 
@@ -155,7 +168,7 @@ private struct ProjectPurchases: View {
                         if index < products.count - 1 { Divider() }
                     }
                 }
-                Text("수익금은 Apple 수수료와 세금을 뺀 개발자 몫이고, 통화별로 따로 더합니다. 환불은 음수로 들어와 건수에서 빠져요.")
+                Text("결제는 고객이 돈을 낸 것만 셉니다. 오퍼 · 프로모션 코드로 0원에 받은 것은 \"코드\"로 따로 적어요. 수익금은 Apple 수수료와 세금을 뺀 개발자 몫이고, 통화별로 따로 더합니다. 환불은 음수로 들어와 건수에서 빠져요.")
                     .font(.body)
                     .foregroundStyle(.tertiary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -187,7 +200,7 @@ private struct ProjectPurchases: View {
                     .foregroundStyle(.secondary)
                 Spacer(minLength: 8)
                 if let sold {
-                    Text("30일 \(sold.units)건 · \(sold.proceedsLabel)")
+                    Text("30일 결제 \(sold.purchases)건" + (sold.freeRedemptions != 0 ? " · 코드 \(sold.freeRedemptions)건" : "") + " · \(sold.proceedsLabel)")
                         .font(.body.monospacedDigit())
                         .foregroundStyle(sold.units > 0 ? .primary : .secondary)
                 }
@@ -234,6 +247,9 @@ private struct PurchaseComparison: View {
             if let sales = purchases.sales {
                 ranking(rows, title: "인앱 결제가 많은 앱", systemImage: "creditcard") {
                     $0.totals.purchases > 0 ? ("\($0.totals.purchases)건", Double($0.totals.purchases), $0.totals.proceedsLabel) : nil
+                }
+                ranking(rows, title: "코드로 0원에 받은 건이 많은 앱", systemImage: "gift") {
+                    $0.totals.freeRedemptions > 0 ? ("\($0.totals.freeRedemptions)건", Double($0.totals.freeRedemptions), $0.totals.codesLabel) : nil
                 }
                 ranking(rows, title: "첫 다운로드가 많은 앱", systemImage: "arrow.down.circle") {
                     $0.totals.firstDownloads > 0 ? ("\($0.totals.firstDownloads)회", Double($0.totals.firstDownloads), "판매 중인 상품 \($0.onSale)개") : nil

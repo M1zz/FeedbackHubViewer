@@ -169,11 +169,20 @@ struct SalesLine: Hashable {
     /// 한 건당 개발자 수익(세금·수수료 뺀 것).
     let proceedsPerUnit: Double
     let proceedsCurrency: String
+    /// 고객이 낸 금액(한 건당). 프로모션 코드로 받은 구매는 0이다.
+    let customerPrice: Double
+    /// 프로모션 · 오퍼 코드 이름(없으면 빈 문자열).
+    let promoCode: String
 
     /// 앱 첫 다운로드(업데이트·재다운로드 제외).
     var isFirstDownload: Bool { ["1", "1F", "1T", "F1"].contains(productType) }
-    /// 인앱 구입·구독 결제.
-    var isPurchase: Bool { productType.hasPrefix("IA") || productType == "FI1" }
+    /// 인앱 상품 줄 — 결제든 무료 코드든.
+    var isInAppItem: Bool { productType.hasPrefix("IA") || productType.hasPrefix("FI") }
+    /// **돈을 낸** 인앱 결제. 프로모션 코드처럼 0원에 받은 줄은 결제가 아니다 —
+    /// 실측에서 한 앱의 "결제" 1,048줄 중 대부분이 0원 코드였다.
+    var isPurchase: Bool { isInAppItem && customerPrice != 0 }
+    /// 0원에 받은 인앱 상품(프로모션 · 오퍼 코드).
+    var isFreeRedemption: Bool { isInAppItem && customerPrice == 0 }
 }
 
 // MARK: - 클라이언트
@@ -378,8 +387,22 @@ actor AppStoreConnect {
             "limit": "200"
         ])
         let current = doc.data.filter(isCurrent)
-        let korean = current.first { $0.relationshipID("territory") == "KOR" }
-        guard let chosen = korean ?? current.first else { return nil }
+        if let korean = current.first(where: { $0.relationshipID("territory") == "KOR" }) {
+            return Self.formatPrice(korean, point: "inAppPurchasePricePoint", in: doc)
+        }
+        // 한국 가격을 따로 안 정했으면 기준 국가 가격에서 자동으로 환산된 값이 있다.
+        let automatic = try? await list("v1/inAppPurchasePriceSchedules/\(schedule.id)/automaticPrices", [
+            "filter[territory]": "KOR",
+            "include": "inAppPurchasePricePoint,territory",
+            "fields[inAppPurchasePricePoints]": "customerPrice",
+            "fields[territories]": "currency",
+            "limit": "50"
+        ])
+        if let automatic, let korean = automatic.data.filter(isCurrent).first,
+           let text = Self.formatPrice(korean, point: "inAppPurchasePricePoint", in: automatic) {
+            return text
+        }
+        guard let chosen = current.first else { return nil }
         return Self.formatPrice(chosen, point: "inAppPurchasePricePoint", in: doc)
     }
 
@@ -437,13 +460,17 @@ actor AppStoreConnect {
         guard let apple = column("Apple Identifier"), let type = column("Product Type Identifier"),
               let units = column("Units"), let proceeds = column("Developer Proceeds"),
               let currency = column("Currency of Proceeds") else { return [] }
+        let price = column("Customer Price")
+        let promo = column("Promo Code")
         return lines.compactMap { row in
-            guard row.count > max(apple, type, units, proceeds, currency) else { return nil }
+            guard row.count > max(apple, type, units, proceeds, currency, price ?? 0) else { return nil }
             return SalesLine(appleID: row[apple],
                              productType: row[type],
                              units: Int(Double(row[units]) ?? 0),
                              proceedsPerUnit: Double(row[proceeds]) ?? 0,
-                             proceedsCurrency: row[currency])
+                             proceedsCurrency: row[currency],
+                             customerPrice: price.flatMap { Double(row[$0]) } ?? 0,
+                             promoCode: promo.map { row[$0].trimmingCharacters(in: .whitespaces) } ?? "")
         }
     }
 
