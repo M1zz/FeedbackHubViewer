@@ -23,7 +23,7 @@ extension FeedbackStore {
         projectCounts.map(\.key)
     }
 
-    /// (key, count) pairs, most feedback first, for the sidebar list. `key` is
+    /// (key, count) pairs, highest DAU first, for the sidebar list. `key` is
     /// the grouping identity (appId); resolve its label with `displayName(for:)`.
     var projectCounts: [(key: String, count: Int)] {
         memoized(\.projectCounts) {
@@ -42,7 +42,7 @@ extension FeedbackStore {
     }
 
     /// Per-project rolled-up numbers for the overview grid, ordered the same
-    /// way as `projectCounts` (most feedback first, "미분류" last).
+    /// way as `projectCounts` (highest DAU first, "미분류" last).
     var projectSummaries: [ProjectSummary] {
         memoized(\.projectSummaries) {
             let weekAgo = Date().addingTimeInterval(-7 * 24 * 60 * 60)
@@ -92,6 +92,11 @@ extension FeedbackStore {
         /// 이번 7일과 그 앞 7일에 새로 깔린 설치(스냅샷의 `installDate` 기준).
         let newInstalls7: Int
         let previousNewInstalls7: Int
+        /// 어제 · 그제 하루 동안 이벤트를 보낸 서로 다른 설치 — 목록이 이 순서로 선다.
+        /// 오늘이 아니라 어제인 까닭은 `eventsYesterday`와 같다: 끝나지 않은 하루로 줄을
+        /// 세우면 아침마다 순서가 뒤집힌다.
+        let dauYesterday: Int
+        let dauDayBefore: Int
 
         var hasUsageData: Bool { installs > 0 || totalEvents > 0 }
 
@@ -130,7 +135,8 @@ extension FeedbackStore {
                                   totalEvents: 0, sparkline: [],
                                   previousEvents7: 0, previousActiveInstalls7: 0,
                                   eventsYesterday: 0, eventsDayBefore: 0,
-                                  newInstalls7: 0, previousNewInstalls7: 0)
+                                  newInstalls7: 0, previousNewInstalls7: 0,
+                                  dauYesterday: 0, dauDayBefore: 0)
     }
 
     /// Traffic per project in one pass. The lists sort against this map rather
@@ -196,7 +202,9 @@ extension FeedbackStore {
                                   eventsYesterday: yesterdayKey.map { days[$0]?.events ?? 0 } ?? 0,
                                   eventsDayBefore: dayBeforeKey.map { days[$0]?.events ?? 0 } ?? 0,
                                   newInstalls7: newInstalls[key] ?? 0,
-                                  previousNewInstalls7: previousNewInstalls[key] ?? 0)
+                                  previousNewInstalls7: previousNewInstalls[key] ?? 0,
+                                  dauYesterday: yesterdayKey.map { days[$0]?.installs.count ?? 0 } ?? 0,
+                                  dauDayBefore: dayBeforeKey.map { days[$0]?.installs.count ?? 0 } ?? 0)
         }
         return result
         }
@@ -230,14 +238,17 @@ extension FeedbackStore {
                             eventsYesterday: all.reduce(0) { $0 + $1.eventsYesterday },
                             eventsDayBefore: all.reduce(0) { $0 + $1.eventsDayBefore },
                             newInstalls7: all.reduce(0) { $0 + $1.newInstalls7 },
-                            previousNewInstalls7: all.reduce(0) { $0 + $1.previousNewInstalls7 })
+                            previousNewInstalls7: all.reduce(0) { $0 + $1.previousNewInstalls7 },
+                            // 설치는 앱마다 익명이라 앱별 DAU의 합이다.
+                            dauYesterday: all.reduce(0) { $0 + $1.dauYesterday },
+                            dauDayBefore: all.reduce(0) { $0 + $1.dauDayBefore })
         return value
         }
     }
 
-    /// Busiest app first. Which app is being *used* the most is what decides
-    /// where to look first, so traffic leads and the feedback count only
-    /// breaks ties. 미분류 always sits at the bottom.
+    /// DAU(어제) 높은 앱 먼저. 몇 사람이 매일 쓰고 있는가가 어디부터 볼지를 정한다 —
+    /// 사용 건수는 한 사람이 많이 눌러도 오르고, 피드백 수는 쓰는 사람보다 불만을 잰다.
+    /// 둘은 동률일 때만 가른다. 미분류는 언제나 맨 아래.
     private func ordered(_ k1: String, _ c1: Int, _ k2: String, _ c2: Int,
                          traffic: [String: Traffic]) -> Bool {
         if k1 == Feedback.unclassifiedProject { return false }
@@ -245,8 +256,9 @@ extension FeedbackStore {
 
         let t1 = traffic[k1] ?? .none
         let t2 = traffic[k2] ?? .none
-        if t1.events7 != t2.events7 { return t1.events7 > t2.events7 }
+        if t1.dauYesterday != t2.dauYesterday { return t1.dauYesterday > t2.dauYesterday }
         if t1.activeInstalls7 != t2.activeInstalls7 { return t1.activeInstalls7 > t2.activeInstalls7 }
+        if t1.events7 != t2.events7 { return t1.events7 > t2.events7 }
         if t1.installs != t2.installs { return t1.installs > t2.installs }
         if c1 != c2 { return c1 > c2 }
         return displayName(for: k1).localizedStandardCompare(displayName(for: k2)) == .orderedAscending

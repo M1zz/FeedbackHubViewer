@@ -188,15 +188,24 @@ private struct ProjectRow: View {
                 Spacer(minLength: 4)
 
                 VStack(alignment: .trailing, spacing: 3) {
-                    // 안 읽은 피드백은 숫자가 아니라 뱃지다 — 옆의 "30건"과 같은
-                    // 활자로 적으면 읽을 것과 구경할 것이 같은 무게로 보인다.
-                    if unread > 0 {
-                        CountBadge(count: unread, systemImage: "envelope.badge.fill",
-                                   tint: .red, name: "안 읽은 피드백")
-                    } else {
-                        Text("\(count)건")
-                            .font(.body.monospacedDigit())
-                            .foregroundStyle(.secondary)
+                    // 목록이 DAU 순이라 그 숫자가 이 자리에 선다. 안 읽은 피드백은
+                    // 숫자가 아니라 뱃지다 — 같은 활자로 적으면 읽을 것과 구경할 것이
+                    // 같은 무게로 보인다.
+                    HStack(spacing: 6) {
+                        if unread > 0 {
+                            CountBadge(count: unread, systemImage: "envelope.badge.fill",
+                                       tint: .red, name: "안 읽은 피드백")
+                        }
+                        if traffic.hasUsageData {
+                            Text("DAU \(AppFormat.count(traffic.dauYesterday))")
+                                .font(.body.monospacedDigit().weight(.semibold))
+                                .foregroundStyle(traffic.dauYesterday > 0 ? .primary : .secondary)
+                                .help("어제 하루 이 앱을 쓴 사람(설치) 수 — 목록이 이 순서입니다. 그제 \(traffic.dauDayBefore)명.")
+                        } else if unread == 0 {
+                            Text("\(count)건")
+                                .font(.body.monospacedDigit())
+                                .foregroundStyle(.secondary)
+                        }
                     }
                     if traffic.totalEvents > 0 {
                         // The same 14-day shape the phone cards draw: how much
@@ -235,6 +244,7 @@ private struct ProjectRow: View {
 
     private var accessibilityText: String {
         var parts = ["\(name)"]
+        if traffic.hasUsageData { parts.append("어제 DAU \(traffic.dauYesterday)명") }
         if let change = weekChangeText { parts.append(change.replacingOccurrences(of: "▲", with: "늘어남")
                                                             .replacingOccurrences(of: "▼", with: "줄어듦")) }
         if let fill = capacity?.fill, let ceiling = capacity?.capacity {

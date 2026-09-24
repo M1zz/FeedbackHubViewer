@@ -207,6 +207,7 @@ private struct ProjectCardBody: View {
                                      pendingCount: Int) -> String {
         var parts: [String] = []
         if traffic.hasChanges {
+            parts.append("어제 DAU \(traffic.dauYesterday)명, 그제 \(traffic.dauDayBefore)명")
             parts.append("7일 사용 \(traffic.events7)건, 지난주 \(traffic.previousEvents7)건")
             parts.append("7일 사용자 \(traffic.activeInstalls7)명, 지난주 \(traffic.previousActiveInstalls7)명")
         } else {
@@ -221,10 +222,11 @@ private struct ProjectCardBody: View {
         return parts.joined(separator: ", ")
     }
 
-    /// 어제와 그제. 오늘을 안 세는 이유는 `Traffic.eventsYesterday`에 있다.
+    /// 어제와 그제의 DAU — 목록이 이 순서로 선다. 오늘을 안 세는 이유는
+    /// `Traffic.eventsYesterday`에 있다.
     private var yesterdayFigure: some View {
-        TrendFigure(title: "어제 사용", current: traffic.eventsYesterday,
-                    previous: traffic.eventsDayBefore, unit: "건", previousLabel: "그제")
+        TrendFigure(title: "DAU (어제)", current: traffic.dauYesterday,
+                    previous: traffic.dauDayBefore, unit: "명", previousLabel: "그제")
             .frame(maxWidth: .infinity, alignment: .leading)
     }
 
