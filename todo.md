@@ -7,8 +7,11 @@
 - [x] 며칠 왔나: 최근 30일(= MAU 창) 1 / 2~3 / 4~7 / 8~15 / 16일 이상, 평균, 이 30일 안에 깐 사람 수
 - [x] app_open을 안 보내는 앱은 카드가 "열어 보기만 한 날은 안 잡혀 낮게 나온다"고 밝힘
 - [ ] 화면에서 눈으로 확인 못 함
-- [ ] 무지개 공방(WeekBlocks, 맥): app_open 이벤트가 없음 → DAU · 잔존 과소. 앱에 하루 1건 app_open 추가 필요
-- [ ] 욕망의 무지개(ScheduleDensity, iOS): 통계가 기본 꺼짐(켜야 보냄) → ASC 첫 다운로드 392에 비해 허브엔 켠 사람만. 설계상 그런 것
+- [x] 무지개 공방(WeekBlocks): 하루 1건 app_open 추가(켤 때 + 앞으로 올 때). 빌드 통과, **커밋 안 함**(리포에 다른 작업이 커밋 전)
+- [x] 욕망의 무지개(ScheduleDensity): 기본 꺼짐 → 기본 켬(직접 끈 사람은 그대로), app_open 추가. 빌드 통과, **커밋 안 함**
+- [ ] 욕망의 무지개 개인정보 처리방침 6항 · 핵심 요약(ko/en) · App Store 개인정보 라벨 — 사용자가 고침. 배포 전에 필수
+- [ ] app_open이 없는 앱: BurningParchment · FootprintDiary · SkyDex · SlideSnap. LeeoKit에 넣으면 한 번에 됨
+- [x] 옵트인 게이트 전수 점검: 욕망의 무지개 말고는 없음(Dalbit · Rereminder는 원격 킬스위치, 기본 켬)
 
 ## 클립키보드 통계 스펙 다듬기 (2026-09-26)
 - [x] 정리: 사용 유형을 `shortcuts`(샘플 4개 포함) → `ownShortcuts`로, 그 키 없는 옛 버전은 "모름" 무리로(`sent: false` 조건 신설)
