@@ -63,7 +63,7 @@ struct ProjectComparisonView: View {
                     ranking(rows, title: "가장 활발한 앱 (MAU)", systemImage: "person.3",
                             note: "최근 30일 안에 이벤트를 보낸 서로 다른 설치 수입니다. 이벤트를 안 보내는 앱은 여기서 0이에요.") {
                         Metric(value: Double($0.mau), text: "\($0.mau)명",
-                               hint: "주간 \($0.wau)명 · 일간 \($0.dau)명")
+                               hint: "주간 \($0.wau)명 · DAU(어제) \($0.dau)명")
                     }
                     ranking(rows, title: "가장 빨리 크는 앱 (최근 7일 신규)", systemImage: "sparkles",
                             note: "최근 7일에 처음 설치된 기기 수입니다.") {

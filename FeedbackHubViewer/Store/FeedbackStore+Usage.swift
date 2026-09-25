@@ -208,9 +208,17 @@ extension FeedbackStore {
                 }
             }
 
+            /// 창이 며칠 전에 끝나는가. **DAU는 어제로 끝난다** — 끝나지 않은 오늘을
+            /// 세면 아침마다 0에 가깝고, 사이드바 · 프로젝트 목록 · 비교 화면이 모두
+            /// 이 값을 읽어 어디서나 같은 DAU가 찍힌다(`Traffic.dauYesterday`).
+            /// 주간 · 월간은 오늘까지 — 하루치 모자람이 7일 · 30일 창에서는 작다.
+            var endingDaysAgo: Int {
+                self == .day ? 1 : 0
+            }
+
             var label: String {
                 switch self {
-                case .day: return "일간 (DAU)"
+                case .day: return "일간 (DAU · 어제)"
                 case .week: return "주간 (WAU)"
                 case .month: return "월간 (MAU)"
                 }
@@ -219,7 +227,7 @@ extension FeedbackStore {
             /// 바로 앞의 같은 길이 창을 부르는 말 — 숫자 밑에 붙는다.
             var previousLabel: String {
                 switch self {
-                case .day: return "어제"
+                case .day: return "그제"
                 case .week: return "지난 7일"
                 case .month: return "지난 30일"
                 }
@@ -503,8 +511,9 @@ extension FeedbackStore {
 
             func window(_ span: ActiveUsers.Span) -> ActiveUsers.Window {
                 ActiveUsers.Window(span: span,
-                                   current: distinct(length: span.days, endingDaysAgo: 0),
-                                   previous: distinct(length: span.days, endingDaysAgo: span.days))
+                                   current: distinct(length: span.days, endingDaysAgo: span.endingDaysAgo),
+                                   previous: distinct(length: span.days,
+                                                      endingDaysAgo: span.endingDaysAgo + span.days))
             }
 
             // 추이는 같은 계산을 하루씩 물러나며 되풀이한 것이다. 30일치라도 한 점당

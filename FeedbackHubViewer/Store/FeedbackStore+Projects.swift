@@ -154,8 +154,11 @@ extension FeedbackStore {
         let previousWeekKeys = Set(UsageRollups.windowKeys(days: 7, endingDaysAgo: 7,
                                                            calendar: calendar))
         // 어제·그제. 오늘을 빼는 이유는 `Traffic.eventsYesterday`에 적어 두었다.
-        let yesterdayKey = UsageRollups.windowKeys(days: 1, endingDaysAgo: 1, calendar: calendar).first
-        let dayBeforeKey = UsageRollups.windowKeys(days: 1, endingDaysAgo: 2, calendar: calendar).first
+        // DAU가 어느 날인지는 통계 카드와 같은 정의(`ActiveUsers.Span.day`)를 읽는다 —
+        // 둘이 따로 정하면 사이드바와 앱 안의 DAU가 어긋난다.
+        let dauOffset = ActiveUsers.Span.day.endingDaysAgo
+        let yesterdayKey = UsageRollups.windowKeys(days: 1, endingDaysAgo: dauOffset, calendar: calendar).first
+        let dayBeforeKey = UsageRollups.windowKeys(days: 1, endingDaysAgo: dauOffset + 1, calendar: calendar).first
 
         let now = Date()
         let weekAgo = now.addingTimeInterval(-7 * 86_400)
