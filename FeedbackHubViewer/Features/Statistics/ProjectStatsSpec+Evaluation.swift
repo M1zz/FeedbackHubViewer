@@ -194,8 +194,11 @@ extension ProjectStatsSpec {
 
     private func distributionInsight(_ spec: DistributionSpec, in context: Context) -> Insight? {
         guard !context.installs.isEmpty else { return nil }
+        let installs = spec.onlyWith.map { key in context.installs.filter { $0[key] != nil } }
+            ?? context.installs
+        guard !installs.isEmpty else { return nil }
         let counts = spec.buckets.map { bucket in
-            context.installs.filter { metrics in
+            installs.filter { metrics in
                 let n = metrics[spec.metric] ?? 0
                 return n >= bucket.from && n <= (bucket.to ?? .greatestFiniteMagnitude)
             }.count
@@ -205,7 +208,12 @@ extension ProjectStatsSpec {
             Insight.Bar(label: bucket.label, value: "\(count)명",
                         ratio: Double(count) / Double(maximum))
         }
-        return .bars(spec.frame(default: "chart.bar"), rows: rows)
+        var frame = spec.frame(default: "chart.bar")
+        if spec.onlyWith != nil {
+            let scope = "새 지표를 보낸 \(installs.count)대만 셉니다. 옛 버전 \(context.installs.count - installs.count)대는 뺐어요."
+            frame.note = [frame.note, scope].compactMap { $0 }.joined(separator: " ")
+        }
+        return .bars(frame, rows: rows)
     }
 
     private func shareInsight(_ spec: ShareSpec, in context: Context) -> Insight? {
@@ -293,7 +301,9 @@ extension ProjectStatsSpec {
     /// 두 번 세어질 수 있어도 사다리에서는 한 번이다.
     private func ladderInsight(_ spec: LadderSpec, in context: Context) -> Insight? {
         guard !context.installs.isEmpty else { return nil }
-        let first = context.installs.count
+        let installs = spec.onlyWith.map { key in context.installs.filter { $0[key] != nil } }
+            ?? context.installs
+        let first = installs.count
         var steps: [Insight.Step] = []
         var previous: Int?
         for rung in spec.steps {
@@ -301,9 +311,9 @@ extension ProjectStatsSpec {
             let missing: Bool
             if let metric = rung.metric {
                 let floor = rung.atLeast ?? 1
-                count = context.installs.filter { ($0[metric] ?? 0) >= floor }.count
+                count = installs.filter { ($0[metric] ?? 0) >= floor }.count
                 // 그 지표를 **아무도 안 보내는** 것과 0명인 것은 다르다.
-                missing = !context.installs.contains { $0[metric] != nil }
+                missing = !installs.contains { $0[metric] != nil }
             } else {
                 count = first
                 missing = false
@@ -319,6 +329,14 @@ extension ProjectStatsSpec {
 
         var frame = spec.frame(default: "figure.walk.arrival")
         frame.verdict = ladderVerdict(spec, steps: steps)
+        if spec.onlyWith != nil {
+            let left = context.installs.count - first
+            // 뺀 설치를 말하지 않으면 모수가 작은 이유가 안 보인다.
+            let scope = first == 0
+                ? "이 카드의 지표를 보낸 설치가 아직 없어요. 새 버전이 퍼지면 채워집니다."
+                : "새 지표를 보낸 \(first)대만 셉니다. 옛 버전 \(left)대는 뺐어요."
+            frame.note = [frame.note, scope].compactMap { $0 }.joined(separator: " ")
+        }
         return .funnel(frame, steps: steps, goal: .init(target: spec.target, floor: spec.floor))
     }
 
@@ -605,6 +623,7 @@ extension ProjectStatsSpec {
                          derived: [String: Double]) -> Bool {
         let value: Double
         if let key = condition.metric {
+            if let sent = condition.sent, (metrics[key] != nil) != sent { return false }
             value = metrics[key] ?? 0
         } else if let keys = condition.sum {
             value = keys.reduce(0.0) { $0 + (metrics[$1] ?? 0) }

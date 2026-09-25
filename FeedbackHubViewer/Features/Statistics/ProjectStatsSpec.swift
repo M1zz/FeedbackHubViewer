@@ -47,6 +47,9 @@ struct ProjectStatsSpec: Decodable {
     var segments: SegmentSpec?
     /// 이벤트를 순서대로 세워 단계별로 몇이 남는지 본다(페이월 → 결제).
     var funnels: [FunnelSpec] = []
+    /// 설치에 남은 상태(지표)로 세우는 사다리. 수익 절의 `activation`과 같은 카드이고,
+    /// 쐐기와 별개로 더 잘게 보고 싶을 때 여기 적는다.
+    var ladders: [LadderSpec] = []
     /// 이 앱이 **어떻게 돈을 버는가**를 관측하는 절. 없으면 수익 카드가 안 뜬다.
     var monetization: MonetizationSpec?
     /// 그릴 카드를 차례대로 직접 적은 것. 적었으면 이게 전부이고, 위의 절들은
@@ -100,7 +103,7 @@ struct ProjectStatsSpec: Decodable {
     // 절은 빈 값으로 읽어야 한다.
     enum CodingKeys: String, CodingKey {
         case specVersion, appId, appName, metricLabels, metricPrefixLabels
-        case eventLabels, tileGroups, distributions, shares, derived, segments, funnels
+        case eventLabels, tileGroups, distributions, shares, derived, segments, funnels, ladders
         case accessFlag, paidFlag, trialFlag, compedFlag, legacyPaidFlag
         case monetization, purchases
         case cards
@@ -120,6 +123,7 @@ struct ProjectStatsSpec: Decodable {
         derived = try c.decodeIfPresent([DerivedSpec].self, forKey: .derived) ?? []
         segments = try c.decodeIfPresent(SegmentSpec.self, forKey: .segments)
         funnels = try c.decodeIfPresent([FunnelSpec].self, forKey: .funnels) ?? []
+        ladders = try c.decodeIfPresent([LadderSpec].self, forKey: .ladders) ?? []
         monetization = try c.decodeIfPresent(MonetizationSpec.self, forKey: .monetization)
         declaredCards = try c.decodeIfPresent([DashboardCardSpec].self, forKey: .cards) ?? []
         accessFlag = try c.decodeIfPresent(String.self, forKey: .accessFlag)
@@ -225,6 +229,9 @@ struct ProjectStatsSpec: Decodable {
         let metric: String
         var note: String?
         let buckets: [Bucket]
+        /// 이 지표 키를 보낸 설치만 센다(`LadderSpec.onlyWith`와 같은 뜻). 안 적으면
+        /// 안 보낸 설치는 0으로 첫 구간에 든다.
+        var onlyWith: String?
 
         struct Bucket: Decodable {
             let label: String
@@ -386,6 +393,9 @@ struct ProjectStatsSpec: Decodable {
         /// [분자, 분모]. 분모가 0이면 0으로 본다.
         var ratio: [String]?
         var derived: String?
+        /// 그 지표 키를 설치가 보냈는가(`metric`에만 쓴다). `false`면 "안 보냄"일 때 참 —
+        /// 옛 버전 설치를 0으로 읽어 엉뚱한 무리에 넣지 않고 따로 모을 때 쓴다.
+        var sent: Bool?
 
         var lt: Double?
         var lte: Double?

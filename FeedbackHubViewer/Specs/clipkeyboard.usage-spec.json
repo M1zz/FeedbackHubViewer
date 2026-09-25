@@ -49,7 +49,10 @@
     "own.pro": { "label": "Pro를 산 설치", "excludeFromAverages": true },
     "own.slots": { "label": "칸 추가를 산 설치", "excludeFromAverages": true },
     "own.twodevice": { "label": "두 대째를 산 설치", "excludeFromAverages": true },
-    "flag.schema": { "label": "통계 규약 버전", "excludeFromAverages": true }
+    "flag.schema": { "label": "통계 규약 버전", "excludeFromAverages": true },
+    "flag.keyboardEnabled": { "label": "설정에서 키보드를 켠 설치", "excludeFromAverages": true },
+    "keyboardPastes": { "label": "키보드로 넣은 횟수" },
+    "state.level": { "label": "숙련 칸 (0 구경 · 1 만듦 · 2 꺼냄 · 3 익음 · 4 능숙)", "excludeFromAverages": true }
   },
   "metricPrefixLabels": {
     "persona.": "고른 페르소나"
@@ -71,7 +74,9 @@
     "trial_started": "체험을 시작함",
     "offer_code_redeemed": "오퍼 코드를 씀",
     "pro_nudge_shown": "Pro 권유를 봄",
-    "pro_nudge_tapped": "Pro 권유를 누름"
+    "pro_nudge_tapped": "Pro 권유를 누름",
+    "time_saved_milestone": "아낀 시간 이정표에 닿음",
+    "launch_incomplete": "직전 실행이 끝까지 못 감"
   },
 
   "tileGroups": [
@@ -81,15 +86,29 @@
       "tiles": [
         { "label": "키보드를 켠 사용자", "kind": "installsWithMetric", "metric": "flag.keyboardActive" },
         { "label": "키보드 입력 횟수", "kind": "sum", "metric": "keyboardUses" },
+        { "label": "키보드로 넣은 횟수", "kind": "sum", "metric": "keyboardPastes", "hint": "떴다가 아무것도 안 넣고 닫은 것은 빠진 수예요. 새 버전부터 모여요." },
         { "label": "켠 사용자당 평균 입력", "kind": "sumPerMatchingInstall", "metric": "keyboardUses", "condition": "flag.keyboardActive", "format": "decimal1" },
         { "label": "절약한 시간 합계", "kind": "sum", "metric": "timeSavedMin", "unit": "분" },
-        { "label": "기능이 열린 사용자", "kind": "installsWithMetric", "metric": "flag.isPro" },
+        { "label": "Pro를 산 사용자", "kind": "installsWithMetric", "metric": "own.pro", "hint": "기능이 열린 사람(flag.isPro)이 아니라 산 사람이에요. 5.0.0부터 기능은 모두에게 열려 있어서 그 수는 설치 수와 거의 같았어요." },
         { "label": "동기화를 켠 사용자", "kind": "installsWithMetric", "metric": "flag.syncOn" }
       ]
     }
   ],
 
   "distributions": [
+    {
+      "title": "숙련 칸 분포",
+      "metric": "state.level",
+      "onlyWith": "state.level",
+      "note": "앱이 스스로 매기는 칸이에요(UserLevel). 내려가지 않는 바닥 값이라 한 번 꺼내 쓴 사람은 계속 '꺼냄' 이상이에요. 키보드 없이 앱 안에서 복사해 쓰는 사람도 '꺼냄'에 들어서, 키보드 활성화율이 못 세는 '가치에 닿은 사람'을 여기서 봐요. '만듦'이 두꺼우면 만든 뒤 꺼내 쓰는 데서 막힌 거예요.",
+      "buckets": [
+        { "label": "구경 (자기 단축어 없음)", "from": 0, "to": 0 },
+        { "label": "만듦 (안 꺼내 씀)", "from": 1, "to": 1 },
+        { "label": "꺼냄 (처음 실제로 씀)", "from": 2, "to": 2 },
+        { "label": "익음 (여러 날 키보드로)", "from": 3, "to": 3 },
+        { "label": "능숙 (빈칸·콤보까지)", "from": 4 }
+      ]
+    },
     {
       "title": "직접 만든 단축어 분포 (한도까지의 거리)",
       "metric": "ownShortcuts",
@@ -135,12 +154,17 @@
 
   "segments": {
     "title": "사용 유형",
-    "note": "한 사람은 한 무리에만 들어가요(합이 전체와 같아요). 위에서부터 걸리는 첫 무리로 정해져요. '만들고 안 쓴 사람'이 크면 키보드를 켜는 데까지 못 간 거고, '쌓아만 두는 사람'이 크면 만드는 것보다 꺼내 쓰는 게 어려운 거예요.",
+    "note": "한 사람은 한 무리에만 들어가요(합이 전체와 같아요). 위에서부터 걸리는 첫 무리로 정해져요. 단축어 수는 온보딩 샘플 4개를 뺀 '직접 만든 단축어'로 재요. 샘플이 섞인 수로 재면 '아직 안 만든 사람'이 거의 안 잡혔어요. 그 키를 안 보내는 옛 버전은 0으로 읽지 않고 맨 위 '모름'에 모아요. '만들고 안 쓴 사람'이 크면 키보드를 켜는 데까지 못 간 거고, '쌓아만 두는 사람'이 크면 만드는 것보다 꺼내 쓰는 게 어려운 거예요.",
     "rules": [
+      {
+        "name": "옛 버전이라 모름",
+        "hint": "직접 만든 단축어 수를 안 보내는 버전이에요. 업데이트되면 아래 무리로 옮겨 가요.",
+        "when": [{ "metric": "ownShortcuts", "sent": false }]
+      },
       {
         "name": "아직 안 만든 사람",
         "hint": "첫 단축어까지 못 갔어요. 여기가 막히면 그 뒤는 전부 안 일어나요.",
-        "when": [{ "metric": "shortcuts", "lt": 1 }]
+        "when": [{ "metric": "ownShortcuts", "lt": 1 }]
       },
       {
         "name": "만들고 안 쓴 사람",
@@ -156,7 +180,7 @@
         "name": "하나만 계속 쓰는 사람",
         "hint": "한 가지 일에 딱 맞게 쓰고 있어요. 두 번째 쓸모를 알려주면 늘어나요.",
         "when": [
-          { "metric": "shortcuts", "lte": 3 },
+          { "metric": "ownShortcuts", "lte": 3 },
           { "sum": ["uses", "keyboardUses"], "gte": 10 }
         ]
       },
@@ -164,7 +188,7 @@
         "name": "쌓아만 두는 사람",
         "hint": "만드는 건 쉬운데 꺼내 쓰는 게 어려운 거예요. 찾기와 순서를 봐야 해요.",
         "when": [
-          { "metric": "shortcuts", "gte": 8 },
+          { "metric": "ownShortcuts", "gte": 8 },
           { "ratio": ["unusedShortcuts", "shortcuts"], "gte": 0.7 }
         ]
       },
@@ -212,9 +236,39 @@
     ]
   },
 
+  "ladders": [
+    {
+      "title": "키보드에 닿기까지",
+      "section": "수익",
+      "onlyWith": "state.level",
+      "note": "위 쐐기의 '키보드를 실제로 씀' 한 칸을 넷으로 쪼갠 거예요. 앱 통계 화면의 '키보드에 닿기까지'와 같은 칸이에요. 설정에서 켬과 떠 봄 사이가 크게 새면 전체 접근이나 키보드 전환을 못 찾는 거고, 떠 봄과 넣어 봄 사이가 새면 키보드 화면에서 무엇을 눌러야 할지 모르는 거예요. 앱은 '떠 봄'에 키보드 활동일 이벤트를 보낸 설치까지 합쳐 세지만, 여기는 스냅샷만 읽어서 조금 적게 나올 수 있어요.",
+      "target": 0.65,
+      "floor": 0.5,
+      "steps": [
+        { "label": "앱을 연 설치" },
+        { "label": "설정에서 키보드를 켬", "metric": "flag.keyboardEnabled", "hint": "앱이 설정 상태를 못 읽으면 키를 안 보내서 여기서 빠져요" },
+        { "label": "키보드가 떠 봄", "metric": "flag.keyboardActive" },
+        { "label": "키보드로 넣어 봄", "metric": "keyboardPastes", "hint": "이 칸이 가치를 실제로 받은 자리예요" }
+      ]
+    }
+  ],
+
   "funnels": [
     {
+      "title": "첫날 퍼널 (온보딩 → 키보드)",
+      "section": "수익",
+      "basis": "installs",
+      "note": "이벤트로 본 첫 경험이에요. 이벤트는 순서를 강제하지 않아서 뒤 칸이 앞 칸보다 클 수 있어요(샘플 단축어로 만들기 전에 키보드부터 쓰는 사람). 그러면 전환율이 아니라 사실로 표시돼요. 처음 안내에서 크게 새면 첫인상 문제, 안내는 통과했는데 단축어를 안 만들면 가치 전달 문제예요.",
+      "steps": [
+        { "label": "앱을 엶", "event": "app_open" },
+        { "label": "처음 안내를 끝냄", "event": "onboarding_completed" },
+        { "label": "단축어를 만듦", "event": "memo_created" },
+        { "label": "키보드로 입력함", "anyOf": ["keyboard_used", "keyboard_active_day"], "hint": "키보드 비콘(keyboard_used)과 키보드만 쓴 날(keyboard_active_day)을 합친 것" }
+      ]
+    },
+    {
       "title": "결제 퍼널",
+      "section": "수익",
       "basis": "installs",
       "note": "한 사람이 페이월을 열 번 봐도 한 명으로 셉니다. 슬라이스(:memo, :buy)는 한 단계로 합쳐요. 어디서 띄웠든 '봤다'는 하나예요.",
       "steps": [
@@ -233,6 +287,7 @@
     },
     {
       "title": "Pro 넛지 퍼널",
+      "section": "수익",
       "basis": "installs",
       "note": "넛지(slots_left · time_saved)가 실제로 눌리는지 봅니다. 첫 칸이 큰데 둘째 칸이 작으면 넛지가 뜨는 자리가 틀린 거예요. 여기서 페이월·결제까지 잇지 않은 건 이벤트가 경로를 안 들고 있어서예요. 페이월은 넛지 말고 다른 데서도 열리니까 이어 붙이면 전환율이 아니라 거짓말이 됩니다. 앱이 paywall_view에 출처 슬라이스(예: paywall_view:nudge_slots_left)를 붙여 보내면 그때 이어요.",
       "steps": [
@@ -242,6 +297,26 @@
           "event": "pro_nudge_tapped",
           "hint": "슬라이스(slots_left · time_saved)별로 어느 쪽이 눌리는지는 아래 이벤트 카드에서 볼 수 있어요."
         }
+      ]
+    },
+    {
+      "title": "결제창에서 멈춘 사람",
+      "section": "수익",
+      "basis": "installs",
+      "note": "구매 버튼을 누른 뒤 스토어 결제창에서 끝을 못 본 사람이에요. 취소가 많으면 가격이나 결제창에서 생긴 망설임이고, 실패가 많으면 결제 수단·네트워크·StoreKit 문제예요. 어느 한도에서 띄웠는지(슬라이스)는 아래 이벤트 카드에서 볼 수 있어요.",
+      "steps": [
+        { "label": "구매 버튼을 누름", "event": "paywall_cta_tapped" },
+        { "label": "취소하거나 실패함", "anyOf": ["purchase_cancelled", "purchase_failed"] }
+      ]
+    },
+    {
+      "title": "체험 → 결제",
+      "section": "수익",
+      "basis": "installs",
+      "note": "체험을 시작한 사람 중 결제까지 간 사람이에요. 결제 칸에는 체험 없이 바로 산 사람도 섞여서 첫 칸보다 클 수 있어요. 그때는 비율이 아니라 두 숫자를 따로 읽으세요.",
+      "steps": [
+        { "label": "체험을 시작함", "event": "trial_started" },
+        { "label": "결제함", "event": "paywall_purchase" }
       ]
     }
   ]
