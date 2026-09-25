@@ -101,6 +101,8 @@ struct StatisticsDashboard: View {
                         audiencePicker
                         userTiles
                         activeUsersCard
+                        retentionCard
+                        activeDaysCard
                         if audience == .all { accessCard }
                         if audience == .all, store.canSplitByPurchase(for: scope) { purchaseCard }
                         specCards
@@ -621,6 +623,136 @@ struct StatisticsDashboard: View {
             if month { peak = max(peak, point.month) }
         }
         return peak
+    }
+
+    // MARK: - 코호트 잔존
+
+    /// 같은 주에 깐 사람들이 1일 · 7일 · 30일 뒤에도 오는가. 위 활성 사용자 카드는
+    /// 새로 온 사람이 떠난 사람을 메워도 그대로라, 사람이 남는지는 여기서만 보인다.
+    private var retentionCard: some View {
+        let retention = store.retention(for: scope, audience: audience)
+        return Card(title: "코호트 잔존 (1일 · 7일 · 30일)", systemImage: "person.2.wave.2") {
+            if retention.isEmpty {
+                emptyNote("잔존은 설치일(스냅샷)과 그 뒤에 온 날(이벤트)을 이어서 잽니다. 이 앱은 아직 둘 중 하나가 없거나, 이벤트를 보내기 시작한 뒤에 깐 설치가 없어요.")
+            } else {
+                ViewThatFits(in: .horizontal) {
+                    HStack(alignment: .top, spacing: 16) { retentionFigures(retention) }
+                    VStack(alignment: .leading, spacing: 12) { retentionFigures(retention) }
+                }
+                retentionTable(retention)
+                footnote(retentionNote(retention))
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func retentionFigures(_ retention: FeedbackStore.Retention) -> some View {
+        ForEach(FeedbackStore.Retention.Checkpoint.allCases) { checkpoint in
+            let rate = retention.pooled[checkpoint] ?? .init()
+            Figure(checkpoint.label, rate.ratio.map(Self.percentText) ?? "—",
+                   note: rate.eligible > 0
+                       ? "\(checkpoint.detail) · \(AppFormat.count(rate.eligible))명 중 \(AppFormat.count(rate.returned))명"
+                       : "\(checkpoint.detail) · 아직 잴 설치 없음")
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    /// 주마다 한 줄. 칸의 진하기가 비율이라, 위아래로 훑으면 최근 주가 나아졌는지가
+    /// 숫자를 읽기 전에 보인다.
+    private func retentionTable(_ retention: FeedbackStore.Retention) -> some View {
+        Grid(alignment: .leading, horizontalSpacing: 8, verticalSpacing: 6) {
+            GridRow {
+                Text("설치한 주")
+                ForEach(FeedbackStore.Retention.Checkpoint.allCases) { Text($0.label) }
+            }
+            .font(.body.weight(.semibold))
+            .foregroundStyle(.secondary)
+            ForEach(retention.cohorts) { cohort in
+                GridRow {
+                    Text("\(cohort.start.formatted(.dateTime.month(.defaultDigits).day())) 주 · \(AppFormat.count(cohort.size))명")
+                        .font(.body.monospacedDigit())
+                    ForEach(FeedbackStore.Retention.Checkpoint.allCases) { checkpoint in
+                        retentionCell(cohort.rates[checkpoint] ?? .init())
+                    }
+                }
+            }
+        }
+        .accessibilityElement(children: .contain)
+    }
+
+    private func retentionCell(_ rate: FeedbackStore.Retention.Rate) -> some View {
+        Text(rate.ratio.map(Self.percentText) ?? "—")
+            .font(.body.monospacedDigit())
+            .foregroundStyle(rate.ratio == nil ? .secondary : .primary)
+            .frame(maxWidth: .infinity, alignment: .center)
+            .padding(.vertical, 3)
+            .background(RoundedRectangle(cornerRadius: 5)
+                .fill(Color.accentColor.opacity(0.08 + 0.5 * (rate.ratio ?? 0))))
+            .help(rate.eligible > 0
+                  ? "\(AppFormat.count(rate.eligible))명 중 \(AppFormat.count(rate.returned))명"
+                  : "재는 날이 아직 안 지났어요")
+    }
+
+    private func retentionNote(_ retention: FeedbackStore.Retention) -> String {
+        var text = "같은 주에 깐 설치가 그 뒤 재는 날 안에 이벤트를 하나라도 보냈는지 셉니다. 1일은 다음 날 하루, 7일과 30일은 주말 하나에 흔들리지 않게 일주일 폭(7~13일째, 30~36일째)으로 잽니다. 재는 날이 아직 안 끝난 설치는 분모에서 빼서, 최근 주는 —이거나 일부만 잰 값이에요. 칸이 진할수록 많이 남은 거예요."
+        if !sendsDailyOpen {
+            text += " ⚠️ 이 앱은 앱을 연 날마다 남는 app_open 이벤트를 안 보내요. 할 일 추가 같은 행동을 한 날만 잡혀서, 열어 보기만 한 날은 안 온 날이 됩니다. 잔존이 실제보다 낮게 나와요."
+        }
+        if retention.excludedBeforeSince > 0, let since = retention.since {
+            text += " 이 앱이 이벤트를 보내기 시작한 \(since.formatted(.dateTime.month(.defaultDigits).day())) 전에 깐 설치 \(AppFormat.count(retention.excludedBeforeSince))대는 설치 직후를 못 봐서 뺐어요."
+        }
+        return text
+    }
+
+    // MARK: - 한 달에 며칠 오는가
+
+    /// 최근 30일에 온 사람이 그중 며칠 왔는가. 고착도는 이 분포의 평균 하나라,
+    /// "매일 오는 소수와 한 번 온 다수"를 "모두가 가끔 오는 앱"과 못 가른다.
+    private var activeDaysCard: some View {
+        let active = store.activeDays(for: scope, audience: audience)
+        return Card(title: "최근 30일에 며칠 왔나", systemImage: "calendar.badge.clock") {
+            if active.isEmpty {
+                emptyNote("최근 30일 안에 도착한 이벤트가 없습니다. 며칠 왔는지는 이벤트로만 셀 수 있어요.")
+            } else {
+                let peak = max(active.buckets.map(\.count).max() ?? 0, 1)
+                VStack(spacing: 8) {
+                    ForEach(active.buckets) { bucket in
+                        SpecBar(label: bucket.label,
+                                value: "\(AppFormat.count(bucket.count))명 (\(Self.percentText(Double(bucket.count) / Double(active.total))))",
+                                ratio: Double(bucket.count) / Double(peak),
+                                hint: nil, tint: .accentColor, isMuted: false)
+                    }
+                }
+                footnote(activeDaysNote(active))
+            }
+        }
+    }
+
+    private func activeDaysNote(_ active: FeedbackStore.ActiveDays) -> String {
+        var text = "최근 30일(오늘 포함)에 이벤트를 보낸 \(AppFormat.count(active.total))명이 그중 며칠 왔는지입니다. 창이 월간 활성(MAU)과 같아서 합이 MAU와 같아요."
+        if let average = active.averageDays {
+            text += " 평균 \(String(format: "%.1f", average))일."
+        }
+        if !sendsDailyOpen {
+            text += " ⚠️ 이 앱은 app_open 이벤트를 안 보내서, 열어 보기만 한 날은 안 센 날이 돼요. 분포가 실제보다 앞 칸으로 쏠립니다."
+        }
+        text += " 1일 칸이 두꺼우면 한 번 써 보고 끝난 사람이 많은 거라 첫 주를 봐야 하고, 가운데가 두꺼우면 필요할 때만 여는 도구라 다시 부를 계기를 봐야 해요."
+        if active.installedWithin > 0 {
+            text += " 이 중 \(AppFormat.count(active.installedWithin))명은 이 30일 안에 깔아서 올 수 있었던 날이 더 짧아요. 그만큼 앞 칸에 몰립니다."
+        }
+        return text
+    }
+
+    /// 앱을 연 날마다 한 건 남는 이벤트를 보내는가. 안 보내는 앱은 "무언가 한 날"만
+    /// 잡혀서 활동일 · 잔존이 낮게 나온다 — 앱이 아니라 계측이 하는 말이라 카드가 밝힌다.
+    private var sendsDailyOpen: Bool {
+        store.eventTallies(for: scope, audience: .all).keys.contains {
+            ProjectStatsSpec.eventBase($0) == "app_open"
+        }
+    }
+
+    private static func percentText(_ ratio: Double) -> String {
+        String(format: "%.0f%%", (ratio * 100).rounded())
     }
 
     // MARK: - 유료기능 · 무료기능

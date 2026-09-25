@@ -61,6 +61,8 @@ extension FeedbackStore {
         // 앞 무리의 값이 그대로 나온다.
         var usage: [ScopeKey: ProjectUsage] = [:]
         var activeUsers: [ScopeKey: ActiveUsers] = [:]
+        var retention: [ScopeKey: Retention] = [:]
+        var activeDays: [ScopeKey: ActiveDays] = [:]
         var eventStats: [ScopeKey: [EventStat]] = [:]
         var eventTallies: [ScopeKey: [String: UsageNameTotal]] = [:]
         var eventLog: [ScopeKey: [UsageEvent]] = [:]
@@ -138,6 +140,8 @@ extension FeedbackStore {
         derived.overallTraffic = nil
         derived.usage = [:]
         derived.activeUsers = [:]
+        derived.retention = [:]
+        derived.activeDays = [:]
         derived.eventStats = [:]
         derived.eventTallies = [:]
         derived.trend = [:]
