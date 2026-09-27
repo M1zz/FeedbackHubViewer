@@ -212,6 +212,11 @@ def referenced_events(spec: dict) -> set:
         for slot in ('tappedEvent', 'purchasedEvent'):
             if card.get(slot):
                 names.add(card[slot])
+    # 릴리즈 건강 카드가 읽는 이벤트. 핵심 행동을 앱이 안 보내게 되면 카드는
+    # "핵심 행동률 0%"가 아니라 "퇴행"으로 읽으므로, 여기서 먼저 잡아야 한다.
+    rel = spec.get('release') or {}
+    names.update((rel.get('coreAction') or {}).get('events') or [])
+    names.update(rel.get('stabilityEvents') or [])
     return {n.split(':', 1)[0] for n in names}
 
 

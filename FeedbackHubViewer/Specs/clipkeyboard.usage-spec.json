@@ -319,5 +319,56 @@
         { "label": "결제함", "event": "paywall_purchase" }
       ]
     }
-  ]
+  ],
+  "release": {
+    "$comment": [
+      "새 버전을 내보낸 뒤 뷰어의 '릴리즈 건강' 카드가 이전 버전과 견주는 기준이다.",
+      "핵심 행동이 줄면 기존 사용자가 여전히 잘 쓰는지(하위 호환), 불안정 이벤트와 새 크래시가 늘면 안정성이 깨진 것이다.",
+      "promises 는 이 앱이 업데이트마다 지키기로 한 약속과, 그것을 기계가 지키게 하는 자리(guard)다. 약속을 깨는 변경은 guard 를 먼저 고쳐야 한다."
+    ],
+    "coreAction": {
+      "label": "키보드로 쓴 사람",
+      "events": ["keyboard_used", "keyboard_active_day"],
+      "note": "이 앱의 가치는 키보드에서 받아요. 앱에서 넣은 사람(keyboard_used)과 키보드만 쓴 날(keyboard_active_day)을 합쳐 셉니다. 새 버전에서 이 비율이 떨어지면 키보드가 죽거나, 단축어가 안 보이거나, 한도에 가려진 거예요."
+    },
+    "stabilityEvents": ["launch_incomplete"],
+    "thresholds": { "crashFreeInstallsMin": 0.99, "coreActionDropMax": 0.2, "minInstallsForVerdict": 20 },
+    "promises": [
+      {
+        "id": "memo-data-survives",
+        "title": "업데이트해도 단축어가 사라지지 않는다",
+        "guard": "Memo 3벌의 관대한 디코더(decodeIfPresent) · MigrationCompatibilityTests · MemoStoreTests"
+      },
+      {
+        "id": "entitlement-apple-only",
+        "title": "평생 Pro 는 Apple 기록(결제 · v4.0 이전 다운로드)으로만 주고, 복원은 늘 같은 답을 낸다",
+        "guard": "ProFeatureManager.isGrandfathered(hasPurchase:wasExistingFreeUser:existingFreeUserVerified:) · ProFeatureManagerTests.testIsGrandfathered_Table"
+      },
+      {
+        "id": "restore-says-result",
+        "title": "이전 구매 복원은 결과를 말한다(복원됨 · 구매 없음 · 연결 실패)",
+        "guard": "StoreManager.RestoreOutcome · restoreOutcomeAlert"
+      },
+      {
+        "id": "keyboard-app-share",
+        "title": "앱에서 만든 것과 고른 설정이 키보드에 그대로 간다",
+        "guard": "App Group 저장(MemoStore · AppGroup.defaults) · KeyboardPrefs 한 곳의 키와 기본값"
+      },
+      {
+        "id": "preview-matches-keyboard",
+        "title": "설정 미리보기와 키보드 탭은 실제 키보드와 같은 모양이다",
+        "guard": "같은 KeyboardView · KeyboardHostKind 는 하는 일만 가른다"
+      },
+      {
+        "id": "launch-never-blocks",
+        "title": "앱이 뜨는 길을 막지 않는다(워치독 · 멈춤)",
+        "guard": "scripts/check_main_thread_cloudkit.sh · scripts/check_main_thread_pasteboard.sh · scripts/check_notification_main.sh · LaunchGuard"
+      },
+      {
+        "id": "placeholder-order-user-owned",
+        "title": "빈칸 값의 순서는 사용자가 정한 대로 둔다(써도 움직이지 않는다)",
+        "guard": "PlaceholderKeepAndOrderTests · PlaceholderValueOrderTests"
+      }
+    ]
+  }
 }

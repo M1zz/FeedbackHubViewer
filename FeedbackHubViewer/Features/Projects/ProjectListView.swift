@@ -24,6 +24,8 @@ import SwiftUI
 
 struct ProjectListView: View {
     @EnvironmentObject private var store: FeedbackStore
+    /// 릴리즈 건강이 빨강인 앱을 위로. 사이드바와 같은 값을 쓴다.
+    @AppStorage("releaseRedFirst") private var redFirst = false
 
     #if os(macOS)
     private let contentSpacing: CGFloat = 16
@@ -39,7 +41,10 @@ struct ProjectListView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            StatusRow()
+            HStack {
+                StatusRow()
+                RedFirstToggle(isOn: $redFirst)
+            }
                 .padding(.horizontal, contentPadding)
                 .padding(.bottom, 8)
             content
@@ -75,7 +80,8 @@ struct ProjectListView: View {
                 ScrollView {
                     LazyVGrid(columns: columns, spacing: contentSpacing) {
                         AllProjectsCard()
-                        ForEach(store.projectSummaries) { summary in
+                        ForEach(redFirst ? store.redFirst(store.projectSummaries, key: \.project)
+                                         : store.projectSummaries) { summary in
                             ProjectCard(summary: summary)
                         }
                     }
@@ -158,13 +164,16 @@ private struct ProjectCardBody: View {
     var capacity: CarryingCapacity? = nil
     /// Only a real project shows this; 전체 has its own 진단 screen for it.
     var crashes7: Int = 0
+    /// 최신 버전의 릴리즈 건강. 전체 카드와 잴 수 없는 앱은 nil.
+    var release: ReleaseHealth.Level? = nil
     let detail: String
 
     var body: some View {
         CardFrame {
             CardTitle(systemImage: systemImage, tint: tint, name: name,
                       subtitle: subtitle, iconURL: iconURL,
-                      unreadCount: unreadCount, pendingCount: pendingCount)
+                      unreadCount: unreadCount, pendingCount: pendingCount,
+                      release: release)
 
             Divider()
 
@@ -317,6 +326,7 @@ private struct ProjectCard: View {
                             pendingCount: summary.pendingCount,
                             capacity: store.carryingCapacity(for: summary.project, period: .week),
                             crashes7: store.crashSummary(for: summary.project).last7Days,
+                            release: store.releaseLevel(for: summary.project),
                             detail: ProjectCardBody.detailText(traffic: traffic,
                                                                feedbackCount: summary.count,
                                                                averageRating: summary.averageRating,
@@ -477,10 +487,14 @@ private struct CardTitle: View {
     /// 안 읽은 피드백과 확인이 필요한 피드백. 0이면 뱃지 자체가 없다.
     var unreadCount: Int = 0
     var pendingCount: Int = 0
+    var release: ReleaseHealth.Level? = nil
 
     var body: some View {
         HStack(alignment: .center, spacing: 10) {
             AppIcon(url: iconURL, symbol: systemImage, tint: tint, size: 26)
+                .overlay(alignment: .topTrailing) {
+                    ReleaseDot(level: release).offset(x: 3, y: -3)
+                }
             VStack(alignment: .leading, spacing: 2) {
                 // A bundle id can be long ("com.devkoan.CalendarSnap") and the
                 // tail is what tells projects apart, so let it wrap and shrink

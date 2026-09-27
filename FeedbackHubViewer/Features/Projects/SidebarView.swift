@@ -15,6 +15,8 @@ struct SidebarView: View {
     /// Only for the app icons — the store links it resolves on launch are what
     /// turns a bundle id into a picture (see `AppIcon`).
     @EnvironmentObject private var keywords: KeywordStore
+    /// 릴리즈 건강이 빨강인 앱을 위로. 끄면 어제 DAU 순 그대로다.
+    @AppStorage("releaseRedFirst") private var redFirst = false
 
     var body: some View {
         // One pass for the whole list: each row's numbers and its sparkline
@@ -22,7 +24,7 @@ struct SidebarView: View {
         let traffic = store.trafficByProject
 
         return List {
-            Section("프로젝트") {
+            Section {
                 ProjectRow(name: "전체 프로젝트",
                            systemImage: "square.grid.3x3",
                            tint: .purple,
@@ -35,7 +37,8 @@ struct SidebarView: View {
                     store.selectedProject = nil
                 }
 
-                ForEach(store.projectCounts, id: \.key) { entry in
+                ForEach(redFirst ? store.redFirst(store.projectCounts, key: { $0.key }) : store.projectCounts,
+                        id: \.key) { entry in
                     ProjectRow(name: store.displayName(for: entry.key),
                                iconURL: keywords.storeApp(for: entry.key)?.iconURL,
                                systemImage: entry.key == Feedback.unclassifiedProject
@@ -46,6 +49,7 @@ struct SidebarView: View {
                                crashes7: store.crashSummary(for: entry.key).last7Days,
                                traffic: traffic[entry.key] ?? .none,
                                capacity: store.carryingCapacity(for: entry.key, period: .week),
+                               release: store.releaseLevel(for: entry.key),
                                isSelected: store.selectedProject == entry.key) {
                         store.selectedProject = entry.key
                     }
@@ -69,6 +73,12 @@ struct SidebarView: View {
                         }
                         .tint(.gray)
                     }
+                }
+            } header: {
+                HStack {
+                    Text("프로젝트")
+                    Spacer()
+                    RedFirstToggle(isOn: $redFirst)
                 }
             }
 
@@ -145,6 +155,8 @@ private struct ProjectRow: View {
     var traffic: FeedbackStore.Traffic = .none
     /// 주간 성장 상한. 못 재면 nil이고, 그때는 그 조각만 빠진다.
     var capacity: CarryingCapacity? = nil
+    /// 최신 버전의 릴리즈 건강. 잴 수 없으면 nil 이고 점이 안 뜬다.
+    var release: ReleaseHealth.Level? = nil
     let isSelected: Bool
     let action: () -> Void
 
@@ -155,11 +167,14 @@ private struct ProjectRow: View {
                         tint: isSelected ? Color.accentColor : tint, size: 22)
 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(name)
-                        .font(.body)
-                        .fontWeight(isSelected ? .semibold : .regular)
-                        .lineLimit(2)
-                        .fixedSize(horizontal: false, vertical: true)
+                    HStack(spacing: 6) {
+                        Text(name)
+                            .font(.body)
+                            .fontWeight(isSelected ? .semibold : .regular)
+                            .lineLimit(2)
+                            .fixedSize(horizontal: false, vertical: true)
+                        ReleaseDot(level: release)
+                    }
                     // 목록이 7일 사용량 순이긴 하지만, 줄에 적는 것은 그 절대값이
                     // 아니라 **지난주와 견준 결과**다. "7일 사용 5,000건"은 열어 볼
                     // 이유가 못 되고 "지난주보다 12% 줄었다"는 이유가 된다.
@@ -253,6 +268,7 @@ private struct ProjectRow: View {
         parts.append("피드백 \(count)건")
         if unread > 0 { parts.append("안 읽음 \(unread)건") }
         if crashes7 > 0 { parts.append("최근 7일 진단 \(crashes7)건") }
+        if let release { parts.append("릴리즈 건강 \(release.label)") }
         return parts.joined(separator: ", ")
     }
 }

@@ -96,6 +96,11 @@ struct ProjectStatsSpec: Decodable {
     /// 없으면 산 것으로 가르는 줄이 안 뜬다 — `FeedbackStore+Audience.swift`.
     var purchases: PurchasesSpec?
 
+    /// 릴리즈 건강 카드가 읽는 절(`Models/ReleaseHealth.swift`). 없어도 카드는 뜬다.
+    /// 크래시 · 불안정 이벤트 · 채택은 어느 앱에서나 재고, 이 절은 핵심 행동과 문턱과
+    /// 약속을 더할 뿐이다.
+    var release: ReleaseSpec?
+
     static let supportedVersion = 1
 
     // 합성된 Decodable은 기본값이 있는 프로퍼티라도 키가 없으면 실패한다. 스펙은 앱마다
@@ -107,6 +112,7 @@ struct ProjectStatsSpec: Decodable {
         case accessFlag, paidFlag, trialFlag, compedFlag, legacyPaidFlag
         case monetization, purchases
         case cards
+        case release
     }
 
     init(from decoder: Decoder) throws {
@@ -132,6 +138,7 @@ struct ProjectStatsSpec: Decodable {
         compedFlag = try c.decodeIfPresent(String.self, forKey: .compedFlag)
         legacyPaidFlag = try c.decodeIfPresent(String.self, forKey: .legacyPaidFlag)
         purchases = try c.decodeIfPresent(PurchasesSpec.self, forKey: .purchases)
+        release = try c.decodeIfPresent(ReleaseSpec.self, forKey: .release)
     }
 
     /// 산 것으로 설치를 가르는 절.

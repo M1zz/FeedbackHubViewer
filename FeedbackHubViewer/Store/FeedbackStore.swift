@@ -405,7 +405,8 @@ final class FeedbackStore: ObservableObject {
     /// end — so an unordered read handed back an arbitrary slice of the stream
     /// and the rest was never asked for again. Reads are uncapped now; what is
     /// bounded is what this device *keeps*.
-    private nonisolated static let eventLimit = 5000
+    /// 릴리즈 건강 카드가 "원본이 창 끝까지 남아 있나"를 따지려고 읽는다.
+    nonisolated static let eventLimit = 5000
     /// Diagnostics are read whole and are small; this is the only cap they get
     /// — again on what is kept, applied after the merge.
     private static let crashLimit = 1000

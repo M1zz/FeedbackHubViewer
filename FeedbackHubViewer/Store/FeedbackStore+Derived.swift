@@ -73,6 +73,8 @@ extension FeedbackStore {
         // The value is itself optional — "잴 활동이 없다"는 계산 결과이지 미계산이
         // 아니므로, 그것도 캐시해야 매 프레임 다시 훑지 않는다.
         var carryingCapacity: [CapacityKey: CarryingCapacity?] = [:]
+        // 릴리즈 건강. nil 도 결과다("창 안에 버전을 가를 이벤트가 없다").
+        var releaseHealth: [String: ReleaseHealth.Report?] = [:]
     }
 
     // MARK: - Reading through the cache
@@ -146,6 +148,7 @@ extension FeedbackStore {
         derived.eventTallies = [:]
         derived.trend = [:]
         derived.carryingCapacity = [:]
+        derived.releaseHealth = [:]
     }
 
     // MARK: - The visible records

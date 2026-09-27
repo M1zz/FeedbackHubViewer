@@ -1,5 +1,19 @@
 # todo
 
+## 릴리즈 건강 카드 (2026-09-27)
+- [x] 통계 화면 맨 위에 카드. 최신 버전과 앞 버전(같은 플랫폼 줄기)을 나란히: 활성 설치(14일) · 핵심 행동률 · 크래시 없는 설치 · 크래시 보고 · 새 크래시 지문 · 피드백(버그). 판정 초록/노랑/빨강 + 이유 한 줄, 채택(7일 활성 중 최신 버전), 스펙의 약속
+- [x] 판정은 순수 함수 `ReleaseHealth.verdict(latest:previous:thresholds:)` (Models/ReleaseHealth.swift). 계산은 `ReleaseHealth.measure`, 스토어는 `FeedbackStore+Release.swift` 로 이미 읽은 레코드만 넘김(새 CloudKit 질의 없음)
+- [x] 스펙 `release` 절 디코딩(coreAction · stabilityEvents · thresholds · promises). 없으면 기본값, 핵심 행동 없으면 "스펙에 핵심 행동이 없음 (할 일)"
+- [x] 모르는 것은 0으로 안 적음: 불안정 이벤트를 스펙이 안 적었고 한 번도 안 왔으면 크래시 없는 비율은 "모름". 원본 이벤트 보관 상한(5,000건)에 걸려 창이 잘리면 각주
+- [x] 크래시 버전: 빌드 번호가 있으면 같은 빌드 보고들의 다수결 appVersion 으로 제자리에 붙임
+- [x] 사이드바 · 프로젝트 카드에 판정 점, "빨강 먼저" 켜기(@AppStorage releaseRedFirst, 두 곳 공유)
+- [x] check-spec-drift 가 release 의 이벤트도 대조
+- [x] macOS · iOS 시뮬레이터 빌드 통과, 새 경고 없음. 판정 함수는 임시 하네스로 7가지 경우 확인
+- [ ] 테스트 타깃이 없음. 생기면 ReleaseHealth.verdict / measure 를 옮겨 넣기
+- [ ] 화면에서 눈으로 확인 못 함
+- [ ] 원본 이벤트 5,000건 상한이 허브 전체에 걸려 앱이 많으면 14일 창이 잘릴 수 있음. 버전별 설치 집합을 일 버킷에 접어 두면 풀림
+- [ ] 클립키보드 스펙 release 절은 앱 리포에서 추가 후 sync (코디네이터 담당). 다른 앱들도 coreAction · promises 를 적어야 하위 호환 판정이 섬
+
 ## 징검돌(Rebound Journal) 사용 통계 (2026-09-26)
 - [x] 허브에 안 잡히던 까닭: LeeoUsageReporter를 아예 안 불렀음. 2.0 브랜치에 기본 켬 통계 + app_open 추가, 커밋(54bc428)
 - [ ] 2.0.0 제출(처리방침 · 개인정보 라벨 · 스크린샷 · 최소 iOS 26 결정) — Rebound-Journal/todo.md 8절

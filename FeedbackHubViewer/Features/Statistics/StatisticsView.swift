@@ -89,6 +89,11 @@ struct StatisticsDashboard: View {
                     VStack(alignment: .leading, spacing: sectionSpacing) {
                         if let notice = store.usageNotice { usageNotice(notice) }
 
+                        // 새 버전이 괜찮은가가 제일 먼저다. 무리 고르개 위에 두는 것은
+                        // 이 카드가 고르개를 따르지 않기 때문이다(크래시·피드백은 설치와
+                        // 이어져 있지 않다).
+                        if let scope { ReleaseHealthCard(project: scope) }
+
                         // 틀은 어느 앱에서나 같다.
                         //
                         // 예전에는 사용 통계가 없으면 카드가 통째로 사라지고
