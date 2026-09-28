@@ -175,21 +175,19 @@ private struct ProjectRow: View {
                             .fixedSize(horizontal: false, vertical: true)
                         ReleaseDot(level: release)
                     }
-                    // 목록이 7일 사용량 순이긴 하지만, 줄에 적는 것은 그 절대값이
-                    // 아니라 **지난주와 견준 결과**다. "7일 사용 5,000건"은 열어 볼
-                    // 이유가 못 되고 "지난주보다 12% 줄었다"는 이유가 된다.
+                    // 둘째 줄은 "열어 볼 이유"만 적는다. 지난주 대비 증감은 뺐다 — 줄마다
+                    // 붙으니 오히려 읽을 것이 묻혔다. 증감은 앱 화면에서 본다.
                     HStack(spacing: 6) {
-                        if let change = weekChangeText {
-                            Text(change)
-                                .foregroundStyle(changeTint)
-                        }
-                        // 변화 옆에 위치 하나 — 지금 자리가 이 앱의 평형에서 몇 %인가.
-                        // 오르내림만으로는 "더 자랄 자리가 있는가"에 답하지 못한다.
+                        // 지금 자리가 이 앱의 평형(상한)에서 몇 %인가.
                         if let fill = capacity?.fill {
-                            // 넘어선 것을 "248%"로 적으면 좋은 소식처럼 읽힌다 —
-                            // 지금의 유입·이탈로는 못 떠받치는 수라는 뜻인데.
-                            Text(fill > 1 ? "상한 넘어섬" : "상한의 \(Int((fill * 100).rounded()))%")
+                            // 넘어선 것은 좋은 소식이 아니다. 지금의 유입 · 이탈로는 못
+                            // 떠받치는 수라 앞으로 내려간다. "상한 넘어섬"은 자꾸 좋게
+                            // 읽혀서, 무슨 일이 일어날지를 그대로 적는다.
+                            Text(fill > 1 ? "줄어들 흐름" : "상한의 \(Int((fill * 100).rounded()))%")
                                 .foregroundStyle(fill > 1 ? .orange : .secondary)
+                                .help(fill > 1
+                                      ? "지금 활동 사용자가 지금의 유입과 이탈로 지킬 수 있는 수(상한)보다 많습니다. 최근에 몰린 사람이 빠지면서 상한 쪽으로 줄어듭니다."
+                                      : "지금의 유입과 이탈이 이어지면 활동 사용자가 멈추는 자리(상한)의 몇 %까지 왔는가.")
                         }
                         if crashes7 > 0 {
                             Text("진단 \(crashes7)")
@@ -239,31 +237,13 @@ private struct ProjectRow: View {
         .accessibilityLabel(accessibilityText)
     }
 
-    /// 지난주와 견준 사용량 한 마디. 견줄 것이 없으면 아무 말도 하지 않는다 —
-    /// 0에서 0으로 간 것을 "±0%"로 적으면 있지도 않은 안정을 말하게 된다.
-    private var weekChangeText: String? {
-        let change = traffic.weekChange
-        if change.isEmpty { return nil }
-        guard let ratio = change.ratio else { return "이번 주 처음 \(change.current)건" }
-        let magnitude = abs(ratio)
-        let amount = magnitude >= 10 ? String(format: "%.0f배", magnitude)
-                                     : String(format: "%.0f%%", (magnitude * 100).rounded())
-        if change.delta == 0 { return "지난주와 같음" }
-        return "지난주보다 \(amount) " + (change.delta > 0 ? "▲" : "▼")
-    }
-
-    private var changeTint: Color {
-        let delta = traffic.weekChange.delta
-        return delta == 0 ? .secondary : (delta > 0 ? .green : .red)
-    }
-
     private var accessibilityText: String {
         var parts = ["\(name)"]
         if traffic.hasUsageData { parts.append("어제 DAU \(traffic.dauYesterday)명") }
-        if let change = weekChangeText { parts.append(change.replacingOccurrences(of: "▲", with: "늘어남")
-                                                            .replacingOccurrences(of: "▼", with: "줄어듦")) }
         if let fill = capacity?.fill, let ceiling = capacity?.capacity {
-            parts.append("성장 상한 \(Int(ceiling.rounded()))명 중 \(Int((fill * 100).rounded()))퍼센트")
+            parts.append(fill > 1
+                         ? "성장 상한 \(Int(ceiling.rounded()))명보다 많아 줄어들 흐름"
+                         : "성장 상한 \(Int(ceiling.rounded()))명 중 \(Int((fill * 100).rounded()))퍼센트")
         }
         parts.append("피드백 \(count)건")
         if unread > 0 { parts.append("안 읽음 \(unread)건") }

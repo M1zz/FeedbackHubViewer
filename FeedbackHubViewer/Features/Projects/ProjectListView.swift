@@ -458,7 +458,7 @@ private struct CapacityGlance: View {
         }
     }
 
-    /// 상한 아래면 "몇 %까지 왔는가", 넘었으면 "넘어섬".
+    /// 상한 아래면 "몇 %까지 왔는가", 넘었으면 "줄어들 흐름".
     ///
     /// 넘어선 상태에서 "248%"라고 적으면 좋은 소식처럼 읽히는데, 실은 반대다 —
     /// 지금의 유입과 이탈로는 이 수를 못 떠받친다는 뜻이라 앞으로 내려간다.
@@ -467,7 +467,7 @@ private struct CapacityGlance: View {
                                 fill: Double, ceiling: Double) -> String {
         let now = AppFormat.count(capacity.currentActive)
         let top = AppFormat.count(Int(ceiling.rounded()))
-        return fill > 1 ? "지금 \(now)명 · 상한 \(top)명 넘어섬"
+        return fill > 1 ? "지금 \(now)명 · 상한 \(top)명보다 많아 줄어들 흐름"
                         : "지금 \(now)명 · 상한 \(top)명 (\(percent(fill)))"
     }
 
