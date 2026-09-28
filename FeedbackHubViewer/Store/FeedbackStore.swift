@@ -40,6 +40,8 @@ final class FeedbackStore: ObservableObject {
     enum ProjectSection: String, CaseIterable, Identifiable {
         case feedback = "피드백"
         case stats = "통계"
+        /// 새 버전이 멀쩡한가 — 초록 · 노랑 · 빨강 판정(`ReleaseHealth`).
+        case release = "릴리즈"
         case crashes = "진단"
         /// App Store search — the only section that reads something other than
         /// the CloudKit hub (see `KeywordStore`). It sits here because it is
@@ -54,6 +56,7 @@ final class FeedbackStore: ObservableObject {
             switch self {
             case .feedback: return "text.bubble"
             case .stats: return "chart.bar"
+            case .release: return "stethoscope"
             case .crashes: return "exclamationmark.triangle"
             case .keywords: return "magnifyingglass"
             case .purchases: return "creditcard"
