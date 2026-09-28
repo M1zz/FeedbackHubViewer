@@ -20,3 +20,7 @@ Packages/
 *.ipa
 *.dSYM.zip
 *.dSYM
+
+# Python
+__pycache__/
+*.pyc
