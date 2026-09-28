@@ -364,11 +364,14 @@ struct StoreMetadataCard: View {
 
 /// 고칠 값을 적고, 바뀌는 것을 한 번 더 보여 준 뒤에 저장한다. 저장은 곧 스토어다 —
 /// 프로모션 텍스트는 심사 없이 바로 나가고, 나머지는 다음 버전 심사에 들어간다.
-private struct MetadataEditor: View {
+struct MetadataEditor: View {
     @EnvironmentObject private var connect: AppStoreConnectStore
     let project: String
     let metadata: StoreMetadata
     let locale: String
+    /// 추천 카드에서 고른 검색어. 열 때 키워드 칸 뒤에 붙여 둔다. 저장은 여전히
+    /// "바뀌는 것 보기"를 거쳐 사람이 누른다.
+    var addingKeywords: [String] = []
     let onClose: () -> Void
 
     @State private var name = ""
@@ -434,7 +437,7 @@ private struct MetadataEditor: View {
         .onAppear {
             name = base?.name ?? ""
             subtitle = base?.subtitle ?? ""
-            keywordsText = base?.keywords ?? ""
+            keywordsText = Self.merge(base?.keywords ?? "", adding: addingKeywords)
             promo = live?.promotionalText ?? ""
         }
     }
@@ -522,6 +525,23 @@ private struct MetadataEditor: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
+    }
+
+    /// 키워드 칸(쉼표로 가른 낱말)에 검색어의 낱말을 붙인다. 이미 있는 낱말은 건너뛴다.
+    /// 스토어는 칸의 낱말을 서로 엮어 검색어를 만들므로 "키보드 테마"는 "키보드",
+    /// "테마" 두 낱말로 넣는 게 글자를 아낀다.
+    static func merge(_ field: String, adding terms: [String]) -> String {
+        var words = field.split(separator: ",")
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .filter { !$0.isEmpty }
+        var seen = Set(words.map { $0.lowercased() })
+        for term in terms {
+            for word in term.split(whereSeparator: \.isWhitespace).map(String.init)
+            where seen.insert(word.lowercased()).inserted {
+                words.append(word)
+            }
+        }
+        return words.joined(separator: ",")
     }
 
     private func save() {

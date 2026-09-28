@@ -36,6 +36,9 @@ final class KeywordStore: ObservableObject {
     @Published private(set) var isChecking = false
     @Published private(set) var progress: CheckProgress?
     @Published var errorMessage: String?
+    /// 추천 검색어, 프로젝트마다 마지막으로 돌린 것. 돌리는 데 몇 분 걸려서
+    /// 다음 실행까지 디스크에 남긴다(`recommend(for:country:)`).
+    @Published private(set) var recommendations: [String: KeywordRecommendation.Report] = [:]
 
     /// Storefronts offered when adding a term. Seeded from what is already
     /// tracked so the picker matches the data, and persisted as a plain
@@ -47,6 +50,7 @@ final class KeywordStore: ObservableObject {
     private static let countriesKey = "keywordCountries"
     private static let lastCheckDayKey = "keywordLastCheckDay"
     private static let lastListingRefreshDayKey = "keywordLastListingRefreshDay"
+    private static let recommendationsFile = "keyword-recommendations"
 
     private let directory = AppStoreDirectory.shared
     private var checkTask: Task<Void, Never>?
@@ -92,6 +96,10 @@ final class KeywordStore: ObservableObject {
         guard restoreTask == nil else { return }
         restoreTask = Task { [weak self] in
             guard let self else { return }
+            if let saved = CacheFile.read([String: KeywordRecommendation.Report].self,
+                                          at: CacheFile.url(Self.recommendationsFile)) {
+                self.recommendations = saved
+            }
             guard let restored = await KeywordCache.shared.load() else { return }
             self.history = restored
             var countries = self.countries
@@ -461,6 +469,153 @@ final class KeywordStore: ObservableObject {
         if kept == 0 {
             errorMessage = "후보 \(candidates.count)개를 확인했지만 순위에 잡히는 것이 없었습니다."
         }
+    }
+
+    // MARK: - Recommendation
+
+    /// 검색이 많이 되고 이 앱이 올라갈 수 있는 검색어를 찾아 순위를 매긴다.
+    ///
+    ///   1. 씨앗 — 앱 이름과 그 낱말, 추적 중인 검색어, 경쟁 앱 이름에서 뽑은 말,
+    ///      이웃 앱 이름들이 함께 쓰는 말(`KeywordCandidates.mined`).
+    ///   2. 넓히기 — 씨앗마다 자동완성을 받아 검색어로 보이는 줄을 후보에 더한다.
+    ///      "키보드"에서 "키보드 테마"가 나오는 식이다.
+    ///   3. 검색 인기 — 후보를 한 글자씩 쳐 가며 몇 글자 만에 뜨는지 잰다.
+    ///   4. 순위 · 관련성 — 인기가 문턱을 넘은 것만 실제로 검색해서 내 순위와 상위
+    ///      10개 중 이웃 수를 읽는다. 이웃이 없고 나도 없으면 관련 없는 말로 뺀다.
+    ///
+    /// 자동완성 요청이 1초, 검색이 3초 간격이라 후보 서른 개면 2~3분 걸린다.
+    func recommend(for project: String, country: String = "kr") {
+        guard checkTask == nil else { return }
+        checkTask = Task { [weak self] in
+            await self?.runRecommendation(project: project, country: country)
+            self?.checkTask = nil
+        }
+    }
+
+    private static let maxRecommendationCandidates = 30
+
+    private func runRecommendation(project: String, country: String) async {
+        guard let trackId = history.links[project],
+              let app = history.apps[String(trackId)] else {
+            errorMessage = "App Store에서 이 앱을 먼저 찾아야 합니다."
+            return
+        }
+        guard AppStoreHints.supports(country) else {
+            errorMessage = "\(Storefront.name(for: country)) 가게의 자동완성은 아직 읽지 못합니다."
+            return
+        }
+        let hints = AppStoreHints.shared
+        isChecking = true
+        errorMessage = nil
+        defer {
+            isChecking = false
+            progress = nil
+        }
+
+        // 이웃: 앱 이름 검색의 상위 30개와, 이미 30위 안에 드는 검색어의 상위 30개.
+        // 이름 검색 하나만으로는 이웃이 좁아 "복붙"처럼 분명히 관련 있는 말이 빠졌다.
+        progress = CheckProgress(done: 0, total: 1, term: app.name)
+        let named: [StoreApp]
+        do {
+            named = try await directory.search(term: app.name, country: country)
+        } catch {
+            errorMessage = error.localizedDescription
+            return
+        }
+        var neighbours = Set(named.prefix(KeywordHistory.competitorDepth).map(\.id))
+        let tracked = history.keywords(for: project).filter { $0.country == country }
+        for keyword in tracked {
+            guard let latest = history.checks[keyword.id]?.max(by: { $0.key < $1.key })?.value,
+                  let rank = latest.rank(of: trackId), rank <= 30 else { continue }
+            neighbours.formUnion(latest.top)
+        }
+        neighbours.remove(trackId)
+        // 평점이 수만 개인 앱(ChatGPT 같은)은 어느 검색에나 끼어 이웃으로 잡힌다. 그대로
+        // 두면 "챗gpt"가 이 앱과 관련 있는 말로 통과한다.
+        let giants = (named + Array(history.apps.values))
+            .filter { $0.ratingCount >= KeywordRecommendation.giantRatings }
+            .map(\.id)
+        neighbours.subtract(giants)
+
+        // 1. 씨앗
+        var seeds: [String] = [app.name]
+        seeds += Self.words(in: app.name).filter { $0.count >= 2 }
+        seeds += tracked.map(\.term)
+        seeds += suggestions(for: project, limit: 6)
+        seeds += KeywordCandidates.mined(from: named.prefix(30).map(\.name), limit: 8)
+
+        var candidates: [String] = []
+        var seen: Set<String> = []
+        func take(_ term: String) {
+            let trimmed = term.trimmingCharacters(in: .whitespaces)
+            let key = KeywordRecommendation.compact(trimmed)
+            guard !key.isEmpty, candidates.count < Self.maxRecommendationCandidates,
+                  seen.insert(key).inserted else { return }
+            candidates.append(trimmed)
+        }
+        seeds.forEach(take)
+
+        // 2. 넓히기
+        for seed in seeds.prefix(10) {
+            guard !Task.isCancelled else { return }
+            progress = CheckProgress(done: 0, total: 1, term: "\(seed) 자동완성")
+            guard let expansions = try? await hints.hints(for: seed, country: country) else { continue }
+            expansions.filter(KeywordRecommendation.looksLikeSearchTerm).forEach(take)
+        }
+
+        // 3 · 4
+        var items: [KeywordRecommendation.Item] = []
+        var dropped: [String] = []
+        var failures = 0
+        for (index, term) in candidates.enumerated() {
+            guard !Task.isCancelled else { return }
+            progress = CheckProgress(done: index + 1, total: candidates.count, term: term)
+
+            var hintsByPrefix: [[String]] = []
+            let target = KeywordRecommendation.compact(term)
+            for prefix in KeywordRecommendation.prefixes(of: term) {
+                guard let list = try? await hints.hints(for: prefix, country: country) else { break }
+                hintsByPrefix.append(list)
+                if list.contains(where: { KeywordRecommendation.compact($0) == target }) { break }
+            }
+            let popularity = KeywordRecommendation.popularity(of: term, hintsByPrefix: hintsByPrefix)
+            // 문턱 아래는 검색하지 않는다. 검색 한 번이 3초라, 아무도 안 치는 말에 쓰기 아깝다.
+            guard popularity.score >= KeywordRecommendation.minimumPopularity else { continue }
+
+            do {
+                let results = try await directory.search(term: term, country: country)
+                let rank = results.firstIndex { $0.id == trackId }.map { $0 + 1 }
+                let near = results.prefix(10).filter { neighbours.contains($0.id) }.count
+                let ratings = results.prefix(5).map(\.ratingCount).sorted()
+                let item = KeywordRecommendation.Item(
+                    term: term, popularity: popularity.score, typedToAppear: popularity.typed,
+                    rank: rank, neighbours: near,
+                    topRatings: ratings.isEmpty ? 0 : ratings[ratings.count / 2])
+                if KeywordRecommendation.isRelevant(rank: rank, neighbours: near) {
+                    items.append(item)
+                } else {
+                    dropped.append(term)
+                }
+            } catch is CancellationError {
+                return
+            } catch {
+                failures += 1
+                if errorMessage == nil { errorMessage = error.localizedDescription }
+            }
+        }
+
+        recommendations[project] = KeywordRecommendation.Report(
+            country: country, measuredAt: Date(),
+            items: KeywordRecommendation.ranked(items), dropped: dropped)
+        CacheFile.write(recommendations, to: CacheFile.url(Self.recommendationsFile))
+        if failures > 0 {
+            errorMessage = "후보 \(failures)개는 검색하지 못했습니다. " + (errorMessage ?? "")
+        }
+    }
+
+    /// 이 앱이 이미 이 가게에서 추적 중인 검색어인가.
+    func isTracked(_ term: String, country: String, for project: String) -> Bool {
+        history.keywords[TrackedKeyword(term: term, country: country).id]?.projects.contains(project) ?? false
     }
 
     // MARK: - Reading
