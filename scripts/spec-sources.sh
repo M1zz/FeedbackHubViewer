@@ -12,16 +12,17 @@
 # 앱 리포 경로가 따로 필요한 까닭: 드리프트 검사는 스펙만 보는 게 아니라 **그 앱의
 # Swift 코드**를 읽어서 "스펙이 가리키는 지표를 아직 보내고 있는가"를 묻는다.
 
-# 이 리포는 workspace/code/FeedbackHubViewer 에 있고, 앱 리포는 workspace/Auto/ 에 있다.
-# 그래서 두 칸 올라가야 workspace 다 (한 칸은 code/ 까지밖에 못 간다).
+# 이 리포는 workspace/code/FeedbackHubViewer 에 있고, 앱 리포도 workspace/code/ 에 있다.
+# 두 칸 올라간 workspace 를 기준으로 적는다.
 WORKSPACE="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 
 # ⚠️ 예전에는 경로가 "$WORKSPACE/ClipKeyboard/..." 와 "$WORKSPACE/../Auto/두번알림/..." 이었다.
 #    둘 다 없는 경로라 스크립트는 늘 "없음 … 건너뜀"만 찍고 지나갔고, --check 가 드리프트를
 #    한 번도 못 잡았다. 스펙이 앱 코드와 어긋난 채 몇 달을 갔던 것이 그 탓이다.
+# ⚠️ 2026-09 에 앱 리포가 workspace/code/<영문 이름> 으로 옮겨져 위 Auto/ 경로가 또 죽었다.
 SPECS=(
-  "$WORKSPACE/Auto/클립키보드|docs/engineering/usage-spec.json|clipkeyboard.usage-spec.json"
-  "$WORKSPACE/Auto/두번알림|docs/usage-spec.json|rereminder.usage-spec.json"
+  "$WORKSPACE/code/ClipKeyboard|docs/engineering/usage-spec.json|clipkeyboard.usage-spec.json"
+  "$WORKSPACE/code/Rereminder|docs/usage-spec.json|rereminder.usage-spec.json"
 )
 
 DEST="FeedbackHubViewer/Specs"

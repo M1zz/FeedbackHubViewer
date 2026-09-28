@@ -40,19 +40,26 @@ final class FeedbackStore: ObservableObject {
     enum ProjectSection: String, CaseIterable, Identifiable {
         case feedback = "피드백"
         case stats = "통계"
+        /// 새 버전이 멀쩡한가 — 초록 · 노랑 · 빨강 판정(`ReleaseHealth`).
+        case release = "릴리즈"
         case crashes = "진단"
         /// App Store search — the only section that reads something other than
         /// the CloudKit hub (see `KeywordStore`). It sits here because it is
         /// still one thing you look at *inside* a project, which is what this
         /// enum means.
         case keywords = "키워드"
+        /// App Store Connect에 걸린 상품과 판매 — 키워드처럼 허브 밖을 읽는다
+        /// (`AppStoreConnectStore`).
+        case purchases = "앱 내 구입"
         var id: String { rawValue }
         var systemImage: String {
             switch self {
             case .feedback: return "text.bubble"
             case .stats: return "chart.bar"
+            case .release: return "stethoscope"
             case .crashes: return "exclamationmark.triangle"
             case .keywords: return "magnifyingglass"
+            case .purchases: return "creditcard"
             }
         }
     }
@@ -401,7 +408,8 @@ final class FeedbackStore: ObservableObject {
     /// end — so an unordered read handed back an arbitrary slice of the stream
     /// and the rest was never asked for again. Reads are uncapped now; what is
     /// bounded is what this device *keeps*.
-    private nonisolated static let eventLimit = 5000
+    /// 릴리즈 건강 카드가 "원본이 창 끝까지 남아 있나"를 따지려고 읽는다.
+    nonisolated static let eventLimit = 5000
     /// Diagnostics are read whole and are small; this is the only cap they get
     /// — again on what is kept, applied after the merge.
     private static let crashLimit = 1000

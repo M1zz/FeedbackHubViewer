@@ -11,6 +11,7 @@ import SwiftUI
 
 struct ContentView: View {
     @EnvironmentObject private var store: FeedbackStore
+    @EnvironmentObject private var connect: AppStoreConnectStore
     #if os(iOS)
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     #endif
@@ -29,6 +30,13 @@ struct ContentView: View {
             .onReceive(NotificationCenter.default.publisher(for: Platform.willStopNotification)) { _ in
                 store.flushCache()
             }
+            #if os(iOS)
+            // 맥은 설정 창(⌘,)이고, 터치 기기는 "더 보기 → 설정"이 이 시트를 연다.
+            .sheet(isPresented: $connect.isShowingSettings) {
+                SettingsView()
+                    .environmentObject(connect)
+            }
+            #endif
     }
 
     @ViewBuilder
@@ -50,4 +58,5 @@ struct ContentView: View {
 #Preview {
     ContentView()
         .environmentObject(FeedbackStore())
+        .environmentObject(AppStoreConnectStore())
 }

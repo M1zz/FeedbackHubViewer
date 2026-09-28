@@ -34,8 +34,20 @@ struct KeywordsView: View {
             LazyVStack(alignment: .leading, spacing: 14) {
                 if let app = linkedApp { linkedAppCard(app) } else { unlinkedCard }
                 if linkedApp != nil && standings.isEmpty { startCard }
+                // 무엇을 추적할지 고르는 카드라 추가 칸보다 먼저 온다.
+                if let project, linkedApp != nil {
+                    KeywordRecommendationCard(project: project,
+                                              country: addCountries.first ?? keywords.countries.first ?? "kr")
+                }
                 addCard
                 if !standings.isEmpty { rankCard }
+                // ASO 카드들 — 한 앱을 볼 때만. 순위(어디 서 있나) → 메타데이터(무엇을 걸어
+                // 뒀나) → 노출 · 전환(그래서 사람이 왔나) 차례로 읽힌다.
+                if let project, linkedApp != nil {
+                    if !standings.isEmpty { RankTrendCard(project: project) }
+                    StoreMetadataCard(project: project)
+                    StoreFunnelCard(project: project)
+                }
                 // Shown even when empty. Competitors are read out of the
                 // results for the terms you track, so with no terms this card
                 // is blank — and a card that just disappears leaves you to

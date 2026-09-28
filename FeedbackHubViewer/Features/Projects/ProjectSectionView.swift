@@ -4,7 +4,7 @@
 //
 //  One project's screen — the second level of the app. The project is chosen
 //  first (sidebar on a Mac/iPad, the project list on a phone); 피드백 · 통계 ·
-//  진단 · 키워드 are the things to look at inside it, switched by the buttons
+//  릴리즈 · 진단 · 키워드 are the things to look at inside it, switched by the buttons
 //  at the top. They are peers of each other and never of the project, which is
 //  what the old 개요/통계 top-level split got backwards.
 //
@@ -14,6 +14,7 @@ import SwiftUI
 struct ProjectSectionView: View {
     @EnvironmentObject private var store: FeedbackStore
     @EnvironmentObject private var keywords: KeywordStore
+    @EnvironmentObject private var purchases: AppStoreConnectStore
     /// 섹션 칸을 몇 줄로 접을지가 여기에 달렸다.
     @Environment(\.dynamicTypeSize) private var typeSize
     /// nil == 전체 프로젝트.
@@ -48,30 +49,31 @@ struct ProjectSectionView: View {
 
     // MARK: - Section switch
 
-    /// Big labelled buttons rather than a segmented control: each one says
-    /// what it is with an icon, a word and its count, and each is a comfortable
-    /// target on a phone. A segmented control put the same choices in half the
-    /// height and none of the meaning.
+    /// 한 줄짜리 알약 버튼. 넘치면 옆으로 민다.
+    ///
+    /// 예전에는 아이콘 · 이름 · 건수 두 줄짜리 큰 버튼을 격자로 깔았다. 뜻은 잘 보였지만
+    /// 아이폰에서는 여섯 칸이 두 줄로 접혀 화면 윗부분을 통째로 먹었고, 정작 봐야 할
+    /// 목록이 그만큼 밀려 내려갔다. 이제는 이름과 건수를 한 줄에 붙이고, 칸이 모자라면
+    /// 줄을 늘리는 대신 옆으로 넘긴다.
+    ///
+    /// `ScrollView` 라서 `HStack` 이 화면을 밀어내던 옛 문제(칸들의 이상적인 너비 합이
+    /// 화면보다 넓어져 양옆이 잘리던 것)는 생기지 않는다 — 스크롤 뷰는 받은 너비만 쓴다.
     private var sectionBar: some View {
-        // 칸이 아니라 **격자**다. `HStack`은 아이들이 요구하는 너비를 합쳐서
-        // 제 너비로 삼으므로, 글씨를 키운 기기나 좁은 화면에서 네 칸이 화면보다
-        // 넓어지면 그 줄이 화면 전체를 밀어냈다 — 맨 끝 칸이 잘리는 데서 끝나지
-        // 않고, 아래 목록까지 가운데로 밀려 양옆이 함께 잘렸다. 격자는 받은
-        // 너비를 절대 넘지 않고, 한 줄에 못 담으면 다음 줄로 접는다.
-        LazyVGrid(columns: sectionColumns, spacing: 6) {
-            ForEach(FeedbackStore.ProjectSection.allCases) { section in
-                sectionButton(section)
+        ScrollViewReader { proxy in
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 6) {
+                    ForEach(FeedbackStore.ProjectSection.allCases) { section in
+                        sectionButton(section).id(section)
+                    }
+                }
+            }
+            // 다른 화면에서 링크로 들어와 끝쪽 탭이 골라졌을 때도 보이게.
+            .onAppear { proxy.scrollTo(store.projectSection, anchor: .center) }
+            .onChange(of: store.projectSection) { _, section in
+                withAnimation(.easeOut(duration: 0.2)) { proxy.scrollTo(section, anchor: .center) }
             }
         }
-        .hubHeaderBar()
-    }
-
-    /// 네 칸이 기본, 글씨 크기를 접근성 단계까지 키웠으면 두 칸씩 두 줄.
-    /// 그 크기에서 네 칸은 아이콘 하나와 글자 두어 자로 쪼그라들어, 무엇을
-    /// 고르는 버튼인지 읽을 수 없게 된다.
-    private var sectionColumns: [GridItem] {
-        let count = typeSize.isAccessibilitySize ? 2 : 4
-        return Array(repeating: GridItem(.flexible(), spacing: 6), count: count)
+        .hubHeaderBar(verticalPadding: 8)
     }
 
     private func sectionButton(_ section: FeedbackStore.ProjectSection) -> some View {
@@ -81,51 +83,30 @@ struct ProjectSectionView: View {
         return Button {
             store.projectSection = section
         } label: {
-            VStack(spacing: 3) {
-                HStack(spacing: 6) {
-                    // 안 읽은 피드백은 뱃지로 붙는다. 밑줄의 작은 글씨로 적으면
-                    // "아직 안 본 게 있다"가 다른 숫자들 사이에 묻힌다.
-                    //
-                    // 아이콘 **옆이 아니라 자리에** 붙는다. 칸 너비는 넷으로
-                    // 나뉘어 있고 아이콘도 뱃지도 줄어들 줄을 모르니, 둘을 다
-                    // 넣으면 줄어드는 것은 이름뿐이라 "피드백"이 "피…"가 된다.
-                    // 뱃지가 있는 동안에는 뱃지가 곧 그 칸의 아이콘이다.
-                    if unread > 0 {
-                        CountBadge(count: unread, systemImage: "envelope.badge.fill",
-                                   tint: .red, name: "안 읽은 피드백")
-                    } else if !typeSize.isAccessibilitySize {
-                        // 접근성 글씨 크기에서는 아이콘도 뺀다. 아이콘은 글씨와
-                        // 함께 커지면서 줄어들지는 않는 유일한 조각이라, 그
-                        // 크기에서는 아이콘 하나가 이름 전체를 삼킨다.
-                        Image(systemName: section.systemImage)
-                            .font(.headline)
-                    }
-                    Text(section.rawValue)
-                        .font(.headline)
+            HStack(spacing: 5) {
+                // 안 읽은 피드백은 뱃지가 아이콘 자리를 대신한다. 둘 다 두면 같은
+                // 칸에 표시가 두 개라 눈이 어디로 갈지 모른다.
+                if unread > 0 {
+                    CountBadge(count: unread, systemImage: "envelope.badge.fill",
+                               tint: .red, name: "안 읽은 피드백")
+                } else if !typeSize.isAccessibilitySize {
+                    Image(systemName: section.systemImage)
+                        .font(.subheadline)
                 }
-                // 두 줄 모두 칸 너비를 제안받아야 한다. 이게 없으면 글자는 제
-                // 이상적인 너비를 그대로 쓰고, 바깥 `frame`은 배경만 칸에 맞춰
-                // 그린다 — 배경 밖으로 글자가 삐져나오고, 맨 끝 칸은 화면
-                // 바깥으로 잘린다. "화면 양옆이 잘리는" 게 이것이었다.
-                .frame(maxWidth: .infinity)
+                Text(section.rawValue)
+                    .font(.subheadline.weight(.semibold))
                 Text(countLabel(for: section, count: count))
-                    .font(.subheadline)
-                    .opacity(isSelected ? 0.9 : 0.7)
-                    .frame(maxWidth: .infinity)
+                    .font(.caption)
+                    .opacity(isSelected ? 0.85 : 0.6)
             }
             .lineLimit(1)
-            // 0.7에서 멈추면 좁은 아이폰에서 "App Store 검색"이 못 들어간다.
-            // 줄 하나짜리 보조 문구라 조금 더 줄어도 읽힌다.
-            .minimumScaleFactor(0.6)
-            .frame(maxWidth: .infinity)
-            // 글자가 모서리에 닿지 않게. 배경 안쪽 여백이 없으면 딱 맞게
-            // 들어가도 잘린 것처럼 보인다.
-            .padding(.horizontal, 8)
-            .padding(.vertical, 10)
+            .fixedSize()
+            .padding(.horizontal, 12)
+            .padding(.vertical, 7)
             .background(isSelected ? Color.accentColor : Color.secondary.opacity(0.12),
-                        in: RoundedRectangle(cornerRadius: 12))
+                        in: Capsule())
             .foregroundStyle(isSelected ? Color.white : Color.primary)
-            .contentShape(RoundedRectangle(cornerRadius: 12))
+            .contentShape(Capsule())
         }
         .buttonStyle(.plain)
         .accessibilityAddTraits(isSelected ? [.isSelected] : [])
@@ -136,9 +117,18 @@ struct ProjectSectionView: View {
         switch section {
         case .feedback: return store.scopedFeedback.count
         case .stats: return store.usage(for: project).installs
+        // 빨강인 앱 수. 한 앱이면 0 아니면 1.
+        case .release: return releaseRedCount
         case .crashes: return store.crashSummary(for: project).total
         case .keywords: return keywords.standings(for: project).filter(\.isRanked).count
+        case .purchases: return project.flatMap { purchases.products(for: $0)?.count } ?? 0
         }
+    }
+
+    /// 한 앱이면 그 앱이 빨강일 때 1, 전체면 빨강인 앱 수.
+    private var releaseRedCount: Int {
+        let keys = project.map { [$0] } ?? store.projectCounts.map(\.key)
+        return keys.filter { store.releaseLevel(for: $0) == .red }.count
     }
 
     /// The second line of each button — the number in words, not a bare digit.
@@ -150,6 +140,11 @@ struct ProjectSectionView: View {
             return "\(count)건"
         case .stats:
             return count > 0 ? "설치 \(count)대" : "사용 통계"
+        case .release:
+            guard let project else {
+                return count > 0 ? "빨강 \(count)개" : "빨강 없음"
+            }
+            return store.releaseLevel(for: project)?.label ?? "판정 없음"
         case .crashes:
             return count > 0 ? "\(count)건" : "없음"
         case .keywords:
@@ -159,6 +154,9 @@ struct ProjectSectionView: View {
             // fraction there is a zero that means nothing. Count the terms.
             guard project != nil else { return "\(tracked)개 추적" }
             return "\(count)/\(tracked) 잡힘"
+        case .purchases:
+            guard purchases.isConfigured else { return "연결 안 됨" }
+            return count > 0 ? "상품 \(count)개" : "App Store Connect"
         }
     }
 
@@ -180,10 +178,14 @@ struct ProjectSectionView: View {
             FeedbackListView(selection: $selection)
         case .stats:
             StatisticsDashboard(project: project)
+        case .release:
+            ReleaseHealthView(project: project)
         case .crashes:
             CrashListView(project: project)
         case .keywords:
             KeywordsView(project: project)
+        case .purchases:
+            InAppPurchasesView(project: project)
         }
     }
 
@@ -213,6 +215,20 @@ struct ProjectSectionView: View {
             text += " · 7일 사용자 \(usage.activeInstalls7)명\(Self.change(usage.activeInstalls7, usage.previousActiveInstalls7))"
             text += " · 7일 사용 \(AppFormat.count(usage.events7))건\(Self.change(usage.events7, usage.previousEvents7))"
             return text
+        case .release:
+            guard let project else {
+                let levels = store.projectCounts.compactMap { store.releaseLevel(for: $0.key) }
+                guard !levels.isEmpty else { return "판정할 수 있는 앱 없음" }
+                let red = levels.filter { $0 == .red }.count
+                let yellow = levels.filter { $0 == .yellow }.count
+                return "앱 \(levels.count)개 판정 · 빨강 \(red) · 노랑 \(yellow)"
+            }
+            guard let report = store.releaseHealth(for: project) else {
+                return "최근 \(ReleaseHealth.windowDays)일에 버전을 가를 사용 이벤트 없음"
+            }
+            var text = "최신 \(report.latest.version)"
+            if let previous = report.previous { text += " · 앞 버전 \(previous.version)" }
+            return text + " · \(report.verdict.level.label)"
         case .crashes:
             let summary = store.crashSummary(for: project)
             guard !summary.isEmpty else { return "올라온 진단 없음" }
@@ -226,6 +242,11 @@ struct ProjectSectionView: View {
             var text = "키워드 \(standings.count)개 · \(ranked.count)개 잡힘"
             if let best { text += " · 최고 \(best)위" }
             return text
+        case .purchases:
+            guard purchases.isConfigured else { return "App Store Connect 키를 넣으면 상품과 판매가 나옵니다" }
+            guard let project else { return "앱별 최근 \(AppStoreConnectStore.salesDays)일 판매 순위" }
+            guard let products = purchases.products(for: project) else { return "App Store Connect 상품" }
+            return "상품 \(products.count)개 · 판매 중 \(products.filter(\.isOnSale).count)개"
         }
     }
 }

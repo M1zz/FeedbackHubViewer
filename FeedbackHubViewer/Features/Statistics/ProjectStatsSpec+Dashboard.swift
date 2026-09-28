@@ -85,8 +85,11 @@ extension ProjectStatsSpec {
         var result: [DashboardCardSpec] = []
         // 수익 절이 맨 앞인 이유: 쐐기에 닿은 사람 수는 다른 어떤 숫자보다
         // 먼저 읽혀야 한다. 가치를 못 받은 사람에게는 어떤 값도 비싸다.
+        if let ladder = monetization?.ladder { result.append(.ladder(ladder)) }
+        // 수익 절 밖의 사다리 — 쐐기 하나로는 어느 칸에서 새는지 안 보일 때 더 잘게
+        // 쪼갠 것이라 쐐기 바로 밑에 둔다.
+        result += ladders.map(DashboardCardSpec.ladder)
         if let money = monetization {
-            if let ladder = money.ladder { result.append(.ladder(ladder)) }
             if let wall = money.wallCard { result.append(.wall(wall)) }
             if let moments = money.momentsCard { result.append(.moments(moments)) }
         }
@@ -111,6 +114,10 @@ extension ProjectStatsSpec {
         /// 이 밑이면 가격이 아니라 제품 문제라고 그 앱이 정해 둔 선(0~1).
         var floor: Double?
         let steps: [Step]
+        /// 이 지표 키를 **보낸** 설치만 센다. 새 버전에서 생긴 지표로 사다리를 세울 때
+        /// 쓴다 — 옛 스냅샷을 섞으면 "안 켰다"와 "안 보냈다"가 한 칸에 섞여 칸마다
+        /// 비율이 옛 설치 수만큼 눌린다. 뺀 수는 카드 각주에 적는다.
+        var onlyWith: String?
 
         /// 한 칸. `metric`이 없으면 "설치 전부"(첫 칸).
         struct Step: Decodable {
@@ -121,13 +128,14 @@ extension ProjectStatsSpec {
             var hint: String?
         }
 
-        enum CodingKeys: String, CodingKey { case target, floor, steps }
+        enum CodingKeys: String, CodingKey { case target, floor, steps, onlyWith }
         init(from decoder: Decoder) throws {
             chrome = try CardChrome(from: decoder)
             let c = try decoder.container(keyedBy: CodingKeys.self)
             target = try c.decodeIfPresent(Double.self, forKey: .target)
             floor = try c.decodeIfPresent(Double.self, forKey: .floor)
             steps = try c.decode([Step].self, forKey: .steps)
+            onlyWith = try c.decodeIfPresent(String.self, forKey: .onlyWith)
         }
     }
 

@@ -55,6 +55,7 @@ struct HubOverflowMenu: View {
             }
             Section {
                 IdentityMenu()
+                OpenSettingsButton()
             }
         } label: {
             Label("더 보기", systemImage: "ellipsis.circle")

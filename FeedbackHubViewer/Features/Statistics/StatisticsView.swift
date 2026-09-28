@@ -80,6 +80,10 @@ struct StatisticsDashboard: View {
                     systemImage: "chart.bar",
                     description: Text(store.noticeMessage ?? "아직 수집된 데이터가 없습니다.")
                 )
+            } else if scope == nil {
+                // 전체 프로젝트는 합이 아니라 앱끼리의 비교다 — 더한 숫자는
+                // 어느 앱에 대해서도 말하지 않는다(`ProjectComparisonView`).
+                ProjectComparisonView()
             } else {
                 ScrollView {
                     VStack(alignment: .leading, spacing: sectionSpacing) {
@@ -97,8 +101,10 @@ struct StatisticsDashboard: View {
                         audiencePicker
                         userTiles
                         activeUsersCard
+                        retentionCard
+                        activeDaysCard
                         if audience == .all { accessCard }
-                        if audience == .all, store.canSplitByPayment(for: scope) { paymentCard }
+                        if audience == .all, store.canSplitByPurchase(for: scope) { purchaseCard }
                         specCards
                         weekOverWeek
                         CarryingCapacityCard(project: scope, audience: audience)
@@ -324,13 +330,13 @@ struct StatisticsDashboard: View {
     /// 칸은 접근 축이 언제나 셋이다 — 전체 · 유료기능 · 무료기능. 앱에 따라 나타났다
     /// 사라지는 칸이 없으므로 프로젝트를 옮겨도 고른 것이 그대로 남는다.
     ///
-    /// 결제 축(Pro 결제 · 옛 유료 구매 · 부가 결제 · 체험 · 무상 · 안 냄)은 **둘째 줄**이고, 결제 키를
-    /// 보내는 범위에서만 뜬다. 한 줄에 섞으면 결제를 모르는 앱에서 다섯 칸이 빈 채로
-    /// 눌린다. 두 줄은 한 선택을 나눠 쓴다 — 한쪽을 고르면 다른 줄은 비어 보인다.
+    /// 산 것 축(파는 것의 조합 2ⁿ칸)은 **둘째 줄**이고, 스펙에 파는 것을 적은 앱 하나를 볼
+    /// 때만 뜬다. 칸이 여덟을 넘기도 해서 나란히 세우지 않고 메뉴로 접는다. 두 줄은 한 선택을
+    /// 나눠 쓴다 — 한쪽을 고르면 다른 줄은 비어 보인다.
     @ViewBuilder
     private var audiencePicker: some View {
         let installs = store.audienceInstalls(for: scope)
-        if installs.known > 0 || installs.paymentKnown > 0 {
+        if installs.known > 0 || !installs.cells.isEmpty {
             VStack(alignment: .leading, spacing: 6) {
                 if installs.known > 0 {
                     Picker("누구를 볼까요", selection: $audience) {
@@ -341,28 +347,52 @@ struct StatisticsDashboard: View {
                     .pickerStyle(.segmented)
                     .labelsHidden()
                 }
-                if installs.paymentKnown > 0 {
-                    HStack(spacing: 8) {
-                        Text("결제로")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                        Picker("결제로 볼까요", selection: $audience) {
-                            ForEach(FeedbackStore.Audience.paymentCases) { group in
-                                Text("\(group.label) \(installs.count(for: group))").tag(group)
-                            }
-                        }
-                        .pickerStyle(.segmented)
-                        .labelsHidden()
-                    }
+                if !installs.cells.isEmpty {
+                    purchaseMenu(installs)
                 }
                 footnote(audienceNote)
             }
             .padding(10)
             .cardSurface(radius: 10, bordered: false)
             .onChange(of: scope) {
-                // 결제 축은 범위마다 뜨고 안 뜬다. 안 뜨는 범위로 옮겼는데 고른 것이
-                // 남아 있으면, 고르개도 없이 화면이 걸러진 채로 남는다.
-                if audience.axis == .payment, !store.canSplitByPayment(for: scope) { audience = .all }
+                // 산 것 칸은 프로젝트마다 뜻이 다르다(한 앱의 "Pro"는 다른 앱의 "Pro"가 아니다).
+                // 범위를 옮기면 고른 칸을 들고 가지 않는다.
+                if audience.axis == .purchase { audience = .all }
+            }
+        }
+    }
+
+    /// 산 것 축의 메뉴. 한 대도 없는 칸은 고를 수 없게 두고(고르면 빈 화면이다), 표본이 얇은
+    /// 칸은 고를 수는 있되 그렇다고 적는다.
+    private func purchaseMenu(_ installs: FeedbackStore.AudienceInstalls) -> some View {
+        HStack(spacing: 8) {
+            Text("산 것으로")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Menu {
+                ForEach(installs.cells, id: \.mask) { cell in
+                    let count = installs.purchased[cell.mask]?.count ?? 0
+                    Button {
+                        audience = .purchased(cell)
+                    } label: {
+                        let thin = count < FeedbackStore.thinPurchaseCell ? " · 표본 적음" : ""
+                        if audience == .purchased(cell) {
+                            Label("\(cell.label) \(count)대\(thin)", systemImage: "checkmark")
+                        } else {
+                            Text("\(cell.label) \(count)대\(thin)")
+                        }
+                    }
+                    .disabled(count == 0)
+                }
+            } label: {
+                Text(audience.axis == .purchase ? audience.label : "고르기")
+                    .font(.caption.weight(.medium))
+            }
+            .fixedSize()
+            if audience.axis == .purchase {
+                Button("해제") { audience = .all }
+                    .font(.caption)
+                    .buttonStyle(.borderless)
             }
         }
     }
@@ -380,21 +410,25 @@ struct StatisticsDashboard: View {
                 // 구버전 설치는 안 보낸다. 그런 설치는 무료기능이 아니라 모름이다.
                 text += " — 권한을 보내는 설치 \(installs.known)대 기준이라, 안 보내는 설치 \(total - installs.known)대는 어느 쪽에도 들어가지 않아요(무료기능이 아니라 모름)"
             }
-            if installs.paymentKnown > 0 {
-                text += ". 둘째 줄은 돈을 낸 방식이고, 결제 플래그(flag.isPaid)를 보내는 설치 \(installs.paymentKnown)대만 갈립니다"
+            if !installs.cells.isEmpty {
+                text += ". 둘째 줄은 지금 파는 것 가운데 무엇을 샀는가이고, 새 규약(flag.schema)을 보내는 설치 \(installs.purchaseKnown)대만 갈립니다"
             }
             return text + ". 고르면 이 화면 전체가 그 무리만 놓고 다시 그려집니다."
         case .paidFeatures, .freeFeatures:
             let count = installs.count(for: audience)
             return "\(audience.label) — \(audience.blurb) \(count)대만 놓고 본 화면입니다. " + caveat
-        case .paying, .legacyPaid, .addOn, .trial, .comped, .unpaid:
-            let count = installs.count(for: audience)
-            var text = "\(audience.label) — \(audience.blurb) \(count)대만 놓고 본 화면입니다. 한 설치는 한 칸에만 들고, 여럿에 해당하면 돈에 가까운 쪽(Pro 결제 · 옛 유료 구매 → 부가 결제 → 체험 → 무상)에 듭니다."
-            if !installs.paymentUnknown.isEmpty {
-                text += " 결제 플래그를 안 보내는 설치 \(installs.paymentUnknown.count)대는 어느 칸에도 없어요(안 냄이 아니라 모름)."
+        case .purchased(let cell):
+            let ids = installs.purchased[cell.mask] ?? []
+            var text = "\(audience.label) — \(audience.blurb) \(ids.count)대만 놓고 본 화면입니다. 한 설치는 산 것의 조합 하나에만 듭니다."
+            let free = ids.intersection(installs.unlockedWithoutBuying).count
+            if free > 0 {
+                text += " 그중 \(free)대는 체험·무상·옛 유료 다운로드로 돈 없이 열려 있어요."
             }
-            if let missing = installs.unreported[audience], !missing.isEmpty {
-                text += " 이 중 \(missing.count)대는 " + Self.unreportedNote(audience)
+            if ids.count < FeedbackStore.thinPurchaseCell {
+                text += " 표본이 \(FeedbackStore.thinPurchaseCell)대에 못 미쳐서, 한두 대가 옮겨도 숫자가 뒤집힙니다."
+            }
+            if !installs.purchaseUnknown.isEmpty {
+                text += " 새 규약 이전 버전 \(installs.purchaseUnknown.count)대는 어느 칸에도 없어요(안 삼이 아니라 모름)."
             }
             return text + " " + caveat
         }
@@ -439,7 +473,7 @@ struct StatisticsDashboard: View {
                 }
                 stickinessRow(active)
                 activeUsersChart(active)
-                footnote("선 위를 가리키면(맥은 마우스를 올리고, 아이폰은 손가락을 대고 밀면) 그 날의 정확한 값이 나옵니다. 범례를 누르면 그 계열이 켜지고 꺼지며, 축은 켜진 것에만 맞춰 다시 잡혀요. 각 창 안에서 이벤트를 보낸 서로 다른 설치를 셉니다. 창이 서로 겹치므로 세 숫자를 더하면 안 돼요 — 오늘 쓴 사람은 주간·월간에도 들어 있습니다. 오늘은 아직 지나지 않은 하루라 DAU는 하루가 끝날 때까지 계속 올라가고, 그래서 어제와 견주는 화살표는 늦은 시각일수록 정확해집니다. 위 '최근 7일 활성' 타일은 스냅샷이 적어 보낸 마지막 활동 시각 기준이라 여기 WAU와 숫자가 다를 수 있어요.")
+                footnote("선 위를 가리키면(맥은 마우스를 올리고, 아이폰은 손가락을 대고 밀면) 그 날의 정확한 값이 나옵니다. 범례를 누르면 그 계열이 켜지고 꺼지며, 축은 켜진 것에만 맞춰 다시 잡혀요. 각 창 안에서 이벤트를 보낸 서로 다른 설치를 셉니다. 창이 서로 겹치므로 세 숫자를 더하면 안 돼요 — 오늘 쓴 사람은 주간·월간에도 들어 있습니다. DAU 숫자는 오늘이 아니라 어제(끝난 하루)라 사이드바 · 프로젝트 목록의 DAU와 같습니다. 그래프 맨 오른쪽 오늘 점은 아직 지나지 않은 하루라 계속 올라가요. 위 '최근 7일 활성' 타일은 스냅샷이 적어 보낸 마지막 활동 시각 기준이라 여기 WAU와 숫자가 다를 수 있어요.")
             }
         }
     }
@@ -591,6 +625,136 @@ struct StatisticsDashboard: View {
         return peak
     }
 
+    // MARK: - 코호트 잔존
+
+    /// 같은 주에 깐 사람들이 1일 · 7일 · 30일 뒤에도 오는가. 위 활성 사용자 카드는
+    /// 새로 온 사람이 떠난 사람을 메워도 그대로라, 사람이 남는지는 여기서만 보인다.
+    private var retentionCard: some View {
+        let retention = store.retention(for: scope, audience: audience)
+        return Card(title: "코호트 잔존 (1일 · 7일 · 30일)", systemImage: "person.2.wave.2") {
+            if retention.isEmpty {
+                emptyNote("잔존은 설치일(스냅샷)과 그 뒤에 온 날(이벤트)을 이어서 잽니다. 이 앱은 아직 둘 중 하나가 없거나, 이벤트를 보내기 시작한 뒤에 깐 설치가 없어요.")
+            } else {
+                ViewThatFits(in: .horizontal) {
+                    HStack(alignment: .top, spacing: 16) { retentionFigures(retention) }
+                    VStack(alignment: .leading, spacing: 12) { retentionFigures(retention) }
+                }
+                retentionTable(retention)
+                footnote(retentionNote(retention))
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func retentionFigures(_ retention: FeedbackStore.Retention) -> some View {
+        ForEach(FeedbackStore.Retention.Checkpoint.allCases) { checkpoint in
+            let rate = retention.pooled[checkpoint] ?? .init()
+            Figure(checkpoint.label, rate.ratio.map(Self.percentText) ?? "—",
+                   note: rate.eligible > 0
+                       ? "\(checkpoint.detail) · \(AppFormat.count(rate.eligible))명 중 \(AppFormat.count(rate.returned))명"
+                       : "\(checkpoint.detail) · 아직 잴 설치 없음")
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    /// 주마다 한 줄. 칸의 진하기가 비율이라, 위아래로 훑으면 최근 주가 나아졌는지가
+    /// 숫자를 읽기 전에 보인다.
+    private func retentionTable(_ retention: FeedbackStore.Retention) -> some View {
+        Grid(alignment: .leading, horizontalSpacing: 8, verticalSpacing: 6) {
+            GridRow {
+                Text("설치한 주")
+                ForEach(FeedbackStore.Retention.Checkpoint.allCases) { Text($0.label) }
+            }
+            .font(.body.weight(.semibold))
+            .foregroundStyle(.secondary)
+            ForEach(retention.cohorts) { cohort in
+                GridRow {
+                    Text("\(cohort.start.formatted(.dateTime.month(.defaultDigits).day())) 주 · \(AppFormat.count(cohort.size))명")
+                        .font(.body.monospacedDigit())
+                    ForEach(FeedbackStore.Retention.Checkpoint.allCases) { checkpoint in
+                        retentionCell(cohort.rates[checkpoint] ?? .init())
+                    }
+                }
+            }
+        }
+        .accessibilityElement(children: .contain)
+    }
+
+    private func retentionCell(_ rate: FeedbackStore.Retention.Rate) -> some View {
+        Text(rate.ratio.map(Self.percentText) ?? "—")
+            .font(.body.monospacedDigit())
+            .foregroundStyle(rate.ratio == nil ? .secondary : .primary)
+            .frame(maxWidth: .infinity, alignment: .center)
+            .padding(.vertical, 3)
+            .background(RoundedRectangle(cornerRadius: 5)
+                .fill(Color.accentColor.opacity(0.08 + 0.5 * (rate.ratio ?? 0))))
+            .help(rate.eligible > 0
+                  ? "\(AppFormat.count(rate.eligible))명 중 \(AppFormat.count(rate.returned))명"
+                  : "재는 날이 아직 안 지났어요")
+    }
+
+    private func retentionNote(_ retention: FeedbackStore.Retention) -> String {
+        var text = "같은 주에 깐 설치가 그 뒤 재는 날 안에 이벤트를 하나라도 보냈는지 셉니다. 1일은 다음 날 하루, 7일과 30일은 주말 하나에 흔들리지 않게 일주일 폭(7~13일째, 30~36일째)으로 잽니다. 재는 날이 아직 안 끝난 설치는 분모에서 빼서, 최근 주는 —이거나 일부만 잰 값이에요. 칸이 진할수록 많이 남은 거예요."
+        if !sendsDailyOpen {
+            text += " ⚠️ 이 앱은 앱을 연 날마다 남는 app_open 이벤트를 안 보내요. 할 일 추가 같은 행동을 한 날만 잡혀서, 열어 보기만 한 날은 안 온 날이 됩니다. 잔존이 실제보다 낮게 나와요."
+        }
+        if retention.excludedBeforeSince > 0, let since = retention.since {
+            text += " 이 앱이 이벤트를 보내기 시작한 \(since.formatted(.dateTime.month(.defaultDigits).day())) 전에 깐 설치 \(AppFormat.count(retention.excludedBeforeSince))대는 설치 직후를 못 봐서 뺐어요."
+        }
+        return text
+    }
+
+    // MARK: - 한 달에 며칠 오는가
+
+    /// 최근 30일에 온 사람이 그중 며칠 왔는가. 고착도는 이 분포의 평균 하나라,
+    /// "매일 오는 소수와 한 번 온 다수"를 "모두가 가끔 오는 앱"과 못 가른다.
+    private var activeDaysCard: some View {
+        let active = store.activeDays(for: scope, audience: audience)
+        return Card(title: "최근 30일에 며칠 왔나", systemImage: "calendar.badge.clock") {
+            if active.isEmpty {
+                emptyNote("최근 30일 안에 도착한 이벤트가 없습니다. 며칠 왔는지는 이벤트로만 셀 수 있어요.")
+            } else {
+                let peak = max(active.buckets.map(\.count).max() ?? 0, 1)
+                VStack(spacing: 8) {
+                    ForEach(active.buckets) { bucket in
+                        SpecBar(label: bucket.label,
+                                value: "\(AppFormat.count(bucket.count))명 (\(Self.percentText(Double(bucket.count) / Double(active.total))))",
+                                ratio: Double(bucket.count) / Double(peak),
+                                hint: nil, tint: .accentColor, isMuted: false)
+                    }
+                }
+                footnote(activeDaysNote(active))
+            }
+        }
+    }
+
+    private func activeDaysNote(_ active: FeedbackStore.ActiveDays) -> String {
+        var text = "최근 30일(오늘 포함)에 이벤트를 보낸 \(AppFormat.count(active.total))명이 그중 며칠 왔는지입니다. 창이 월간 활성(MAU)과 같아서 합이 MAU와 같아요."
+        if let average = active.averageDays {
+            text += " 평균 \(String(format: "%.1f", average))일."
+        }
+        if !sendsDailyOpen {
+            text += " ⚠️ 이 앱은 app_open 이벤트를 안 보내서, 열어 보기만 한 날은 안 센 날이 돼요. 분포가 실제보다 앞 칸으로 쏠립니다."
+        }
+        text += " 1일 칸이 두꺼우면 한 번 써 보고 끝난 사람이 많은 거라 첫 주를 봐야 하고, 가운데가 두꺼우면 필요할 때만 여는 도구라 다시 부를 계기를 봐야 해요."
+        if active.installedWithin > 0 {
+            text += " 이 중 \(AppFormat.count(active.installedWithin))명은 이 30일 안에 깔아서 올 수 있었던 날이 더 짧아요. 그만큼 앞 칸에 몰립니다."
+        }
+        return text
+    }
+
+    /// 앱을 연 날마다 한 건 남는 이벤트를 보내는가. 안 보내는 앱은 "무언가 한 날"만
+    /// 잡혀서 활동일 · 잔존이 낮게 나온다 — 앱이 아니라 계측이 하는 말이라 카드가 밝힌다.
+    private var sendsDailyOpen: Bool {
+        store.eventTallies(for: scope, audience: .all).keys.contains {
+            ProjectStatsSpec.eventBase($0) == "app_open"
+        }
+    }
+
+    private static func percentText(_ ratio: Double) -> String {
+        String(format: "%.0f%%", (ratio * 100).rounded())
+    }
+
     // MARK: - 유료기능 · 무료기능
 
     /// 유료 기능을 쓸 수 있는 사람이 몇이고, 그중 지금 쓰고 있는 사람이 몇인가.
@@ -622,57 +786,47 @@ struct StatisticsDashboard: View {
         }
     }
 
-    /// 돈을 낸 방식별로 몇 명이고, 그중 지금 오는 사람이 몇인가.
+    /// 산 것의 조합마다 몇 명이고, 그중 지금 오는 사람이 몇인가.
     ///
-    /// 위 카드(유료기능 · 무료기능)는 **열렸는가**를 재고, 이 카드는 **어떻게 열렸는가**를
-    /// 잰다. 둘이 다르다는 것이 이 카드가 따로 있는 이유다 — 유료기능 대부분이 무상이면
-    /// 그건 매출이 아니라 옛 약속이다.
-    private var paymentCard: some View {
+    /// 위 카드(유료기능 · 무료기능)는 **열렸는가**를 재고, 이 카드는 **무엇을 샀는가**를
+    /// 잰다. 둘이 다르다는 것이 이 카드가 따로 있는 이유다 — 유료기능 대부분이 "안 삼"이면
+    /// 그건 매출이 아니라 옛 약속이다. 칸은 비어 있어도 전부 적는다: "아무도 이 조합을 안
+    /// 샀다"도 답이다.
+    private var purchaseCard: some View {
         let installs = store.audienceInstalls(for: scope)
         let monthAgo = Date().addingTimeInterval(-30 * 86_400)
         let active30 = Set(store.snapshots(for: scope)
             .filter { ($0.lastActiveAt ?? .distantPast) >= monthAgo }
             .map(\.installID))
-        let known = installs.paymentKnown
-        let activeKnown = FeedbackStore.Audience.paymentCases
-            .reduce(0) { $0 + (installs.payment[$1] ?? []).intersection(active30).count }
-        return Card(title: "결제 종류", systemImage: "creditcard") {
+        let known = installs.purchaseKnown
+        let activeKnown = installs.purchased.values.reduce(0) { $0 + $1.intersection(active30).count }
+        return Card(title: "산 것 조합", systemImage: "creditcard") {
             VStack(spacing: 10) {
-                ForEach(FeedbackStore.Audience.paymentCases) { kind in
-                    let ids = installs.payment[kind] ?? []
+                ForEach(installs.cells, id: \.mask) { cell in
+                    let ids = installs.purchased[cell.mask] ?? []
                     let active = ids.intersection(active30).count
+                    let free = ids.intersection(installs.unlockedWithoutBuying).count
                     let ratio = known > 0 ? Double(ids.count) / Double(known) : 0
                     let activeRatio = activeKnown > 0 ? Double(active) / Double(activeKnown) : 0
-                    SpecBar(label: kind.label,
-                            value: String(format: "%.1f%%", ratio * 100),
+                    SpecBar(label: cell.label,
+                            value: known > 0 ? String(format: "%.1f%%", ratio * 100) : "—",
                             ratio: ratio,
-                            hint: "\(ids.count)명 · 최근 30일 활성 \(active)명(활성 중 \(String(format: "%.1f%%", activeRatio * 100)))")
+                            hint: "\(ids.count)명 · 최근 30일 활성 \(active)명(활성 중 \(String(format: "%.1f%%", activeRatio * 100)))"
+                                + (free > 0 ? " · 돈 없이 열림 \(free)명" : ""),
+                            isMuted: ids.count < FeedbackStore.thinPurchaseCell)
                 }
             }
-            footnote(paymentNote(installs))
+            footnote(purchaseNote(installs))
         }
     }
 
-    /// 결제 종류 카드의 각주 — 분모가 무엇이고, 무엇이 빠졌는가.
-    private func paymentNote(_ installs: FeedbackStore.AudienceInstalls) -> String {
-        var note = "앱이 보낸 결제 플래그(flag.isPaid · flag.isLegacyPaid · flag.boughtAddOn · flag.isTrial · flag.isComped)로 갈랐습니다. 비율의 분모는 결제 플래그를 보낸 설치 \(installs.paymentKnown)대예요. 한 설치는 한 칸에만 들고, 여럿에 해당하면 돈에 가까운 쪽에 듭니다. 영수증이 아니라 앱이 보낸 값이라 매출과는 대조해 봐야 해요."
-        if !installs.paymentUnknown.isEmpty {
-            note += " 결제 플래그를 안 보내는 설치 \(installs.paymentUnknown.count)대는 안 냄이 아니라 모름이라 빠졌습니다."
-        }
-        for kind in FeedbackStore.Audience.paymentCases {
-            guard let missing = installs.unreported[kind], !missing.isEmpty else { continue }
-            note += " \(kind.label) 중 \(missing.count)대는 " + Self.unreportedNote(kind)
+    /// 산 것 조합 카드의 각주 — 분모가 무엇이고, 무엇이 빠졌는가.
+    private func purchaseNote(_ installs: FeedbackStore.AudienceInstalls) -> String {
+        var note = "앱이 산 것마다 보낸 값(own.*)으로 갈랐습니다. 파는 것이 n개면 칸은 2ⁿ개이고, 한 설치는 한 칸에만 듭니다. 비율의 분모는 새 규약(flag.schema)을 보낸 설치 \(installs.purchaseKnown)대예요. 체험·무상·옛 유료 다운로드는 산 것이 아니라서 칸이 아니라 '돈 없이 열림'으로만 적습니다. 표본이 \(FeedbackStore.thinPurchaseCell)대에 못 미치는 칸은 흐리게 그렸어요. 영수증이 아니라 앱이 보낸 값이라 매출과는 대조해 봐야 해요."
+        if !installs.purchaseUnknown.isEmpty {
+            note += " 새 규약 이전 버전 \(installs.purchaseUnknown.count)대는 옛 값이 결제와 접근을 섞어 보내서 믿지 않고 뺐습니다 — 안 삼이 아니라 모름이에요. 업데이트하는 대로 칸에 들어옵니다."
         }
         return note
-    }
-
-    /// 칸을 옆 칸과 가르는 늦게 생긴 키를 안 보낸 설치에 붙이는 말.
-    private static func unreportedNote(_ kind: FeedbackStore.Audience) -> String {
-        switch kind {
-        case .paying: return "옛 유료 구매 플래그를 아직 안 보내는 버전이라, 앱이 유료 다운로드였던 시절에 산 사람이 섞여 있을 수 있어요."
-        case .unpaid: return "부가 결제 플래그를 아직 안 보내는 버전이라, 칸 추가처럼 작은 결제만 한 사람이 섞여 있을 수 있어요."
-        default:      return "이 칸을 가르는 플래그를 아직 안 보내는 버전이에요."
-        }
     }
 
     /// `slice`가 nil이거나 표본이 너무 얇으면 "아직 모른다" — 막대는 비고 값은 —.

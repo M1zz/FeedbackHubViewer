@@ -24,6 +24,8 @@ import SwiftUI
 
 struct ProjectListView: View {
     @EnvironmentObject private var store: FeedbackStore
+    /// 릴리즈 건강이 빨강인 앱을 위로. 사이드바와 같은 값을 쓴다.
+    @AppStorage("releaseRedFirst") private var redFirst = false
 
     #if os(macOS)
     private let contentSpacing: CGFloat = 16
@@ -39,7 +41,10 @@ struct ProjectListView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            StatusRow()
+            HStack {
+                StatusRow()
+                RedFirstToggle(isOn: $redFirst)
+            }
                 .padding(.horizontal, contentPadding)
                 .padding(.bottom, 8)
             content
@@ -75,7 +80,8 @@ struct ProjectListView: View {
                 ScrollView {
                     LazyVGrid(columns: columns, spacing: contentSpacing) {
                         AllProjectsCard()
-                        ForEach(store.projectSummaries) { summary in
+                        ForEach(redFirst ? store.redFirst(store.projectSummaries, key: \.project)
+                                         : store.projectSummaries) { summary in
                             ProjectCard(summary: summary)
                         }
                     }
@@ -158,13 +164,16 @@ private struct ProjectCardBody: View {
     var capacity: CarryingCapacity? = nil
     /// Only a real project shows this; 전체 has its own 진단 screen for it.
     var crashes7: Int = 0
+    /// 최신 버전의 릴리즈 건강. 전체 카드와 잴 수 없는 앱은 nil.
+    var release: ReleaseHealth.Level? = nil
     let detail: String
 
     var body: some View {
         CardFrame {
             CardTitle(systemImage: systemImage, tint: tint, name: name,
                       subtitle: subtitle, iconURL: iconURL,
-                      unreadCount: unreadCount, pendingCount: pendingCount)
+                      unreadCount: unreadCount, pendingCount: pendingCount,
+                      release: release)
 
             Divider()
 
@@ -207,6 +216,7 @@ private struct ProjectCardBody: View {
                                      pendingCount: Int) -> String {
         var parts: [String] = []
         if traffic.hasChanges {
+            parts.append("어제 DAU \(traffic.dauYesterday)명, 그제 \(traffic.dauDayBefore)명")
             parts.append("7일 사용 \(traffic.events7)건, 지난주 \(traffic.previousEvents7)건")
             parts.append("7일 사용자 \(traffic.activeInstalls7)명, 지난주 \(traffic.previousActiveInstalls7)명")
         } else {
@@ -221,10 +231,11 @@ private struct ProjectCardBody: View {
         return parts.joined(separator: ", ")
     }
 
-    /// 어제와 그제. 오늘을 안 세는 이유는 `Traffic.eventsYesterday`에 있다.
+    /// 어제와 그제의 DAU — 목록이 이 순서로 선다. 오늘을 안 세는 이유는
+    /// `Traffic.eventsYesterday`에 있다.
     private var yesterdayFigure: some View {
-        TrendFigure(title: "어제 사용", current: traffic.eventsYesterday,
-                    previous: traffic.eventsDayBefore, unit: "건", previousLabel: "그제")
+        TrendFigure(title: "DAU (어제)", current: traffic.dauYesterday,
+                    previous: traffic.dauDayBefore, unit: "명", previousLabel: "그제")
             .frame(maxWidth: .infinity, alignment: .leading)
     }
 
@@ -315,6 +326,7 @@ private struct ProjectCard: View {
                             pendingCount: summary.pendingCount,
                             capacity: store.carryingCapacity(for: summary.project, period: .week),
                             crashes7: store.crashSummary(for: summary.project).last7Days,
+                            release: store.releaseLevel(for: summary.project),
                             detail: ProjectCardBody.detailText(traffic: traffic,
                                                                feedbackCount: summary.count,
                                                                averageRating: summary.averageRating,
@@ -446,7 +458,7 @@ private struct CapacityGlance: View {
         }
     }
 
-    /// 상한 아래면 "몇 %까지 왔는가", 넘었으면 "넘어섬".
+    /// 상한 아래면 "몇 %까지 왔는가", 넘었으면 "줄어들 흐름".
     ///
     /// 넘어선 상태에서 "248%"라고 적으면 좋은 소식처럼 읽히는데, 실은 반대다 —
     /// 지금의 유입과 이탈로는 이 수를 못 떠받친다는 뜻이라 앞으로 내려간다.
@@ -455,7 +467,7 @@ private struct CapacityGlance: View {
                                 fill: Double, ceiling: Double) -> String {
         let now = AppFormat.count(capacity.currentActive)
         let top = AppFormat.count(Int(ceiling.rounded()))
-        return fill > 1 ? "지금 \(now)명 · 상한 \(top)명 넘어섬"
+        return fill > 1 ? "지금 \(now)명 · 상한 \(top)명보다 많아 줄어들 흐름"
                         : "지금 \(now)명 · 상한 \(top)명 (\(percent(fill)))"
     }
 
@@ -475,10 +487,14 @@ private struct CardTitle: View {
     /// 안 읽은 피드백과 확인이 필요한 피드백. 0이면 뱃지 자체가 없다.
     var unreadCount: Int = 0
     var pendingCount: Int = 0
+    var release: ReleaseHealth.Level? = nil
 
     var body: some View {
         HStack(alignment: .center, spacing: 10) {
             AppIcon(url: iconURL, symbol: systemImage, tint: tint, size: 26)
+                .overlay(alignment: .topTrailing) {
+                    ReleaseDot(level: release).offset(x: 3, y: -3)
+                }
             VStack(alignment: .leading, spacing: 2) {
                 // A bundle id can be long ("com.devkoan.CalendarSnap") and the
                 // tail is what tells projects apart, so let it wrap and shrink

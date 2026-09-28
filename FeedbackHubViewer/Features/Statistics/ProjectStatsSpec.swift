@@ -47,6 +47,9 @@ struct ProjectStatsSpec: Decodable {
     var segments: SegmentSpec?
     /// 이벤트를 순서대로 세워 단계별로 몇이 남는지 본다(페이월 → 결제).
     var funnels: [FunnelSpec] = []
+    /// 설치에 남은 상태(지표)로 세우는 사다리. 수익 절의 `activation`과 같은 카드이고,
+    /// 쐐기와 별개로 더 잘게 보고 싶을 때 여기 적는다.
+    var ladders: [LadderSpec] = []
     /// 이 앱이 **어떻게 돈을 버는가**를 관측하는 절. 없으면 수익 카드가 안 뜬다.
     var monetization: MonetizationSpec?
     /// 그릴 카드를 차례대로 직접 적은 것. 적었으면 이게 전부이고, 위의 절들은
@@ -84,15 +87,19 @@ struct ProjectStatsSpec: Decodable {
     /// 테스터. 규약 이름은 `flag.isComped`. 영구 면제라 전환 대상이 아니다.
     var compedFlag: String?
 
-    /// 유료 기능을 **열지 않는** 작은 결제(칸 추가·기기 추가 같은 것)를 한 설치를 뜻하는
-    /// 0/1 플래그 키. 규약 이름은 `flag.boughtAddOn`. 접근의 근거가 아니고, 결제 축에서
-    /// 돈을 낸 사람을 "안 냄"과 가르는 데만 쓴다.
-    var addOnFlag: String?
-
-    /// 결제가 켜진 설치 중 **앱이 유료 다운로드였던 시절에 산** 설치를 뜻하는 0/1 플래그 키.
-    /// 규약 이름은 `flag.isLegacyPaid`. 돈은 냈지만 지금의 인앱 결제와 무관해서, 결제 축에서
-    /// Pro 결제와 가른다 — 섞이면 매출과 대조할 때 전환율이 부푼다.
+    /// **앱이 유료 다운로드였던 시절에 산** 설치를 뜻하는 0/1 플래그 키. 규약 이름은
+    /// `flag.isLegacyPaid`. 돈은 냈지만 지금 파는 것을 산 게 아니라서 `purchases`의 칸에는
+    /// 안 들고, 체험·무상과 함께 "돈 없이 열림" 표식으로만 쓴다.
     var legacyPaidFlag: String?
+
+    /// 이 앱이 **지금 파는 것**과, 설치마다 그중 무엇을 샀는지 읽는 키.
+    /// 없으면 산 것으로 가르는 줄이 안 뜬다 — `FeedbackStore+Audience.swift`.
+    var purchases: PurchasesSpec?
+
+    /// 릴리즈 건강 카드가 읽는 절(`Models/ReleaseHealth.swift`). 없어도 카드는 뜬다.
+    /// 크래시 · 불안정 이벤트 · 채택은 어느 앱에서나 재고, 이 절은 핵심 행동과 문턱과
+    /// 약속을 더할 뿐이다.
+    var release: ReleaseSpec?
 
     static let supportedVersion = 1
 
@@ -101,10 +108,11 @@ struct ProjectStatsSpec: Decodable {
     // 절은 빈 값으로 읽어야 한다.
     enum CodingKeys: String, CodingKey {
         case specVersion, appId, appName, metricLabels, metricPrefixLabels
-        case eventLabels, tileGroups, distributions, shares, derived, segments, funnels
-        case accessFlag, paidFlag, trialFlag, compedFlag, addOnFlag, legacyPaidFlag
-        case monetization
+        case eventLabels, tileGroups, distributions, shares, derived, segments, funnels, ladders
+        case accessFlag, paidFlag, trialFlag, compedFlag, legacyPaidFlag
+        case monetization, purchases
         case cards
+        case release
     }
 
     init(from decoder: Decoder) throws {
@@ -121,14 +129,53 @@ struct ProjectStatsSpec: Decodable {
         derived = try c.decodeIfPresent([DerivedSpec].self, forKey: .derived) ?? []
         segments = try c.decodeIfPresent(SegmentSpec.self, forKey: .segments)
         funnels = try c.decodeIfPresent([FunnelSpec].self, forKey: .funnels) ?? []
+        ladders = try c.decodeIfPresent([LadderSpec].self, forKey: .ladders) ?? []
         monetization = try c.decodeIfPresent(MonetizationSpec.self, forKey: .monetization)
         declaredCards = try c.decodeIfPresent([DashboardCardSpec].self, forKey: .cards) ?? []
         accessFlag = try c.decodeIfPresent(String.self, forKey: .accessFlag)
         paidFlag = try c.decodeIfPresent(String.self, forKey: .paidFlag)
         trialFlag = try c.decodeIfPresent(String.self, forKey: .trialFlag)
         compedFlag = try c.decodeIfPresent(String.self, forKey: .compedFlag)
-        addOnFlag = try c.decodeIfPresent(String.self, forKey: .addOnFlag)
         legacyPaidFlag = try c.decodeIfPresent(String.self, forKey: .legacyPaidFlag)
+        purchases = try c.decodeIfPresent(PurchasesSpec.self, forKey: .purchases)
+        release = try c.decodeIfPresent(ReleaseSpec.self, forKey: .release)
+    }
+
+    /// 산 것으로 설치를 가르는 절.
+    ///
+    ///     "purchases": {
+    ///       "since": 2,
+    ///       "products": [{ "key": "own.pro", "label": "Pro" }, { "key": "own.slots", "label": "칸 추가" }]
+    ///     }
+    ///
+    /// 상품이 n개면 칸은 2ⁿ개다 — 한 설치는 "산 것의 조합" 하나에만 든다. 상품은 SKU가 아니라
+    /// **산 것**으로 적는다: 값만 다른 SKU(정가 · 반값 · 업그레이드)는 한 줄이다. 소모성처럼
+    /// 여러 번 사는 것은 개수를 보내도 되고, 칸을 나눌 때는 1 이상이면 산 것으로 접는다.
+    ///
+    /// `since`가 기준선이다. 설치가 보낸 `flag.schema`가 이 값보다 작거나 없으면 그 설치는
+    /// 이 절에서 **모름**이다 — 옛 버전은 결제와 접근을 한 비트에 섞어 보냈고, 그 값은 뷰어가
+    /// 되돌릴 수 없다. 원본을 지우는 대신 기준선 밖으로 뺀다.
+    struct PurchasesSpec: Decodable {
+        struct Product: Decodable, Hashable {
+            /// 스냅샷 metrics 키. 규약은 `own.<이름>`.
+            let key: String
+            let label: String
+        }
+
+        let products: [Product]
+        /// 이 절을 믿기 시작하는 `flag.schema` 값.
+        var since: Double = 2
+        /// 기준선을 싣는 키. 규약 이름은 `flag.schema`.
+        var schemaKey: String = "flag.schema"
+
+        enum CodingKeys: String, CodingKey { case products, since, schemaKey }
+
+        init(from decoder: Decoder) throws {
+            let c = try decoder.container(keyedBy: CodingKeys.self)
+            products = try c.decode([Product].self, forKey: .products)
+            since = try c.decodeIfPresent(Double.self, forKey: .since) ?? 2
+            schemaKey = try c.decodeIfPresent(String.self, forKey: .schemaKey) ?? "flag.schema"
+        }
     }
 
     struct MetricLabel: Decodable {
@@ -189,6 +236,9 @@ struct ProjectStatsSpec: Decodable {
         let metric: String
         var note: String?
         let buckets: [Bucket]
+        /// 이 지표 키를 보낸 설치만 센다(`LadderSpec.onlyWith`와 같은 뜻). 안 적으면
+        /// 안 보낸 설치는 0으로 첫 구간에 든다.
+        var onlyWith: String?
 
         struct Bucket: Decodable {
             let label: String
@@ -350,6 +400,9 @@ struct ProjectStatsSpec: Decodable {
         /// [분자, 분모]. 분모가 0이면 0으로 본다.
         var ratio: [String]?
         var derived: String?
+        /// 그 지표 키를 설치가 보냈는가(`metric`에만 쓴다). `false`면 "안 보냄"일 때 참 —
+        /// 옛 버전 설치를 0으로 읽어 엉뚱한 무리에 넣지 않고 따로 모을 때 쓴다.
+        var sent: Bool?
 
         var lt: Double?
         var lte: Double?
