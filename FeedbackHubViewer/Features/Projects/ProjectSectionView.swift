@@ -4,7 +4,7 @@
 //
 //  One project's screen — the second level of the app. The project is chosen
 //  first (sidebar on a Mac/iPad, the project list on a phone); 피드백 · 통계 ·
-//  릴리즈 · 진단 · 키워드 are the things to look at inside it, switched by the buttons
+//  릴리즈 · 진단 · 키워드 · 앱 내 구입 · 리뷰 are the things to look at inside it, switched by the buttons
 //  at the top. They are peers of each other and never of the project, which is
 //  what the old 개요/통계 top-level split got backwards.
 //
@@ -19,7 +19,7 @@ struct ProjectSectionView: View {
     @Environment(\.dynamicTypeSize) private var typeSize
     /// nil == 전체 프로젝트.
     let project: String?
-    /// The Mac's third column follows this; a phone pushes the detail instead.
+    /// The Mac's inspector follows this; a phone pushes the detail instead.
     @Binding var selection: Feedback.ID?
 
     init(project: String?, selection: Binding<Feedback.ID?> = .constant(nil)) {
@@ -80,6 +80,8 @@ struct ProjectSectionView: View {
         let isSelected = store.projectSection == section
         let count = count(for: section)
         let unread = section == .feedback ? store.unreadCount(for: project) : 0
+        // 답 안 한 리뷰도 같은 자리에 — 할 일이 있다는 표시다.
+        let unanswered = section == .reviews ? unansweredReviews : 0
         return Button {
             store.projectSection = section
         } label: {
@@ -89,6 +91,9 @@ struct ProjectSectionView: View {
                 if unread > 0 {
                     CountBadge(count: unread, systemImage: "envelope.badge.fill",
                                tint: .red, name: "안 읽은 피드백")
+                } else if unanswered > 0 {
+                    CountBadge(count: unanswered, systemImage: "bubble.left.fill",
+                               tint: .orange, name: "답 안 한 리뷰")
                 } else if !typeSize.isAccessibilitySize {
                     Image(systemName: section.systemImage)
                         .font(.subheadline)
@@ -125,7 +130,19 @@ struct ProjectSectionView: View {
         case .crashes: return store.crashSummary(for: project).total
         case .keywords: return keywords.standings(for: project).filter(\.isRanked).count
         case .purchases: return project.flatMap { purchases.products(for: $0)?.count } ?? 0
+        case .reviews: return reviewCount
         }
+    }
+
+    /// 이 앱(전체면 모든 앱)의 받아 둔 리뷰 수.
+    private var reviewCount: Int {
+        guard let project else { return purchases.reviewFeeds.values.reduce(0) { $0 + $1.reviews.count } }
+        return purchases.reviewFeeds[project]?.reviews.count ?? 0
+    }
+
+    private var unansweredReviews: Int {
+        guard let project else { return purchases.reviewFeeds.values.reduce(0) { $0 + $1.unanswered } }
+        return purchases.unansweredReviews(for: project)
     }
 
     /// 한 앱이면 그 앱이 빨강일 때 1, 전체면 빨강인 앱 수.
@@ -163,6 +180,10 @@ struct ProjectSectionView: View {
         case .purchases:
             guard purchases.isConfigured else { return "연결 안 됨" }
             return count > 0 ? "상품 \(count)개" : "App Store Connect"
+        case .reviews:
+            guard purchases.isConfigured else { return "연결 안 됨" }
+            guard project != nil else { return "우선순위" }
+            return count > 0 ? "\(AppFormat.count(count))건" : "App Store"
         }
     }
 
@@ -194,6 +215,8 @@ struct ProjectSectionView: View {
             KeywordsView(project: project)
         case .purchases:
             InAppPurchasesView(project: project)
+        case .reviews:
+            ReviewsView(project: project)
         }
     }
 
@@ -259,6 +282,17 @@ struct ProjectSectionView: View {
             guard let project else { return "앱별 최근 \(AppStoreConnectStore.salesDays)일 판매 순위" }
             guard let products = purchases.products(for: project) else { return "App Store Connect 상품" }
             return "상품 \(products.count)개 · 판매 중 \(products.filter(\.isOnSale).count)개"
+        case .reviews:
+            guard purchases.isConfigured else { return "App Store Connect 키를 넣으면 리뷰를 읽고 답할 수 있습니다" }
+            guard let project else {
+                guard let analysis = purchases.priority else { return "앱마다 위험 · 기회 점수를 냅니다" }
+                return "앱 \(analysis.rows.count)개 분석 · \(AppFormat.relative(analysis.date))"
+            }
+            guard let feed = purchases.reviewFeeds[project], feed.fetchedAt != nil else { return "App Store 리뷰" }
+            var text = "리뷰 \(AppFormat.count(feed.reviews.count))건"
+            if let average = feed.average { text += String(format: " · 평균 %.2f", average) }
+            text += feed.unanswered > 0 ? " · 답 안 함 \(feed.unanswered)건" : " · 모두 답함"
+            return text
         }
     }
 }

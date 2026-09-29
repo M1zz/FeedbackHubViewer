@@ -39,6 +39,10 @@ final class FeedbackStore: ObservableObject {
     /// are peers of each other, never of the project.
     enum ProjectSection: String, CaseIterable, Identifiable {
         case feedback = "피드백"
+        /// App Store 리뷰와 개발자 응답. 피드백 바로 옆에 둔다 — 앱 안에서 온 목소리와
+        /// 스토어에 남긴 목소리는 나란히 봐야 한다. 허브가 아니라 App Store Connect 를
+        /// 읽고, 여기서는 쓰기도 한다(`AppStoreConnect+Reviews.swift`).
+        case reviews = "리뷰"
         case stats = "통계"
         /// 새 버전이 멀쩡한가 — 초록 · 노랑 · 빨강 판정(`ReleaseHealth`).
         case release = "릴리즈"
@@ -64,6 +68,7 @@ final class FeedbackStore: ObservableObject {
             case .crashes: return "exclamationmark.triangle"
             case .keywords: return "magnifyingglass"
             case .purchases: return "creditcard"
+            case .reviews: return "star.bubble"
             }
         }
     }

@@ -2,7 +2,8 @@
 //  InAppPurchasesView.swift
 //  FeedbackHubViewer
 //
-//  "앱 내 구입" 섹션 — App Store Connect에 걸린 상품과 최근 30일 판매.
+//  "앱 내 구입" 섹션 — App Store Connect에 걸린 상품과 최근 30일 판매, 그리고
+//  노출에서 결제까지 · 구독의 깔때기(`RevenueFunnelCards.swift`).
 //
 //  통계 섹션의 "산 것" 카드는 앱이 스스로 보낸 값(own.*)이고, 여기는 스토어가 말하는
 //  값이다. 둘을 나란히 볼 수 있어야 앱이 보낸 값을 믿을지 말지가 정해진다.
@@ -105,6 +106,11 @@ private struct ProjectPurchases: View {
             }
         case .loaded(let app, let products)?:
             summary(app, products)
+            RevenueFunnelCard(project: project)
+            // 구독을 파는 앱만 — 아니면 구독 이벤트 리포트 서른 날치가 헛걸음이다.
+            if products.contains(where: { $0.kind == .autoRenewable }) {
+                SubscriptionFunnelCard(appleID: app.id)
+            }
             productsCard(products)
             SalesStatus()
         }

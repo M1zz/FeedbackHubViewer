@@ -4,7 +4,9 @@
 //
 //  Which project on the left, that project's 피드백 · 통계 · 진단 · 키워드 beside
 //  it. The selected feedback opens as an inspector on the right only while
-//  one is selected, so nothing sits there empty. The Mac's layout, and the
+//  one is selected **and 피드백 is the open section** — on 리뷰 · 통계 and the
+//  rest a feedback detail has nothing to do with what is on screen, so the
+//  section gets the full width. Nothing sits there empty. The Mac's layout, and the
 //  iPad's at a regular width (where rows push their detail instead).
 //
 
@@ -67,9 +69,10 @@ struct SplitRootView: View {
         return store.allFeedback.first(where: { $0.id == id })
     }
 
-    /// Open while a row is selected and the user hasn't folded it away.
+    /// Open while a row is selected, 피드백 is showing, and the user hasn't
+    /// folded it away.
     private var isShowingDetail: Binding<Bool> {
-        Binding(get: { selectedFeedback != nil && !isDetailCollapsed },
+        Binding(get: { selectedFeedback != nil && store.projectSection == .feedback && !isDetailCollapsed },
                 set: { isDetailCollapsed = !$0 })
     }
 
@@ -94,7 +97,7 @@ struct SplitRootView: View {
                 Label(isDetailCollapsed ? "상세 펴기" : "상세 접기", systemImage: "sidebar.right")
             }
             .help("오른쪽 피드백 상세 칸을 접거나 폅니다")
-            .disabled(selectedFeedback == nil)
+            .disabled(selectedFeedback == nil || store.projectSection != .feedback)
             .keyboardShortcut("i", modifiers: [.command, .option])
         }
 

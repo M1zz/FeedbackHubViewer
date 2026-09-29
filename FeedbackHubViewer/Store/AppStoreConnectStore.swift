@@ -33,6 +33,22 @@ final class AppStoreConnectStore: ObservableObject {
     /// 번들 ID → 최근 30일 노출 · 전환.
     @Published private(set) var funnels: [String: LoadState<FunnelResult>] = [:]
 
+    /// 번들 ID → 스토어 리뷰(`AppStoreConnectStore+Reviews.swift`). 디스크에서 먼저 채운다.
+    @Published var reviewFeeds: [String: ReviewFeed] = [:]
+    /// 번들 ID → 가장 최근 App Store 버전.
+    @Published var versions: [String: AppVersionStatus] = [:]
+    /// 전체 프로젝트의 우선순위 분석 — 지금 보이는 것과 지난 기록.
+    @Published var priority: PriorityAnalysis?
+    @Published var priorityHistory: [PriorityAnalysis] = []
+    @Published var priorityProgress: String?
+
+    /// 최근 30일 구독 이벤트(계정 전체, `AppStoreConnectStore+Funnels.swift`). nil 이면 아직.
+    @Published var subscriptionEvents: SubscriptionEventWindow?
+    @Published var isLoadingSubscriptionEvents = false
+    @Published var subscriptionEventsError: String?
+    /// 날짜 → 그날 구독 이벤트. 지난 날은 바뀌지 않는다.
+    var subscriptionReportCache: [String: [SubscriptionEventLine]] = [:]
+
     enum LoadState<Value> {
         case loading
         case loaded(Value)
@@ -63,12 +79,13 @@ final class AppStoreConnectStore: ObservableObject {
     /// 판매를 몇 일 치 보는가.
     static let salesDays = 30
 
-    private var client: AppStoreConnect?
+    private(set) var client: AppStoreConnect?
     private var reportCache: [String: [SalesLine]] = [:]
 
     init() {
         credentials = AppStoreConnectKeychain.load()
         client = credentials.map(AppStoreConnect.init)
+        restoreReviews()
     }
 
     var isConfigured: Bool { credentials != nil }
@@ -87,6 +104,8 @@ final class AppStoreConnectStore: ObservableObject {
         metadata = [:]
         funnels = [:]
         apps = [:]
+        forgetReviews()
+        forgetSubscriptionEvents()
     }
 
     func signOut() {
@@ -100,6 +119,8 @@ final class AppStoreConnectStore: ObservableObject {
         metadata = [:]
         funnels = [:]
         apps = [:]
+        forgetReviews()
+        forgetSubscriptionEvents()
     }
 
     // MARK: - 앱 찾기
@@ -107,7 +128,7 @@ final class AppStoreConnectStore: ObservableObject {
     private var apps: [String: ConnectApp] = [:]
 
     /// 번들 ID → App Store Connect 앱. 한 번 찾으면 이번 실행 동안 다시 안 묻는다.
-    private func resolveApp(_ bundleID: String) async throws -> ConnectApp {
+    func resolveApp(_ bundleID: String) async throws -> ConnectApp {
         if let app = apps[bundleID] ?? connectApp(for: bundleID) { return app }
         guard let client else { throw AppStoreConnect.Failure.missing("App Store Connect 키") }
         let app = try await client.app(bundleID: bundleID)
@@ -211,16 +232,16 @@ final class AppStoreConnectStore: ObservableObject {
         defer { isLoadingSales = false }
 
         let calendar = Calendar(identifier: .gregorian)
-        var lines: [SalesLine] = []
+        var days: [(key: String, lines: [SalesLine])] = []
         var missingDays = 0
         for offset in 1...Self.salesDays {
             guard let date = calendar.date(byAdding: .day, value: -offset, to: Date()) else { continue }
             let key = AppStoreConnect.day.string(from: date)
-            if let cached = reportCache[key] { lines += cached; continue }
+            if let cached = reportCache[key] { days.append((key, cached)); continue }
             do {
                 let day = try await client.sales(on: date)
                 reportCache[key] = day
-                lines += day
+                days.append((key, day))
             } catch {
                 // 하루를 못 읽어도 나머지는 선다. 다만 키·권한 문제면 30번 되풀이할 이유가 없다.
                 if let failure = error as? AppStoreConnect.Failure {
@@ -234,7 +255,7 @@ final class AppStoreConnectStore: ObservableObject {
                 missingDays += 1
             }
         }
-        sales = SalesWindow(lines: lines, days: Self.salesDays, missingDays: missingDays)
+        sales = SalesWindow(daily: days, days: Self.salesDays, missingDays: missingDays)
     }
 
     /// 최근 30일 판매를 Apple Identifier별로 접은 것.
@@ -243,6 +264,10 @@ final class AppStoreConnectStore: ObservableObject {
         let missingDays: Int
         /// Apple Identifier → 합계.
         let byItem: [String: Totals]
+        /// Apple Identifier → 날짜("yyyy-MM-dd") → 첫 다운로드. 추세를 가를 때 쓴다.
+        let firstDownloadsByDay: [String: [String: Int]]
+        /// 리포트를 받은 날짜들, 오래된 것부터.
+        let dayKeys: [String]
 
         struct Totals {
             var units = 0
@@ -278,11 +303,19 @@ final class AppStoreConnectStore: ObservableObject {
             }
         }
 
-        init(lines: [SalesLine], days: Int, missingDays: Int) {
+        init(daily: [(key: String, lines: [SalesLine])], days: Int, missingDays: Int) {
             self.days = days
             self.missingDays = missingDays
+            self.dayKeys = daily.map(\.key).sorted()
             var byItem: [String: Totals] = [:]
-            for line in lines {
+            var byDay: [String: [String: Int]] = [:]
+            for (day, lines) in daily {
+                for line in lines where line.isFirstDownload {
+                    byDay[line.appleID, default: [:]][day, default: 0] += line.units
+                }
+            }
+            self.firstDownloadsByDay = byDay
+            for line in daily.flatMap(\.lines) {
                 var totals = byItem[line.appleID] ?? Totals()
                 totals.units += line.units
                 if line.isFirstDownload { totals.firstDownloads += line.units }
