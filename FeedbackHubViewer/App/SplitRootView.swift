@@ -2,9 +2,10 @@
 //  SplitRootView.swift
 //  FeedbackHubViewer
 //
-//  Three columns, one per level of the hierarchy: which project on the left,
-//  that project's 피드백 · 통계 · 진단 · 키워드 in the middle, and the selected
-//  feedback on the right. The Mac's layout, and the iPad's at a regular width.
+//  Which project on the left, that project's 피드백 · 통계 · 진단 · 키워드 beside
+//  it. The selected feedback opens as an inspector on the right only while
+//  one is selected, so nothing sits there empty. The Mac's layout, and the
+//  iPad's at a regular width (where rows push their detail instead).
 //
 
 import SwiftUI
@@ -12,16 +13,16 @@ import SwiftUI
 struct SplitRootView: View {
     @EnvironmentObject private var store: FeedbackStore
     @State private var selection: Feedback.ID?
+    /// 고른 피드백은 그대로 두고 오른쪽 상세 칸만 접은 상태. 다른 행을 고르면 다시 연다.
+    @State private var isDetailCollapsed = false
 
     var body: some View {
         NavigationSplitView {
             SidebarView()
                 .navigationSplitViewColumnWidth(min: 240, ideal: 280, max: 340)
                 .navigationTitle("프로젝트")
-        } content: {
-            contentColumn
         } detail: {
-            detailColumn
+            contentColumn
         }
         // The project screen sits beside the project list here rather than on
         // top of it, so cross-screen links re-scope the column instead of
@@ -49,21 +50,27 @@ struct SplitRootView: View {
             .hubToolbar()
             #endif
         }
-        .navigationSplitViewColumnWidth(min: 340, ideal: 480, max: 760)
+        #if os(macOS)
+        .inspector(isPresented: isShowingDetail) {
+            if let feedback = selectedFeedback {
+                FeedbackDetailView(feedback: feedback,
+                                   projectLabel: store.displayName(for: feedback.projectKey))
+                    .inspectorColumnWidth(min: 320, ideal: 420, max: 640)
+            }
+        }
+        .onChange(of: selection) { isDetailCollapsed = false }
+        #endif
     }
 
-    @ViewBuilder
-    private var detailColumn: some View {
-        if let id = selection, let feedback = store.allFeedback.first(where: { $0.id == id }) {
-            FeedbackDetailView(feedback: feedback,
-                               projectLabel: store.displayName(for: feedback.projectKey))
-        } else {
-            ContentUnavailableView(
-                "피드백을 선택하세요",
-                systemImage: "text.bubble",
-                description: Text("목록에서 항목을 선택하면 전체 내용이 여기에 표시됩니다.")
-            )
-        }
+    private var selectedFeedback: Feedback? {
+        guard let id = selection else { return nil }
+        return store.allFeedback.first(where: { $0.id == id })
+    }
+
+    /// Open while a row is selected and the user hasn't folded it away.
+    private var isShowingDetail: Binding<Bool> {
+        Binding(get: { selectedFeedback != nil && !isDetailCollapsed },
+                set: { isDetailCollapsed = !$0 })
     }
 
     #if os(macOS)
@@ -77,6 +84,18 @@ struct SplitRootView: View {
 
         ToolbarItem(placement: .primaryAction) {
             IdentityMenu()
+        }
+
+        // 상세 칸을 접고 펴는 스위치. 고른 피드백이 있을 때만 뜻이 있다.
+        ToolbarItem(placement: .primaryAction) {
+            Button {
+                isDetailCollapsed.toggle()
+            } label: {
+                Label(isDetailCollapsed ? "상세 펴기" : "상세 접기", systemImage: "sidebar.right")
+            }
+            .help("오른쪽 피드백 상세 칸을 접거나 폅니다")
+            .disabled(selectedFeedback == nil)
+            .keyboardShortcut("i", modifiers: [.command, .option])
         }
 
         ToolbarItemGroup(placement: .primaryAction) {
