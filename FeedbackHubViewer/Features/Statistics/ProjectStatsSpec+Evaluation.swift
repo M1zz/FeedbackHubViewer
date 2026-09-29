@@ -54,6 +54,14 @@ extension ProjectStatsSpec {
         struct Goal {
             var target: Double?
             var floor: Double?
+            /// 선과 견줄 값 — 마지막 칸의 상태에 닿은 설치 ÷ 전체 설치, **순서 무관**.
+            /// 깔때기는 순서대로 온 사람만 세지만, 앱이 그은 선(철수 기준 등)은 대개
+            /// "그 상태에 닿은 비율"로 정의돼 있어 둘을 따로 둔다.
+            var reached: Double?
+            var reachedCount: Int = 0
+            var base: Int = 0
+            /// 마지막 칸의 이름.
+            var label: String?
         }
 
         struct Tile: Identifiable {
@@ -108,6 +116,8 @@ extension ProjectStatsSpec {
             /// 강제할 수 없다. 그래서 전환율인 척하지 않고 사실을 드러낸다.
             let exceedsPrevious: Bool
             var hint: String?
+            /// 앞 칸을 건너뛰고 이 칸의 상태에 닿은 설치 — 깔때기에서는 뺐다.
+            var skipped: Int = 0
             var id: String { label }
         }
     }
@@ -306,29 +316,54 @@ extension ProjectStatsSpec {
         let first = installs.count
         var steps: [Insight.Step] = []
         var previous: Int?
+        // 깔때기다: 한 칸은 **앞 칸을 모두 지난** 설치만 센다. 칸마다 따로 세면 샘플
+        // 단축어로 키보드부터 쓴 사람이 마지막 칸에 들어가 뒤 칸이 앞 칸보다 커지고,
+        // 전환율이 100%를 넘는다. 건너뛴 사람은 `skipped` 로 따로 적는다.
+        var remaining = installs
         for rung in spec.steps {
             let count: Int
             let missing: Bool
+            var skipped = 0
             if let metric = rung.metric {
                 let floor = rung.atLeast ?? 1
-                count = installs.filter { ($0[metric] ?? 0) >= floor }.count
+                let reached: ([String: Double]) -> Bool = { ($0[metric] ?? 0) >= floor }
                 // 그 지표를 **아무도 안 보내는** 것과 0명인 것은 다르다.
                 missing = !installs.contains { $0[metric] != nil }
+                if missing {
+                    count = 0
+                } else {
+                    let kept = remaining.filter(reached)
+                    skipped = installs.filter(reached).count - kept.count
+                    remaining = kept
+                    count = kept.count
+                }
             } else {
-                count = first
+                count = remaining.count
                 missing = false
             }
             steps.append(Insight.Step(
                 label: rung.label, count: count,
                 ratio: first > 0 ? Double(count) / Double(first) : 0,
                 fromPrevious: previous.map { $0 > 0 ? Double(count) / Double($0) : 0 },
-                isMissing: missing, exceedsPrevious: false, hint: rung.hint))
-            previous = count
+                isMissing: missing, exceedsPrevious: false, hint: rung.hint, skipped: skipped))
+            if !missing { previous = count }
         }
         guard !steps.isEmpty else { return nil }
 
+        // 선과 견줄 값: 마지막 칸의 지표에 닿은 설치 전부(앞 칸을 건너뛰었어도).
+        var goal = Insight.Goal(target: spec.target, floor: spec.floor)
+        if let lastRung = spec.steps.last, let metric = lastRung.metric,
+           steps.last?.isMissing == false, first > 0 {
+            let floorValue = lastRung.atLeast ?? 1
+            let count = installs.filter { ($0[metric] ?? 0) >= floorValue }.count
+            goal.reached = Double(count) / Double(first)
+            goal.reachedCount = count
+            goal.base = first
+            goal.label = lastRung.label
+        }
+
         var frame = spec.frame(default: "figure.walk.arrival")
-        frame.verdict = ladderVerdict(spec, steps: steps)
+        frame.verdict = ladderVerdict(spec, steps: steps, reached: goal.reached)
         if spec.onlyWith != nil {
             let left = context.installs.count - first
             // 뺀 설치를 말하지 않으면 모수가 작은 이유가 안 보인다.
@@ -337,15 +372,15 @@ extension ProjectStatsSpec {
                 : "새 지표를 보낸 \(first)대만 셉니다. 옛 버전 \(left)대는 뺐어요."
             frame.note = [frame.note, scope].compactMap { $0 }.joined(separator: " ")
         }
-        return .funnel(frame, steps: steps, goal: .init(target: spec.target, floor: spec.floor))
+        return .funnel(frame, steps: steps, goal: goal)
     }
 
     /// 사다리 맨 밑 한 줄. 앱이 스스로 그어 둔 선과 견준다.
-    private func ladderVerdict(_ spec: LadderSpec, steps: [Insight.Step]) -> String? {
+    private func ladderVerdict(_ spec: LadderSpec, steps: [Insight.Step], reached measured: Double?) -> String? {
         guard let last = steps.last, !last.isMissing else { return nil }
-        let reached = last.ratio
+        let reached = measured ?? last.ratio
         if let floor = spec.floor, reached < floor {
-            var text = "마지막 칸이 \(Self.percent(reached))입니다. 이 앱이 정해 둔 하한 "
+            var text = "'\(last.label)'에 닿은 설치가 \(Self.percent(reached))입니다. 이 앱이 정해 둔 하한 "
                      + "\(Self.percent(floor)) 아래예요."
             let worst = steps.filter { !$0.isMissing && $0.fromPrevious != nil }
                 .min { ($0.fromPrevious ?? 1) < ($1.fromPrevious ?? 1) }
@@ -356,7 +391,7 @@ extension ProjectStatsSpec {
             return text
         }
         if let target = spec.target, reached < target {
-            return "마지막 칸이 \(Self.percent(reached))로 목표 \(Self.percent(target))에 못 미칩니다."
+            return "'\(last.label)'에 닿은 설치가 \(Self.percent(reached))로 목표 \(Self.percent(target))에 못 미칩니다."
         }
         return nil
     }

@@ -73,6 +73,9 @@ extension FeedbackStore {
             let start: Date
             let size: Int
             let rates: [Checkpoint: Rate]
+            /// 주 단위 잔존 — k주째(깐 날부터 7k~7k+6일째)에 한 번이라도 온 비율.
+            /// 인덱스 0이 1주째. Firebase · Amplitude 의 코호트 삼각형 표가 이것이다.
+            var weekly: [Rate] = []
 
             var id: Date { start }
         }
@@ -86,6 +89,19 @@ extension FeedbackStore {
         let since: Date?
         /// 설치일이 그보다 앞서서 뺀 설치 수.
         let excludedBeforeSince: Int
+        /// 잔존 곡선 — 깐 지 N일째(1…30)에 앱을 쓴 비율. 1·7·30일 세 점과 달리
+        /// **모양**이 보인다: 떨어지다 어디서 평평해지는가가 잔존의 요점이다.
+        var curve: [Int: Rate] = [:]
+        /// 같은 곡선을 최근 4주에 깐 설치만으로.
+        var recentCurve: [Int: Rate] = [:]
+        /// 그보다 전에 깐 설치만으로. 최근 곡선과 겹쳐 나아졌는지 본다.
+        var olderCurve: [Int: Rate] = [:]
+
+        static let curveDays = 30
+        /// 삼각형 표의 열 수(1주째 … 8주째).
+        static let triangleWeeks = 8
+        /// 곡선에서 "최근"으로 가르는 설치 경과일.
+        static let recentWindow = 28
 
         var isEmpty: Bool { cohorts.isEmpty }
 
@@ -157,13 +173,123 @@ extension FeedbackStore {
                     pooled[checkpoint, default: .init()].returned += rate.returned
                     pooled[checkpoint, default: .init()].eligible += rate.eligible
                 }
-                return Retention.Cohort(start: week, size: group.count, rates: rates)
+                let weekly = (1...Retention.triangleWeeks).map { k -> Retention.Rate in
+                    var rate = Retention.Rate()
+                    for member in group {
+                        let lastAgo = member.installAgo - (7 * k + 6)
+                        guard lastAgo >= 1 else { continue }
+                        rate.eligible += 1
+                        let firstAgo = member.installAgo - 7 * k
+                        if member.active.contains(where: { $0 >= lastAgo && $0 <= firstAgo }) {
+                            rate.returned += 1
+                        }
+                    }
+                    return rate
+                }
+                return Retention.Cohort(start: week, size: group.count, rates: rates, weekly: weekly)
+            }
+
+            // 곡선: 깐 지 N일째 되는 날이 어제 이전인 설치만 분모에 든다.
+            var curve: [Int: Retention.Rate] = [:]
+            var recent: [Int: Retention.Rate] = [:]
+            var older: [Int: Retention.Rate] = [:]
+            for member in members.values.joined() {
+                let isRecent = member.installAgo <= Retention.recentWindow
+                for day in 1...Retention.curveDays {
+                    let ago = member.installAgo - day
+                    guard ago >= 1 else { break }
+                    let came = member.active.contains(ago)
+                    curve[day, default: .init()].eligible += 1
+                    if came { curve[day, default: .init()].returned += 1 }
+                    if isRecent {
+                        recent[day, default: .init()].eligible += 1
+                        if came { recent[day, default: .init()].returned += 1 }
+                    } else {
+                        older[day, default: .init()].eligible += 1
+                        if came { older[day, default: .init()].returned += 1 }
+                    }
+                }
             }
 
             let since = calendar.date(byAdding: .day, value: -firstEventAgo,
                                       to: calendar.startOfDay(for: now))
             return Retention(cohorts: Array(cohorts), pooled: pooled,
-                             since: since, excludedBeforeSince: excluded)
+                             since: since, excludedBeforeSince: excluded,
+                             curve: curve, recentCurve: recent, olderCurve: older)
+        }
+    }
+
+    // MARK: - Lifecycle (신규 · 유지 · 복귀 · 이탈)
+
+    /// 한 주 동안 활동한 사람을 넷으로 가른다. Amplitude 의 Lifecycle, 흔히 growth
+    /// accounting 이라 부르는 그림이다. 활성 사용자 수가 그대로여도 안에서 새로 온
+    /// 사람이 떠난 사람을 메우고 있는지, 둘 다 적은지는 이것으로만 보인다.
+    ///
+    ///  · 신규: 이번 주에 처음 온 사람(이 허브가 기억하는 180일 안에서)
+    ///  · 유지: 지난주에도 오고 이번 주에도 온 사람
+    ///  · 복귀: 지난주엔 없었는데 그 전에 왔던 사람이 돌아옴
+    ///  · 이탈: 지난주엔 왔는데 이번 주엔 안 온 사람(음수로 그린다)
+    ///
+    /// 주는 달력 주가 아니라 **어제에서 끝나는 7일**씩 물러난다. 이번 주가 반만 지난
+    /// 월요일에 막대가 폭락한 것처럼 보이지 않게.
+    struct Lifecycle {
+        struct Week: Identifiable {
+            /// 이 7일의 첫날.
+            let start: Date
+            let new: Int
+            let retained: Int
+            let resurrected: Int
+            let dormant: Int
+            var id: Date { start }
+            var active: Int { new + retained + resurrected }
+            /// (신규 + 복귀) ÷ 이탈. 1보다 크면 늘고, 작으면 준다.
+            var quickRatio: Double? { dormant > 0 ? Double(new + resurrected) / Double(dormant) : nil }
+        }
+
+        /// 오래된 것부터.
+        let weeks: [Week]
+        var isEmpty: Bool { weeks.allSatisfy { $0.active == 0 && $0.dormant == 0 } }
+
+        static let weekCount = 12
+    }
+
+    func lifecycle(for project: String?, audience: Audience = .all,
+                   calendar: Calendar = .current) -> Lifecycle {
+        memoized(\.lifecycle, ScopeKey(project: project, audience: audience)) {
+            let span = UsageRollups.idRetentionDays
+            let axis = UsageRollups.recentDayKeys(span, calendar: calendar)
+            let days = self.days(for: project, audience: audience)
+            // 며칠 전 → 그날 온 설치.
+            var byAgo: [Int: Set<String>] = [:]
+            for (index, entry) in axis.enumerated() {
+                guard let bucket = days[entry.key], !bucket.installs.isEmpty else { continue }
+                byAgo[span - 1 - index] = bucket.installs
+            }
+            func union(_ range: ClosedRange<Int>) -> Set<String> {
+                range.reduce(into: Set<String>()) { $0.formUnion(byAgo[$1] ?? []) }
+            }
+
+            let count = Lifecycle.weekCount
+            // w = 0 이 가장 오래된 주. 끝나는 날(며칠 전)은 1 + 7 × (count - 1 - w).
+            let oldestEnd = 1 + 7 * (count - 1)
+            var seenBefore = union((oldestEnd + 7)...(span - 1))
+            var previous = union((oldestEnd + 7)...(oldestEnd + 13))
+            var weeks: [Lifecycle.Week] = []
+            for w in 0..<count {
+                let end = 1 + 7 * (count - 1 - w)
+                let active = union(end...(end + 6))
+                let new = active.subtracting(seenBefore)
+                let retained = active.intersection(previous)
+                let resurrected = active.subtracting(previous).subtracting(new)
+                let dormant = previous.subtracting(active)
+                let start = calendar.date(byAdding: .day, value: -(end + 6),
+                                          to: calendar.startOfDay(for: Date())) ?? Date()
+                weeks.append(.init(start: start, new: new.count, retained: retained.count,
+                                   resurrected: resurrected.count, dormant: dormant.count))
+                seenBefore.formUnion(active)
+                previous = active
+            }
+            return Lifecycle(weeks: weeks)
         }
     }
 

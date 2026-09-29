@@ -247,6 +247,9 @@ extension FeedbackStore {
         let day: Window
         let week: Window
         let month: Window
+        /// 오늘 지금까지 온 사람. 아직 끝나지 않은 하루라 DAU(어제)와 따로 둔다 —
+        /// 새로고침할 때마다 오르는 숫자는 이것이다.
+        var today: Int = 0
 
         /// 하루씩 물러나며 같은 세 창을 다시 잰 값(오래된 것부터). 오늘 하루의
         /// 숫자만으로는 오르는 중인지 내리는 중인지 알 수 없다.
@@ -531,6 +534,7 @@ extension FeedbackStore {
                 }
 
             return ActiveUsers(day: window(.day), week: window(.week), month: window(.month),
+                               today: distinct(length: 1, endingDaysAgo: 0),
                                series: series)
         }
     }
