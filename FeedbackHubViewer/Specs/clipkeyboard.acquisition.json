@@ -1,0 +1,62 @@
+{
+  "$comment": [
+    "유입 경로 지도의 원본. docs/acquisition.html 이 사람이 읽는 그림이고, 이 파일은 FeedbackHub 가 읽는 데이터다.",
+    "허브는 이 파일과 usage-spec.json 의 사다리, App Store Connect 노출 리포트를 합쳐 '지금 어느 구역이 새는가'를 계산해서 보여 준다.",
+    "channels.lands: search · browse · appReferrer · webReferrer · campaign · unknown (App Store 가 붙이는 이름표)",
+    "channels.measure: separate(길만 따로 셈) · mixed(다른 길과 섞여 셈) · none(못 셈)",
+    "channels.status: active(쓰는 길) · planned(초안) · unused(안 씀)",
+    "nextSteps.zone: promotion · storefront · app · measurement. 허브는 새는 구역의 첫 할 일을 맨 위에 올린다.",
+    "고친 뒤 FeedbackHubViewer 에서 scripts/sync-stats-specs.sh 를 돌린다."
+  ],
+  "acquisitionVersion": 1,
+  "appId": "com.Ysoup.TokenMemo",
+  "appName": "ClipKeyboard",
+  "asOf": "2026-09-24",
+  "mapURL": "https://m1zz.github.io/ClipKeyboard/acquisition.html",
+
+  "appZone": {
+    "activation": "키보드에 닿기까지",
+    "activationFloor": 0.5,
+    "paywallEvent": "paywall_view",
+    "paywallFloor": 0.05
+  },
+  "storefront": {
+    "conversionFloor": 0.25,
+    "note": "제품 페이지 조회 대비 첫 다운로드. 25% 는 ASC 동종 앱 벤치마크를 옮기기 전의 임시 선이다."
+  },
+
+  "channels": [
+    { "name": "App Store 검색", "group": "App Store 안", "lands": "search", "measure": "mixed", "status": "active", "note": "입소문으로 이름을 듣고 검색한 사람도 여기 섞인다" },
+    { "name": "둘러보기", "group": "App Store 안", "lands": "browse", "measure": "mixed", "status": "active" },
+    { "name": "Apple 피처링", "group": "App Store 안", "lands": "browse", "measure": "mixed", "status": "planned" },
+    { "name": "인앱 이벤트", "group": "App Store 안", "lands": "browse", "measure": "mixed", "status": "unused" },
+    { "name": "Search Ads", "group": "App Store 안", "lands": "search", "measure": "separate", "status": "unused" },
+
+    { "name": "Reddit", "group": "커뮤니티·소셜", "lands": "webReferrer", "measure": "mixed", "status": "active" },
+    { "name": "Product Hunt · Show HN", "group": "커뮤니티·소셜", "lands": "webReferrer", "measure": "mixed", "status": "planned" },
+    { "name": "Threads · X", "group": "커뮤니티·소셜", "lands": "appReferrer", "measure": "mixed", "status": "active" },
+    { "name": "한국 커뮤니티", "group": "커뮤니티·소셜", "lands": "webReferrer", "measure": "mixed", "status": "active" },
+    { "name": "짧은 영상", "group": "커뮤니티·소셜", "lands": "appReferrer", "measure": "mixed", "status": "unused" },
+
+    { "name": "구글 · 네이버 검색", "group": "웹 검색·남의 글", "lands": "webReferrer", "measure": "none", "status": "active", "note": "Search Console 등록 여부부터 확인" },
+    { "name": "내 블로그 글", "group": "웹 검색·남의 글", "lands": "webReferrer", "measure": "mixed", "status": "active" },
+    { "name": "남이 쓴 기사·추천 목록", "group": "웹 검색·남의 글", "lands": "webReferrer", "measure": "mixed", "status": "active" },
+    { "name": "광고 · 협업 · 스폰서", "group": "웹 검색·남의 글", "lands": "campaign", "measure": "separate", "status": "unused" },
+
+    { "name": "앱 안 공유", "group": "사람", "lands": "appReferrer", "measure": "mixed", "status": "active", "note": "공유 링크에 ct 가 없어 고리가 얼마나 도는지 모른다" },
+    { "name": "말로 하는 추천", "group": "사람", "lands": "search", "measure": "none", "status": "active", "note": "검색으로 위장한다" },
+    { "name": "선물 페이지 · 오퍼 코드", "group": "사람", "lands": "unknown", "measure": "separate", "status": "active", "note": "코드 사용 수는 남지만 새 사람인지는 모른다" }
+  ],
+
+  "nextSteps": [
+    { "zone": "app", "title": "최근 30일 설치로 '키보드에 닿기까지' 칸별 이탈 보기", "detail": "켜기 전에 빠지면 안내, 켰는데 안 뜨면 지구본 전환, 떴는데 안 넣으면 첫 칸의 내용 문제." },
+    { "zone": "app", "title": "페이월이 뜨는 자리 늘리기", "detail": "쓰는 사람조차 결제 문 앞에 거의 서지 않는다. 권한 판정을 고친 버전 이후로 다시 센다." },
+    { "zone": "storefront", "title": "ASC 동종 앱 벤치마크와 전환율 나란히 보기", "detail": "낮으면 스크린샷 첫 3장, 부제, 리뷰 수." },
+    { "zone": "measurement", "title": "캠페인 제공자 토큰(pt) 발급", "detail": "App Store Connect 에서 한 번. 그래야 길마다 따로 세는 캠페인 칸이 열린다." },
+    { "zone": "measurement", "title": "소개 · 가이드 페이지 링크 6곳에 ct", "detail": "index.html 4곳, tutorial.html 2곳." },
+    { "zone": "measurement", "title": "앱 안 공유 링크에 ct", "detail": "친구에게 알리기와 여권 영상. 입소문 고리가 보이게 된다." },
+    { "zone": "measurement", "title": "커뮤니티 글마다 ct", "detail": "글끼리 리텐션까지 견줄 수 있다." },
+    { "zone": "measurement", "title": "앱 안에서 '어디서 알게 되셨어요?' 한 번 묻기", "detail": "입소문 · 검색엔진처럼 선이 안 남는 길을 셀 유일한 창. 답을 스냅샷 한 칸으로." },
+    { "zone": "promotion", "title": "앞 구역이 괜찮을 때만 노출 늘리기", "detail": "그때부터 ct 로 길마다 재며 늘린다." }
+  ]
+}

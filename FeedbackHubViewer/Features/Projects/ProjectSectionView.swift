@@ -119,6 +119,9 @@ struct ProjectSectionView: View {
         case .stats: return store.usage(for: project).installs
         // 빨강인 앱 수. 한 앱이면 0 아니면 1.
         case .release: return releaseRedCount
+        case .acquisition:
+            guard let project else { return AcquisitionCatalog.all.count }
+            return AcquisitionCatalog.map(for: project)?.activeChannels.count ?? 0
         case .crashes: return store.crashSummary(for: project).total
         case .keywords: return keywords.standings(for: project).filter(\.isRanked).count
         case .purchases: return project.flatMap { purchases.products(for: $0)?.count } ?? 0
@@ -145,6 +148,9 @@ struct ProjectSectionView: View {
                 return count > 0 ? "빨강 \(count)개" : "빨강 없음"
             }
             return store.releaseLevel(for: project)?.label ?? "판정 없음"
+        case .acquisition:
+            guard project != nil else { return count > 0 ? "지도 \(count)개" : "지도 없음" }
+            return count > 0 ? "길 \(count)개" : "지도 없음"
         case .crashes:
             return count > 0 ? "\(count)건" : "없음"
         case .keywords:
@@ -180,6 +186,8 @@ struct ProjectSectionView: View {
             StatisticsDashboard(project: project)
         case .release:
             ReleaseHealthView(project: project)
+        case .acquisition:
+            AcquisitionView(project: project)
         case .crashes:
             CrashListView(project: project)
         case .keywords:
@@ -229,6 +237,10 @@ struct ProjectSectionView: View {
             var text = "최신 \(report.latest.version)"
             if let previous = report.previous { text += " · 앞 버전 \(previous.version)" }
             return text + " · \(report.verdict.level.label)"
+        case .acquisition:
+            guard let project else { return "앱마다 어디서 새는지" }
+            guard let map = AcquisitionCatalog.map(for: project) else { return "유입 지도 없음" }
+            return "쓰는 길 \(map.activeChannels.count)개" + (map.asOf.map { " · 지도 \($0) 기준" } ?? "")
         case .crashes:
             let summary = store.crashSummary(for: project)
             guard !summary.isEmpty else { return "올라온 진단 없음" }

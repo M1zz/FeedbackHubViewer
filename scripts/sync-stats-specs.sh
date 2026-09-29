@@ -1,5 +1,5 @@
 #!/bin/bash
-# 앱별 통계 스펙(usage-spec.json)을 각 앱 리포에서 뷰어로 가져온다.
+# 앱별 통계 스펙(usage-spec.json)과 유입 지도(acquisition.json)를 각 앱 리포에서 뷰어로 가져온다.
 #
 # 원본은 지표를 만드는 곳, 즉 앱 리포에 있다(<앱>/docs/usage-spec.json).
 # 지표를 추가하는 커밋에서 라벨도 같이 쓰게 되고, 뷰어는 그 사본만 번들에 넣는다.
@@ -24,7 +24,7 @@ check_only=false
 mkdir -p "$DEST"
 status=0
 
-for entry in "${SPECS[@]}"; do
+for entry in "${SPECS[@]}" "${ACQUISITION[@]}"; do
   IFS='|' read -r repo rel name <<< "$entry"
   src="$repo/$rel"
   dst="$DEST/$name"

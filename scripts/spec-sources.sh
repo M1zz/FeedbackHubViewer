@@ -25,4 +25,10 @@ SPECS=(
   "$WORKSPACE/code/Rereminder|docs/usage-spec.json|rereminder.usage-spec.json"
 )
 
+# 유입 경로 지도. 형식은 SPECS 와 같다. 허브의 "유입" 탭이 이것으로 어디가 새는지 판정한다.
+# 뷰어 쪽 이름은 반드시 `.acquisition.json` 으로 끝나야 한다(통계 스펙과 가르는 표시).
+ACQUISITION=(
+  "$WORKSPACE/code/ClipKeyboard|docs/engineering/acquisition.json|clipkeyboard.acquisition.json"
+)
+
 DEST="FeedbackHubViewer/Specs"

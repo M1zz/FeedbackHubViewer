@@ -42,6 +42,9 @@ final class FeedbackStore: ObservableObject {
         case stats = "통계"
         /// 새 버전이 멀쩡한가 — 초록 · 노랑 · 빨강 판정(`ReleaseHealth`).
         case release = "릴리즈"
+        /// 사람이 앱에 어떻게 닿고 어디서 새는가 — 앱 리포의 유입 지도로 판정한다
+        /// (`Models/Acquisition.swift`).
+        case acquisition = "유입"
         case crashes = "진단"
         /// App Store search — the only section that reads something other than
         /// the CloudKit hub (see `KeywordStore`). It sits here because it is
@@ -57,6 +60,7 @@ final class FeedbackStore: ObservableObject {
             case .feedback: return "text.bubble"
             case .stats: return "chart.bar"
             case .release: return "stethoscope"
+            case .acquisition: return "point.3.connected.trianglepath.dotted"
             case .crashes: return "exclamationmark.triangle"
             case .keywords: return "magnifyingglass"
             case .purchases: return "creditcard"
