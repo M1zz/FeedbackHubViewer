@@ -90,7 +90,7 @@ enum AppStoreConnectKeychain {
 // MARK: - 모델
 
 /// 스토어에 걸린 상품 하나 — 인앱 구입이든 구독이든.
-struct StoreProduct: Identifiable, Hashable {
+struct StoreProduct: Identifiable, Hashable, Codable {
     /// App Store Connect의 id. 판매 리포트의 Apple Identifier와 같은 값이다.
     let id: String
     let name: String
@@ -103,7 +103,7 @@ struct StoreProduct: Identifiable, Hashable {
     /// "₩4,400" — 못 읽었으면 nil.
     var price: String?
 
-    enum Kind: String, Hashable {
+    enum Kind: String, Hashable, Codable {
         case consumable = "CONSUMABLE"
         case nonConsumable = "NON_CONSUMABLE"
         case nonRenewing = "NON_RENEWING_SUBSCRIPTION"
@@ -155,14 +155,14 @@ struct StoreProduct: Identifiable, Hashable {
 }
 
 /// App Store Connect에 있는 앱 하나.
-struct ConnectApp: Hashable {
+struct ConnectApp: Hashable, Codable {
     let id: String
     let name: String
     let bundleID: String
 }
 
 /// 판매 리포트 한 줄에서 필요한 것만.
-struct SalesLine: Hashable {
+struct SalesLine: Hashable, Codable {
     let appleID: String
     let productType: String
     let units: Int

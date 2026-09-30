@@ -18,6 +18,12 @@
 //  두 번 세어진다 — 실제로 첫 다운로드가 판매 리포트의 두 배로 나왔다. 그래서 날짜마다
 //  가장 늦게 가공된 파일 하나만 쓴다(늦은 쪽이 고쳐진 값일 수 있다).
 //
+//  ── 받은 파일은 디스크에 둔다 ──
+//
+//  한 번 가공된 인스턴스는 바뀌지 않는다. 그래서 파일은 인스턴스 id 로 디스크에 두고
+//  (`AnalyticsCache`), 다음부터는 인스턴스 목록만 물어 새로 생긴 것만 받는다. 목록도
+//  남겨 두어서, 앱을 켜자마자 네트워크 없이 지난번 결과를 그릴 수 있다(`requestID: nil`).
+//
 
 import Foundation
 
@@ -73,52 +79,79 @@ extension AppStoreConnect {
 
     /// 최근 `days`일의 행을 날짜마다 한 벌씩(머리말).
     ///
+    /// `requestID` 가 nil 이면 네트워크 없이 디스크에 둔 파일만 읽는다 — 지난번에 본
+    /// 인스턴스 목록과 그 파일들. 있으면 목록을 새로 묻고, 디스크에 없는 파일만 받는다.
+    ///
     /// 가공일로 먼저 거르는 창을 사흘 넓게 잡는다 — 가공은 사건보다 하루 이틀 늦어서,
     /// 창 첫날의 행이 그보다 늦게 가공된 파일에 들어 있다.
-    func analyticsRows(_ report: AnalyticsReport, requestID: String, appID: String,
+    func analyticsRows(_ report: AnalyticsReport, requestID: String?, appID: String,
                        days: Int) async throws -> AnalyticsRows {
         let calendar = Calendar(identifier: .gregorian)
         let cutoff = Self.day.string(from: calendar.date(byAdding: .day, value: -(days + 3), to: Date()) ?? Date())
         let firstDay = Self.day.string(from: calendar.date(byAdding: .day, value: -days, to: Date()) ?? Date())
 
-        let reports = try await list("v1/analyticsReportRequests/\(requestID)/reports", ["filter[name]": report.rawValue])
-        guard let found = reports.data.first else { return AnalyticsRows() }
-        let instances = try await list("v1/analyticsReports/\(found.id)/instances", [
-            "filter[granularity]": "DAILY", "limit": "200"
-        ])
-        let recent = instances.data.filter { ($0.string("processingDate") ?? "") >= cutoff }
+        let recent: [AnalyticsCache.Instance]
+        if let requestID {
+            let reports = try await list("v1/analyticsReportRequests/\(requestID)/reports", ["filter[name]": report.rawValue])
+            guard let found = reports.data.first else { return AnalyticsRows() }
+            let instances = try await list("v1/analyticsReports/\(found.id)/instances", [
+                "filter[granularity]": "DAILY", "limit": "200"
+            ])
+            recent = instances.data
+                .map { AnalyticsCache.Instance(id: $0.id, processingDate: $0.string("processingDate") ?? "") }
+                .filter { $0.processingDate >= cutoff }
+            AnalyticsCache.remember(recent, appID: appID, report: report)
+        } else {
+            recent = AnalyticsCache.instances(appID: appID, report: report).filter { $0.processingDate >= cutoff }
+        }
 
-        var result = AnalyticsRows(instances: recent.count)
+        var result = AnalyticsRows()
         /// 날짜 → 그 날짜를 준 파일의 가공일. 늦게 가공된 파일이 이긴다.
         var processedFor: [String: String] = [:]
         for instance in recent {
-            let processed = instance.string("processingDate") ?? ""
+            let segments: [Data]
+            if let cached = AnalyticsCache.segments(instanceID: instance.id) {
+                segments = cached
+            } else if requestID != nil {
+                segments = try await downloadSegments(instanceID: instance.id)
+                AnalyticsCache.store(segments, instanceID: instance.id)
+            } else {
+                continue
+            }
+            result.instances += 1
             var rowsByDate: [String: [[String: String]]] = [:]
-            for row in try await segmentRows(instanceID: instance.id) {
+            for row in Self.rows(gzipped: segments) {
                 guard row["App Apple Identifier"] == nil || row["App Apple Identifier"] == appID,
                       let date = row["Date"], date >= firstDay else { continue }
                 rowsByDate[date, default: []].append(row)
             }
-            for (date, rows) in rowsByDate where processed > (processedFor[date] ?? "") {
-                processedFor[date] = processed
+            for (date, rows) in rowsByDate where instance.processingDate > (processedFor[date] ?? "") {
+                processedFor[date] = instance.processingDate
                 result.byDate[date] = rows
             }
         }
         return result
     }
 
-    /// 한 인스턴스의 모든 세그먼트를 받아 행으로.
-    private func segmentRows(instanceID: String) async throws -> [[String: String]] {
+    /// 한 인스턴스의 모든 세그먼트를 받은 그대로(gzip).
+    private func downloadSegments(instanceID: String) async throws -> [Data] {
         let segments = try await list("v1/analyticsReportInstances/\(instanceID)/segments", [:])
-        var rows: [[String: String]] = []
+        var files: [Data] = []
         for segment in segments.data {
             guard let link = segment.string("url").flatMap(URL.init(string:)) else { continue }
             // 미리 서명된 주소라 인증 머리를 붙이지 않는다.
             let (data, _) = try await URLSession.shared.data(from: link)
-            guard let text = Self.gunzip(data).flatMap({ String(data: $0, encoding: .utf8) }) else { continue }
-            rows += Self.rows(text)
+            files.append(data)
         }
-        return rows
+        return files
+    }
+
+    /// gzip 세그먼트들을 행으로.
+    static func rows(gzipped segments: [Data]) -> [[String: String]] {
+        segments.flatMap { data -> [[String: String]] in
+            guard let text = gunzip(data).flatMap({ String(data: $0, encoding: .utf8) }) else { return [] }
+            return rows(text)
+        }
     }
 
     /// 탭으로 나뉜 표를 머리글 이름으로 읽는다.
@@ -127,5 +160,64 @@ extension AppStoreConnect {
         guard !lines.isEmpty else { return [] }
         let header = lines.removeFirst()
         return lines.map { Dictionary(zip(header, $0), uniquingKeysWith: { first, _ in first }) }
+    }
+}
+
+// MARK: - 디스크
+
+/// 받은 분석 리포트 파일과, 리포트마다 최근에 본 인스턴스 목록.
+///
+/// 파일은 인스턴스 id 하나에 한 파일(받은 gzip 그대로)이라 작고, 목록에서 빠진
+/// 인스턴스(창 밖으로 밀려난 것)의 파일은 목록을 고칠 때 함께 지운다.
+/// 계정에 딸린 것이라 키를 바꾸거나 지우면 `forget()` 으로 통째로 지운다.
+enum AnalyticsCache {
+
+    struct Instance: Codable, Hashable {
+        let id: String
+        let processingDate: String
+    }
+
+    /// 앱 id → 리포트 이름 → 최근에 본 인스턴스.
+    private typealias Index = [String: [String: [Instance]]]
+
+    private static var indexFile: URL? { CacheFile.url("analytics-index") }
+
+    private static var directory: URL? {
+        guard let base = CacheFile.url("analytics-index")?.deletingLastPathComponent() else { return nil }
+        let directory = base.appendingPathComponent("analytics", isDirectory: true)
+        try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        return directory
+    }
+
+    private static func file(_ instanceID: String) -> URL? {
+        directory?.appendingPathComponent("\(instanceID).json")
+    }
+
+    static func instances(appID: String, report: AnalyticsReport) -> [Instance] {
+        CacheFile.read(Index.self, at: indexFile)?[appID]?[report.rawValue] ?? []
+    }
+
+    /// 새 목록으로 바꾸고, 빠진 인스턴스의 파일을 지운다.
+    static func remember(_ instances: [Instance], appID: String, report: AnalyticsReport) {
+        var index = CacheFile.read(Index.self, at: indexFile) ?? [:]
+        let old = index[appID]?[report.rawValue] ?? []
+        guard old != instances else { return }
+        index[appID, default: [:]][report.rawValue] = instances
+        CacheFile.write(index, to: indexFile)
+        let kept = Set(instances.map(\.id))
+        for gone in old where !kept.contains(gone.id) { CacheFile.remove(file(gone.id)) }
+    }
+
+    static func segments(instanceID: String) -> [Data]? {
+        CacheFile.read([Data].self, at: file(instanceID))
+    }
+
+    static func store(_ segments: [Data], instanceID: String) {
+        CacheFile.write(segments, to: file(instanceID))
+    }
+
+    static func forget() {
+        CacheFile.remove(indexFile)
+        CacheFile.remove(directory)
     }
 }
