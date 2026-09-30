@@ -346,8 +346,8 @@ extension FeedbackStore {
                 case .all:          return scanned
                 case .paidFeatures: return paidFeatures
                 case .freeFeatures: return freeFeatures
-                // 이 카드는 접근 축만 센다. 결제 축은 `audienceInstalls` 에서.
-                case .purchased:    return 0
+                // 이 카드는 접근 축만 센다. 결제 · 나라 축은 `audienceInstalls` 에서.
+                case .purchased, .region: return 0
                 }
             }
         }

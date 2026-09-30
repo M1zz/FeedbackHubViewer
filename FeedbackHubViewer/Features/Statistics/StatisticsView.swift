@@ -99,6 +99,7 @@ struct StatisticsDashboard: View {
                         activeUsersCard
                         lifecycleCard
                         retentionCard
+                        if audience == .all { regionCard }
                         activeDaysCard
                         if audience == .all { accessCard }
                         specCards
@@ -144,6 +145,7 @@ struct StatisticsDashboard: View {
         all.append(StatsAnalysis.lifecycle(store.lifecycle(for: scope, audience: audience)))
         all.append(StatsAnalysis.retention(store.retention(for: scope, audience: audience),
                                            sendsDailyOpen: sendsDailyOpen))
+        if audience == .all, let region = regionFinding { all.append(region) }
         all.append(habitFinding)
         all.append(capacityFinding)
         if audience == .all, let paid = StatsAnalysis.paid(store.accessSplit(for: scope)) { all.append(paid) }
@@ -454,7 +456,7 @@ struct StatisticsDashboard: View {
     @ViewBuilder
     private var audiencePicker: some View {
         let installs = store.audienceInstalls(for: scope)
-        if installs.known > 0 || !installs.cells.isEmpty {
+        if installs.known > 0 || !installs.cells.isEmpty || !installs.regions.isEmpty {
             VStack(alignment: .leading, spacing: 6) {
                 if installs.known > 0 {
                     Picker("누구를 볼까요", selection: $audience) {
@@ -468,6 +470,9 @@ struct StatisticsDashboard: View {
                 if !installs.cells.isEmpty {
                     purchaseMenu(installs)
                 }
+                if !installs.regions.isEmpty {
+                    regionMenu(installs)
+                }
                 footnote(audienceNote)
             }
             .padding(10)
@@ -476,6 +481,11 @@ struct StatisticsDashboard: View {
                 // 산 것 칸은 프로젝트마다 뜻이 다르다(한 앱의 "Pro"는 다른 앱의 "Pro"가 아니다).
                 // 범위를 옮기면 고른 칸을 들고 가지 않는다.
                 if audience.axis == .purchase { audience = .all }
+                // 나라는 앱이 바뀌어도 뜻이 같다(대만은 대만이다). 새 범위에 그 나라 설치가
+                // 없을 때만 놓는다 — 빈 화면을 고른 채로 두지 않는다.
+                if case .region = audience, (store.installIDs(for: scope, audience: audience) ?? []).isEmpty {
+                    audience = .all
+                }
             }
         }
     }
@@ -515,6 +525,40 @@ struct StatisticsDashboard: View {
         }
     }
 
+    /// 나라 축의 메뉴. 설치가 많은 나라부터, 표본이 얇은 나라는 그렇다고 적는다.
+    private func regionMenu(_ installs: FeedbackStore.AudienceInstalls) -> some View {
+        HStack(spacing: 8) {
+            Text("나라로")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Menu {
+                ForEach(installs.regionOrder, id: \.self) { code in
+                    let count = installs.regions[code]?.count ?? 0
+                    let group = FeedbackStore.Audience.region(code)
+                    Button {
+                        audience = group
+                    } label: {
+                        let thin = count < FeedbackStore.regionMinimumInstalls ? " · 표본 적음" : ""
+                        if audience == group {
+                            Label("\(group.label) \(count)대\(thin)", systemImage: "checkmark")
+                        } else {
+                            Text("\(group.label) \(count)대\(thin)")
+                        }
+                    }
+                }
+            } label: {
+                Text(audience.axis == .region ? audience.label : "고르기")
+                    .font(.caption.weight(.medium))
+            }
+            .fixedSize()
+            if audience.axis == .region {
+                Button("해제") { audience = .all }
+                    .font(.caption)
+                    .buttonStyle(.borderless)
+            }
+        }
+    }
+
     /// 고르개 밑의 한 줄 — 무엇을 덮고 있고, 무엇을 못 보여주는지.
     private var audienceNote: String {
         let installs = store.audienceInstalls(for: scope)
@@ -530,6 +574,9 @@ struct StatisticsDashboard: View {
             }
             if !installs.cells.isEmpty {
                 text += ". 둘째 줄은 지금 파는 것 가운데 무엇을 샀는가이고, 새 규약(flag.schema)을 보내는 설치 \(installs.purchaseKnown)대만 갈립니다"
+            }
+            if !installs.regions.isEmpty {
+                text += ". 나라는 기기 지역 설정(locale)으로 가르고, 나라를 말하지 않는 설치 \(installs.regionUnknown.count)대는 모름입니다"
             }
             return text + ". 고르면 이 화면 전체가 그 무리만 놓고 다시 그려집니다."
         case .paidFeatures, .freeFeatures:
@@ -547,6 +594,13 @@ struct StatisticsDashboard: View {
             }
             if !installs.purchaseUnknown.isEmpty {
                 text += " 새 규약 이전 버전 \(installs.purchaseUnknown.count)대는 어느 칸에도 없어요(안 삼이 아니라 모름)."
+            }
+            return text + " " + caveat
+        case .region:
+            let count = installs.count(for: audience)
+            var text = "\(audience.label) — \(audience.blurb) \(count)대만 놓고 본 화면입니다. 기기의 지역 설정이라 App Store 국가와 드물게 어긋날 수 있어요."
+            if count < FeedbackStore.regionMinimumInstalls {
+                text += " 표본이 \(FeedbackStore.regionMinimumInstalls)대에 못 미쳐서, 한두 대가 옮겨도 숫자가 뒤집힙니다."
             }
             return text + " " + caveat
         }
@@ -867,6 +921,55 @@ struct StatisticsDashboard: View {
             text += " 이 앱이 이벤트를 보내기 시작한 \(since.formatted(.dateTime.month(.defaultDigits).day())) 전에 깐 설치 \(AppFormat.count(retention.excludedBeforeSince))대는 설치 직후를 못 봐서 뺐어요."
         }
         return text
+    }
+
+    // MARK: - 나라마다 남나
+
+    private var regionFinding: StatsFinding? {
+        StatsAnalysis.regions(store.regionComparison(for: scope),
+                              overall: store.retention(for: scope, audience: .all))
+    }
+
+    /// 나라끼리 잔존을 나란히. 들어온 수는 판매 리포트가 말해 주지만, 남는지는 여기서만
+    /// 보인다 — 현지화에 품을 쓸지를 정하는 카드다. 설치가 충분한 나라가 둘 이상일 때만 뜬다.
+    @ViewBuilder
+    private var regionCard: some View {
+        let rows = store.regionComparison(for: scope)
+        if rows.count >= 2 {
+            AnalyzedCard(title: "나라마다 남나", systemImage: "globe.asia.australia",
+                         finding: regionFinding) {
+                regionTable(rows)
+            } detail: {
+                footnote("나라는 스냅샷의 기기 지역 설정(locale)입니다. App Store 국가와 대부분 같지만, 한국어 기기를 미국 계정으로 쓰는 사람처럼 어긋날 수 있어요. 설치 \(FeedbackStore.regionMinimumInstalls)대 이상인 나라만, 많은 나라부터 \(FeedbackStore.regionComparisonLimit)곳까지 세웁니다. 칸은 위 잔존 카드와 같은 계산이라, 무리 고르개에서 그 나라를 고르면 잔존 카드가 같은 숫자를 보여 줍니다. 판정은 나라마다 10명 이상 잰 값만 씁니다.")
+            }
+        }
+    }
+
+    private func regionTable(_ rows: [FeedbackStore.RegionRow]) -> some View {
+        Grid(alignment: .leading, horizontalSpacing: 8, verticalSpacing: 6) {
+            GridRow {
+                Text("나라")
+                ForEach(FeedbackStore.Retention.Checkpoint.allCases) { Text($0.label) }
+            }
+            .font(.body.weight(.semibold))
+            .foregroundStyle(.secondary)
+            ForEach(rows) { row in
+                GridRow {
+                    Button {
+                        audience = .region(row.code)
+                    } label: {
+                        Text("\(row.name) · \(AppFormat.count(row.installs))대")
+                            .font(.body.monospacedDigit())
+                    }
+                    .buttonStyle(.borderless)
+                    .help("\(row.name)만 놓고 이 화면 보기")
+                    ForEach(FeedbackStore.Retention.Checkpoint.allCases) { checkpoint in
+                        retentionCell(row.pooled[checkpoint] ?? .init())
+                    }
+                }
+            }
+        }
+        .accessibilityElement(children: .contain)
     }
 
     // MARK: - 한 달에 며칠 오는가

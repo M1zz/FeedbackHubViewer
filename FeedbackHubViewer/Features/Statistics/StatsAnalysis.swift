@@ -18,7 +18,7 @@ import Foundation
 
 struct StatsFinding: Identifiable {
     enum Topic: String {
-        case growth, lifecycle, retention, habit, capacity, paid, flow, release, feedback
+        case growth, lifecycle, retention, region, habit, capacity, paid, flow, release, feedback
     }
 
     enum State: Int, Comparable {
@@ -198,6 +198,61 @@ enum StatsAnalysis {
             if state == .bad { state = .watch }
         }
         return .init(topic: .retention, question: question, answer: answer, state: state, action: action)
+    }
+
+    /// 나라마다 남는가 — 들어온 수가 아니라 남는 비율로 나라를 견준다.
+    ///
+    /// 7일 잔존이 잴 만큼 쌓인 나라가 둘 이상일 때만 판정한다. 아니면 다음 날 잔존으로
+    /// 대신하고 그렇다고 적는다. 기준은 이 앱 전체의 같은 값이다 — 흔한 앱 값보다 이 앱
+    /// 안에서 어느 나라가 새는지가 현지화를 정하는 데 쓰인다.
+    static func regions(_ rows: [FeedbackStore.RegionRow],
+                        overall: FeedbackStore.Retention) -> StatsFinding? {
+        let question = "나라마다 남나?"
+        /// 한 나라의 값이 판정에 쓸 만큼 쌓였는가.
+        let minimumEligible = 10
+        func measured(_ checkpoint: FeedbackStore.Retention.Checkpoint)
+            -> [(row: FeedbackStore.RegionRow, ratio: Double)] {
+            rows.compactMap { row in
+                guard let rate = row.pooled[checkpoint], rate.eligible >= minimumEligible,
+                      let ratio = rate.ratio else { return nil }
+                return (row, ratio)
+            }
+        }
+        guard rows.count >= 2 else { return nil }
+        var checkpoint = FeedbackStore.Retention.Checkpoint.day7
+        var values = measured(.day7)
+        if values.count < 2 {
+            checkpoint = .day1
+            values = measured(.day1)
+        }
+        guard values.count >= 2, let base = overall.pooled[checkpoint]?.ratio, base > 0 else {
+            return .init(topic: .region, question: question,
+                         answer: "나라마다 잔존을 잴 설치가 아직 모자랍니다(나라당 \(minimumEligible)명 이상 필요).",
+                         state: .unknown)
+        }
+
+        let listed = values.map { "\($0.row.name) \(percent($0.ratio))" }.joined(separator: ", ")
+        var answer = "\(checkpoint.label) 기준 \(listed)가 돌아옵니다(앱 전체 \(percent(base)))."
+        if checkpoint == .day1 {
+            answer += " 7일 잔존은 아직 잴 나라가 모자라 다음 날로 견줬어요."
+        }
+
+        // 전체의 60%도 못 미치는 나라는 새는 곳이다. 설치가 많은 나라부터 본다.
+        let leaking = values.filter { $0.ratio < base * 0.6 }
+        let strong = values.filter { $0.ratio > base * 1.4 }
+        var state: StatsFinding.State = .good
+        var action: String?
+        if let worst = leaking.first {
+            answer += " \(leaking.map(\.row.name).joined(separator: " · "))은(는) 앱 전체보다 크게 덜 남아요."
+            state = .watch
+            action = "\(worst.row.name) 사용자의 첫 경험 점검하기: 그 나라 언어 · 첫 화면 · 스토어 설명이 기대와 맞는지"
+        } else {
+            answer += " 크게 새는 나라는 없어요."
+        }
+        if !strong.isEmpty {
+            answer += " \(strong.map(\.row.name).joined(separator: " · "))은(는) 전체보다 잘 남아서, 그 나라에 더 알릴 만해요."
+        }
+        return .init(topic: .region, question: question, answer: answer, state: state, action: action)
     }
 
     // MARK: - 자주 오나
