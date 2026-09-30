@@ -97,14 +97,20 @@ extension FeedbackStore {
         case freeFeatures
         /// 지금 파는 것 가운데 이 조합을 산 설치(`PurchaseCell`).
         case purchased(PurchaseCell)
+        /// 기기 지역이 이 나라인 설치. 값은 ISO 두 글자 코드("TW")다
+        /// (`FeedbackStore+Region.swift`).
+        case region(String)
 
-        enum Axis { case access, purchase }
+        enum Axis { case access, purchase, region }
 
         var id: Self { self }
 
         var axis: Axis {
-            if case .purchased = self { return .purchase }
-            return .access
+            switch self {
+            case .purchased: return .purchase
+            case .region:    return .region
+            default:         return .access
+            }
         }
 
         static let accessCases: [Audience] = [.all, .paidFeatures, .freeFeatures]
@@ -115,6 +121,7 @@ extension FeedbackStore {
             case .paidFeatures:     return "유료기능"
             case .freeFeatures:     return "무료기능"
             case .purchased(let c): return c.label
+            case .region(let code): return FeedbackStore.regionName(code)
             }
         }
 
@@ -126,6 +133,8 @@ extension FeedbackStore {
             case .freeFeatures: return "무료 기능만 쓰고 있는 설치"
             case .purchased(let c):
                 return c.mask == 0 ? "지금 파는 것을 하나도 안 산 설치" : "\(c.label)을(를) 산 설치"
+            case .region:
+                return "기기 지역이 \(label)인 설치"
             }
         }
 
@@ -183,6 +192,16 @@ extension FeedbackStore {
         /// 칸이 아니라 표식이라 어느 칸과도 겹칠 수 있다.
         var unlockedWithoutBuying: Set<String> = []
 
+        /// 나라 축 — 기기 지역 코드마다 든 설치.
+        var regions: [String: Set<String>] = [:]
+        /// 나라 축에서 모름 — 지역 없는 locale("en")이나 나라가 아닌 지역("419")을 보낸 설치.
+        var regionUnknown: Set<String> = []
+
+        /// 설치가 많은 나라부터. 같으면 코드 차례.
+        var regionOrder: [String] {
+            regions.keys.sorted { (regions[$0]!.count, $1) > (regions[$1]!.count, $0) }
+        }
+
         /// 갈린 설치 수 — 이 화면이 덮고 있는 범위.
         var known: Int { paidFeatures.count + freeFeatures.count }
         /// 산 것 축에서 갈린 설치 수 — 기준선 안의 설치.
@@ -195,6 +214,7 @@ extension FeedbackStore {
             case .paidFeatures:     return paidFeatures
             case .freeFeatures:     return freeFeatures
             case .purchased(let c): return purchased[c.mask] ?? []
+            case .region(let code): return regions[code] ?? []
             }
         }
 
@@ -223,6 +243,11 @@ extension FeedbackStore {
                     case true?:  result.paidFeatures.insert(snapshot.installID)
                     case false?: result.freeFeatures.insert(snapshot.installID)
                     case nil:    result.unknown.insert(snapshot.installID)
+                    }
+                    if let code = Self.regionCode(snapshot.locale) {
+                        result.regions[code, default: []].insert(snapshot.installID)
+                    } else {
+                        result.regionUnknown.insert(snapshot.installID)
                     }
                 }
             }

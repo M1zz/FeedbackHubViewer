@@ -43,7 +43,8 @@
 화면 위계는 **프로젝트 우선**입니다. 먼저 프로젝트를 고르고, 그 안에서 **피드백 · 통계 · 진단**을
 상단 세그먼트로 전환합니다.
 
-- **Mac / iPad**: 프로젝트 목록(사이드바) + 그 프로젝트의 피드백·통계·진단 + 피드백 상세의 3열
+- **Mac / iPad**: 프로젝트 목록(사이드바) + 그 프로젝트의 섹션, 2열. 피드백 상세는 맥에서는 피드백
+  섹션에서 고른 동안만 오른쪽 인스펙터로, 아이패드에서는 밀어 넣어 보여 줍니다(다른 섹션은 창 너비를 다 씁니다)
 - **iPhone**: 프로젝트 카드 목록 → 프로젝트 화면(피드백·통계·진단) → 피드백 상세의 단일 스택
   (탭 바 없음)
 
@@ -696,7 +697,7 @@ FeedbackHubViewer/
    ├─ Assets.xcassets              # 앱 아이콘 (AppIcon / AppIconProduction)
    ├─ FeedbackStore.swift          # 상태/필터/정렬/통계/자동갱신 + 캐시 복원·증분 병합
    ├─ FeedbackCache.swift          # 마지막 조회 결과 + 일 단위 롤업을 디스크에 저장(환경별 JSON)
-   ├─ ContentView.swift            # 레이아웃 선택 + 3열(SplitRootView) + 툴바
+   ├─ ContentView.swift            # 레이아웃 선택 + 2열(SplitRootView) + 툴바
    ├─ PhoneRootView.swift          # iPhone 단일 스택 레이아웃 + 공용 툴바
    ├─ PlatformSupport.swift        # macOS/iOS 차이 흡수(붙여넣기·리스트 스타일·날짜 포맷)
    ├─ SidebarView.swift            # 프로젝트 목록(사이드바)

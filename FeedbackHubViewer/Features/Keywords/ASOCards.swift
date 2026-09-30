@@ -372,6 +372,8 @@ struct MetadataEditor: View {
     /// 추천 카드에서 고른 검색어. 열 때 키워드 칸 뒤에 붙여 둔다. 저장은 여전히
     /// "바뀌는 것 보기"를 거쳐 사람이 누른다.
     var addingKeywords: [String] = []
+    /// 유입 탭의 키워드 처방처럼 바꿀 값을 미리 채워 열 때. nil 이면 지금 값.
+    var proposedKeywords: String? = nil
     let onClose: () -> Void
 
     @State private var name = ""
@@ -437,7 +439,7 @@ struct MetadataEditor: View {
         .onAppear {
             name = base?.name ?? ""
             subtitle = base?.subtitle ?? ""
-            keywordsText = Self.merge(base?.keywords ?? "", adding: addingKeywords)
+            keywordsText = proposedKeywords ?? Self.merge(base?.keywords ?? "", adding: addingKeywords)
             promo = live?.promotionalText ?? ""
         }
     }

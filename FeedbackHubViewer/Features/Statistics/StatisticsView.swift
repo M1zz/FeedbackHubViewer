@@ -89,33 +89,23 @@ struct StatisticsDashboard: View {
                     VStack(alignment: .leading, spacing: sectionSpacing) {
                         if let notice = store.usageNotice { usageNotice(notice) }
 
-                        // 틀은 어느 앱에서나 같다.
-                        //
-                        // 예전에는 사용 통계가 없으면 카드가 통째로 사라지고
-                        // 안내문 하나만 남았다. 그러면 앱마다 화면의 구성이 달라
-                        // 두 앱을 나란히 읽을 수가 없고, "이 앱은 이 카드가 왜
-                        // 없지"가 매번 새 질문이 된다. 그래서 카드는 언제나 같은
-                        // 자리에 뜨고, 값이 없을 때는 빈칸 대신 **왜 비었는지**가
-                        // 들어간다 — 아직 안 보내는 것과 0인 것은 다른 말이다.
+                        // 결론이 먼저다. 아래 카드들을 읽고 머리로 합쳐야 나오던 것을
+                        // 여기서 계산해 나쁜 것부터 한 줄씩 적는다(`StatsAnalysis`).
                         if !usage.hasUsageData { noUsageCard }
                         audiencePicker
-                        userTiles
+                        summaryCard
+
+                        // 카드마다 묻는 것과 답이 위에 있고, 숫자는 "자세히" 아래로 접힌다.
                         activeUsersCard
+                        lifecycleCard
                         retentionCard
+                        if audience == .all { regionCard }
                         activeDaysCard
                         if audience == .all { accessCard }
-                        if audience == .all, store.canSplitByPurchase(for: scope) { purchaseCard }
                         specCards
-                        weekOverWeek
-                        CarryingCapacityCard(project: scope, audience: audience)
-                        trendCard
-                        eventCard
-                        eventLogCard
-                        metricsCard
-                        flagCard
-                        distributionCards
-                        feedbackCard
-                        specGapCard
+                        capacityCard
+
+                        rawSection
                     }
                     .padding(contentPadding)
                 }
@@ -130,6 +120,124 @@ struct StatisticsDashboard: View {
     }
 
     private var usage: FeedbackStore.ProjectUsage { store.usage(for: scope, audience: audience) }
+
+    // MARK: - 해석
+
+    private var growthFinding: StatsFinding {
+        StatsAnalysis.growth(store.activeUsers(for: scope, audience: audience),
+                             new7: usage.new7, previousNew7: usage.previousNew7)
+    }
+
+    private var habitFinding: StatsFinding {
+        StatsAnalysis.habit(store.activeDays(for: scope, audience: audience),
+                            stickiness: store.activeUsers(for: scope, audience: audience).stickiness)
+    }
+
+    private var capacityFinding: StatsFinding {
+        StatsAnalysis.capacity(store.carryingCapacity(for: scope, period: .week, audience: audience))
+    }
+
+    /// 이 화면의 모든 해석. 나쁜 것부터.
+    private var findings: [StatsFinding] {
+        var all: [StatsFinding] = []
+        if let scope, let release = StatsAnalysis.release(store.releaseHealth(for: scope)) { all.append(release) }
+        all.append(growthFinding)
+        all.append(StatsAnalysis.lifecycle(store.lifecycle(for: scope, audience: audience)))
+        all.append(StatsAnalysis.retention(store.retention(for: scope, audience: audience),
+                                           sendsDailyOpen: sendsDailyOpen))
+        if audience == .all, let region = regionFinding { all.append(region) }
+        all.append(habitFinding)
+        all.append(capacityFinding)
+        if audience == .all, let paid = StatsAnalysis.paid(store.accessSplit(for: scope)) { all.append(paid) }
+        for section in store.dashboard(for: scope, audience: audience) {
+            for insight in section.insights {
+                // 판정이 서는 흐름만 요약에 올린다. 몰림(막대)은 카드에서 읽으면 된다.
+                if let finding = StatsAnalysis.spec(insight), finding.state != .unknown { all.append(finding) }
+            }
+        }
+        if let feedback = StatsAnalysis.feedback(pending: store.scopedPendingCount) { all.append(feedback) }
+        return StatsAnalysis.ranked(all)
+    }
+
+    /// 맨 위 한 장. 이 앱이 지금 어떤지를 결론만.
+    private var summaryCard: some View {
+        let ranked = findings
+        let known = ranked.filter { $0.state != .unknown }
+        let headline: String = {
+            guard let worst = known.first else { return "아직 판단할 만큼 쌓이지 않았습니다." }
+            switch worst.state {
+            case .bad: return "\(worst.question.replacingOccurrences(of: "?", with: "")) — 여기가 문제입니다."
+            case .watch: return "크게 새는 곳은 없지만 \(worst.question.replacingOccurrences(of: "?", with: "")) 쪽을 지켜봐야 합니다."
+            default: return "지금 보이는 곳은 모두 괜찮습니다."
+            }
+        }()
+        let action = ranked.first { $0.state == .bad && $0.action != nil }?.action
+            ?? ranked.first { $0.state == .watch && $0.action != nil }?.action
+
+        return VStack(alignment: .leading, spacing: 12) {
+            Text(headline)
+                .font(.title3.weight(.semibold))
+                .fixedSize(horizontal: false, vertical: true)
+            if let action {
+                Label("지금 할 일: \(action)", systemImage: "hand.point.right")
+                    .font(.body.weight(.semibold))
+                    .foregroundStyle(Color.accentColor)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            VStack(alignment: .leading, spacing: 10) {
+                ForEach(ranked) { finding in
+                    HStack(alignment: .top, spacing: 10) {
+                        FindingDot(state: finding.state).padding(.top, 5)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(finding.question)
+                                .font(.headline)
+                            Text(finding.answer)
+                                .font(.body)
+                                .foregroundStyle(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(Platform.cardPadding)
+        .cardSurface()
+    }
+
+    private var capacityCard: some View {
+        AnalyzedCard(title: "이 앱이 클 수 있는 한도", systemImage: "chart.line.flattrend.xyaxis",
+                     finding: capacityFinding) {
+            CarryingCapacityCard(project: scope, audience: audience)
+        }
+    }
+
+    @State private var showsRaw = false
+
+    /// 해석 없이 늘어놓는 것들. 무엇이 왔는지 직접 뒤질 때만 연다.
+    private var rawSection: some View {
+        DisclosureGroup(isExpanded: $showsRaw) {
+            VStack(alignment: .leading, spacing: sectionSpacing) {
+                userTiles
+                if audience == .all, store.canSplitByPurchase(for: scope) { purchaseCard }
+                weekOverWeek
+                trendCard
+                eventCard
+                eventLogCard
+                metricsCard
+                flagCard
+                distributionCards
+                feedbackCard
+                specGapCard
+            }
+            .padding(.top, 10)
+        } label: {
+            Text("원본 데이터 (설치 수 · 추이 · 이벤트 · 지표 · 버전 · 피드백)")
+                .font(.headline)
+        }
+        .padding(Platform.cardPadding)
+        .cardSurface()
+    }
 
     // MARK: - 앱별 스펙
 
@@ -195,7 +303,15 @@ struct StatisticsDashboard: View {
     @ViewBuilder
     private func specCard(_ insight: ProjectStatsSpec.Insight) -> some View {
         let frame = insight.frame
-        Card(title: frame.title, systemImage: frame.icon) {
+        AnalyzedCard(title: frame.title, systemImage: frame.icon, finding: StatsAnalysis.spec(insight)) {
+            specShape(insight)
+        } detail: {
+            specNotes(insight)
+        }
+    }
+
+    @ViewBuilder
+    private func specShape(_ insight: ProjectStatsSpec.Insight) -> some View {
             switch insight {
             case .tiles(_, let items):
                 LazyVGrid(columns: tileColumns, spacing: 10) {
@@ -217,18 +333,23 @@ struct StatisticsDashboard: View {
                     }
                 }
             case .funnel(_, let steps, let goal):
-                VStack(spacing: 8) {
-                    ForEach(steps) { step in
-                        SpecFunnelStep(step: step)
-                    }
-                }
+                if let goal, goal.reached != nil { GoalBullet(goal: goal) }
+                FunnelChart(stages: steps.map {
+                    FunnelChart.Stage(label: $0.label, count: $0.count,
+                                      isMissing: $0.isMissing, exceedsPrevious: $0.exceedsPrevious)
+                }, floor: goal?.reached == nil ? goal?.floor : nil)
                 if let goal { goalNote(goal, steps: steps) }
             }
+    }
+
+    @ViewBuilder
+    private func specNotes(_ insight: ProjectStatsSpec.Insight) -> some View {
+            let frame = insight.frame
             if let note = frame.note { footnote(note) }
             // 카드가 스스로 내린 결론. 숫자를 보고 나서 읽을 말이라 맨 밑이다.
             if let verdict = frame.verdict {
                 Label(verdict, systemImage: "info.circle")
-                    .font(.caption)
+                    .font(.body)
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
@@ -240,7 +361,6 @@ struct StatisticsDashboard: View {
                     footnote("회색 칸은 그 이벤트·지표가 이 앱에서 한 번도 도착한 적이 없다는 뜻이에요. 아무도 거기까지 못 간 게 아니라 앱이 아직 안 보내는 거라, 스펙이 아니라 앱을 고쳐야 답이 나옵니다.")
                 }
             }
-        }
     }
 
     /// 앱이 스스로 그어 둔 선. 선이 있어야 7%가 "낮다"가 아니라
@@ -336,7 +456,7 @@ struct StatisticsDashboard: View {
     @ViewBuilder
     private var audiencePicker: some View {
         let installs = store.audienceInstalls(for: scope)
-        if installs.known > 0 || !installs.cells.isEmpty {
+        if installs.known > 0 || !installs.cells.isEmpty || !installs.regions.isEmpty {
             VStack(alignment: .leading, spacing: 6) {
                 if installs.known > 0 {
                     Picker("누구를 볼까요", selection: $audience) {
@@ -350,6 +470,9 @@ struct StatisticsDashboard: View {
                 if !installs.cells.isEmpty {
                     purchaseMenu(installs)
                 }
+                if !installs.regions.isEmpty {
+                    regionMenu(installs)
+                }
                 footnote(audienceNote)
             }
             .padding(10)
@@ -358,6 +481,11 @@ struct StatisticsDashboard: View {
                 // 산 것 칸은 프로젝트마다 뜻이 다르다(한 앱의 "Pro"는 다른 앱의 "Pro"가 아니다).
                 // 범위를 옮기면 고른 칸을 들고 가지 않는다.
                 if audience.axis == .purchase { audience = .all }
+                // 나라는 앱이 바뀌어도 뜻이 같다(대만은 대만이다). 새 범위에 그 나라 설치가
+                // 없을 때만 놓는다 — 빈 화면을 고른 채로 두지 않는다.
+                if case .region = audience, (store.installIDs(for: scope, audience: audience) ?? []).isEmpty {
+                    audience = .all
+                }
             }
         }
     }
@@ -397,6 +525,40 @@ struct StatisticsDashboard: View {
         }
     }
 
+    /// 나라 축의 메뉴. 설치가 많은 나라부터, 표본이 얇은 나라는 그렇다고 적는다.
+    private func regionMenu(_ installs: FeedbackStore.AudienceInstalls) -> some View {
+        HStack(spacing: 8) {
+            Text("나라로")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Menu {
+                ForEach(installs.regionOrder, id: \.self) { code in
+                    let count = installs.regions[code]?.count ?? 0
+                    let group = FeedbackStore.Audience.region(code)
+                    Button {
+                        audience = group
+                    } label: {
+                        let thin = count < FeedbackStore.regionMinimumInstalls ? " · 표본 적음" : ""
+                        if audience == group {
+                            Label("\(group.label) \(count)대\(thin)", systemImage: "checkmark")
+                        } else {
+                            Text("\(group.label) \(count)대\(thin)")
+                        }
+                    }
+                }
+            } label: {
+                Text(audience.axis == .region ? audience.label : "고르기")
+                    .font(.caption.weight(.medium))
+            }
+            .fixedSize()
+            if audience.axis == .region {
+                Button("해제") { audience = .all }
+                    .font(.caption)
+                    .buttonStyle(.borderless)
+            }
+        }
+    }
+
     /// 고르개 밑의 한 줄 — 무엇을 덮고 있고, 무엇을 못 보여주는지.
     private var audienceNote: String {
         let installs = store.audienceInstalls(for: scope)
@@ -412,6 +574,9 @@ struct StatisticsDashboard: View {
             }
             if !installs.cells.isEmpty {
                 text += ". 둘째 줄은 지금 파는 것 가운데 무엇을 샀는가이고, 새 규약(flag.schema)을 보내는 설치 \(installs.purchaseKnown)대만 갈립니다"
+            }
+            if !installs.regions.isEmpty {
+                text += ". 나라는 기기 지역 설정(locale)으로 가르고, 나라를 말하지 않는 설치 \(installs.regionUnknown.count)대는 모름입니다"
             }
             return text + ". 고르면 이 화면 전체가 그 무리만 놓고 다시 그려집니다."
         case .paidFeatures, .freeFeatures:
@@ -429,6 +594,13 @@ struct StatisticsDashboard: View {
             }
             if !installs.purchaseUnknown.isEmpty {
                 text += " 새 규약 이전 버전 \(installs.purchaseUnknown.count)대는 어느 칸에도 없어요(안 삼이 아니라 모름)."
+            }
+            return text + " " + caveat
+        case .region:
+            let count = installs.count(for: audience)
+            var text = "\(audience.label) — \(audience.blurb) \(count)대만 놓고 본 화면입니다. 기기의 지역 설정이라 App Store 국가와 드물게 어긋날 수 있어요."
+            if count < FeedbackStore.regionMinimumInstalls {
+                text += " 표본이 \(FeedbackStore.regionMinimumInstalls)대에 못 미쳐서, 한두 대가 옮겨도 숫자가 뒤집힙니다."
             }
             return text + " " + caveat
         }
@@ -463,16 +635,21 @@ struct StatisticsDashboard: View {
     /// "얼마나 자주 오는가"는 둘의 비(고착도)에서만 나온다.
     private var activeUsersCard: some View {
         let active = store.activeUsers(for: scope, audience: audience)
-        return Card(title: "활성 사용자 (DAU · WAU · MAU)", systemImage: "person.3") {
+        return AnalyzedCard(title: "활성 사용자 (DAU · WAU · MAU)", systemImage: "person.3",
+                            finding: growthFinding) {
             if active.isEmpty {
                 emptyNote("최근 30일 안에 도착한 이벤트가 없습니다. 활성 사용자는 이벤트로만 셀 수 있어서, 앱이 UsageEvent를 보내기 시작하면 여기 나옵니다.")
             } else {
+                todayRow(active)
+                activeUsersChart(active)
+            }
+        } detail: {
+            if !active.isEmpty {
                 ViewThatFits(in: .horizontal) {
                     HStack(alignment: .top, spacing: 16) { activeUsersFigures(active) }
                     VStack(alignment: .leading, spacing: 12) { activeUsersFigures(active) }
                 }
                 stickinessRow(active)
-                activeUsersChart(active)
                 footnote("선 위를 가리키면(맥은 마우스를 올리고, 아이폰은 손가락을 대고 밀면) 그 날의 정확한 값이 나옵니다. 범례를 누르면 그 계열이 켜지고 꺼지며, 축은 켜진 것에만 맞춰 다시 잡혀요. 각 창 안에서 이벤트를 보낸 서로 다른 설치를 셉니다. 창이 서로 겹치므로 세 숫자를 더하면 안 돼요 — 오늘 쓴 사람은 주간·월간에도 들어 있습니다. DAU 숫자는 오늘이 아니라 어제(끝난 하루)라 사이드바 · 프로젝트 목록의 DAU와 같습니다. 그래프 맨 오른쪽 오늘 점은 아직 지나지 않은 하루라 계속 올라가요. 위 '최근 7일 활성' 타일은 스냅샷이 적어 보낸 마지막 활동 시각 기준이라 여기 WAU와 숫자가 다를 수 있어요.")
             }
         }
@@ -625,21 +802,63 @@ struct StatisticsDashboard: View {
         return peak
     }
 
+    // MARK: - 오늘 지금까지
+
+    /// DAU 는 끝난 하루(어제)라 새로고침해도 안 오른다. 오늘 들어오는 사람은 여기서 본다.
+    private func todayRow(_ active: FeedbackStore.ActiveUsers) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 18) {
+            Figure("어제 DAU (확정)", "\(active.day.current)명")
+            Figure("오늘 지금까지", "\(active.today)명", note: "진행 중 · 새로고침하면 오름")
+            Figure("최근 7일 (WAU)", "\(active.week.current)명")
+            Figure("최근 30일 (MAU)", "\(active.month.current)명")
+        }
+    }
+
+    // MARK: - Lifecycle
+
+    private var lifecycleCard: some View {
+        let lifecycle = store.lifecycle(for: scope, audience: audience)
+        return AnalyzedCard(title: "Lifecycle (신규 · 유지 · 복귀 · 이탈)", systemImage: "arrow.left.arrow.right",
+                            finding: StatsAnalysis.lifecycle(lifecycle)) {
+            if lifecycle.isEmpty {
+                emptyNote("최근 12주에 온 사람이 없습니다.")
+            } else {
+                LifecycleChart(lifecycle: lifecycle)
+            }
+        } detail: {
+            footnote("Amplitude 의 Lifecycle 과 같은 그림이에요. 7일마다 그 주에 온 사람을 가릅니다. 신규는 처음 온 사람(이 허브가 기억하는 180일 안에서), 유지는 지난주에도 온 사람, 복귀는 지난주엔 없었다가 돌아온 사람, 이탈은 지난주엔 왔는데 이번 주엔 안 온 사람이라 아래로 그립니다. 위 막대 합이 그 주의 WAU예요. Quick Ratio 는 (신규 + 복귀) ÷ 이탈로, 1보다 크면 늘고 작으면 줄어요. 앱이 이벤트를 보내기 시작한 지 얼마 안 됐으면 처음 몇 주는 모두 신규로 잡힙니다.")
+        }
+    }
+
     // MARK: - 코호트 잔존
 
     /// 같은 주에 깐 사람들이 1일 · 7일 · 30일 뒤에도 오는가. 위 활성 사용자 카드는
     /// 새로 온 사람이 떠난 사람을 메워도 그대로라, 사람이 남는지는 여기서만 보인다.
     private var retentionCard: some View {
         let retention = store.retention(for: scope, audience: audience)
-        return Card(title: "코호트 잔존 (1일 · 7일 · 30일)", systemImage: "person.2.wave.2") {
+        return AnalyzedCard(title: "코호트 잔존 (1일 · 7일 · 30일)", systemImage: "person.2.wave.2",
+                            finding: StatsAnalysis.retention(retention, sendsDailyOpen: sendsDailyOpen)) {
             if retention.isEmpty {
                 emptyNote("잔존은 설치일(스냅샷)과 그 뒤에 온 날(이벤트)을 이어서 잽니다. 이 앱은 아직 둘 중 하나가 없거나, 이벤트를 보내기 시작한 뒤에 깐 설치가 없어요.")
             } else {
+                RetentionCurveChart(retention: retention)
+                // 코호트 삼각형 표(Firebase · Amplitude 방식): 줄이 깐 주, 칸이 그 뒤
+                // k주째. 위아래로 훑으면 최근 주가 나아졌는지, 옆으로 훑으면 몇 주째에
+                // 바닥이 생기는지 보인다.
+                Text("깐 주별로 몇 주째까지 남았나")
+                    .font(.headline)
+                    .padding(.top, 6)
+                CohortTriangle(retention: retention)
+            }
+        } detail: {
+            if !retention.isEmpty {
+                Text("1일 · 7일 · 30일 잔존 (Adjust · AppsFlyer 방식)")
+                    .font(.headline)
+                retentionTable(retention)
                 ViewThatFits(in: .horizontal) {
                     HStack(alignment: .top, spacing: 16) { retentionFigures(retention) }
                     VStack(alignment: .leading, spacing: 12) { retentionFigures(retention) }
                 }
-                retentionTable(retention)
                 footnote(retentionNote(retention))
             }
         }
@@ -704,27 +923,73 @@ struct StatisticsDashboard: View {
         return text
     }
 
+    // MARK: - 나라마다 남나
+
+    private var regionFinding: StatsFinding? {
+        StatsAnalysis.regions(store.regionComparison(for: scope),
+                              overall: store.retention(for: scope, audience: .all))
+    }
+
+    /// 나라끼리 잔존을 나란히. 들어온 수는 판매 리포트가 말해 주지만, 남는지는 여기서만
+    /// 보인다 — 현지화에 품을 쓸지를 정하는 카드다. 설치가 충분한 나라가 둘 이상일 때만 뜬다.
+    @ViewBuilder
+    private var regionCard: some View {
+        let rows = store.regionComparison(for: scope)
+        if rows.count >= 2 {
+            AnalyzedCard(title: "나라마다 남나", systemImage: "globe.asia.australia",
+                         finding: regionFinding) {
+                regionTable(rows)
+            } detail: {
+                footnote("나라는 스냅샷의 기기 지역 설정(locale)입니다. App Store 국가와 대부분 같지만, 한국어 기기를 미국 계정으로 쓰는 사람처럼 어긋날 수 있어요. 설치 \(FeedbackStore.regionMinimumInstalls)대 이상인 나라만, 많은 나라부터 \(FeedbackStore.regionComparisonLimit)곳까지 세웁니다. 칸은 위 잔존 카드와 같은 계산이라, 무리 고르개에서 그 나라를 고르면 잔존 카드가 같은 숫자를 보여 줍니다. 판정은 나라마다 10명 이상 잰 값만 씁니다.")
+            }
+        }
+    }
+
+    private func regionTable(_ rows: [FeedbackStore.RegionRow]) -> some View {
+        Grid(alignment: .leading, horizontalSpacing: 8, verticalSpacing: 6) {
+            GridRow {
+                Text("나라")
+                ForEach(FeedbackStore.Retention.Checkpoint.allCases) { Text($0.label) }
+            }
+            .font(.body.weight(.semibold))
+            .foregroundStyle(.secondary)
+            ForEach(rows) { row in
+                GridRow {
+                    Button {
+                        audience = .region(row.code)
+                    } label: {
+                        Text("\(row.name) · \(AppFormat.count(row.installs))대")
+                            .font(.body.monospacedDigit())
+                    }
+                    .buttonStyle(.borderless)
+                    .help("\(row.name)만 놓고 이 화면 보기")
+                    ForEach(FeedbackStore.Retention.Checkpoint.allCases) { checkpoint in
+                        retentionCell(row.pooled[checkpoint] ?? .init())
+                    }
+                }
+            }
+        }
+        .accessibilityElement(children: .contain)
+    }
+
     // MARK: - 한 달에 며칠 오는가
 
     /// 최근 30일에 온 사람이 그중 며칠 왔는가. 고착도는 이 분포의 평균 하나라,
     /// "매일 오는 소수와 한 번 온 다수"를 "모두가 가끔 오는 앱"과 못 가른다.
     private var activeDaysCard: some View {
         let active = store.activeDays(for: scope, audience: audience)
-        return Card(title: "최근 30일에 며칠 왔나", systemImage: "calendar.badge.clock") {
+        return AnalyzedCard(title: "최근 30일에 며칠 왔나", systemImage: "calendar.badge.clock",
+                            finding: habitFinding) {
             if active.isEmpty {
                 emptyNote("최근 30일 안에 도착한 이벤트가 없습니다. 며칠 왔는지는 이벤트로만 셀 수 있어요.")
             } else {
-                let peak = max(active.buckets.map(\.count).max() ?? 0, 1)
-                VStack(spacing: 8) {
-                    ForEach(active.buckets) { bucket in
-                        SpecBar(label: bucket.label,
-                                value: "\(AppFormat.count(bucket.count))명 (\(Self.percentText(Double(bucket.count) / Double(active.total))))",
-                                ratio: Double(bucket.count) / Double(peak),
-                                hint: nil, tint: .accentColor, isMuted: false)
-                    }
-                }
-                footnote(activeDaysNote(active))
+                // 이야기인 칸만 강조한다: 한 번 오고 끝난 사람이 문제면 1일 칸,
+                // 아니면 여러 날 오는 칸.
+                let story = habitFinding.state == .good ? active.buckets.last?.label : active.buckets.first?.label
+                ActiveDaysChart(days: active, highlight: story)
             }
+        } detail: {
+            if !active.isEmpty { footnote(activeDaysNote(active)) }
         }
     }
 
@@ -765,7 +1030,21 @@ struct StatisticsDashboard: View {
     /// 눈에 걸린다.
     private var accessCard: some View {
         let split = store.accessSplit(for: scope)
-        return Card(title: "유료기능 · 무료기능", systemImage: "lock.open") {
+        return AnalyzedCard(title: "유료기능 · 무료기능", systemImage: "lock.open",
+                            finding: StatsAnalysis.paid(split)) {
+            if let split, !split.isEmpty {
+                VStack(alignment: .leading, spacing: 10) {
+                    ViewThatFits(in: .horizontal) {
+                        HStack(spacing: 24) { accessDonuts(split) }
+                        VStack(spacing: 16) { accessDonuts(split) }
+                    }
+                    // 모름이 한 칸도 없으면 범례에서도 뺀다.
+                    ShareLegend(slices: Self.accessSlices(split.all).filter {
+                        $0.label != "모름" || split.all.unknown + split.active30.unknown > 0
+                    })
+                }
+            }
+        } detail: {
             if let split, !split.isEmpty {
                 VStack(spacing: 10) {
                     accessRow("전체 설치", split.all)
@@ -784,6 +1063,24 @@ struct StatisticsDashboard: View {
                 footnote("이 앱이 권한을 보내지 않습니다. 스냅샷 metrics에 flag.hasAccess(지금 유료 기능을 쓸 수 있는가)를 0/1로 실어 보내면 여기서 갈립니다. 이름이 다르면 앱 리포의 docs/usage-spec.json에 accessFlag로 적어 두면 돼요. 없는 동안은 0%가 아니라 '모름'으로 둡니다.")
             }
         }
+    }
+
+    /// 조각 셋: 유료 기능 · 무료 기능 · 권한을 안 보내 모르는 설치. 순서와 색은 고정이다.
+    /// 가운데 %는 위 답과 같은 값 — 모름을 뺀 유료 비중이다(`Slice.ratio`).
+    private static func accessSlices(_ slice: FeedbackStore.AccessSplit.Slice) -> [DonutSlice] {
+        [DonutSlice(label: "유료 기능", value: slice.paidFeatures, color: .blue),
+         DonutSlice(label: "무료 기능", value: slice.freeFeatures, color: .orange),
+         DonutSlice(label: "모름", value: slice.unknown, color: .gray)]
+    }
+
+    @ViewBuilder
+    private func accessDonuts(_ split: FeedbackStore.AccessSplit) -> some View {
+        ShareDonut(title: "전체 설치", slices: Self.accessSlices(split.all),
+                   centerRatio: .some(split.all.ratio))
+        ShareDonut(title: "최근 7일 활성", slices: Self.accessSlices(split.active7),
+                   centerRatio: .some(split.active7.ratio))
+        ShareDonut(title: "최근 30일 활성", slices: Self.accessSlices(split.active30),
+                   centerRatio: .some(split.active30.ratio))
     }
 
     /// 산 것의 조합마다 몇 명이고, 그중 지금 오는 사람이 몇인가.
@@ -1359,6 +1656,99 @@ struct StatisticsDashboard: View {
 
 // MARK: - Building blocks
 
+/// 묻는 것과 답이 위에, 그다음 차트(펼친 채로), 표와 각주는 접힌 채로 아래에.
+/// 답이 없는 카드는 차트와 자세히를 그대로 편다.
+struct AnalyzedCard<Chart: View, Detail: View>: View {
+    let title: String
+    let systemImage: String
+    let finding: StatsFinding?
+    @ViewBuilder let chart: Chart
+    @ViewBuilder let detail: Detail
+
+    @State private var isExpanded = false
+
+    init(title: String, systemImage: String, finding: StatsFinding?,
+         @ViewBuilder chart: () -> Chart,
+         @ViewBuilder detail: () -> Detail) {
+        self.title = title
+        self.systemImage = systemImage
+        self.finding = finding
+        self.chart = chart()
+        self.detail = detail()
+    }
+
+    var body: some View {
+        Card(title: title, systemImage: systemImage) {
+            if let finding {
+                Text(finding.question)
+                    .font(.body)
+                    .foregroundStyle(.secondary)
+                HStack(alignment: .top, spacing: 10) {
+                    FindingDot(state: finding.state).padding(.top, 5)
+                    Text(finding.answer)
+                        .font(.body.weight(.semibold))
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                if let action = finding.action, finding.state == .bad || finding.state == .watch {
+                    Label(action, systemImage: "hand.point.right")
+                        .font(.body)
+                        .foregroundStyle(Color.accentColor)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                chart
+                    .padding(.top, 4)
+                if Detail.self != EmptyView.self {
+                    DisclosureGroup(isExpanded: $isExpanded) {
+                        VStack(alignment: .leading, spacing: 10) { detail }
+                            .padding(.top, 6)
+                    } label: {
+                        Text("숫자 · 설명 자세히").font(.body)
+                    }
+                }
+            } else {
+                chart
+                detail
+            }
+        }
+    }
+}
+
+extension AnalyzedCard where Detail == EmptyView {
+    init(title: String, systemImage: String, finding: StatsFinding?,
+         @ViewBuilder chart: () -> Chart) {
+        self.init(title: title, systemImage: systemImage, finding: finding, chart: chart, detail: { EmptyView() })
+    }
+}
+
+struct FindingDot: View {
+    let state: StatsFinding.State
+
+    var body: some View {
+        Circle()
+            .fill(color)
+            .frame(width: 11, height: 11)
+            .accessibilityLabel(name)
+    }
+
+    private var color: Color {
+        switch state {
+        case .bad: return .red
+        case .watch: return .orange
+        case .good: return .green
+        case .unknown: return .gray
+        }
+    }
+
+    private var name: String {
+        switch state {
+        case .bad: return "문제"
+        case .watch: return "지켜봄"
+        case .good: return "괜찮음"
+        case .unknown: return "모름"
+        }
+    }
+}
+
 /// 스펙이 만든 숫자 하나.
 private struct SpecTile: View {
     let label: String
@@ -1433,40 +1823,3 @@ extension SpecBar where Trailing == Text {
     }
 }
 
-/// 퍼널 한 칸. 막대 길이는 첫 단계 대비이고, 오른쪽 작은 숫자는 바로 앞 단계 대비다 —
-/// 어디서 새는지는 전체 전환율이 아니라 단계 사이의 낙차가 말해 준다.
-private struct SpecFunnelStep: View {
-    let step: ProjectStatsSpec.Insight.Step
-
-    var body: some View {
-        SpecBar(label: step.label,
-                ratio: step.ratio,
-                hint: step.hint,
-                tint: step.isMissing ? Color.secondary.opacity(0.25) : .accentColor,
-                isMuted: step.isMissing) {
-            if step.isMissing {
-                Text("보내지 않음")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            } else {
-                Text("\(step.count)")
-                    .font(.callout.monospacedDigit().weight(.semibold))
-                if step.exceedsPrevious {
-                    // 전환율인 척하지 않는다: 앞 단계를 거치지 않고도 닿는
-                    // 자리라는 뜻이고, 퍼센트로 적으면 거짓말이 된다.
-                    Label("앞 단계 밖에서도 옴", systemImage: "arrow.turn.up.right")
-                        .font(.caption)
-                        .foregroundStyle(.orange)
-                } else if let previous = step.fromPrevious {
-                    Text(Self.percent(previous))
-                        .font(.caption.monospacedDigit())
-                        .foregroundStyle(.secondary)
-                }
-            }
-        }
-    }
-
-    private static func percent(_ ratio: Double) -> String {
-        "→ " + String(format: "%.0f%%", (ratio * 100).rounded())
-    }
-}

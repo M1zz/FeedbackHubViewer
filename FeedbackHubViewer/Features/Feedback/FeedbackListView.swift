@@ -245,8 +245,8 @@ struct FeedbackListView: View {
 
     // MARK: - List
 
-    /// macOS selects a row and shows it in the detail column; iOS pushes the
-    /// detail onto the navigation stack instead.
+    /// macOS selects a row and shows it in the inspector (`SplitRootView`);
+    /// iOS pushes the detail onto the navigation stack instead.
     @ViewBuilder
     private var list: some View {
         #if os(macOS)

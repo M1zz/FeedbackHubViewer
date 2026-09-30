@@ -447,7 +447,8 @@ enum ProjectStatsSpecCatalog {
         var specs: [ProjectStatsSpec] = []
         var failures: [Failure] = []
 
-        for url in urls {
+        // 유입 지도(`*.acquisition.json`)도 `appId` 를 갖지만 통계 스펙이 아니다.
+        for url in urls where !url.lastPathComponent.hasSuffix(AcquisitionCatalog.fileSuffix) {
             // 스펙이 아닌 JSON 도 번들에 있다. 그런 파일까지 실패로 세면 경보가
             // 소음이 되므로, `appId` 가 있는 파일만 스펙으로 본다.
             guard let data = try? Data(contentsOf: url),

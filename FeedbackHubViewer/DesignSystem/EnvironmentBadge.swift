@@ -21,9 +21,19 @@ struct EnvironmentBadge: View {
 
     var body: some View {
         Label(store.environment.shortLabel, systemImage: "cloud")
+            #if os(iOS)
+            .font(.body.weight(.semibold))
+            .padding(.horizontal, 10)
+            .padding(.vertical, 4)
+            #else
             .font(.caption2.weight(.semibold))
             .padding(.horizontal, 7)
             .padding(.vertical, 3)
+            #endif
+            // 배지는 줄어들지 않는다. 좁은 헤더에서 먼저 짜부라져 "PROD" 가 한 글자씩
+            // 세로로 쌓이던 것이 이것이었다.
+            .lineLimit(1)
+            .fixedSize()
             .background(tint.opacity(0.15), in: Capsule())
             .foregroundStyle(tint)
             .help("이 빌드는 CloudKit \(store.environment.displayName) 환경을 읽습니다")

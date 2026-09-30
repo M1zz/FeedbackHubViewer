@@ -200,10 +200,29 @@ extension CrashReport {
                                 offset: offset.hasPrefix("+") ? String(offset.dropFirst()) : offset,
                                 isSystem: Self.isSystemBinary(binary)))
         }
-        return result
+        return Self.leafFirst(result)
+    }
+
+    /// 거꾸로 올라온 스택을 바로 세운다. 0번이 잎(죽은 자리)이 되게.
+    ///
+    /// ClipKeyboard 5.0.6 ~ 5.1.6 은 스택을 **뒤집어** 보냈다. 0번이 dyld, 1번이 앱의 `main`
+    /// 이라 `culprit` 이 늘 `main` 이 되고, `fingerprint` 도 늘 dyld>앱>SwiftUI>... 로 같아서
+    /// 서로 다른 멈춤이 한 이슈로 묶였다(ClipKeyboard 의 docs/postmortem/CRASH_STACK_UPSIDE_DOWN.md).
+    /// 뿌리(메인 스레드는 dyld, 나머지는 libsystem_pthread)가 앞에만 있으면 뒤집는다.
+    static func leafFirst(_ frames: [Frame]) -> [Frame] {
+        func isRoot(_ frame: Frame) -> Bool {
+            frame.binary == "dyld" || frame.binary == "libsystem_pthread.dylib"
+        }
+        guard let first = frames.first, let last = frames.last,
+              isRoot(first), !isRoot(last) else { return frames }
+        return frames.reversed().enumerated().map { index, frame in
+            Frame(id: index, binary: frame.binary, offset: frame.offset, isSystem: frame.isSystem)
+        }
     }
 
     /// 뿌리 쪽이 잘렸다고 알리는 줄이 있으면 그 문장.
+    ///
+    /// ⚠️ 거꾸로 올라온 옛 기록(`leafFirst` 참고)은 이 줄이 거짓이다. 잘린 쪽이 뿌리가 아니라 **잎**이다.
     var truncationNote: String? {
         stack.split(separator: "\n").first { $0.hasPrefix("...") }.map(String.init)
     }
