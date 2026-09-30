@@ -9,10 +9,8 @@
 //  것)과, 다음 버전으로 준비 중인 것(고칠 수 있는 것). 대조는 앞의 것으로 하고,
 //  고치는 것은 뒤의 것에 한다. 프로모션 텍스트만은 나가 있는 버전에서도 바로 고쳐진다.
 //
-//  노출 리포트는 가공한 날짜별로 파일이 나오는데, **한 날짜가 연속된 두 파일에 똑같이
-//  들어 있다**(9월 22일 파일에 20 · 21일, 23일 파일에 21 · 22일). 파일을 그냥 더하면 모든
-//  날이 두 번 세어진다 — 실제로 첫 다운로드가 판매 리포트의 두 배로 나왔다. 그래서 날짜마다
-//  가장 늦게 가공된 파일 하나만 쓴다(늦은 쪽이 고쳐진 값일 수 있다).
+//  노출 리포트를 받는 일(요청 · 인스턴스 · 날짜마다 한 벌)은 공통 층이 한다
+//  (`AppStoreConnect+AnalyticsReports.swift`). 여기는 그 행을 퍼널로 읽기만 한다.
 //
 
 import Foundation
@@ -219,101 +217,44 @@ extension AppStoreConnect {
         }
     }
 
-    // MARK: 노출 · 다운로드 리포트
+    // MARK: 노출 · 다운로드 퍼널
 
-    /// 이 앱의 살아 있는 리포트 요청. 없으면 nil — 만들어야 1~2일 뒤부터 쌓인다.
-    func analyticsRequestID(appID: String) async throws -> String? {
-        let doc = try await list("v1/apps/\(appID)/analyticsReportRequests", [:])
-        return doc.data.first {
-            $0.string("accessType") == "ONGOING" && $0.bool("stoppedDueToInactivity") != true
-        }?.id
-    }
-
-    /// 계속 쌓이는(ONGOING) 리포트 요청을 만든다. 앱마다 하나면 된다.
-    func createAnalyticsRequest(appID: String) async throws {
-        _ = try await write("POST", "v1/analyticsReportRequests", body: [
-            "data": [
-                "type": "analyticsReportRequests",
-                "attributes": ["accessType": "ONGOING"],
-                "relationships": ["app": ["data": ["type": "apps", "id": appID]]]
-            ]
-        ])
-    }
-
-    /// 최근 `days`일의 퍼널. 리포트 파일은 가공한 날짜별로 나오고, 한 파일에 며칠 치 행이
-    /// 섞여 있어서 행의 Date로 다시 모은다. 같은 날짜가 여러 파일에 있으면 가장 늦게
-    /// 가공된 파일의 것만 쓴다(머리말).
+    /// 최근 `days`일의 퍼널 — 경로별 노출 → 페이지 조회 → 첫 다운로드. 행은 공통 층이
+    /// 날짜마다 한 벌씩 모아 준다(`AppStoreConnect+AnalyticsReports.swift`).
     func funnel(requestID: String, appID: String, days: Int) async throws -> StoreFunnel {
-        let cutoffDate = Calendar(identifier: .gregorian).date(byAdding: .day, value: -(days + 3), to: Date()) ?? Date()
-        let cutoff = Self.day.string(from: cutoffDate)
-        let firstDay = Self.day.string(from: Calendar(identifier: .gregorian).date(byAdding: .day, value: -days, to: Date()) ?? Date())
+        let engagement = try await analyticsRows(.engagementStandard, requestID: requestID, appID: appID, days: days)
+        let downloads = try await analyticsRows(.downloadsStandard, requestID: requestID, appID: appID, days: days)
 
         var sources: [String: StoreFunnel.Counts] = [:]
         var daily: [String: StoreFunnel.Counts] = [:]
-        var instances = 0
+        func add(_ counts: StoreFunnel.Counts, source: String, date: String) {
+            sources[source, default: .init()].add(counts)
+            // 날짜별 추이는 검색 노출과 (모든 경로의) 첫 다운로드만 그린다.
+            var day = counts
+            if source != "App Store search" { day.impressions = 0; day.pageViews = 0 }
+            daily[date, default: .init()].add(day)
+        }
 
-        for (name, isEngagement) in [("App Store Discovery and Engagement Standard", true),
-                                     ("App Downloads Standard", false)] {
-            let reports = try await list("v1/analyticsReportRequests/\(requestID)/reports", ["filter[name]": name])
-            guard let report = reports.data.first else { continue }
-            let found = try await list("v1/analyticsReports/\(report.id)/instances", [
-                "filter[granularity]": "DAILY", "limit": "200"
-            ])
-            let recent = found.data.filter { ($0.string("processingDate") ?? "") >= cutoff }
-            instances += recent.count
-            /// 날짜 → (가공일, 그 파일의 그날 행). 늦게 가공된 파일이 이긴다.
-            var byDate: [String: (processed: String, rows: [[String: String]])] = [:]
-            for instance in recent {
-                let processed = instance.string("processingDate") ?? ""
-                var rowsByDate: [String: [[String: String]]] = [:]
-                let segments = try await list("v1/analyticsReportInstances/\(instance.id)/segments", [:])
-                for segment in segments.data {
-                    guard let link = segment.string("url").flatMap(URL.init(string:)) else { continue }
-                    // 미리 서명된 주소라 인증 머리를 붙이지 않는다.
-                    let (data, _) = try await URLSession.shared.data(from: link)
-                    guard let text = Self.gunzip(data).flatMap({ String(data: $0, encoding: .utf8) }) else { continue }
-                    for row in Self.rows(text) {
-                        guard row["App Apple Identifier"] == nil || row["App Apple Identifier"] == appID,
-                              let date = row["Date"], date >= firstDay else { continue }
-                        rowsByDate[date, default: []].append(row)
-                    }
+        for (date, rows) in engagement.byDate {
+            for row in rows {
+                let unique = Int(row["Unique Counts"] ?? "") ?? Int(row["Counts"] ?? "") ?? 0
+                var counts = StoreFunnel.Counts()
+                switch row["Event"] {
+                case "Impression": counts.impressions = unique
+                case "Page view": counts.pageViews = unique
+                default: continue
                 }
-                for (date, rows) in rowsByDate where processed > (byDate[date]?.processed ?? "") {
-                    byDate[date] = (processed, rows)
-                }
-            }
-
-            for (date, entry) in byDate {
-                for row in entry.rows {
-                    let source = row["Source Type"] ?? "Unavailable"
-                    var counts = StoreFunnel.Counts()
-                    if isEngagement {
-                        let unique = Int(row["Unique Counts"] ?? "") ?? Int(row["Counts"] ?? "") ?? 0
-                        switch row["Event"] {
-                        case "Impression": counts.impressions = unique
-                        case "Page view": counts.pageViews = unique
-                        default: continue
-                        }
-                    } else {
-                        guard row["Download Type"] == "First-time download" else { continue }
-                        counts.firstDownloads = Int(row["Counts"] ?? "") ?? 0
-                    }
-                    sources[source, default: .init()].add(counts)
-                    // 날짜별 추이는 검색 노출과 (모든 경로의) 첫 다운로드만 그린다.
-                    var day = counts
-                    if source != "App Store search" { day.impressions = 0; day.pageViews = 0 }
-                    daily[date, default: .init()].add(day)
-                }
+                add(counts, source: row["Source Type"] ?? "Unavailable", date: date)
             }
         }
-        return StoreFunnel(days: days, sources: sources, daily: daily, instances: instances)
-    }
-
-    /// 탭으로 나뉜 표를 머리글 이름으로 읽는다.
-    static func rows(_ text: String) -> [[String: String]] {
-        var lines = text.split(whereSeparator: \.isNewline).map { $0.split(separator: "\t", omittingEmptySubsequences: false).map(String.init) }
-        guard !lines.isEmpty else { return [] }
-        let header = lines.removeFirst()
-        return lines.map { Dictionary(zip(header, $0), uniquingKeysWith: { first, _ in first }) }
+        for (date, rows) in downloads.byDate {
+            for row in rows where row["Download Type"] == "First-time download" {
+                var counts = StoreFunnel.Counts()
+                counts.firstDownloads = Int(row["Counts"] ?? "") ?? 0
+                add(counts, source: row["Source Type"] ?? "Unavailable", date: date)
+            }
+        }
+        return StoreFunnel(days: days, sources: sources, daily: daily,
+                           instances: engagement.instances + downloads.instances)
     }
 }

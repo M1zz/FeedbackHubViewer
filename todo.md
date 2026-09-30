@@ -1,5 +1,34 @@
 # todo
 
+## 누가 내 앱을 링크했나 (2026-09-30)
+- [x] App Store 상세 리포트(App Downloads Detailed · Discovery and Engagement Detailed)의 `Source Info` 로 링크 출처를 찾음. 퍼널과 같은 ONGOING 요청 안에 이미 있어서 새 요청 불필요
+- [x] 실측(클립키보드 8/26~9/30): AppRaven · 什么值得买 · Telegram · WeChat · 태국 YouTube · reddit.com · LINE · Facebook. 이름 가려진 웹 유입 124건
+- [x] 모델 `Models/Referrals.swift`: 출처(웹 도메인 / 앱 번들 ID), 알려진 출처 사전(이름 · 종류, 브라우저 · 메모 · 메일은 "통로"로 따로), 출처별 셈, 감지(`ReferralDetection`: 새로 · 급증 · 꾸준 · 잠잠)
+- [x] "새로"는 리포트 창이 아니라 처음 본 날 기록(`referral-ledger.json`)으로. 계정을 바꾸면 지움
+- [x] 유입 탭 "누가 내 앱을 링크했나" 카드(`ReferralCard`): 유입 지도가 없는 앱에도 뜸. 웹 출처는 "이 사이트에서 앱 찾아보기"(Google site: 검색)
+- [x] 감지는 받아 둔 실제 리포트로 임시 하네스 확인(9/5 기준 什么值得买 "새로", 기록이 더 이르면 새로 아님, 9/30 은 모두 잠잠)
+- [x] 리팩토링: 분석 리포트 받기를 공통 층으로(`AppStoreConnect+AnalyticsReports.swift` — 리포트 이름 · 날짜마다 가장 늦게 가공된 파일 한 벌 · gzip TSV). 퍼널이 그 층을 씀
+- [x] 리팩토링: `AcquisitionView.swift`(650줄)를 화면별 파일로(Detail · StoreFlowCard · MissingInputsCard · ASOPrescriptionCard · MapDetail · Overview), 판정 입력 모으기는 `Store/FeedbackStore+AcquisitionDiagnosis.swift` 로
+- [x] 리팩토링: `AppStoreConnectStore` 의 save · signOut 이 따로 들던 계정 초기화를 `forgetAccount()` 하나로
+- [x] macOS · iOS 시뮬레이터 빌드 통과
+- [ ] 화면에서 눈으로 확인 못 함
+- [ ] 퍼널 리팩토링 전후 숫자가 같은지 실제 앱에서 대조(로직은 그대로 옮김)
+- [ ] 상세 리포트는 앱을 열 때마다 받음(30초~1분). 인스턴스별 디스크 캐시가 있으면 두 번째부터 빠름
+- [ ] 전체 프로젝트 유입 화면에 "앱 가로질러 새로 링크한 곳" 모아 보기 + 새 출처가 생기면 알림
+- [ ] 모르는 출처(종류 "기타")가 잡히면 `ReferralProfile` 사전에 한 줄 더하기
+
+## 나라별로 보기 (2026-09-30)
+- [x] 까닭: 해외 유입은 코드 캠페인 며칠에 몰린다(9월 두번알림 91% · 욕망의 무지개 83% · 무지개 공방 98%가 해외, 판매 리포트 기준). 들어온 수는 판매 리포트에 있지만 남는지는 없어서, 현지화(대만 zh-Hant 등)에 품을 쓸지 못 정했다
+- [x] 무리 고르개에 셋째 축 "나라로"(`Audience.region`). 스냅샷 `locale` → ISO 두 글자(`FeedbackStore.regionCode`, `@rg=` 지역 덮어쓰기도 읽음). 지역 없는 "en" · 숫자 지역("419")은 모름. 고르면 화면 전체가 그 나라로 다시 그려짐(기존 `installIDs` 경로 그대로)
+- [x] "나라마다 남나" 카드(잔존 카드 바로 아래, 전체일 때만): 설치 20대 이상 나라를 많은 순으로 8곳까지, 1 · 7 · 30일 잔존. 나라 이름을 누르면 그 나라로 고름. 계산은 그 나라를 골랐을 때의 잔존 카드와 같은 함수(`regionComparison` → `retention(for:audience:)`)
+- [x] 판정 `StatsAnalysis.regions`: 7일 잔존(나라당 10명 이상 잰 나라가 둘 이상, 아니면 다음 날로 대신)을 앱 전체 값과 견줌. 전체의 60% 미만이면 "새는 나라" + 할 일, 140% 초과면 "더 알릴 만함". 요약 카드에도 올라감
+- [x] 한 프로젝트에서 고른 나라는 새 프로젝트에 그 나라 설치가 있으면 유지, 없으면 전체로
+- [x] macOS · iOS 시뮬레이터 빌드 통과
+- [ ] 화면에서 눈으로 확인 못 함(표 너비 · 긴 나라 이름 "중국 본토" · 메뉴 길이)
+- [ ] locale 은 기기 지역 설정이라 App Store 국가와 어긋날 수 있음. 앱이 `Storefront.current?.countryCode` 를 보내면(LeeoKit) 그걸 먼저 쓰게
+- [ ] 캠페인 코호트(9/2~7 두번알림, 9/24~26 욕망의 무지개 · 무지개 공방)는 7일 잔존이 10월 초부터 잡힘 — 그때 대만 · 홍콩 줄 확인
+- [ ] 전체 프로젝트 비교 화면에도 나라 순위(앱을 가로질러)를 둘지 결정
+
 ## iOS 프로젝트 목록 헤더 (2026-09-30)
 - [x] PROD 배지가 세로로 한 글자씩 쌓이던 것: 헤더 한 줄(배지 · 레코드 타입 · 시각 · 빨강 먼저)에서 배지가 먼저 짜부라짐. 배지 `.fixedSize()` · 한 줄 고정
 - [x] 폰 헤더: 레코드 타입 뺌(맥만), 글자 `.body`, 안 들어가면 두 줄로 접음(ViewThatFits), 아래 구분선
@@ -489,6 +518,8 @@
       CKError 재시도, 공개 DB 쓰기 스로틀링
 - [ ] **두번알림에 결제 성공 이벤트가 없음**: `purchase_started`·`purchase_failed`는 오는데 완료가
       안 옴(스펙의 `paywall_converted`가 "보내지 않음"으로 뜸). 앱에서 보내야 퍼널 마지막 칸이 채워짐
+      → 2026-09-30 두번알림 앱에서 수정(페이월 밖 결제도 트랜잭션당 1회 `purchase_completed`,
+        `flag.isPaid` 에서 평생 무료 제외). **다음 배포 뒤에도 칸이 회색이면 결제가 없는 것** — 그때 닫을 것
 - [ ] (선택) ClipKeyboard `paywall_view`에 출처 슬라이스(`:nudge_slots_left` 등)를 붙이면
       Pro 넛지 퍼널을 결제까지 이을 수 있음. 지금은 포함 관계가 아니라 2단계에서 끊어 둠
 - [ ] `com.Ysoup.LeaveWise`가 `paywall_view`를 보내는데 스펙이 없음 — 붙일지 결정

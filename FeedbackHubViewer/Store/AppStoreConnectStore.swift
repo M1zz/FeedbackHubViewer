@@ -32,6 +32,10 @@ final class AppStoreConnectStore: ObservableObject {
     @Published private(set) var metadata: [String: LoadState<StoreMetadata>] = [:]
     /// 번들 ID → 최근 30일 노출 · 전환.
     @Published private(set) var funnels: [String: LoadState<FunnelResult>] = [:]
+    /// 번들 ID → 누가 링크했나(`AppStoreConnectStore+Referrals.swift`).
+    @Published var referrals: [String: LoadState<ReferralResult>] = [:]
+    /// 번들 ID → (출처 → 처음 본 날). 디스크에 남는다.
+    var referralLedger: ReferralLedger = [:]
 
     /// 번들 ID → 스토어 리뷰(`AppStoreConnectStore+Reviews.swift`). 디스크에서 먼저 채운다.
     @Published var reviewFeeds: [String: ReviewFeed] = [:]
@@ -86,6 +90,7 @@ final class AppStoreConnectStore: ObservableObject {
         credentials = AppStoreConnectKeychain.load()
         client = credentials.map(AppStoreConnect.init)
         restoreReviews()
+        restoreReferralLedger()
     }
 
     var isConfigured: Bool { credentials != nil }
@@ -97,21 +102,18 @@ final class AppStoreConnectStore: ObservableObject {
         try AppStoreConnectKeychain.save(new)
         credentials = new
         client = AppStoreConnect(credentials: new)
-        catalogs = [:]
-        sales = nil
-        salesError = nil
-        reportCache = [:]
-        metadata = [:]
-        funnels = [:]
-        apps = [:]
-        forgetReviews()
-        forgetSubscriptionEvents()
+        forgetAccount()
     }
 
     func signOut() {
         AppStoreConnectKeychain.delete()
         credentials = nil
         client = nil
+        forgetAccount()
+    }
+
+    /// 계정에 딸린 것을 전부 잊는다 — 키를 바꾸거나 지우면 다른 계정의 것이 남으면 안 된다.
+    private func forgetAccount() {
         catalogs = [:]
         sales = nil
         salesError = nil
@@ -121,6 +123,7 @@ final class AppStoreConnectStore: ObservableObject {
         apps = [:]
         forgetReviews()
         forgetSubscriptionEvents()
+        forgetReferrals()
     }
 
     // MARK: - 앱 찾기
@@ -188,6 +191,7 @@ final class AppStoreConnectStore: ObservableObject {
             let app = try await resolveApp(bundleID)
             try await client.createAnalyticsRequest(appID: app.id)
             await loadFunnel(bundleID: bundleID, force: true)
+            await loadReferrals(bundleID: bundleID, force: true)
         } catch {
             funnels[bundleID] = .failed(error.localizedDescription)
         }
