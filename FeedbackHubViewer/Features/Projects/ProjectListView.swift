@@ -41,12 +41,22 @@ struct ProjectListView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            HStack {
-                StatusRow()
-                RedFirstToggle(isOn: $redFirst)
+            // 한 줄에 들어가면 한 줄, 아니면 두 줄. 어느 쪽이든 줄이는 것은 글자가 아니라
+            // 배치다 — 배지 · 시각 · 스위치 중 하나가 짜부라지면 읽을 수 없게 된다.
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 10) {
+                    StatusRow()
+                    RedFirstToggle(isOn: $redFirst).fixedSize()
+                }
+                VStack(alignment: .leading, spacing: 6) {
+                    StatusRow()
+                    RedFirstToggle(isOn: $redFirst).fixedSize()
+                }
             }
-                .padding(.horizontal, contentPadding)
-                .padding(.bottom, 8)
+            .padding(.horizontal, contentPadding)
+            .padding(.vertical, 8)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            Divider()
             content
         }
         // The title stays (it is what the back button on the next screen says)
@@ -113,31 +123,44 @@ private struct StatusRow: View {
     var body: some View {
         HStack(spacing: 8) {
             EnvironmentBadge()
+            #if os(macOS)
+            // 레코드 타입은 만드는 사람용 정보라 폰의 좁은 헤더에서는 뺀다(사이드바 · 설정에 있다).
             if let type = store.resolvedRecordType {
                 Text(type)
                     .font(.caption2.monospaced())
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
             }
-            Spacer(minLength: 4)
+            #endif
             if store.isRefreshing {
-                ProgressView().controlSize(.mini)
+                ProgressView().controlSize(.small)
                 // Which step, and how far into it — the caption has room for
                 // that much of `RefreshProgress` and no more.
                 if let progress = store.refreshProgress {
                     Text(progress.shortText)
-                        .font(.caption2)
+                        .font(Self.captionFont)
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
+                        .truncationMode(.tail)
                         .monospacedDigit()
                 }
             } else if let updated = store.lastUpdated {
                 Text("업데이트 \(AppFormat.time(updated))")
-                    .font(.caption2)
+                    .font(Self.captionFont)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
+                    .fixedSize()
             }
+            Spacer(minLength: 0)
         }
+    }
+
+    private static var captionFont: Font {
+        #if os(iOS)
+        .body
+        #else
+        .caption2
+        #endif
     }
 }
 
