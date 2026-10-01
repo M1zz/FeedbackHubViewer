@@ -212,16 +212,8 @@ private struct ProjectReviewsView: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
-                    .help("마지막으로 App Store Connect 에서 리뷰를 받은 때. 그 사이에는 저장해 둔 리뷰를 보여 줍니다.")
+                    .help("마지막으로 App Store Connect 에서 리뷰를 받은 때. 툴바의 새로고침이 다시 받습니다.")
             }
-            Button {
-                Task { await purchases.loadReviews(bundleID: project, force: true) }
-            } label: {
-                Label("다시 받기", systemImage: "arrow.clockwise")
-                    .labelStyle(.iconOnly)
-            }
-            .help("리뷰를 App Store Connect 에서 다시 받습니다")
-            .disabled(feed.isLoading)
         }
         .hubHeaderBar(verticalPadding: 8)
     }

@@ -60,6 +60,7 @@ extension AppStoreConnectStore {
             }
         }
         subscriptionEvents = SubscriptionEventWindow(lines: lines, days: Self.salesDays, missingDays: missingDays)
+        markFetched("subscriptionEvents")
     }
 
     func forgetSubscriptionEvents() {

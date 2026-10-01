@@ -95,11 +95,15 @@ final class AppStoreConnectStore: ObservableObject {
     /// 이번 실행에서 네트워크로 새로 받았거나 받는 중인 것("funnel:번들 ID" 꼴).
     /// 디스크에서 채운 값은 여기 없어서, 처음 볼 때 한 번 새로 받는다.
     var refreshed: Set<String> = []
+    /// 마지막으로 네트워크에서 받아 낸 때("funnel:번들 ID" · "sales" 꼴). 디스크에서 그린
+    /// 값이 얼마나 묵었는지를 데이터 상태 칸이 말할 수 있게 디스크에 남는다.
+    @Published private(set) var fetchedAt: [String: Date] = [:]
 
     private static var appsFile: URL? { CacheFile.url("connect-apps") }
     private static var catalogsFile: URL? { CacheFile.url("store-catalogs") }
     private static var salesFile: URL? { CacheFile.url("sales-days") }
     static var subscriptionEventsFile: URL? { CacheFile.url("subscription-event-days") }
+    private static var fetchedAtFile: URL? { CacheFile.url("connect-fetched-at") }
 
     /// 디스크의 상품 목록 한 앱치.
     private struct StoredCatalog: Codable {
@@ -123,6 +127,13 @@ final class AppStoreConnectStore: ObservableObject {
         reportCache = CacheFile.read([String: [SalesLine]].self, at: Self.salesFile) ?? [:]
         subscriptionReportCache = CacheFile.read([String: [SubscriptionEventLine]].self,
                                                  at: Self.subscriptionEventsFile) ?? [:]
+        fetchedAt = CacheFile.read([String: Date].self, at: Self.fetchedAtFile) ?? [:]
+    }
+
+    /// 네트워크에서 새로 받아 냈다고 적는다.
+    func markFetched(_ key: String) {
+        fetchedAt[key] = Date()
+        CacheFile.write(fetchedAt, to: Self.fetchedAtFile)
     }
 
     /// 날짜별 리포트를 디스크에 쓸 때 남길 것 — 창(과 며칠 여유) 안의 날짜만. 빈 날은
@@ -156,6 +167,8 @@ final class AppStoreConnectStore: ObservableObject {
     /// 계정에 딸린 것을 전부 잊는다 — 키를 바꾸거나 지우면 다른 계정의 것이 남으면 안 된다.
     private func forgetAccount() {
         refreshed = []
+        fetchedAt = [:]
+        CacheFile.remove(Self.fetchedAtFile)
         catalogs = [:]
         CacheFile.remove(Self.appsFile)
         CacheFile.remove(Self.catalogsFile)
@@ -195,6 +208,7 @@ final class AppStoreConnectStore: ObservableObject {
         do {
             let app = try await resolveApp(bundleID)
             metadata[bundleID] = .loaded(try await client.metadata(appID: app.id))
+            markFetched("metadata:\(bundleID)")
         } catch {
             metadata[bundleID] = .failed(error.localizedDescription)
         }
@@ -247,11 +261,13 @@ final class AppStoreConnectStore: ObservableObject {
             let app = try await resolveApp(bundleID)
             guard let request = try await client.analyticsRequestID(appID: app.id) else {
                 self[keyPath: state][bundleID] = .loaded(noRequest)
+                markFetched(key)
                 return
             }
             if let value = try await read(client, request, app.id) {
                 self[keyPath: state][bundleID] = .loaded(value)
             }
+            markFetched(key)
         } catch {
             // 다음에 볼 때 다시 받는다. 디스크에서 그린 것이 있으면 그대로 둔다.
             refreshed.remove(key)
@@ -290,6 +306,7 @@ final class AppStoreConnectStore: ObservableObject {
             let products = try await client.products(appID: app.id)
             catalogs[bundleID] = .loaded(app, products)
             saveCatalogs()
+            markFetched(key)
         } catch {
             refreshed.remove(key)
             if case .loaded? = catalogs[bundleID] { return }
@@ -360,6 +377,7 @@ final class AppStoreConnectStore: ObservableObject {
             }
         }
         sales = SalesWindow(daily: days, days: Self.salesDays, missingDays: missingDays)
+        markFetched("sales")
     }
 
     /// 최근 30일 판매를 Apple Identifier별로 접은 것.

@@ -13,28 +13,20 @@
 
 import SwiftUI
 
-/// 지금 새로고침. Disabled while a read is already in flight.
-struct RefreshButton: View {
-    @EnvironmentObject private var store: FeedbackStore
-
-    var body: some View {
-        Button {
-            Task { await store.load() }
-        } label: {
-            Label("새로고침", systemImage: "arrow.clockwise")
-        }
-        .disabled(store.isRefreshing)
-        .help("지금 새로고침")
-    }
-}
-
 /// The touch platforms' "더 보기" menu: everything the Mac spreads across its
 /// window toolbar, folded into one item.
 struct HubOverflowMenu: View {
     @EnvironmentObject private var store: FeedbackStore
+    /// 데이터 상태 시트. 메뉴 안에는 시트를 못 붙여서 바깥(`HubToolbar`)이 쥔다.
+    @Binding var showsDataSources: Bool
 
     var body: some View {
         Menu {
+            Button {
+                showsDataSources = true
+            } label: {
+                Label("데이터 상태 · 무엇을 언제 받았나", systemImage: "list.bullet.rectangle")
+            }
             Toggle(isOn: $store.autoRefresh) {
                 Label("자동 갱신 (1분)", systemImage: "timer")
             }
@@ -69,14 +61,33 @@ struct HubOverflowMenu: View {
 /// pushed view its own bar.
 struct HubToolbar: ViewModifier {
     @EnvironmentObject private var store: FeedbackStore
+    @EnvironmentObject private var connect: AppStoreConnectStore
+    @EnvironmentObject private var keywords: KeywordStore
+    @State private var showsDataSources = false
 
     func body(content: Content) -> some View {
         content
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) { RefreshButton() }
-                ToolbarItem(placement: .topBarTrailing) { HubOverflowMenu() }
+                ToolbarItem(placement: .topBarTrailing) {
+                    HubOverflowMenu(showsDataSources: $showsDataSources)
+                }
             }
-            .refreshable { await store.load() }
+            .refreshable { await HubRefresh.now(store, connect) }
+            .sheet(isPresented: $showsDataSources) {
+                NavigationStack {
+                    ScrollView { DataSourcesPanel() }
+                        .toolbar {
+                            ToolbarItem(placement: .confirmationAction) {
+                                Button("닫기") { showsDataSources = false }
+                            }
+                        }
+                }
+                .environmentObject(store)
+                .environmentObject(connect)
+                .environmentObject(keywords)
+                .presentationDetents([.medium, .large])
+            }
     }
 }
 
@@ -97,8 +108,12 @@ extension View {
 /// rebuilds this label alone rather than the whole toolbar (see `IdentityMenu`).
 struct RefreshStatus: View {
     @EnvironmentObject private var store: FeedbackStore
+    @EnvironmentObject private var connect: AppStoreConnectStore
 
     var body: some View {
+        // CloudKit 이 끝나도 App Store Connect 는 더 걸릴 수 있다(링크 출처는 1분).
+        // 그동안 "업데이트: 지금"이라고만 하면 리뷰가 아직 옛것인 줄 모른다.
+        let connectLoading = connect.loadingSources(project: store.selectedProject)
         if store.isRefreshing || store.isPublishingSummary {
             HStack(spacing: 6) {
                 // 올리기는 새로고침의 마지막 걸음이라 같은 자리에 나온다.
@@ -118,15 +133,24 @@ struct RefreshStatus: View {
                     Text("업데이트 확인 중…")
                 }
             }
-            .font(.caption)
+            .font(.body)
             .foregroundStyle(.secondary)
             // The step number and the record count both change width as they
             // climb; without this the neighbouring toolbar items jitter.
-            .frame(minWidth: 210, alignment: .leading)
+            .frame(minWidth: 260, alignment: .leading)
             .monospacedDigit()
+        } else if !connectLoading.isEmpty {
+            HStack(spacing: 6) {
+                ProgressView().controlSize(.small)
+                Text("App Store Connect 받는 중 · \(connectLoading.joined(separator: " · "))")
+                    .lineLimit(1)
+            }
+            .font(.body)
+            .foregroundStyle(.secondary)
+            .frame(minWidth: 260, alignment: .leading)
         } else if let updated = store.lastUpdated {
             Text("업데이트: \(AppFormat.time(updated))")
-                .font(.caption)
+                .font(.body)
                 .foregroundStyle(.secondary)
         }
     }

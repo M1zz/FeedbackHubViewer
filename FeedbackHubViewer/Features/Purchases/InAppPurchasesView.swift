@@ -69,14 +69,7 @@ struct InAppPurchasesView: View {
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
             Spacer(minLength: 8)
-            Button {
-                Task {
-                    if let project { await purchases.loadCatalog(bundleID: project, force: true) }
-                    await purchases.loadSales(force: true)
-                }
-            } label: {
-                Label("다시 읽기", systemImage: "arrow.clockwise")
-            }
+            // 다시 읽기는 툴바의 새로고침이 한다(상품 · 판매 모두).
             OpenSettingsButton(title: "키 설정")
         }
         .font(.body)
