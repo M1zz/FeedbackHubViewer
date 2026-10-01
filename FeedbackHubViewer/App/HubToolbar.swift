@@ -68,6 +68,7 @@ struct HubToolbar: ViewModifier {
     func body(content: Content) -> some View {
         content
             .toolbar {
+                ToolbarItem(placement: .topBarTrailing) { AttentionButton() }
                 ToolbarItem(placement: .topBarTrailing) { RefreshButton() }
                 ToolbarItem(placement: .topBarTrailing) {
                     HubOverflowMenu(showsDataSources: $showsDataSources)

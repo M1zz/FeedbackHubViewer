@@ -37,6 +37,7 @@ extension AppStoreConnectStore {
 
     private static var reviewsFile: URL? { CacheFile.url("store-reviews") }
     private static var priorityFile: URL? { CacheFile.url("store-review-priority") }
+    private static var viewedFile: URL? { CacheFile.url("store-reviews-viewed") }
 
     // MARK: - 디스크
 
@@ -48,6 +49,8 @@ extension AppStoreConnectStore {
             priorityHistory = history
             priority = history.first
         }
+        viewedReviewIDs = CacheFile.read([String: Set<String>].self, at: Self.viewedFile) ?? [:]
+        for bundleID in reviewFeeds.keys { seedViewedReviews(bundleID) }
     }
 
     /// 키를 바꾸거나 지우면 — 다른 계정의 리뷰가 남아 있으면 안 된다.
@@ -56,8 +59,10 @@ extension AppStoreConnectStore {
         versions = [:]
         priority = nil
         priorityHistory = []
+        viewedReviewIDs = [:]
         CacheFile.remove(Self.reviewsFile)
         CacheFile.remove(Self.priorityFile)
+        CacheFile.remove(Self.viewedFile)
     }
 
     private func persistReviews() {
@@ -65,6 +70,38 @@ extension AppStoreConnectStore {
             feed.fetchedAt.map { StoredFeed(reviews: feed.reviews, fetchedAt: $0) }
         }
         CacheFile.write(stored, to: Self.reviewsFile)
+    }
+
+    // MARK: - 새 리뷰
+
+    /// 아직 안 본 리뷰 수. 한 앱(nil 이면 받아 둔 모든 앱).
+    func newReviewCount(for bundleID: String?) -> Int {
+        let keys = bundleID.map { [$0] } ?? Array(reviewFeeds.keys)
+        return keys.reduce(0) { total, key in
+            guard let viewed = viewedReviewIDs[key], let feed = reviewFeeds[key] else { return total }
+            return total + feed.reviews.reduce(0) { $0 + (viewed.contains($1.id) ? 0 : 1) }
+        }
+    }
+
+    /// 리뷰 탭을 열었을 때 — 그 앱(nil 이면 모든 앱)의 리뷰를 확인한 것으로.
+    func markReviewsViewed(bundleID: String?) {
+        var changed = false
+        for key in bundleID.map({ [$0] }) ?? Array(reviewFeeds.keys) {
+            guard let feed = reviewFeeds[key] else { continue }
+            let ids = Set(feed.reviews.map(\.id))
+            guard let viewed = viewedReviewIDs[key], !ids.isSubset(of: viewed) else { continue }
+            viewedReviewIDs[key] = viewed.union(ids)
+            changed = true
+        }
+        if changed { CacheFile.write(viewedReviewIDs, to: Self.viewedFile) }
+    }
+
+    /// 한 앱의 리뷰를 처음 받았으면 그때 있던 것은 새것으로 치지 않는다 — 처음 켠 날
+    /// 리뷰 수백 개가 다 "새 리뷰"가 되면 뱃지가 아무 말도 안 하게 된다.
+    private func seedViewedReviews(_ bundleID: String) {
+        guard viewedReviewIDs[bundleID] == nil, let feed = reviewFeeds[bundleID] else { return }
+        viewedReviewIDs[bundleID] = Set(feed.reviews.map(\.id))
+        CacheFile.write(viewedReviewIDs, to: Self.viewedFile)
     }
 
     // MARK: - 읽기
@@ -86,6 +123,7 @@ extension AppStoreConnectStore {
             let reviews = try await client.reviews(appID: app.id)
             reviewFeeds[bundleID] = ReviewFeed(reviews: reviews, fetchedAt: Date())
             persistReviews()
+            seedViewedReviews(bundleID)
             if let version = try? await client.latestVersion(appID: app.id) {
                 versions[bundleID] = version
             }

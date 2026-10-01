@@ -39,8 +39,28 @@ struct ProjectSectionView: View {
         // Everything downstream reads the scope off the store, so the pushed
         // screen and the store can never disagree about which project this is.
         .task(id: project) { store.selectedProject = project }
+        // 진단 · 리뷰는 탭을 열면 확인한 것으로 — 보고 있는 동안 새로 들어온 것도.
+        .task(id: viewedKey) { markViewed() }
         .navigationTitle(title)
         .hubNavigationSubtitle(subtitle)
+    }
+
+    private var viewedKey: String {
+        let fresh: Int
+        switch store.projectSection {
+        case .crashes: fresh = store.newCrashCount(for: project)
+        case .reviews: fresh = purchases.newReviewCount(for: project)
+        default: fresh = 0
+        }
+        return "\(project ?? "")|\(store.projectSection.rawValue)|\(fresh)"
+    }
+
+    private func markViewed() {
+        switch store.projectSection {
+        case .crashes: store.markCrashesViewed(project: project)
+        case .reviews: purchases.markReviewsViewed(bundleID: project)
+        default: break
+        }
     }
 
     private var title: String {
@@ -81,6 +101,8 @@ struct ProjectSectionView: View {
         let isSelected = store.projectSection == section
         let count = count(for: section)
         let unread = section == .feedback ? store.unreadCount(for: project) : 0
+        let newCrashes = section == .crashes ? store.newCrashCount(for: project) : 0
+        let newReviews = section == .reviews ? purchases.newReviewCount(for: project) : 0
         // 답 안 한 리뷰도 같은 자리에 — 할 일이 있다는 표시다.
         let unanswered = section == .reviews ? unansweredReviews : 0
         return Button {
@@ -92,6 +114,13 @@ struct ProjectSectionView: View {
                 if unread > 0 {
                     CountBadge(count: unread, systemImage: "envelope.badge.fill",
                                tint: .red, name: "안 읽은 피드백")
+                } else if newCrashes > 0 {
+                    CountBadge(count: newCrashes, systemImage: "exclamationmark.triangle.fill",
+                               tint: .red, name: "새 진단")
+                } else if newReviews > 0 {
+                    // 새 리뷰가 답 안 한 리뷰보다 먼저 — 새것을 봐야 답할 것도 안다.
+                    CountBadge(count: newReviews, systemImage: "star.bubble.fill",
+                               tint: .red, name: "새 리뷰")
                 } else if unanswered > 0 {
                     CountBadge(count: unanswered, systemImage: "bubble.left.fill",
                                tint: .orange, name: "답 안 한 리뷰")

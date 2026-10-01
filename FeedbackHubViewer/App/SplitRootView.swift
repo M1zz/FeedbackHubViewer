@@ -91,6 +91,11 @@ struct SplitRootView: View {
             DesignCanvasButton()
         }
 
+        // 새로 온 피드백 · 진단 · 리뷰. 누르면 앱마다 무엇이 왔는지.
+        ToolbarItem(placement: .primaryAction) {
+            AttentionButton()
+        }
+
         ToolbarItem(placement: .primaryAction) {
             IdentityMenu()
         }
@@ -111,7 +116,7 @@ struct SplitRootView: View {
             Toggle(isOn: $store.notificationsEnabled) {
                 Label("알림", systemImage: "bell.badge")
             }
-            .help("새 피드백·진단이 들어오면 알리고, 앱 아이콘에 안 읽은 수를 표시합니다")
+            .help("새 피드백·진단이 들어오면 알립니다. 앱 아이콘 뱃지는 이와 상관없이 새로 온 수를 보입니다")
             .toggleStyle(.button)
 
             // A stopwatch, not a second round arrow: beside the refresh

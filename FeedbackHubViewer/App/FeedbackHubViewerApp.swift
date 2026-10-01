@@ -58,6 +58,10 @@ struct FeedbackHubViewerApp: App {
                 .onReceive(keywords.$history) { history in
                     store.storeAppNames = history.storeNames
                 }
+                // 앱 아이콘 뱃지에 새 스토어 리뷰도 — 리뷰는 App Store Connect 쪽이 쥐고 있다.
+                .onChange(of: purchases.newReviewCount(for: nil), initial: true) { _, count in
+                    store.newStoreReviewCount = count
+                }
         }
         #if os(macOS)
         .windowToolbarStyle(.unified)

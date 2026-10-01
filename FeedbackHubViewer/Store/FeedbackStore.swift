@@ -270,8 +270,6 @@ final class FeedbackStore: ObservableObject {
                     notificationsAuthorized = await NotificationService.requestAuthorization()
                     refreshBadge()
                 }
-            } else {
-                NotificationService.setBadge(0)
             }
         }
     }
@@ -306,6 +304,7 @@ final class FeedbackStore: ObservableObject {
         notificationsEnabled = defaults.bool(forKey: Self.notificationsEnabledKey)
         seenFeedbackIDs = defaults.stringArray(forKey: Self.seenFeedbackIDsKey).map(Set.init)
         seenCrashIDs = defaults.stringArray(forKey: Self.seenCrashIDsKey).map(Set.init)
+        viewedCrashIDs = defaults.stringArray(forKey: Self.viewedCrashIDsKey).map(Set.init)
         if notificationsEnabled {
             Task { notificationsAuthorized = await NotificationService.isAuthorized() }
         }
@@ -1009,6 +1008,15 @@ final class FeedbackStore: ObservableObject {
     private var seenFeedbackIDs: Set<String>?
     private var seenCrashIDs: Set<String>?
 
+    /// 진단 화면에서 확인한 진단(`FeedbackStore+Attention.swift`). 위의 `seenCrashIDs` 는
+    /// "알림을 보냈나"라서 새로고침마다 따라오지만, 이것은 사람이 진단 탭을 열어야 늘어난다.
+    /// nil 이면 이 기기에서 처음이라, 처음 받은 진단은 새것으로 치지 않는다.
+    @Published var viewedCrashIDs: Set<String>?
+    static let viewedCrashIDsKey = "viewedCrashIDs"
+    /// 스토어 리뷰 중 새로 들어온 수. 리뷰는 `AppStoreConnectStore` 가 쥐고 있어서
+    /// 앱 아이콘 뱃지에 더하려고 그쪽에서 넣어 준다.
+    @Published var newStoreReviewCount = 0 { didSet { if newStoreReviewCount != oldValue { refreshBadge() } } }
+
     /// Compare what just arrived against what this device had already seen and
     /// announce the difference. Hidden projects are excluded — a project you
     /// hid should not interrupt you.
@@ -1043,11 +1051,17 @@ final class FeedbackStore: ObservableObject {
             seenCrashIDs = crashIDs
             defaults.set(Array(crashIDs), forKey: Self.seenCrashIDsKey)
         }
+        seedViewedCrashes()
     }
 
-    /// The app icon badge follows the unread feedback count.
+    /// 앱 아이콘 뱃지 — 안 읽은 피드백 + 새 진단 + 새 스토어 리뷰. 알림 토글과 따로
+    /// 늘 붙인다(맥 Dock 은 허락이 필요 없고, 아이폰은 알림을 허락했을 때만 보인다).
     func refreshBadge() {
-        NotificationService.setBadge(notificationsEnabled ? unreadCount : 0)
+        NotificationService.setBadge(attentionCount)
+    }
+
+    func persistViewedCrashes() {
+        defaults.set(Array(viewedCrashIDs ?? []), forKey: Self.viewedCrashIDsKey)
     }
 
     // MARK: - Read / unread

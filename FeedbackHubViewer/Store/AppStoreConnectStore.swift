@@ -45,6 +45,8 @@ final class AppStoreConnectStore: ObservableObject {
 
     /// 번들 ID → 스토어 리뷰(`AppStoreConnectStore+Reviews.swift`). 디스크에서 먼저 채운다.
     @Published var reviewFeeds: [String: ReviewFeed] = [:]
+    /// 번들 ID → 리뷰 탭에서 확인한 리뷰 id. 디스크에 남는다.
+    @Published var viewedReviewIDs: [String: Set<String>] = [:]
     /// 번들 ID → 가장 최근 App Store 버전.
     @Published var versions: [String: AppVersionStatus] = [:]
     /// 전체 프로젝트의 우선순위 분석 — 지금 보이는 것과 지난 기록.
