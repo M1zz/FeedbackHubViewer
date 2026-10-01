@@ -18,6 +18,8 @@ struct FeedbackHubViewerApp: App {
     @StateObject private var keywords = KeywordStore()
     /// App Store Connect — 상품과 판매. 키가 있을 때만 읽는다(`AppStoreConnectStore`).
     @StateObject private var purchases = AppStoreConnectStore()
+    /// 앱 리포의 설계 문서 폴더를 지켜본다(맥만).
+    @StateObject private var designDocs = DesignDocsStore()
 
     var body: some Scene {
         WindowGroup {
@@ -25,6 +27,7 @@ struct FeedbackHubViewerApp: App {
                 .environmentObject(store)
                 .environmentObject(keywords)
                 .environmentObject(purchases)
+                .environmentObject(designDocs)
                 .task {
                     // Paint the cached hub, then check CloudKit for changes on
                     // a task the store owns — the window never waits for it.
@@ -60,8 +63,8 @@ struct FeedbackHubViewerApp: App {
         .windowToolbarStyle(.unified)
         .commands {
             CommandGroup(after: .toolbar) {
-                Button("Refresh") {
-                    Task { await store.load() }
+                Button("모두 새로고침") {
+                    Task { await HubRefresh.now(store, purchases) }
                 }
                 .keyboardShortcut("r", modifiers: .command)
             }

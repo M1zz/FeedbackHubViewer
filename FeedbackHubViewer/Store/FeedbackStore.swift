@@ -58,6 +58,9 @@ final class FeedbackStore: ObservableObject {
         /// App Store Connect에 걸린 상품과 판매 — 키워드처럼 허브 밖을 읽는다
         /// (`AppStoreConnectStore`).
         case purchases = "앱 내 구입"
+        /// 왜 이렇게 만들었나 - 앱 리포의 설계 문서(HTML)를 지켜보다가 연다
+        /// (`DesignDocsStore`). 맥의 디스크를 읽는 유일한 칸.
+        case design = "설계"
         var id: String { rawValue }
         var systemImage: String {
             switch self {
@@ -69,6 +72,7 @@ final class FeedbackStore: ObservableObject {
             case .keywords: return "magnifyingglass"
             case .purchases: return "creditcard"
             case .reviews: return "star.bubble"
+            case .design: return "pencil.and.ruler"
             }
         }
     }

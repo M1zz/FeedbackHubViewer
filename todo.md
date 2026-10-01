@@ -1,5 +1,36 @@
 # todo
 
+## 설계 칸 · 앱 리포의 설계 문서 지켜보기 (2026-10-01)
+- [x] 까닭: 문제 정의 · 페르소나 · 저니맵 · 솔루션 도출 HTML 이 claude.ai 아티팩트에만 있어 찾을 때마다 헤맸다
+- [x] 앱 리포의 `docs/product/process/` 를 그 자리로 정함(ClipKeyboard 에 `design-canvas.html` 과 README)
+- [x] 프로젝트 화면에 "설계" 칸(`Features/Design/`): 폴더를 DispatchSource 로 지켜보다가 HTML 이 생기거나 바뀌면 목록을 다시 읽고, "열기"는 기본 브라우저로
+- [x] 샌드박스: workspace/code 폴더를 한 번 고르게 하고 보안 범위 북마크로 남김(맥 entitlements 에 bookmarks.app-scope 추가)
+- [x] 프로젝트 키 → 리포 폴더는 `DesignDocsStore.repos`(ClipKeyboard · Rereminder)
+- [x] macOS · iOS 시뮬레이터 빌드 통과. 폰 · 패드는 "맥에서만" 안내
+- [ ] 화면에서 눈으로 확인 못 함(폴더 고르기 → 목록 → 열기)
+
+## 설계 캔버스 · 앱마다 하나 (2026-10-01)
+- [x] 까닭: 모든 앱에 설계 캔버스(`docs/product/process/design-canvas.html`)가 있어야 한다
+- [x] 맥 툴바 i 단추(`DesignCanvasButton`): 지금 앱의 캔버스가 있으면 바로 열고, 없으면 "없으니 만들어야 함" + 폴더 보기. 전체 프로젝트면 앱마다 있나 없나(없는 앱 먼저)
+- [x] 설계 칸 맨 위에 같은 판정 카드(`DesignCanvasCard` · `DesignCanvasRollCall`)
+- [x] 상태 줄 "업데이트: …" 글자 `.body`, i 는 상태 줄에서 떼어 캔버스 단추로
+- [x] macOS · iOS 시뮬레이터 빌드 통과
+- [ ] 화면에서 눈으로 확인 못 함(팝오버 크기, 툴바 i 크기)
+- [ ] 캔버스 있는 앱은 ClipKeyboard 하나뿐. Rereminder 는 만들어야 하고, 나머지 앱은 `DesignDocsStore.repos` 에 리포부터 등록해야 함
+
+## 새로고침 하나로 · 데이터 상태 (2026-10-01)
+- [x] 까닭: 툴바 새로고침은 CloudKit(피드백 · 사용 통계)만 읽고, 리뷰 · 판매 · 상품 · 노출 · 링크 출처 · 스토어 문구는 화면마다 따로 단추가 있어 무엇이 언제 새로 받아졌는지 알 수 없었다
+- [x] 툴바 새로고침 · ⌘R · 당겨서 새로고침 → `HubRefresh.now`: CloudKit + 지금 보는 앱의 App Store Connect 전부(`refreshAll(project:)`, 받는 중인 것은 건너뜀). 자동 갱신(1분)은 그대로 CloudKit 만
+- [x] 소스별 마지막으로 받은 때 `AppStoreConnectStore.fetchedAt`(디스크 `connect-fetched-at`, 계정 바꾸면 지움)
+- [x] 데이터 상태 칸(`App/DataSourcesPanel.swift`): 소스마다 받은 때 · 받는 중 · 실패, 하루 넘으면 "오래됨", 줄마다 "이것만 다시 받기". 맥은 툴바 상태 줄을 누르면 팝오버, 폰 · 패드는 "더 보기" 메뉴 → 시트
+- [x] 상태 줄: CloudKit 이 끝나도 App Store Connect 가 받는 중이면 "App Store Connect 받는 중 · 리뷰 · 링크 출처"
+- [x] 리뷰 · 앱 내 구입 · 스토어 문구 카드 머리의 따로 놀던 "다시 받기/다시 읽기" 뺌(실패 카드 안의 재시도는 둠)
+- [x] 키워드 순위는 몇 분 걸려서 모두 새로고침에 안 넣고 데이터 상태 칸에서만 따로
+- [x] 유입 탭 맨 위에 "누가 내 앱을 링크했나 보기" 단추 — 아래 카드로 스크롤, 새로 · 급증이 있으면 "새 소식 N"
+- [x] macOS · iOS 시뮬레이터 빌드 통과
+- [ ] 화면에서 눈으로 확인 못 함(팝오버 너비, 시트 높이, 툴바 상태 줄 버튼 모양)
+- [ ] 한 앱 새로고침이 App Store Connect 요청을 동시에 여섯 갈래 보냄 — 시간당 한도에 걸리는지 지켜보기
+
 ## 누가 내 앱을 링크했나 (2026-09-30)
 - [x] App Store 상세 리포트(App Downloads Detailed · Discovery and Engagement Detailed)의 `Source Info` 로 링크 출처를 찾음. 퍼널과 같은 ONGOING 요청 안에 이미 있어서 새 요청 불필요
 - [x] 실측(클립키보드 8/26~9/30): AppRaven · 什么值得买 · Telegram · WeChat · 태국 YouTube · reddit.com · LINE · Facebook. 이름 가려진 웹 유입 124건

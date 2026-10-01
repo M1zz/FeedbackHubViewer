@@ -15,6 +15,7 @@ struct ProjectSectionView: View {
     @EnvironmentObject private var store: FeedbackStore
     @EnvironmentObject private var keywords: KeywordStore
     @EnvironmentObject private var purchases: AppStoreConnectStore
+    @EnvironmentObject private var design: DesignDocsStore
     /// 섹션 칸을 몇 줄로 접을지가 여기에 달렸다.
     @Environment(\.dynamicTypeSize) private var typeSize
     /// nil == 전체 프로젝트.
@@ -131,6 +132,7 @@ struct ProjectSectionView: View {
         case .keywords: return keywords.standings(for: project).filter(\.isRanked).count
         case .purchases: return project.flatMap { purchases.products(for: $0)?.count } ?? 0
         case .reviews: return reviewCount
+        case .design: return design.docs(for: project).count
         }
     }
 
@@ -184,6 +186,10 @@ struct ProjectSectionView: View {
             guard purchases.isConfigured else { return "연결 안 됨" }
             guard project != nil else { return "우선순위" }
             return count > 0 ? "\(AppFormat.count(count))건" : "App Store"
+        case .design:
+            guard DesignDocsStore.isSupported else { return "맥에서" }
+            guard design.workspace != nil else { return "폴더 고르기" }
+            return count > 0 ? "\(count)장" : "없음"
         }
     }
 
@@ -217,6 +223,8 @@ struct ProjectSectionView: View {
             InAppPurchasesView(project: project)
         case .reviews:
             ReviewsView(project: project)
+        case .design:
+            DesignDocsView(project: project)
         }
     }
 
@@ -293,6 +301,8 @@ struct ProjectSectionView: View {
             if let average = feed.average { text += String(format: " · 평균 %.2f", average) }
             text += feed.unanswered > 0 ? " · 답 안 함 \(feed.unanswered)건" : " · 모두 답함"
             return text
+        case .design:
+            return "문제 정의부터 솔루션까지 · 리포의 \(DesignDocsStore.folder)"
         }
     }
 }

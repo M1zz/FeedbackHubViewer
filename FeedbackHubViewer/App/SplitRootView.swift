@@ -81,8 +81,14 @@ struct SplitRootView: View {
     /// platforms fold the same set into `HubOverflowMenu`.
     @ToolbarContentBuilder
     private var macToolbarContent: some ToolbarContent {
+        // 누르면 무엇을 언제 받았는지가 열린다.
         ToolbarItem(placement: .status) {
-            RefreshStatus()
+            DataStatusButton()
+        }
+
+        // 지금 보는 앱의 설계 캔버스. 없으면 만들어야 한다고 알린다.
+        ToolbarItem(placement: .status) {
+            DesignCanvasButton()
         }
 
         ToolbarItem(placement: .primaryAction) {
