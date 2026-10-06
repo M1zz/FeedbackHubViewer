@@ -48,6 +48,8 @@ final class AppStoreConnectStore: ObservableObject {
     @Published var analyticsScans: [String: LoadState<AnalyticsScan>] = [:]
     /// "번들 ID|리포트 이름" → 그 리포트를 그대로 접은 것.
     @Published var analyticsDigests: [String: LoadState<AnalyticsDigest>] = [:]
+    /// 번들 ID → 지난 기록(ONE_TIME_SNAPSHOT) 요청이 있는가. 모르면 키가 없다.
+    @Published var analyticsSnapshots: [String: Bool] = [:]
     /// 계정의 앱마다 분석 리포트 요청이 있는가. 디스크에서 먼저 채운다.
     @Published var analyticsCoverage: LoadState<AnalyticsCoverage>?
 

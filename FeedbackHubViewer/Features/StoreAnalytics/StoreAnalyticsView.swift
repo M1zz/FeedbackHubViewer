@@ -60,7 +60,7 @@ struct StoreAnalyticsView: View {
             }
         case .loaded(.noRequest)?:
             Card(title: "분석 리포트 요청이 없습니다", systemImage: "tray") {
-                AnalyticsNote("이 앱은 아직 App Store 분석 리포트를 요청하지 않았습니다. 요청하면 1~2일 뒤부터 하루치씩 쌓여요. 요청은 한 번이면 되고, 스토어에 보이는 것은 아무것도 바뀌지 않습니다.")
+                AnalyticsNote("이 앱은 아직 App Store 분석 리포트를 요청하지 않았습니다. 요청하면 지난 기록과 함께 1~2일 뒤부터 채워지고, 그다음부터 하루치씩 쌓여요. 요청은 한 번이면 되고, 스토어에 보이는 것은 아무것도 바뀌지 않습니다.")
                 Button(isRequesting ? "요청 중…" : "리포트 요청 만들기") {
                     isRequesting = true
                     Task {
@@ -74,9 +74,16 @@ struct StoreAnalyticsView: View {
         case .loaded(.ready(let analytics))?:
             if analytics.isEmpty {
                 Card(title: "아직 쌓인 리포트가 없습니다", systemImage: "hourglass") {
-                    AnalyticsNote("리포트 요청은 있지만 최근 \(analytics.days)일에 만들어진 파일이 없습니다. 요청하고 1~2일 뒤부터 나와요.")
+                    AnalyticsNote("App Store Connect 웹의 분석 탭에는 Apple 이 모아 둔 지난 기록이 다 있지만, 분석 API 는 리포트 요청을 만든 날부터만 쌓습니다. 이 앱은 요청은 있는데 최근 \(analytics.days)일에 만들어진 파일이 없어요.")
+                    SnapshotRequestView(project: project)
                 }
             } else {
+                if analytics.coveredDays.count < analytics.days - 5, connect.analyticsSnapshots[project] == false {
+                    Card(title: "기록이 \(analytics.coveredDays.count)일 치뿐입니다", systemImage: "clock.arrow.circlepath") {
+                        AnalyticsNote("분석 API 는 요청을 만든 날(\(analytics.coveredDays.first.map(StoreInsights.Period.short) ?? "—"))부터만 쌓습니다. 지난 기록을 한 번 받으면 최근 \(analytics.days)일이 채워져 판정이 정확해집니다.")
+                        SnapshotRequestView(project: project)
+                    }
+                }
                 cards(analytics)
             }
             AnalyticsExplorerCard(project: project)
@@ -103,6 +110,39 @@ struct StoreAnalyticsView: View {
             Card(title: "구독 상태", systemImage: "person.2.badge.gearshape") { AnalyticsDigestView(digest: states) }
         }
         AnalyticsNote("숫자는 Apple 의 App Store Connect 분석 리포트입니다. 하루 이틀 늦게 나오고, 너무 작은 칸은 프라이버시 기준 때문에 통째로 빠집니다. 세션 · 삭제 · 크래시는 기기 설정에서 \"앱 개발자와 공유\" 를 켠 사람만 세서 실제보다 작습니다 — 비율로 읽으세요.")
+    }
+}
+
+// MARK: - 지난 기록
+
+/// 지난 기록(ONE_TIME_SNAPSHOT)을 한 번 받는 단추. 이미 요청했으면 기다리라고만 한다.
+struct SnapshotRequestView: View {
+    @EnvironmentObject private var connect: AppStoreConnectStore
+    let project: String
+
+    @State private var isRequesting = false
+    @State private var message: String?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            if connect.analyticsSnapshots[project] == true {
+                AnalyticsNote("지난 기록을 이미 요청했습니다. Apple 이 만들기까지 1~2일 걸리고, 그다음 열면 채워집니다.")
+            } else {
+                Button(isRequesting ? "요청 중…" : "지난 기록 받기") {
+                    isRequesting = true
+                    Task {
+                        message = await connect.requestAnalyticsSnapshot(bundleID: project)
+                        isRequesting = false
+                    }
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(isRequesting)
+                AnalyticsNote("Apple 에 지난 기록을 한 번 만들어 달라고 요청합니다. 스토어에 보이는 것은 아무것도 바뀌지 않습니다.")
+            }
+            if let message {
+                Text(message).font(.body).fixedSize(horizontal: false, vertical: true)
+            }
+        }
     }
 }
 

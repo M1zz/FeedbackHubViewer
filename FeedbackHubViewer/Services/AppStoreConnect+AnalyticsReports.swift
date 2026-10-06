@@ -76,14 +76,40 @@ extension AppStoreConnect {
 
     /// 계속 쌓이는(ONGOING) 리포트 요청을 만든다. 앱마다 하나면 되고, 그 안에
     /// Standard 와 Detailed 가 다 들어 있다.
+    ///
+    /// ONGOING 은 **만든 날부터만** 쌓는다. App Store Connect 웹의 분석 탭에는 지난 기록이
+    /// 다 있는데 이 탭은 비어 있던 까닭이다. 그래서 지난 기록을 한 번 만들어 달라는
+    /// 요청(ONE_TIME_SNAPSHOT)을 같이 낸다. 그것이 실패해도 ONGOING 은 선다.
     func createAnalyticsRequest(appID: String) async throws {
+        try await createRequest(appID: appID, accessType: "ONGOING")
+        try? await createAnalyticsSnapshot(appID: appID)
+    }
+
+    /// 지난 기록을 한 번 만들어 달라는 요청. 이미 있으면 다시 만들지 않는다.
+    /// 1~2일 뒤에 파일이 생기고, 읽는 쪽(`analyticsRows`)이 ONGOING 의 것과 합친다.
+    func createAnalyticsSnapshot(appID: String) async throws {
+        if try await analyticsSnapshotID(appID: appID, refresh: true) != nil { return }
+        try await createRequest(appID: appID, accessType: "ONE_TIME_SNAPSHOT")
+        snapshotRequests[appID] = nil
+    }
+
+    private func createRequest(appID: String, accessType: String) async throws {
         _ = try await write("POST", "v1/analyticsReportRequests", body: [
             "data": [
                 "type": "analyticsReportRequests",
-                "attributes": ["accessType": "ONGOING"],
+                "attributes": ["accessType": accessType],
                 "relationships": ["app": ["data": ["type": "apps", "id": appID]]]
             ]
         ])
+    }
+
+    /// 지난 기록 요청의 id. 없으면 nil. 한 번 찾으면 이번 실행 동안 다시 묻지 않는다.
+    func analyticsSnapshotID(appID: String, refresh: Bool = false) async throws -> String? {
+        if !refresh, let known = snapshotRequests[appID] { return known }
+        let doc = try await list("v1/apps/\(appID)/analyticsReportRequests", [:])
+        let id = doc.data.first { $0.string("accessType") == "ONE_TIME_SNAPSHOT" }?.id
+        snapshotRequests[appID] = .some(id)
+        return id
     }
 
     // MARK: 행
@@ -112,16 +138,16 @@ extension AppStoreConnect {
 
         let recent: [AnalyticsCache.Instance]
         if let requestID {
-            let reports = try await list("v1/analyticsReportRequests/\(requestID)/reports", ["filter[name]": name])
-            guard let found = reports.data.first(where: { $0.string("name") == name }) ?? reports.data.first else {
-                return AnalyticsRows()
+            // 계속 쌓는 요청과, 있으면 지난 기록 요청. 같은 날짜가 둘에 다 있으면 아래에서
+            // 늦게 가공된 파일 하나만 쓴다.
+            var requests = [requestID]
+            // 여기서는 "없음" 과 "묻다 실패" 를 가를 필요가 없다 — 둘 다 계속 쌓는 것만 읽는다.
+            if let snapshot = try? await analyticsSnapshotID(appID: appID) { requests.append(snapshot) }
+            var found: [AnalyticsCache.Instance] = []
+            for request in requests {
+                found += try await instances(request: request, name: name, granularity: granularity)
             }
-            let instances = try await list("v1/analyticsReports/\(found.id)/instances", [
-                "filter[granularity]": granularity.rawValue, "limit": "200"
-            ])
-            recent = instances.data
-                .map { AnalyticsCache.Instance(id: $0.id, processingDate: $0.string("processingDate") ?? "") }
-                .filter { $0.processingDate >= cutoff }
+            recent = Array(Set(found)).filter { $0.processingDate >= cutoff }.sorted { $0.processingDate < $1.processingDate }
             AnalyticsCache.remember(recent, appID: appID, key: key)
         } else {
             recent = AnalyticsCache.instances(appID: appID, key: key).filter { $0.processingDate >= cutoff }
@@ -154,6 +180,16 @@ extension AppStoreConnect {
             }
         }
         return result
+    }
+
+    /// 한 요청 안에서 이름으로 고른 리포트의 인스턴스.
+    private func instances(request: String, name: String, granularity: AnalyticsGranularity) async throws -> [AnalyticsCache.Instance] {
+        let reports = try await list("v1/analyticsReportRequests/\(request)/reports", ["filter[name]": name])
+        guard let found = reports.data.first(where: { $0.string("name") == name }) ?? reports.data.first else { return [] }
+        let instances = try await list("v1/analyticsReports/\(found.id)/instances", [
+            "filter[granularity]": granularity.rawValue, "limit": "200"
+        ])
+        return instances.data.map { AnalyticsCache.Instance(id: $0.id, processingDate: $0.string("processingDate") ?? "") }
     }
 
     /// 한 인스턴스의 모든 세그먼트를 받은 그대로(gzip).

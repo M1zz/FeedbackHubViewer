@@ -215,6 +215,9 @@ actor AppStoreConnect {
 
     private let credentials: AppStoreConnectCredentials
     private var token: (value: String, expires: Date)?
+    /// 앱 id → 지난 기록(ONE_TIME_SNAPSHOT) 요청 id. 리포트 열두 종이 저마다 묻지 않게
+    /// 한 번 찾으면 이번 실행 동안 둔다(`AppStoreConnect+AnalyticsReports.swift`).
+    var snapshotRequests: [String: String?] = [:]
     private static let base = URL(string: "https://api.appstoreconnect.apple.com")!
 
     init(credentials: AppStoreConnectCredentials) {

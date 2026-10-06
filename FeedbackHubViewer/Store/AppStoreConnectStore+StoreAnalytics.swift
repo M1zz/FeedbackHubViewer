@@ -38,6 +38,37 @@ extension AppStoreConnectStore {
             let analytics = try await Self.storeAnalytics(client: client, requestID: requestID, appID: appID)
             return requestID == nil && analytics.instances == 0 ? nil : .ready(analytics)
         }
+        await loadSnapshotState(bundleID: bundleID)
+    }
+
+    // MARK: - 지난 기록
+
+    /// 지난 기록 요청이 있는지. 화면이 "지난 기록 받기" 단추를 띄울지 정한다.
+    func loadSnapshotState(bundleID: String) async {
+        guard let client, let app = try? await resolveApp(bundleID) else { return }
+        // 묻다 실패하면 모르는 채로 둔다 — 단추를 띄우지도 감추지도 않는다. `try?` 로 쓰면
+        // "요청 없음(nil)" 과 "묻다 실패" 가 한 nil 로 합쳐진다.
+        do {
+            analyticsSnapshots[bundleID] = try await client.analyticsSnapshotID(appID: app.id) != nil
+        } catch {}
+    }
+
+    /// 지난 기록을 한 번 만들어 달라고 한다. 계속 쌓는 요청이 없으면 그것도 같이 만든다.
+    /// 화면에 보일 한 줄을 돌려준다.
+    func requestAnalyticsSnapshot(bundleID: String) async -> String {
+        guard let client else { return "App Store Connect 키가 없습니다." }
+        do {
+            let app = try await resolveApp(bundleID)
+            if try await client.analyticsRequestID(appID: app.id) == nil {
+                try await client.createAnalyticsRequest(appID: app.id)
+            } else {
+                try await client.createAnalyticsSnapshot(appID: app.id)
+            }
+            analyticsSnapshots[bundleID] = true
+            return "요청했습니다. Apple 이 지난 기록을 만들기까지 1~2일 걸립니다. 그다음 열면 이 탭이 채워집니다."
+        } catch {
+            return "요청하지 못했습니다: \(error.localizedDescription)"
+        }
     }
 
     private static func storeAnalytics(client: AppStoreConnect, requestID: String?, appID: String) async throws -> StoreAnalytics {

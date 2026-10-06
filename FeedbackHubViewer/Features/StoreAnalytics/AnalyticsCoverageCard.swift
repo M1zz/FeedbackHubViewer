@@ -37,7 +37,7 @@ struct AnalyticsCoverageCard: View {
             Button("모두 요청") { requestAll() }
             Button("취소", role: .cancel) {}
         } message: {
-            Text("스토어에 보이는 것은 아무것도 바뀌지 않습니다. 1~2일 뒤부터 하루치씩 쌓입니다.")
+            Text("스토어에 보이는 것은 아무것도 바뀌지 않습니다. 앱마다 계속 쌓는 요청과 지난 기록 한 번을 같이 요청하고, 1~2일 뒤부터 채워집니다.")
         }
     }
 
@@ -48,7 +48,7 @@ struct AnalyticsCoverageCard: View {
             AnalyticsHeadline("앱 \(coverage.apps.count)개 모두 리포트가 쌓이고 있습니다.")
         } else {
             AnalyticsHeadline("앱 \(coverage.apps.count)개 중 \(missing.count)개는 리포트 요청이 없어 기록이 안 쌓이고 있습니다.")
-            AnalyticsNote("요청은 만든 날부터만 쌓이고 지난 기록은 생기지 않습니다. 요청이 있어야 이 탭의 분석(행사와 평상시 · 삭제 · 나라별 전환 · 세션)이 나옵니다.")
+            AnalyticsNote("App Store Connect 웹의 분석 탭과 달리 분석 API 는 요청을 만든 날부터만 쌓습니다. 요청하면 지난 기록도 한 번 같이 받아 와서, 이 탭의 분석(행사와 평상시 · 삭제 · 나라별 전환 · 세션)이 나옵니다.")
             Button(isRequesting ? "요청 만드는 중…" : "요청 없는 앱 \(missing.count)개 모두 요청") { isConfirming = true }
                 .buttonStyle(.borderedProminent)
                 .disabled(isRequesting)

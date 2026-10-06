@@ -269,6 +269,11 @@ extension StoreAnalytics {
         insights = StoreInsights(self)
     }
 
+    /// 원본에 행이 있는 날짜들. 창(`days`)보다 훨씬 적으면 요청을 만든 지 얼마 안 된 것이다.
+    var coveredDays: [String] {
+        Set(raw.values.flatMap { $0.byDate.keys }).sorted()
+    }
+
     var isEmpty: Bool {
         sessions == nil && installs == nil && downloads == nil && engagement == nil && purchases == nil
             && webPreview == nil && installPerformance == nil && crashes == nil && optIn == nil
