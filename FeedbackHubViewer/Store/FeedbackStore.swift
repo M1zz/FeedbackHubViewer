@@ -1132,6 +1132,16 @@ final class FeedbackStore: ObservableObject {
         triage[feedback.id]?.status ?? .pending
     }
 
+    // MARK: - Replies (written to the hub, read by the sender's app)
+
+    func reply(for feedback: Feedback) async -> String? {
+        await service.fetchReply(forFeedback: feedback.id)
+    }
+
+    func sendReply(_ message: String, for feedback: Feedback) async throws {
+        try await service.saveReply(message, forFeedback: feedback.id, appId: feedback.appId)
+    }
+
     func note(for feedback: Feedback) -> String {
         triage[feedback.id]?.note ?? ""
     }

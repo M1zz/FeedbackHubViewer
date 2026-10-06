@@ -88,6 +88,34 @@ final class CloudKitService {
         container = CKContainer(identifier: Self.containerIdentifier)
     }
 
+    // MARK: - Replies
+
+    /// LeeoKit's reply record type. One reply per feedback, named
+    /// `reply-<feedback recordName>`, so the app fetches it by ID: no query,
+    /// no Queryable index. Must exist in Production with World: Read.
+    static let replyRecordType = "FeedbackReply"
+
+    nonisolated static func replyRecordID(forFeedback id: String) -> CKRecord.ID {
+        CKRecord.ID(recordName: "reply-\(id)")
+    }
+
+    /// The reply already written for this feedback, if any.
+    func fetchReply(forFeedback id: String) async -> String? {
+        (try? await database.record(for: Self.replyRecordID(forFeedback: id)))?["message"] as? String
+    }
+
+    /// Writes (or rewrites) the reply. The sender sees it in their app under
+    /// Settings > 보낸 의견, whether or not they left an email.
+    func saveReply(_ message: String, forFeedback id: String, appId: String?) async throws {
+        let recordID = Self.replyRecordID(forFeedback: id)
+        let record = (try? await database.record(for: recordID))
+            ?? CKRecord(recordType: Self.replyRecordType, recordID: recordID)
+        record["feedbackID"] = id
+        record["message"] = message
+        if let appId { record["appId"] = appId }
+        _ = try await database.save(record)
+    }
+
     /// Usage statistics record types, written by LeeoKit's `LeeoUsageReporter`
     /// into this same container. Fixed names — unlike feedback, there is no
     /// guessing to do (see `Usage.swift`).

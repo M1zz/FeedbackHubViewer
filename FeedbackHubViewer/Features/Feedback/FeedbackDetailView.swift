@@ -25,6 +25,15 @@ struct FeedbackDetailView: View {
     /// The memo being typed. Seeded from the store when the record changes and
     /// written back as it is edited, so leaving the screen never loses it.
     @State private var noteDraft = ""
+    /// The reply being written to the sender. Seeded from the hub on open.
+    @State private var replyDraft = ""
+    @State private var sentReply: String?
+    @State private var replyState: ReplyState = .idle
+
+    private enum ReplyState: Equatable {
+        case idle, sending, sent
+        case failed(String)
+    }
 
     var body: some View {
         ScrollView {
@@ -48,6 +57,20 @@ struct FeedbackDetailView: View {
                 }
 
                 metadataGrid
+
+                if !feedback.attachedInfoLines.isEmpty {
+                    section(title: "자동 첨부") {
+                        VStack(alignment: .leading, spacing: 4) {
+                            ForEach(feedback.attachedInfoLines, id: \.self) { line in
+                                Text(line)
+                                    .font(.body)
+                                    .textSelection(.enabled)
+                            }
+                        }
+                    }
+                }
+
+                replySection
 
                 section(title: "모든 필드") {
                     VStack(spacing: 0) {
@@ -81,6 +104,9 @@ struct FeedbackDetailView: View {
         .task(id: feedback.id) {
             store.markRead(feedback)
             noteDraft = store.note(for: feedback)
+            replyState = .idle
+            sentReply = await store.reply(for: feedback)
+            replyDraft = sentReply ?? ""
         }
         .onChange(of: noteDraft) { _, draft in
             guard draft != store.note(for: feedback) else { return }
@@ -216,6 +242,58 @@ struct FeedbackDetailView: View {
             Text(feedback.createdAtDisplay)
                 .font(.body)
                 .foregroundStyle(.secondary)
+        }
+    }
+
+    /// Reply that lands in the sender's app (Settings > 보낸 의견). Works
+    /// without an email address, which most feedback does not carry.
+    private var replySection: some View {
+        section(title: sentReply == nil ? "답장" : "답장 (보냄)") {
+            VStack(alignment: .leading, spacing: 8) {
+                TextEditor(text: $replyDraft)
+                    .font(.body)
+                    .frame(minHeight: 100)
+                    .padding(6)
+                    .background(Color.secondary.opacity(0.06), in: RoundedRectangle(cornerRadius: 8))
+                HStack {
+                    Text(replyStatusText)
+                        .font(.body)
+                        .foregroundStyle(replyStatusIsError ? .red : .secondary)
+                    Spacer()
+                    Button(sentReply == nil ? "답장 보내기" : "답장 고치기") { sendReply() }
+                        .buttonStyle(.borderedProminent)
+                        .disabled(replyDraft.trimmed.isEmpty || replyState == .sending
+                                  || replyDraft.trimmed == sentReply)
+                }
+            }
+        }
+    }
+
+    private var replyStatusText: String {
+        switch replyState {
+        case .idle: return "사용자 앱의 설정 > 보낸 의견에 보여요"
+        case .sending: return "보내는 중…"
+        case .sent: return "보냈어요"
+        case .failed(let message): return message
+        }
+    }
+
+    private var replyStatusIsError: Bool {
+        if case .failed = replyState { return true }
+        return false
+    }
+
+    private func sendReply() {
+        let message = replyDraft.trimmed
+        replyState = .sending
+        Task {
+            do {
+                try await store.sendReply(message, for: feedback)
+                sentReply = message
+                replyState = .sent
+            } catch {
+                replyState = .failed("보내지 못했어요. FeedbackReply 타입이 이 환경에 배포됐는지 확인하세요.")
+            }
         }
     }
 
