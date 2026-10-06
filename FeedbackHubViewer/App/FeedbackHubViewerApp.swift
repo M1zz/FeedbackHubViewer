@@ -88,7 +88,7 @@ struct FeedbackHubViewerApp: App {
     private var rootView: some View {
         #if os(macOS)
         ContentView()
-            .frame(minWidth: 900, minHeight: 560)
+            .frame(minWidth: SplitRootView.windowMinWidth, minHeight: 560)
         #else
         ContentView()
         #endif

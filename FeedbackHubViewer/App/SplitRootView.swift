@@ -3,7 +3,7 @@
 //  FeedbackHubViewer
 //
 //  Which project on the left, that project's 피드백 · 통계 · 진단 · 키워드 beside
-//  it. The selected feedback opens as an inspector on the right only while
+//  it. The selected feedback opens as a panel on the right only while
 //  one is selected **and 피드백 is the open section** — on 리뷰 · 통계 and the
 //  rest a feedback detail has nothing to do with what is on screen, so the
 //  section gets the full width. Nothing sits there empty. The Mac's layout, and the
@@ -17,11 +17,13 @@ struct SplitRootView: View {
     @State private var selection: Feedback.ID?
     /// 고른 피드백은 그대로 두고 오른쪽 상세 칸만 접은 상태. 다른 행을 고르면 다시 연다.
     @State private var isDetailCollapsed = false
+    /// 동작 줄이기를 켠 사람에게는 상세가 미끄러지지 않고 바로 나타난다.
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         NavigationSplitView {
             SidebarView()
-                .navigationSplitViewColumnWidth(min: 240, ideal: 280, max: 340)
+                .navigationSplitViewColumnWidth(min: 220, ideal: 260, max: Self.sidebarMaxWidth)
                 .navigationTitle("프로젝트")
         } detail: {
             contentColumn
@@ -38,6 +40,44 @@ struct SplitRootView: View {
     /// The selected project's screen. Which project it is comes from the
     /// sidebar; which of its sections is showing comes from the store.
     private var contentColumn: some View {
+        #if os(macOS)
+        // 상세는 `.inspector` 가 아니라 이 칸 안에 나란히 둔다.
+        //
+        // `.inspector` 는 AppKit 분할 칸 하나를 더 만들고, 칸마다 제 툴바 구역과 최소
+        // 너비를 따로 셈한다. 피드백을 고르면 읽음 표시 · 툴바 글자가 바뀌며 그 최소 너비가
+        // 거듭 다시 계산됐고, AppKit 이 "Update Constraints in Window pass" 예외로 앱을
+        // 죽였다(창을 1020pt 로 넓혀도 똑같았다). 한 칸 안의 `HStack` 은 분할 칸끼리
+        // 최소 너비를 주고받을 일이 없다.
+        HStack(spacing: 0) {
+            // 가운데 칸에는 최소 너비를 박지 않는다. 박으면 가운데 + 상세가 사이드바를
+            // 뺀 자리보다 넓어질 때 분할 칸이 사이드바를 줄여 주지 않고, 칸 전체가 창보다
+            // 넓어져 가운데 정렬된 채 **양옆이 잘린다**(사이드바 왼쪽 · 상세 오른쪽).
+            // 줄어드는 몫은 목록이 받는다. 얼마까지 줄지는 창의 최소 너비가 정한다.
+            projectStack
+                .frame(maxWidth: .infinity)
+            if isShowingDetail.wrappedValue, let feedback = selectedFeedback {
+                // 열고 닫을 때만 오른쪽에서 밀려 들어오고 나간다. 다른 행을 고를 때는
+                // 바깥 틀이 그대로라 미끄러지지 않고 안의 내용만 바뀐다 — `.id` 는 안쪽에 둔다.
+                HStack(spacing: 0) {
+                    Divider()
+                    FeedbackDetailView(feedback: feedback,
+                                       projectLabel: store.displayName(for: feedback.projectKey))
+                        .id(feedback.id)
+                }
+                .frame(width: Self.detailWidth)
+                .transition(.move(edge: .trailing).combined(with: .opacity))
+            }
+        }
+        // 미끄러지는 동안 상세가 목록 위로 삐져나오지 않게.
+        .clipped()
+        .animation(reduceMotion ? nil : .snappy(duration: 0.28), value: isShowingDetail.wrappedValue)
+        .onChange(of: selection) { isDetailCollapsed = false }
+        #else
+        projectStack
+        #endif
+    }
+
+    private var projectStack: some View {
         NavigationStack(path: $store.path) {
             ProjectSectionView(project: store.selectedProject, selection: $selection)
             #if os(iOS)
@@ -52,17 +92,14 @@ struct SplitRootView: View {
             .hubToolbar()
             #endif
         }
-        #if os(macOS)
-        .inspector(isPresented: isShowingDetail) {
-            if let feedback = selectedFeedback {
-                FeedbackDetailView(feedback: feedback,
-                                   projectLabel: store.displayName(for: feedback.projectKey))
-                    .inspectorColumnWidth(min: 320, ideal: 420, max: 640)
-            }
-        }
-        .onChange(of: selection) { isDetailCollapsed = false }
-        #endif
     }
+
+    /// 창의 최소 너비 = 가장 넓은 사이드바 + 상세 + 상세를 열어도 가운데 목록이 쓸 만한
+    /// 너비(`FeedbackHubViewerApp`). 가운데 칸에 최소 너비를 박는 대신 여기서 받아 낸다.
+    static let sidebarMaxWidth: CGFloat = 340
+    static let detailWidth: CGFloat = 360
+    static let contentComfortWidth: CGFloat = 340
+    static var windowMinWidth: CGFloat { sidebarMaxWidth + detailWidth + contentComfortWidth }
 
     private var selectedFeedback: Feedback? {
         guard let id = selection else { return nil }

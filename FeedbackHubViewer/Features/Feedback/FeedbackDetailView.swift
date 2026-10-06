@@ -98,7 +98,9 @@ struct FeedbackDetailView: View {
             .padding(contentPadding)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
+        #if os(iOS)
         .navigationTitle("상세")
+        #endif
         // Opening the detail is what counts as having seen the feedback, so the
         // unread badge for this record clears here on both platforms.
         .task(id: feedback.id) {
@@ -112,17 +114,18 @@ struct FeedbackDetailView: View {
             guard draft != store.note(for: feedback) else { return }
             store.setNote(draft, for: feedback)
         }
+        #if os(iOS)
+        // 맥에는 툴바 단추를 두지 않는다. 맥의 상세는 가운데 칸 옆에 나란히 서서
+        // (`SplitRootView`) 창 툴바를 같이 쓰는데, 고를 때마다 단추 글자가 바뀌며 툴바
+        // 너비를 흔들었다. 같은 결정은 바로 아래 처리 칸에 있다.
         .toolbar {
             ToolbarItem(placement: .primaryAction) { triageButton }
-            #if os(iOS)
             ToolbarItem(placement: .topBarTrailing) {
                 ShareLink(item: shareText) {
                     Label("공유", systemImage: "square.and.arrow.up")
                 }
             }
-            #endif
         }
-        #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif
     }
