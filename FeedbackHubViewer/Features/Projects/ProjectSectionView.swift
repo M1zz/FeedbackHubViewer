@@ -162,6 +162,10 @@ struct ProjectSectionView: View {
         case .purchases: return project.flatMap { purchases.products(for: $0)?.count } ?? 0
         case .reviews: return reviewCount
         case .design: return design.docs(for: project).count
+        case .storeAnalytics:
+            guard let project else { return purchases.analyticsCoverage?.value?.missing.count ?? 0 }
+            guard case .ready(let analytics)? = purchases.storeAnalytics[project]?.value else { return 0 }
+            return analytics.insights?.findings.filter { $0.level == .bad }.count ?? 0
         }
     }
 
@@ -215,6 +219,14 @@ struct ProjectSectionView: View {
             guard purchases.isConfigured else { return "연결 안 됨" }
             guard project != nil else { return "우선순위" }
             return count > 0 ? "\(AppFormat.count(count))건" : "App Store"
+        case .storeAnalytics:
+            guard purchases.isConfigured else { return "연결 안 됨" }
+            guard let project else {
+                guard let coverage = purchases.analyticsCoverage?.value else { return "요청 현황" }
+                return "요청 \(coverage.apps.count - coverage.missing.count)/\(coverage.apps.count)"
+            }
+            guard case .ready? = purchases.storeAnalytics[project]?.value else { return "App Store Connect" }
+            return count > 0 ? "문제 \(count)개" : "문제 없음"
         case .design:
             guard DesignDocsStore.isSupported else { return "맥에서" }
             guard design.workspace != nil else { return "폴더 고르기" }
@@ -254,6 +266,8 @@ struct ProjectSectionView: View {
             ReviewsView(project: project)
         case .design:
             DesignDocsView(project: project)
+        case .storeAnalytics:
+            StoreAnalyticsView(project: project)
         }
     }
 
@@ -332,6 +346,17 @@ struct ProjectSectionView: View {
             return text
         case .design:
             return "문제 정의부터 솔루션까지 · 리포의 \(DesignDocsStore.folder)"
+        case .storeAnalytics:
+            guard purchases.isConfigured else { return "App Store Connect 키를 넣으면 Apple 이 모은 분석 리포트가 나옵니다" }
+            guard let project else {
+                guard let coverage = purchases.analyticsCoverage?.value else { return "앱마다 분석 리포트가 쌓이는지" }
+                return coverage.missing.isEmpty ? "앱 \(coverage.apps.count)개 모두 쌓는 중"
+                    : "앱 \(coverage.apps.count)개 중 \(coverage.missing.count)개는 요청 없음"
+            }
+            guard case .ready(let analytics)? = purchases.storeAnalytics[project]?.value else { return "App Store Connect 분석 리포트" }
+            var text = "최근 \(analytics.days)일 · 리포트 파일 \(analytics.instances)개"
+            if let surge = analytics.insights?.surge { text += " · \(surge.range) 몰림 제외하고 판정" }
+            return text
         }
     }
 }

@@ -42,6 +42,14 @@ final class AppStoreConnectStore: ObservableObject {
     @Published var referrals: [String: LoadState<ReferralResult>] = [:]
     /// 번들 ID → (출처 → 처음 본 날). 디스크에 남는다.
     var referralLedger: ReferralLedger = [:]
+    /// 번들 ID → App Store 분석 리포트를 접은 것(`AppStoreConnectStore+StoreAnalytics.swift`).
+    @Published var storeAnalytics: [String: LoadState<StoreAnalyticsResult>] = [:]
+    /// 번들 ID → 리포트 전부를 훑은 결과. 디스크에 남는다.
+    @Published var analyticsScans: [String: LoadState<AnalyticsScan>] = [:]
+    /// "번들 ID|리포트 이름" → 그 리포트를 그대로 접은 것.
+    @Published var analyticsDigests: [String: LoadState<AnalyticsDigest>] = [:]
+    /// 계정의 앱마다 분석 리포트 요청이 있는가. 디스크에서 먼저 채운다.
+    @Published var analyticsCoverage: LoadState<AnalyticsCoverage>?
 
     /// 번들 ID → 스토어 리뷰(`AppStoreConnectStore+Reviews.swift`). 디스크에서 먼저 채운다.
     @Published var reviewFeeds: [String: ReviewFeed] = [:]
@@ -185,6 +193,7 @@ final class AppStoreConnectStore: ObservableObject {
         forgetReviews()
         forgetSubscriptionEvents()
         forgetReferrals()
+        forgetStoreAnalytics()
     }
 
     // MARK: - 앱 찾기

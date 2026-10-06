@@ -49,6 +49,9 @@ final class FeedbackStore: ObservableObject {
         /// 사람이 앱에 어떻게 닿고 어디서 새는가 — 앱 리포의 유입 지도로 판정한다
         /// (`Models/Acquisition.swift`).
         case acquisition = "유입"
+        /// App Store Connect 분석 리포트 — 세션 · 설치와 삭제 · 다운로드 구성 · 스토어 행동 ·
+        /// 구매 · 웹 미리보기 · 설치 성능 · 크래시(`StoreAnalytics`), 그리고 리포트 전부 훑기.
+        case storeAnalytics = "스토어 분석"
         case crashes = "진단"
         /// App Store search — the only section that reads something other than
         /// the CloudKit hub (see `KeywordStore`). It sits here because it is
@@ -68,6 +71,7 @@ final class FeedbackStore: ObservableObject {
             case .stats: return "chart.bar"
             case .release: return "stethoscope"
             case .acquisition: return "point.3.connected.trianglepath.dotted"
+            case .storeAnalytics: return "chart.xyaxis.line"
             case .crashes: return "exclamationmark.triangle"
             case .keywords: return "magnifyingglass"
             case .purchases: return "creditcard"

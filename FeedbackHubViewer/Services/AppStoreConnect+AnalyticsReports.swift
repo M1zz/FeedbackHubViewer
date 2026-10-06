@@ -40,6 +40,17 @@ enum AnalyticsReport: String {
     case downloadsDetailed = "App Downloads Detailed"
 }
 
+/// 인스턴스의 단위. 대부분은 날마다 나오지만, 크래시처럼 달마다만 나오는 리포트가 있다.
+enum AnalyticsGranularity: String {
+    case daily = "DAILY"
+    case monthly = "MONTHLY"
+
+    /// 디스크 목록의 열쇠. 날 단위는 예전처럼 리포트 이름 그대로 둔다.
+    func cacheKey(_ name: String) -> String {
+        self == .daily ? name : "\(name)#\(rawValue)"
+    }
+}
+
 /// 한 리포트를 날짜별로 한 벌씩 모은 것.
 struct AnalyticsRows {
     /// 날짜("yyyy-MM-dd") → 그날의 행. 행은 머리글 이름 → 값.
@@ -86,23 +97,34 @@ extension AppStoreConnect {
     /// 창 첫날의 행이 그보다 늦게 가공된 파일에 들어 있다.
     func analyticsRows(_ report: AnalyticsReport, requestID: String?, appID: String,
                        days: Int) async throws -> AnalyticsRows {
+        try await analyticsRows(named: report.rawValue, requestID: requestID, appID: appID, days: days)
+    }
+
+    /// 이름으로 고른 리포트의 행. 달 단위 리포트는 행의 날짜가 그달 1일이라, 창을 한 달
+    /// 더 넓혀야 지난달 파일이 잡힌다.
+    func analyticsRows(named name: String, granularity: AnalyticsGranularity = .daily,
+                       requestID: String?, appID: String, days: Int) async throws -> AnalyticsRows {
         let calendar = Calendar(identifier: .gregorian)
-        let cutoff = Self.day.string(from: calendar.date(byAdding: .day, value: -(days + 3), to: Date()) ?? Date())
-        let firstDay = Self.day.string(from: calendar.date(byAdding: .day, value: -days, to: Date()) ?? Date())
+        let span = granularity == .monthly ? days + 31 : days
+        let cutoff = Self.day.string(from: calendar.date(byAdding: .day, value: -(span + 3), to: Date()) ?? Date())
+        let firstDay = Self.day.string(from: calendar.date(byAdding: .day, value: -span, to: Date()) ?? Date())
+        let key = granularity.cacheKey(name)
 
         let recent: [AnalyticsCache.Instance]
         if let requestID {
-            let reports = try await list("v1/analyticsReportRequests/\(requestID)/reports", ["filter[name]": report.rawValue])
-            guard let found = reports.data.first else { return AnalyticsRows() }
+            let reports = try await list("v1/analyticsReportRequests/\(requestID)/reports", ["filter[name]": name])
+            guard let found = reports.data.first(where: { $0.string("name") == name }) ?? reports.data.first else {
+                return AnalyticsRows()
+            }
             let instances = try await list("v1/analyticsReports/\(found.id)/instances", [
-                "filter[granularity]": "DAILY", "limit": "200"
+                "filter[granularity]": granularity.rawValue, "limit": "200"
             ])
             recent = instances.data
                 .map { AnalyticsCache.Instance(id: $0.id, processingDate: $0.string("processingDate") ?? "") }
                 .filter { $0.processingDate >= cutoff }
-            AnalyticsCache.remember(recent, appID: appID, report: report)
+            AnalyticsCache.remember(recent, appID: appID, key: key)
         } else {
-            recent = AnalyticsCache.instances(appID: appID, report: report).filter { $0.processingDate >= cutoff }
+            recent = AnalyticsCache.instances(appID: appID, key: key).filter { $0.processingDate >= cutoff }
         }
 
         var result = AnalyticsRows()
@@ -121,8 +143,9 @@ extension AppStoreConnect {
             result.instances += 1
             var rowsByDate: [String: [[String: String]]] = [:]
             for row in Self.rows(gzipped: segments) {
+                // 설치 경로 리포트(Platform App Installs)만 날짜 열 이름이 다르다.
                 guard row["App Apple Identifier"] == nil || row["App Apple Identifier"] == appID,
-                      let date = row["Date"], date >= firstDay else { continue }
+                      let date = row["Date"] ?? row["Install Day"], date >= firstDay else { continue }
                 rowsByDate[date, default: []].append(row)
             }
             for (date, rows) in rowsByDate where instance.processingDate > (processedFor[date] ?? "") {
@@ -193,16 +216,17 @@ enum AnalyticsCache {
         directory?.appendingPathComponent("\(instanceID).json")
     }
 
-    static func instances(appID: String, report: AnalyticsReport) -> [Instance] {
-        CacheFile.read(Index.self, at: indexFile)?[appID]?[report.rawValue] ?? []
+    /// `key` 는 `AnalyticsGranularity.cacheKey` — 리포트 이름(날 단위)이거나 이름#단위.
+    static func instances(appID: String, key: String) -> [Instance] {
+        CacheFile.read(Index.self, at: indexFile)?[appID]?[key] ?? []
     }
 
     /// 새 목록으로 바꾸고, 빠진 인스턴스의 파일을 지운다.
-    static func remember(_ instances: [Instance], appID: String, report: AnalyticsReport) {
+    static func remember(_ instances: [Instance], appID: String, key: String) {
         var index = CacheFile.read(Index.self, at: indexFile) ?? [:]
-        let old = index[appID]?[report.rawValue] ?? []
+        let old = index[appID]?[key] ?? []
         guard old != instances else { return }
-        index[appID, default: [:]][report.rawValue] = instances
+        index[appID, default: [:]][key] = instances
         CacheFile.write(index, to: indexFile)
         let kept = Set(instances.map(\.id))
         for gone in old where !kept.contains(gone.id) { CacheFile.remove(file(gone.id)) }
