@@ -18,7 +18,7 @@ import Foundation
 
 struct StatsFinding: Identifiable {
     enum Topic: String {
-        case growth, lifecycle, retention, region, habit, capacity, paid, flow, release, feedback
+        case growth, lifecycle, retention, region, habit, stickiness, capacity, paid, flow, release, feedback
     }
 
     enum State: Int, Comparable {
@@ -285,6 +285,93 @@ enum StatsAnalysis {
             answer += " 여러 날 오는 사람이 중심이에요."
         }
         return .init(topic: .habit, question: question, answer: answer, state: state, action: action)
+    }
+
+    // MARK: - 습관이 되었나 (사용 주기 · 고착도 · L28)
+
+    /// 주기에 맞는 비율로 습관을 잰다. 매일 쓰는 앱은 DAU/MAU, 매주 쓰는 앱은 WAU/MAU,
+    /// 가끔 쓰는 앱은 비율이 아니라 MAU 와 잔존이 말한다.
+    ///
+    /// 기준 숫자(DAU/MAU 20% 괜찮음 · 50% 메신저급)는 업계 통념이지 법칙이 아니라 답에도
+    /// 그렇게 적는다. 규모가 작으면(MAU 1,000 미만) 이 비율은 출시 · 피처링 하나에
+    /// 크게 흔들려서, 나쁨으로 올리지 않고 잔존을 보라고 한다.
+    static func stickiness(_ habit: FeedbackStore.Habit) -> StatsFinding {
+        let question = "습관이 되었나?"
+        guard !habit.isEmpty else {
+            return .init(topic: .stickiness, question: question,
+                         answer: "지난 30일 활동이 없어 모릅니다.", state: .unknown)
+        }
+        guard let cycle = habit.cycle else {
+            return .init(topic: .stickiness, question: question,
+                         answer: "이 앱이 얼마나 자주 쓰여야 하는지(매일 · 매주 · 가끔)를 정하지 않아, 어느 비율로 잴지 모릅니다. 지금 DAU/MAU \(habit.dauOverMau.map(percent) ?? "—"), WAU/MAU \(habit.wauOverMau.map(percent) ?? "—").",
+                         state: .unknown, action: "습관 카드에서 사용 주기 정하기")
+        }
+
+        var answer = ""
+        var state: StatsFinding.State = .good
+        var action: String?
+        let mauChange = habit.previousMAU > 0
+            ? Double(habit.mau - habit.previousMAU) / Double(habit.previousMAU) : nil
+
+        if let ratio = habit.mainRatio, let now = ratio.now {
+            answer = "\(cycle.label) 쓰는 앱이라 \(ratio.name)로 봅니다: \(percent(now))"
+            if let before = ratio.before, before > 0 {
+                answer += "(4주 전 \(percent(before)))"
+            }
+            answer += "."
+            if cycle == .daily {
+                if now >= 0.5 {
+                    answer += " 메신저급이에요."
+                } else if now >= 0.2 {
+                    answer += " 흔히 괜찮다고 보는 20%를 넘었어요."
+                } else {
+                    answer += " 흔히 괜찮다고 보는 20%(업계 통념)보다 낮아요."
+                    state = now < 0.1 ? .bad : .watch
+                    action = "매일 다시 열 이유 만들기: 알림 · 위젯 · 하루 단위 가치"
+                }
+            }
+            // 유입만 늘고 정착은 안 되나 — MAU 는 오르는데 비율이 내린다.
+            if let before = ratio.before, before > 0 {
+                let ratioChange = (now - before) / before
+                if let mauChange, mauChange > 0.05, ratioChange < -0.1 {
+                    answer += " MAU는 \(signed(mauChange)) 늘었는데 비율은 내려서, 유입만 늘고 정착은 안 되는 중이에요."
+                    state = min(state, .watch)
+                    action = action ?? "새로 온 사람의 첫 주 보기(잔존 카드)"
+                } else if ratioChange < -0.15 {
+                    answer += " 4주 전보다 덜 자주 와요."
+                    state = min(state, .watch)
+                } else if ratioChange > 0.15 {
+                    answer += " 4주 전보다 더 자주 와요."
+                }
+            }
+        } else {
+            answer = "가끔 쓰는 앱이라 비율보다 MAU \(habit.mau)명"
+            if let mauChange { answer += "(4주 전보다 \(signed(mauChange)))" }
+            answer += "과 필요할 때 다시 오는지(잔존)를 봅니다."
+            if let mauChange, mauChange < -0.15 { state = .watch }
+        }
+
+        // L28 오른쪽 끝 — 거의 매일 · 매주 오는 사람이 쌓이나.
+        if let threshold = habit.tailThreshold, let tail = habit.tailShare(habit.curve) {
+            answer += " 지난 28일 중 \(threshold)일 이상 온 사람이 \(percent(tail))"
+            if let before = habit.tailShare(habit.previousCurve), before > 0 {
+                answer += "(그 앞 28일 \(percent(before)))"
+                if tail > before * 1.15 { answer += "로 늘고 있어요 — 진짜 신호예요." }
+                else if tail < before * 0.85 { answer += "로 줄고 있어요."; state = min(state, .watch) }
+                else { answer += "예요." }
+            } else {
+                answer += "예요."
+            }
+        }
+
+        if habit.isSmall {
+            answer += " MAU \(habit.mau)명 규모에서는 이 비율이 출시 · 피처링 하나에 크게 흔들려요. 코호트 잔존을 주로 보세요."
+            if state == .bad { state = .watch }
+        }
+        if habit.fellBackToAnyEvent {
+            answer += " 고른 가치 행동은 기록이 아직 짧아 지금은 아무 이벤트 기준이에요."
+        }
+        return .init(topic: .stickiness, question: question, answer: answer, state: state, action: action)
     }
 
     // MARK: - 어디까지 크나

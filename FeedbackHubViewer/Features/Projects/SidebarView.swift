@@ -50,6 +50,7 @@ struct SidebarView: View {
                                traffic: traffic[entry.key] ?? .none,
                                capacity: store.carryingCapacity(for: entry.key, period: .week),
                                release: store.releaseLevel(for: entry.key),
+                               cycle: store.usageCycle(for: entry.key),
                                isSelected: store.selectedProject == entry.key) {
                         store.selectedProject = entry.key
                     }
@@ -157,6 +158,8 @@ private struct ProjectRow: View {
     var capacity: CarryingCapacity? = nil
     /// 최신 버전의 릴리즈 건강. 잴 수 없으면 nil 이고 점이 안 뜬다.
     var release: ReleaseHealth.Level? = nil
+    /// 이 앱의 사용 주기. 오른쪽 숫자가 그 주기의 지표가 된다(안 정했으면 MAU).
+    var cycle: UsageCycle? = nil
     let isSelected: Bool
     let action: () -> Void
 
@@ -210,10 +213,10 @@ private struct ProjectRow: View {
                                        tint: .red, name: "안 읽은 피드백")
                         }
                         if traffic.hasUsageData {
-                            Text("MAU \(AppFormat.count(traffic.mau))")
+                            Text("\(mainMetric.name) \(AppFormat.count(mainMetric.value))")
                                 .font(.body.monospacedDigit().weight(.semibold))
-                                .foregroundStyle(traffic.mau > 0 ? .primary : .secondary)
-                                .help("최근 30일 동안 이 앱을 쓴 사람(설치) 수 — 목록이 이 순서입니다. 그 앞 30일 \(traffic.previousMAU)명, 어제 DAU \(traffic.dauYesterday)명.")
+                                .foregroundStyle(mainMetric.value > 0 ? .primary : .secondary)
+                                .help("\(cycle.map { "\($0.label) 쓰는 앱이라 \($0.metricName)" } ?? "사용 주기를 안 정해 MAU")를 보입니다(통계 → 습관 카드에서 정함). 목록은 MAU 순 — MAU \(traffic.mau)명, 7일 \(traffic.activeInstalls7)명, 어제 DAU \(traffic.dauYesterday)명.")
                         } else if unread == 0 {
                             Text("\(count)건")
                                 .font(.body.monospacedDigit())
@@ -237,9 +240,18 @@ private struct ProjectRow: View {
         .accessibilityLabel(accessibilityText)
     }
 
+    /// 사용 주기에 맞는 지표 — 매일 DAU(어제), 매주 WAU(7일), 가끔 · 안 정함 MAU.
+    private var mainMetric: (name: String, value: Int) {
+        switch cycle {
+        case .daily: ("DAU", traffic.dauYesterday)
+        case .weekly: ("WAU", traffic.activeInstalls7)
+        case .occasional, nil: ("MAU", traffic.mau)
+        }
+    }
+
     private var accessibilityText: String {
         var parts = ["\(name)"]
-        if traffic.hasUsageData { parts.append("최근 30일 MAU \(traffic.mau)명") }
+        if traffic.hasUsageData { parts.append("\(mainMetric.name) \(mainMetric.value)명") }
         if let fill = capacity?.fill, let ceiling = capacity?.capacity {
             parts.append(fill > 1
                          ? "성장 상한 \(Int(ceiling.rounded()))명보다 많아 줄어들 흐름"

@@ -94,11 +94,21 @@ struct StatisticsDashboard: View {
                         if !usage.hasUsageData { noUsageCard }
                         audiencePicker
                         summaryCard
+                        threeQuestionsCard
 
                         // 카드마다 묻는 것과 답이 위에 있고, 숫자는 "자세히" 아래로 접힌다.
-                        activeUsersCard
-                        lifecycleCard
-                        retentionCard
+                        // 규모가 작으면 DAU 계열이 바깥 일에 흔들리므로 코호트 잔존이 먼저다.
+                        if habit.isSmall {
+                            retentionCard
+                            habitCard
+                            activeUsersCard
+                            lifecycleCard
+                        } else {
+                            habitCard
+                            activeUsersCard
+                            lifecycleCard
+                            retentionCard
+                        }
                         if audience == .all { regionCard }
                         activeDaysCard
                         if audience == .all { accessCard }
@@ -133,6 +143,33 @@ struct StatisticsDashboard: View {
                             stickiness: store.activeUsers(for: scope, audience: audience).stickiness)
     }
 
+    private var habit: FeedbackStore.Habit { store.habit(for: scope, audience: audience) }
+
+    private var stickinessFinding: StatsFinding { StatsAnalysis.stickiness(habit) }
+
+    private var retentionFinding: StatsFinding {
+        StatsAnalysis.retention(store.retention(for: scope, audience: audience), sendsDailyOpen: sendsDailyOpen)
+    }
+
+    /// 습관 — 사용 주기에 맞춘 주 지표 · 고착도 · L28.
+    @ViewBuilder
+    private var habitCard: some View {
+        if let scope {
+            AnalyzedCard(title: "습관 (사용 주기 · 고착도 · L28)", systemImage: "repeat",
+                         finding: stickinessFinding) {
+                HabitCardBody(project: scope, habit: habit)
+            }
+        }
+    }
+
+    private var threeQuestionsCard: some View {
+        ThreeQuestionsCard(habit: stickinessFinding,
+                           retention: retentionFinding,
+                           paid: audience == .all ? StatsAnalysis.paid(store.accessSplit(for: scope)) : nil,
+                           isSmall: habit.isSmall,
+                           mau: habit.mau)
+    }
+
     private var capacityFinding: StatsFinding {
         StatsAnalysis.capacity(store.carryingCapacity(for: scope, period: .week, audience: audience))
     }
@@ -143,8 +180,8 @@ struct StatisticsDashboard: View {
         if let scope, let release = StatsAnalysis.release(store.releaseHealth(for: scope)) { all.append(release) }
         all.append(growthFinding)
         all.append(StatsAnalysis.lifecycle(store.lifecycle(for: scope, audience: audience)))
-        all.append(StatsAnalysis.retention(store.retention(for: scope, audience: audience),
-                                           sendsDailyOpen: sendsDailyOpen))
+        all.append(retentionFinding)
+        all.append(stickinessFinding)
         if audience == .all, let region = regionFinding { all.append(region) }
         all.append(habitFinding)
         all.append(capacityFinding)

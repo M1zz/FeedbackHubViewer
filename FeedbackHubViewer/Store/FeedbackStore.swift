@@ -302,6 +302,16 @@ final class FeedbackStore: ObservableObject {
             refreshBadge()
         }
     }
+    /// 앱마다 뷰어에서 고른 사용 주기 · 가치 행동(`ActivityDefinition`). 스펙보다 이긴다.
+    @Published var activityOverrides: [String: ActivityDefinition] = [:] {
+        didSet {
+            guard activityOverrides != oldValue else { return }
+            if let data = try? JSONEncoder().encode(activityOverrides) {
+                defaults.set(data, forKey: Self.activityOverridesKey)
+            }
+            derived.habit = [:]
+        }
+    }
     /// 새로고침이 새것을 찾았을 때 시스템 알림을 띄울 것(`notificationsEnabled` 가 켜져 있을 때).
     @Published var alertKinds = AttentionKind.defaultAlertKinds {
         didSet {
@@ -338,6 +348,10 @@ final class FeedbackStore: ObservableObject {
             .flatMap(FeedbackStatusFilter.init(rawValue:)) ?? .pending
         hiddenProjects = Set(defaults.stringArray(forKey: Self.hiddenProjectsKey) ?? [])
         notificationsEnabled = defaults.bool(forKey: Self.notificationsEnabledKey)
+        if let data = defaults.data(forKey: Self.activityOverridesKey),
+           let saved = try? JSONDecoder().decode([String: ActivityDefinition].self, from: data) {
+            activityOverrides = saved
+        }
         if let saved = defaults.stringArray(forKey: Self.badgeKindsKey) {
             badgeKinds = Set(saved.compactMap(AttentionKind.init(rawValue:)))
         }
@@ -776,11 +790,14 @@ final class FeedbackStore: ObservableObject {
             // Idempotent, so this only does work on the first launch after a
             // device upgrades into rollups and has to seed them from the
             // records it already had on disk.
-            if restored.fold(cached?.events ?? []) > 0 {
+            let folded = restored.fold(cached?.events ?? []) > 0
+            if folded {
                 restored.pruneIdentifiers()
                 restored.rebuildDirtyPeriods()
-                persistRollups(restored)
             }
+            // 이벤트별 설치 집합이 생기기 전의 날을, 들고 있는 원본만큼 채운다(한 번이면 된다).
+            let backfilled = restored.backfillEventInstalls(cached?.events ?? [])
+            if folded || backfilled { persistRollups(restored) }
             if !restored.isEmpty { rollups = restored }
         }
 
@@ -1043,6 +1060,7 @@ final class FeedbackStore: ObservableObject {
     private static let notificationsEnabledKey = "notificationsEnabled"
     private static let badgeKindsKey = "badgeKinds"
     private static let alertKindsKey = "alertKinds"
+    private static let activityOverridesKey = "activityDefinitions"
     private static let seenFeedbackIDsKey = "seenFeedbackIDs"
     private static let seenCrashIDsKey = "seenCrashIDs"
 

@@ -100,6 +100,12 @@ struct ProjectStatsSpec: Decodable {
     /// 크래시 · 불안정 이벤트 · 채택은 어느 앱에서나 재고, 이 절은 핵심 행동과 문턱과
     /// 약속을 더할 뿐이다.
     var release: ReleaseSpec?
+    /// 이 앱이 얼마나 자주 쓰여야 하나, 무엇을 해야 "썼다"고 치나(`ActivityDefinition`).
+    ///
+    ///     "activity": { "cycle": "weekly", "valueEvents": ["review_saved"] }
+    ///
+    /// 뷰어에서 고른 값이 있으면 그것이 이긴다.
+    var activity: ActivityDefinition?
 
     static let supportedVersion = 1
 
@@ -113,6 +119,7 @@ struct ProjectStatsSpec: Decodable {
         case monetization, purchases
         case cards
         case release
+        case activity
     }
 
     init(from decoder: Decoder) throws {
@@ -139,6 +146,7 @@ struct ProjectStatsSpec: Decodable {
         legacyPaidFlag = try c.decodeIfPresent(String.self, forKey: .legacyPaidFlag)
         purchases = try c.decodeIfPresent(PurchasesSpec.self, forKey: .purchases)
         release = try c.decodeIfPresent(ReleaseSpec.self, forKey: .release)
+        activity = try c.decodeIfPresent(ActivityDefinition.self, forKey: .activity)
     }
 
     /// 산 것으로 설치를 가르는 절.
