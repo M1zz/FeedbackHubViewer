@@ -304,13 +304,19 @@ extension FeedbackStore {
     /// dashboard can focus on one project. `nil` selection == every project.
     var scopedFeedback: [Feedback] { feedback(for: selectedProject) }
 
-    var filteredFeedback: [Feedback] {
+    var filteredFeedback: [Feedback] { filteredFeedback(keeping: nil) }
+
+    /// `keptID` 는 지금 상세에 열어 둔 피드백이다. 그 줄은 처리 상태가 필터와
+    /// 어긋나도 목록에 남긴다. 맥의 `List(selection:)` 은 선택된 줄이 빠지면 선택을
+    /// 풀고, 그러면 상세 칸이 닫힌다 — "처리 완료"를 보다가 확인 필요로 되돌리는
+    /// 순간 상세가 사라졌다. 다른 줄을 고르면 그때 빠진다.
+    func filteredFeedback(keeping keptID: Feedback.ID?) -> [Feedback] {
         var items = scopedFeedback
 
         // 처리한 피드백은 기본적으로 목록에서 빠진다. 통계는 `scopedFeedback`을
         // 그대로 쓰므로 숫자에서는 사라지지 않는다.
         if statusFilter != .all {
-            items = items.filter { statusFilter.accepts(status(of: $0)) }
+            items = items.filter { $0.id == keptID || statusFilter.accepts(status(of: $0)) }
         }
 
         if let version = selectedVersion {

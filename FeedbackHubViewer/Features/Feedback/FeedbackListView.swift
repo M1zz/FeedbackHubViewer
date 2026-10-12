@@ -252,7 +252,7 @@ struct FeedbackListView: View {
         #if os(macOS)
         List(selection: $selection) {
             statusSection
-            ForEach(store.filteredFeedback) { feedback in
+            ForEach(store.filteredFeedback(keeping: selection)) { feedback in
                 triageAffordances(row(for: feedback).tag(feedback.id), for: feedback)
             }
             handledSwitch
