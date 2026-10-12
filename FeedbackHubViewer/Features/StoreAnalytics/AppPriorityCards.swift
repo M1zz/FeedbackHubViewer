@@ -1,11 +1,14 @@
 //
-//  ReviewPriorityView.swift
+//  AppPriorityCards.swift
 //  FeedbackHubViewer
 //
-//  전체 프로젝트의 "리뷰" 섹션 — ReviewManager 의 우선순위 대시보드.
+//  전체 프로젝트의 "스토어 분석" — ReviewManager 의 우선순위 대시보드.
 //
 //  앱마다 위험 · 기회 점수를 내고(`PriorityScorer`), 지금 가장 신경 쓸 앱과 키우면 더 잘
-//  될 앱을 맨 위에 적는다. 한 줄을 누르면 그 앱의 리뷰로 간다.
+//  될 앱을 맨 위에 적는다. 한 줄을 누르면 그 앱의 스토어 분석으로 간다.
+//
+//  점수의 대부분이 결제 · 다운로드라 리뷰 탭이 아니라 여기 둔다 — 리뷰 탭의 전체 화면은
+//  모든 앱의 리뷰를 한 목록으로 보여 준다(`AllReviewsView`).
 //
 //  분석은 누를 때만 돈다. 앱마다 리뷰 · 상품을 차례로 읽어서 몇 분 걸릴 수 있고, App
 //  Store Connect 의 시간당 한도도 쓴다. 지난 분석은 디스크에 남아 다음에 켜도 보인다.
@@ -13,7 +16,7 @@
 
 import SwiftUI
 
-struct ReviewPriorityView: View {
+struct AppPriorityCards: View {
     @EnvironmentObject private var store: FeedbackStore
     @EnvironmentObject private var purchases: AppStoreConnectStore
     @EnvironmentObject private var keywords: KeywordStore
@@ -26,28 +29,26 @@ struct ReviewPriorityView: View {
             .map { ($0, store.displayName(for: $0)) }
     }
 
+    /// 스크롤은 담는 쪽(`StoreAnalyticsView`)이 한다.
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
-                header
-                if let analysis = purchases.priority, !analysis.rows.isEmpty {
-                    headline(analysis.rows)
-                    legend(analysis)
-                    let rows = sort.sorted(analysis.rows)
-                    ForEach(Array(rows.enumerated()), id: \.element.id) { index, row in
-                        Button {
-                            store.open(project: row.id, section: .reviews)
-                        } label: {
-                            PriorityRowCard(rank: index + 1, row: row, sort: sort,
-                                            iconURL: keywords.storeApp(for: row.id)?.iconURL)
-                        }
-                        .buttonStyle(.plain)
+        VStack(alignment: .leading, spacing: 16) {
+            header
+            if let analysis = purchases.priority, !analysis.rows.isEmpty {
+                headline(analysis.rows)
+                legend(analysis)
+                let rows = sort.sorted(analysis.rows)
+                ForEach(Array(rows.enumerated()), id: \.element.id) { index, row in
+                    Button {
+                        store.open(project: row.id, section: .storeAnalytics)
+                    } label: {
+                        PriorityRowCard(rank: index + 1, row: row, sort: sort,
+                                        iconURL: keywords.storeApp(for: row.id)?.iconURL)
                     }
-                } else if !purchases.isAnalyzingPriority {
-                    empty
+                    .buttonStyle(.plain)
                 }
+            } else if !purchases.isAnalyzingPriority {
+                empty
             }
-            .padding(ReviewLayout.padding)
         }
     }
 
@@ -149,7 +150,7 @@ struct ReviewPriorityView: View {
 
     private func banner(title: String, row: PriorityRow, tint: Color, systemImage: String, detail: String) -> some View {
         Button {
-            store.open(project: row.id, section: .reviews)
+            store.open(project: row.id, section: .storeAnalytics)
         } label: {
             HStack(spacing: 12) {
                 Image(systemName: systemImage)

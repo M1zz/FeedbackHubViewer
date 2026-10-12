@@ -230,7 +230,6 @@ struct ProjectSectionView: View {
             return count > 0 ? "상품 \(count)개" : "App Store Connect"
         case .reviews:
             guard purchases.isConfigured else { return "연결 안 됨" }
-            guard project != nil else { return "우선순위" }
             return count > 0 ? "\(AppFormat.count(count))건" : "App Store"
         case .storeAnalytics:
             guard purchases.isConfigured else { return "연결 안 됨" }
@@ -354,8 +353,13 @@ struct ProjectSectionView: View {
         case .reviews:
             guard purchases.isConfigured else { return "App Store Connect 키를 넣으면 리뷰를 읽고 답할 수 있습니다" }
             guard let project else {
-                guard let analysis = purchases.priority else { return "앱마다 위험 · 기회 점수를 냅니다" }
-                return "앱 \(analysis.rows.count)개 분석 · \(AppFormat.relative(analysis.date))"
+                let feeds = purchases.reviewFeeds.filter { !store.hiddenProjects.contains($0.key) }.values
+                let total = feeds.reduce(0) { $0 + $1.reviews.count }
+                guard total > 0 else { return "모든 앱의 App Store 리뷰" }
+                let unanswered = feeds.reduce(0) { $0 + $1.unanswered }
+                var text = "앱 \(feeds.filter { !$0.reviews.isEmpty }.count)개 · 리뷰 \(AppFormat.count(total))건"
+                text += unanswered > 0 ? " · 답 안 함 \(unanswered)건" : " · 모두 답함"
+                return text
             }
             guard let feed = purchases.reviewFeeds[project], feed.fetchedAt != nil else { return "App Store 리뷰" }
             var text = "리뷰 \(AppFormat.count(feed.reviews.count))건"
@@ -367,7 +371,10 @@ struct ProjectSectionView: View {
         case .storeAnalytics:
             guard purchases.isConfigured else { return "App Store Connect 키를 넣으면 Apple 이 모은 분석 리포트가 나옵니다" }
             guard let project else {
-                guard let coverage = purchases.analyticsCoverage?.value else { return "앱마다 분석 리포트가 쌓이는지" }
+                if let analysis = purchases.priority {
+                    return "앱 \(analysis.rows.count)개 위험 · 기회 순위 · \(AppFormat.relative(analysis.date))"
+                }
+                guard let coverage = purchases.analyticsCoverage?.value else { return "앱마다 위험 · 기회 순위와 리포트 현황" }
                 return coverage.missing.isEmpty ? "앱 \(coverage.apps.count)개 모두 쌓는 중"
                     : "앱 \(coverage.apps.count)개 중 \(coverage.missing.count)개는 요청 없음"
             }

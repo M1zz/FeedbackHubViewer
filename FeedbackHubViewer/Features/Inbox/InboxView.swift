@@ -102,6 +102,12 @@ struct InboxView: View {
         let isEmpty = (!showsReviews || reviews.isEmpty) && (!showsBugs || bugs.isEmpty)
             && (!showsOthers || others.isEmpty)
 
+        // 보이는 행이 바뀌면 목록을 새로 만든다. 살아 있는 `List` 에 행을 바꿔 넣으면
+        // 전에 재 둔 높이를 그대로 써서(리뷰가 늦게 들어올 때, 필터를 바꿀 때) 여러 줄짜리
+        // 행이 첫 줄만 남고 서로 겹친다 — `FeedbackListView` 와 같은 까닭.
+        let rowsKey = rowsKey(reviews: showsReviews ? reviews : [],
+                              feedback: (showsBugs ? bugs : []) + (showsOthers ? others : []))
+
         #if os(macOS)
         List(selection: $selection) {
             sections(reviews: showsReviews ? reviews : nil,
@@ -109,6 +115,8 @@ struct InboxView: View {
                      others: showsOthers ? others : nil,
                      isEmpty: isEmpty)
         }
+        .hubListStyle()
+        .id(rowsKey)
         #else
         List {
             sections(reviews: showsReviews ? reviews : nil,
@@ -116,7 +124,18 @@ struct InboxView: View {
                      others: showsOthers ? others : nil,
                      isEmpty: isEmpty)
         }
+        .hubListStyle()
+        .id(rowsKey)
         #endif
+    }
+
+    private func rowsKey(reviews: [ReviewItem], feedback: [Feedback]) -> Int {
+        var hasher = Hasher()
+        hasher.combine(filter)
+        hasher.combine(purchases.isConfigured)
+        for item in reviews { hasher.combine(item.id) }
+        for item in feedback { hasher.combine(item.id) }
+        return hasher.finalize()
     }
 
     @ViewBuilder
@@ -281,15 +300,8 @@ struct InboxView: View {
 
     // MARK: 리뷰 받기
 
-    /// 모든 앱의 리뷰를 차례로(한꺼번에 쏘면 시간당 한도를 쓴다). 30분 안에 받은 앱은
-    /// 건너뛰고(`reviewFreshness`), 이번 실행에서 한 번 못 받은 앱(스토어에 없는 앱)은
-    /// 다시 묻지 않는다.
     private func loadReviews() async {
-        guard purchases.isConfigured else { return }
-        for key in store.projectCounts.map(\.key) where key != Feedback.unclassifiedProject {
-            if purchases.reviewFeeds[key]?.error != nil { continue }
-            await purchases.loadReviews(bundleID: key)
-        }
+        await purchases.loadReviews(bundleIDs: store.projectCounts.map(\.key))
     }
 }
 

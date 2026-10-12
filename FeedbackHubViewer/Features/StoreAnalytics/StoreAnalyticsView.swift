@@ -33,6 +33,7 @@ struct StoreAnalyticsView: View {
                 } else if let project {
                     content(project)
                 } else {
+                    AppPriorityCards()
                     AnalyticsCoverageCard()
                 }
             }

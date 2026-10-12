@@ -5,9 +5,9 @@
 //  "리뷰" 섹션 — ReviewManager 를 통째로 옮겨 온 자리.
 //
 //  한 앱을 고르면 그 앱의 App Store 리뷰를 읽고(목록) 숫자로 본다(통계). 목록에서는
-//  걸러 보고, 번역하고, 복사하고, 답을 달고 고치고 지운다. 전체 프로젝트에서는 리뷰
-//  하나하나가 아니라 **어느 앱을 먼저 볼지** — 위험 · 기회 점수(`ReviewPriorityView`) —
-//  를 보여 준다. 스무 개 앱의 리뷰를 한 목록에 섞으면 무엇부터 할지가 안 보인다.
+//  걸러 보고, 번역하고, 복사하고, 답을 달고 고치고 지운다. 전체 프로젝트에서는 모든 앱의
+//  리뷰를 한 목록에 모으고 앱 이름을 붙인다(`AllReviewsView`). 어느 앱을 먼저 볼지 —
+//  위험 · 기회 점수 — 는 결제 · 다운로드가 대부분이라 스토어 분석 탭에 있다.
 //
 //  ReviewManager 에서 옮기지 않은 것: 앱 목록(여기서는 프로젝트가 그 자리다), 키 입력
 //  온보딩(설정에 이미 있다), 다운로드 · 판매 · 노출 카드(앱 내 구입 · 키워드 섹션에 이미
@@ -40,7 +40,7 @@ struct ReviewsView: View {
                 // 앱을 바꾸면 거르기 · 검색 · 펼침을 새로 시작한다.
                 .id(project)
         } else {
-            ReviewPriorityView()
+            AllReviewsView()
         }
     }
 }
@@ -319,10 +319,175 @@ private struct ProjectReviewsView: View {
     }
 }
 
+// MARK: - 모든 앱
+
+/// 전체 프로젝트 — 모든 앱의 리뷰를 한 목록에. 카드마다 앱 이름이 붙고, 누르면 그 앱의
+/// 리뷰로 간다. 거르기 · 정렬 · 검색은 한 앱 화면과 같다.
+private struct AllReviewsView: View {
+    @EnvironmentObject private var store: FeedbackStore
+    @EnvironmentObject private var purchases: AppStoreConnectStore
+
+    struct Item: Identifiable {
+        let project: String
+        let review: CustomerReview
+        var id: String { review.id }
+    }
+
+    @State private var filter: ReviewFilter = .all
+    @State private var sort: ReviewSort = .newest
+    @State private var searchText = ""
+    @State private var editing: Item?
+    @State private var deleting: Item?
+    @State private var actionError: String?
+
+    private var feeds: [(key: String, feed: ReviewFeed)] {
+        purchases.reviewFeeds
+            .filter { !store.hiddenProjects.contains($0.key) }
+            .map { ($0.key, $0.value) }
+    }
+
+    private var all: [Item] {
+        feeds.flatMap { key, feed in feed.reviews.map { Item(project: key, review: $0) } }
+    }
+
+    private var shown: [Item] {
+        let query = searchText.trimmingCharacters(in: .whitespaces)
+        let matched = all.filter { item in
+            guard filter.matches(item.review) else { return false }
+            guard !query.isEmpty else { return true }
+            return [item.review.title, item.review.body, item.review.reviewerNickname,
+                    item.review.response?.responseBody, store.displayName(for: item.project)]
+                .compactMap { $0 }
+                .contains { $0.localizedCaseInsensitiveContains(query) }
+        }
+        // 정렬은 리뷰끼리 — 같은 리뷰에 앱을 다시 붙인다.
+        let byID = Dictionary(matched.map { ($0.review.id, $0.project) }, uniquingKeysWith: { first, _ in first })
+        return sort.sorted(matched.map(\.review)).compactMap { review in
+            byID[review.id].map { Item(project: $0, review: review) }
+        }
+    }
+
+    var body: some View {
+        let all = self.all
+        let isLoading = feeds.contains { $0.feed.isLoading }
+
+        Group {
+            if all.isEmpty {
+                if isLoading {
+                    ProgressView("리뷰를 받는 중…")
+                        .font(.body)
+                } else {
+                    ContentUnavailableView("리뷰가 없습니다", systemImage: "star.bubble",
+                                           description: Text("받아 온 App Store 리뷰가 아직 없어요."))
+                }
+            } else {
+                ScrollView {
+                    LazyVStack(alignment: .leading, spacing: 12) {
+                        summary(all, isLoading: isLoading)
+                        controls
+                        let shown = self.shown
+                        if shown.isEmpty {
+                            Text(filter == .unanswered && searchText.isEmpty
+                                 ? "답하지 않은 리뷰가 없습니다. 모두 답했습니다."
+                                 : "조건에 맞는 리뷰가 없습니다.")
+                                .font(.body)
+                                .foregroundStyle(.secondary)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 40)
+                        } else {
+                            Text(shown.count == all.count ? "\(shown.count)건" : "\(shown.count)건 표시 / 전체 \(all.count)건")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                            ForEach(shown) { item in
+                                ReviewCard(review: item.review,
+                                           appName: store.displayName(for: item.project),
+                                           onOpenApp: { store.open(project: item.project, section: .reviews) },
+                                           onRespond: { editing = item },
+                                           onDelete: { deleting = item })
+                            }
+                        }
+                    }
+                    .padding(ReviewLayout.padding)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .task { await purchases.loadReviews(bundleIDs: store.projectCounts.map(\.key)) }
+        .sheet(item: $editing) { item in
+            ReviewResponseSheet(review: item.review, project: item.project)
+                .environmentObject(purchases)
+        }
+        .confirmationDialog("이 리뷰에 단 응답을 지울까요?",
+                            isPresented: Binding(get: { deleting != nil }, set: { if !$0 { deleting = nil } }),
+                            titleVisibility: .visible,
+                            presenting: deleting) { item in
+            Button("응답 지우기", role: .destructive) {
+                Task { await delete(item) }
+            }
+        } message: { _ in
+            Text("App Store 에서 바로 내려갑니다. 지운 글은 되살릴 수 없어요.")
+        }
+        .alert("응답을 지우지 못했습니다",
+               isPresented: Binding(get: { actionError != nil }, set: { if !$0 { actionError = nil } })) {
+            Button("확인", role: .cancel) {}
+        } message: {
+            Text(actionError ?? "")
+        }
+    }
+
+    private func delete(_ item: Item) async {
+        do {
+            try await purchases.deleteResponse(of: item.review, in: item.project)
+        } catch {
+            actionError = error.localizedDescription
+        }
+    }
+
+    private func summary(_ all: [Item], isLoading: Bool) -> some View {
+        let unanswered = all.filter { $0.review.response == nil }.count
+        let fresh = all.filter(\.review.isNew).count
+        let apps = Set(all.map(\.project)).count
+        return FlowLayout(spacing: 6, lineSpacing: 6) {
+            Tag(text: "앱 \(apps)개", systemImage: "square.grid.2x2")
+            Tag(text: "리뷰 \(AppFormat.count(all.count))건", systemImage: "text.bubble")
+            Tag(text: unanswered > 0 ? "답 안 함 \(unanswered)건" : "모두 답함",
+                systemImage: "checkmark.bubble", tint: unanswered == 0 ? .green : .orange)
+            if fresh > 0 {
+                Tag(text: "새 리뷰 \(fresh)건", systemImage: "sparkles", tint: .red)
+            }
+            if isLoading {
+                ProgressView().controlSize(.small)
+            }
+        }
+    }
+
+    private var controls: some View {
+        FlowLayout(spacing: 8, lineSpacing: 8) {
+            Picker("거르기", selection: $filter) {
+                ForEach(ReviewFilter.allCases) { filter in
+                    Text(filter.label).tag(filter)
+                }
+            }
+            .fixedSize()
+            Picker("정렬", selection: $sort) {
+                ForEach(ReviewSort.allCases) { Text($0.rawValue).tag($0) }
+            }
+            .fixedSize()
+            TextField("앱 · 제목 · 본문 · 닉네임 검색", text: $searchText)
+                .textFieldStyle(.roundedBorder)
+                .frame(minWidth: 180, idealWidth: 240, maxWidth: 320)
+        }
+        .pickerStyle(.menu)
+    }
+}
+
 // MARK: - 리뷰 한 건
 
 struct ReviewCard: View {
     let review: CustomerReview
+    /// 모든 앱을 한 목록에 볼 때만 — 어느 앱의 리뷰인지, 누르면 그 앱으로.
+    var appName: String? = nil
+    var onOpenApp: (() -> Void)? = nil
     let onRespond: () -> Void
     let onDelete: () -> Void
 
@@ -374,6 +539,15 @@ struct ReviewCard: View {
 
     private var header: some View {
         FlowLayout(spacing: 6, lineSpacing: 4) {
+            if let appName {
+                Button {
+                    onOpenApp?()
+                } label: {
+                    Tag(text: appName, systemImage: "square.grid.2x2", isCompact: true)
+                }
+                .buttonStyle(.plain)
+                .help("이 앱의 리뷰로 갑니다")
+            }
             StarRatingView(rating: review.rating)
             Tag(text: review.territoryName, systemImage: "globe", isCompact: true)
             if review.isNew {
