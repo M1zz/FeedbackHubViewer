@@ -441,7 +441,8 @@ struct FeedbackListView: View {
 
 }
 
-private struct FeedbackRow: View {
+/// 한 피드백 줄. "할 일"(`InboxView`)도 같은 줄을 쓴다.
+struct FeedbackRow: View {
     let feedback: Feedback
     let projectLabel: String
     let isUnread: Bool

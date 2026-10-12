@@ -8,10 +8,42 @@
 //  피드백은 한 건씩 열어 읽음이 되지만(`markRead`), 진단과 리뷰는 그 탭을 열면
 //  확인한 것으로 친다 — 한 건씩 여는 화면이 아니라 목록으로 훑는 화면이라서다.
 //
+//  무엇을 뱃지로 셀지는 설정(`badgeKinds`)이 정한다. 기본은 리뷰 · 피드백 — 진단은
+//  진단 탭 안에서 보면 되고, 뱃지에 섞이면 사람이 쓴 것(리뷰 · 피드백)이 묻힌다.
+//
 
 import Foundation
 
+/// 뱃지 · 알림으로 알리는 것. 순서가 곧 우선순위 — 종 목록과 탭에서 이 순서로 선다.
+enum AttentionKind: String, CaseIterable, Identifiable {
+    case review, feedback, crash
+
+    var id: String { rawValue }
+
+    var name: String {
+        switch self {
+        case .review: "리뷰"
+        case .feedback: "피드백"
+        case .crash: "진단"
+        }
+    }
+
+    var systemImage: String {
+        switch self {
+        case .review: "star.bubble.fill"
+        case .feedback: "envelope.badge.fill"
+        case .crash: "exclamationmark.triangle.fill"
+        }
+    }
+
+    /// 처음 켠 기기의 기본값.
+    static let defaultBadgeKinds: Set<AttentionKind> = [.review, .feedback]
+    static let defaultAlertKinds: Set<AttentionKind> = [.feedback, .crash]
+}
+
 extension FeedbackStore {
+
+    func showsBadge(_ kind: AttentionKind) -> Bool { badgeKinds.contains(kind) }
 
     /// 아직 안 본 진단 수. 한 앱(nil 이면 전체).
     func newCrashCount(for project: String?) -> Int {
@@ -28,9 +60,11 @@ extension FeedbackStore {
         refreshBadge()
     }
 
-    /// 앱 아이콘과 종이 보이는 수.
+    /// 앱 아이콘과 종이 보이는 수 — 설정에서 켠 것만.
     var attentionCount: Int {
-        unreadCount + newCrashCount(for: nil) + newStoreReviewCount
+        (showsBadge(.review) ? newStoreReviewCount : 0)
+            + (showsBadge(.feedback) ? unreadCount : 0)
+            + (showsBadge(.crash) ? newCrashCount(for: nil) : 0)
     }
 
     /// 이 기기에서 처음 진단을 받았을 때, 이미 있던 것은 새것으로 치지 않는다.

@@ -38,6 +38,9 @@ final class FeedbackStore: ObservableObject {
     /// app — these are the three things you can look at *inside* it, and they
     /// are peers of each other, never of the project.
     enum ProjectSection: String, CaseIterable, Identifiable {
+        /// 전체 프로젝트에만 있는 칸 — 모든 앱의 답 안 한 리뷰 · 처리 안 한 버그 리포트 ·
+        /// 피드백(`InboxView`). 전체 프로젝트를 고르면 이 칸으로 연다.
+        case inbox = "할 일"
         case feedback = "피드백"
         /// App Store 리뷰와 개발자 응답. 피드백 바로 옆에 둔다 — 앱 안에서 온 목소리와
         /// 스토어에 남긴 목소리는 나란히 봐야 한다. 허브가 아니라 App Store Connect 를
@@ -65,8 +68,11 @@ final class FeedbackStore: ObservableObject {
         /// (`DesignDocsStore`). 맥의 디스크를 읽는 유일한 칸.
         case design = "설계"
         var id: String { rawValue }
+        /// 고른 피드백을 맥의 오른쪽 상세 칸에 여는 칸.
+        var showsFeedbackDetail: Bool { self == .feedback || self == .inbox }
         var systemImage: String {
             switch self {
+            case .inbox: return "tray.full"
             case .feedback: return "text.bubble"
             case .stats: return "chart.bar"
             case .release: return "stethoscope"
@@ -221,7 +227,7 @@ final class FeedbackStore: ObservableObject {
     // Navigation
 
     /// Which of the selected project's three sections is on screen.
-    @Published var projectSection: ProjectSection = .feedback
+    @Published var projectSection: ProjectSection = .inbox
     /// What is pushed on top of the project list: a project's screen, and on
     /// iOS a single feedback's detail after that.
     @Published var path = NavigationPath()
@@ -245,7 +251,18 @@ final class FeedbackStore: ObservableObject {
     // Filters / sorting
     @Published var searchText = ""
     @Published var sortOption: SortOption = .newest
-    @Published var selectedProject: String? = nil     // nil == all projects
+    @Published var selectedProject: String? = nil {   // nil == all projects
+        didSet {
+            guard selectedProject != oldValue else { return }
+            // 전체로 오면 "할 일" 부터, 한 앱으로 가면 할 일 칸이 없으니 피드백으로.
+            // `open(project:section:)` 은 이 뒤에 칸을 정하므로 링크가 고른 칸이 이긴다.
+            if selectedProject == nil {
+                projectSection = .inbox
+            } else if projectSection == .inbox {
+                projectSection = .feedback
+            }
+        }
+    }
     @Published var selectedVersion: String? = nil     // nil == all versions
     @Published var minimumRating: Int = 0             // 0 == any rating
     /// Which triage decisions the list shows (see `FeedbackTriage.swift`).
@@ -277,6 +294,21 @@ final class FeedbackStore: ObservableObject {
             }
         }
     }
+    /// 뱃지(앱 아이콘 · 종 · 탭)에 셀 것. 기기마다 따로 둔다.
+    @Published var badgeKinds = AttentionKind.defaultBadgeKinds {
+        didSet {
+            guard badgeKinds != oldValue else { return }
+            defaults.set(badgeKinds.map(\.rawValue), forKey: Self.badgeKindsKey)
+            refreshBadge()
+        }
+    }
+    /// 새로고침이 새것을 찾았을 때 시스템 알림을 띄울 것(`notificationsEnabled` 가 켜져 있을 때).
+    @Published var alertKinds = AttentionKind.defaultAlertKinds {
+        didSet {
+            guard alertKinds != oldValue else { return }
+            defaults.set(alertKinds.map(\.rawValue), forKey: Self.alertKindsKey)
+        }
+    }
     /// False when the system denied notifications — the toggle stays on but the
     /// UI can explain why nothing shows up.
     @Published private(set) var notificationsAuthorized = true
@@ -306,6 +338,12 @@ final class FeedbackStore: ObservableObject {
             .flatMap(FeedbackStatusFilter.init(rawValue:)) ?? .pending
         hiddenProjects = Set(defaults.stringArray(forKey: Self.hiddenProjectsKey) ?? [])
         notificationsEnabled = defaults.bool(forKey: Self.notificationsEnabledKey)
+        if let saved = defaults.stringArray(forKey: Self.badgeKindsKey) {
+            badgeKinds = Set(saved.compactMap(AttentionKind.init(rawValue:)))
+        }
+        if let saved = defaults.stringArray(forKey: Self.alertKindsKey) {
+            alertKinds = Set(saved.compactMap(AttentionKind.init(rawValue:)))
+        }
         seenFeedbackIDs = defaults.stringArray(forKey: Self.seenFeedbackIDsKey).map(Set.init)
         seenCrashIDs = defaults.stringArray(forKey: Self.seenCrashIDsKey).map(Set.init)
         viewedCrashIDs = defaults.stringArray(forKey: Self.viewedCrashIDsKey).map(Set.init)
@@ -1003,6 +1041,8 @@ final class FeedbackStore: ObservableObject {
     // MARK: - Notifications
 
     private static let notificationsEnabledKey = "notificationsEnabled"
+    private static let badgeKindsKey = "badgeKinds"
+    private static let alertKindsKey = "alertKinds"
     private static let seenFeedbackIDsKey = "seenFeedbackIDs"
     private static let seenCrashIDsKey = "seenCrashIDs"
 
@@ -1030,14 +1070,14 @@ final class FeedbackStore: ObservableObject {
 
         if let previous = seenFeedbackIDs {
             let fresh = allFeedback.filter { !previous.contains($0.id) }
-            if notificationsEnabled, !fresh.isEmpty {
+            if notificationsEnabled, alertKinds.contains(.feedback), !fresh.isEmpty {
                 let projects = Array(Set(fresh.map { displayName(for: $0.projectKey) })).sorted()
                 NotificationService.notifyNewFeedback(count: fresh.count, projects: projects)
             }
         }
         if let previous = seenCrashIDs {
             let fresh = allCrashes.filter { !previous.contains($0.id) }
-            if notificationsEnabled, !fresh.isEmpty {
+            if notificationsEnabled, alertKinds.contains(.crash), !fresh.isEmpty {
                 let projects = Array(Set(fresh.map { displayName(for: $0.projectKey) })).sorted()
                 NotificationService.notifyNewCrashes(count: fresh.count, projects: projects)
             }
@@ -1058,7 +1098,7 @@ final class FeedbackStore: ObservableObject {
         seedViewedCrashes()
     }
 
-    /// 앱 아이콘 뱃지 — 안 읽은 피드백 + 새 진단 + 새 스토어 리뷰. 알림 토글과 따로
+    /// 앱 아이콘 뱃지 — 설정에서 켠 것(기본: 새 스토어 리뷰 + 안 읽은 피드백). 알림 토글과 따로
     /// 늘 붙인다(맥 Dock 은 허락이 필요 없고, 아이폰은 알림을 허락했을 때만 보인다).
     func refreshBadge() {
         NotificationService.setBadge(attentionCount)

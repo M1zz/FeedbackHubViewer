@@ -34,6 +34,7 @@ struct ContentView: View {
             // 맥은 설정 창(⌘,)이고, 터치 기기는 "더 보기 → 설정"이 이 시트를 연다.
             .sheet(isPresented: $connect.isShowingSettings) {
                 SettingsView()
+                    .environmentObject(store)
                     .environmentObject(connect)
             }
             #endif

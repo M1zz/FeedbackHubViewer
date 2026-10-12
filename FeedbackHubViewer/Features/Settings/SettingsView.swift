@@ -2,7 +2,7 @@
 //  SettingsView.swift
 //  FeedbackHubViewer
 //
-//  설정 — 지금은 App Store Connect 연결 하나.
+//  설정 — App Store Connect 연결, 그리고 어떤 것을 뱃지 · 알림으로 볼지.
 //
 //  연결 폼은 원래 "앱 내 구입" 화면 안에 있었는데, 그 키는 앱 내 구입만이 아니라 키워드
 //  화면의 메타데이터 · 노출 카드도 쓴다. 한 화면 안에 두면 다른 화면에서는 "어디서 넣지"가
@@ -21,11 +21,20 @@ struct SettingsView: View {
         TabView {
             ScrollView { connectSection.padding(20) }
                 .tabItem { Label("App Store Connect", systemImage: "key") }
+            ScrollView { AttentionSettings().padding(20) }
+                .tabItem { Label("알림", systemImage: "bell.badge") }
         }
         .frame(width: 560, height: 620)
         #else
         NavigationStack {
-            ScrollView { connectSection.padding() }
+            ScrollView {
+                VStack(alignment: .leading, spacing: 28) {
+                    AttentionSettings()
+                    Divider()
+                    connectSection
+                }
+                .padding()
+            }
                 .navigationTitle("설정")
                 .toolbar {
                     ToolbarItem(placement: .confirmationAction) {
@@ -47,6 +56,65 @@ struct SettingsView: View {
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
             ConnectKeyForm(onSaved: {})
+        }
+    }
+}
+
+// MARK: - 알림
+
+/// 무엇을 뱃지(앱 아이콘 · 종 · 탭)로 세고, 무엇이 오면 시스템 알림을 띄울지.
+/// 뱃지는 리뷰 → 피드백 → 진단 순으로 선다 — 이 목록의 순서가 그 우선순위다.
+private struct AttentionSettings: View {
+    @EnvironmentObject private var store: FeedbackStore
+
+    /// 시스템 알림을 띄울 수 있는 것. 리뷰는 App Store Connect 를 읽을 때 알게 되어
+    /// 아직 알림을 보내지 않는다.
+    private let alertable: [AttentionKind] = [.feedback, .crash]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            VStack(alignment: .leading, spacing: 10) {
+                Text("뱃지").font(.headline)
+                Text("앱 아이콘 · 툴바의 종 · 탭에 새로 온 수를 붙일 것. 켠 것 가운데 새 리뷰가 맨 앞, 그다음 피드백, 진단 순으로 보입니다.")
+                    .font(.body)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                ForEach(AttentionKind.allCases) { kind in
+                    Toggle(isOn: binding(for: kind, in: \.badgeKinds)) {
+                        Label("새 \(kind.name)", systemImage: kind.systemImage)
+                    }
+                }
+            }
+
+            VStack(alignment: .leading, spacing: 10) {
+                Text("알림").font(.headline)
+                Toggle(isOn: $store.notificationsEnabled) {
+                    Label("새로고침에서 새것을 찾으면 알림 보내기", systemImage: "bell")
+                }
+                ForEach(alertable) { kind in
+                    Toggle(isOn: binding(for: kind, in: \.alertKinds)) {
+                        Label("새 \(kind.name)", systemImage: kind.systemImage)
+                    }
+                    .disabled(!store.notificationsEnabled)
+                    .padding(.leading, 20)
+                }
+                if store.notificationsEnabled && !store.notificationsAuthorized {
+                    Text("시스템 설정에서 이 앱의 알림을 허용해야 알림이 표시됩니다.")
+                        .font(.body)
+                        .foregroundStyle(.orange)
+                }
+            }
+        }
+        .font(.body)
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func binding(for kind: AttentionKind,
+                         in keyPath: ReferenceWritableKeyPath<FeedbackStore, Set<AttentionKind>>) -> Binding<Bool> {
+        Binding {
+            store[keyPath: keyPath].contains(kind)
+        } set: { isOn in
+            if isOn { store[keyPath: keyPath].insert(kind) } else { store[keyPath: keyPath].remove(kind) }
         }
     }
 }

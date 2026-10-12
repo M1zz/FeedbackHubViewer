@@ -31,7 +31,7 @@ struct HubOverflowMenu: View {
                 Label("자동 갱신 (1분)", systemImage: "timer")
             }
             Toggle(isOn: $store.notificationsEnabled) {
-                Label("새 피드백·진단 알림", systemImage: "bell.badge")
+                Label("새것 알림", systemImage: "bell.badge")
             }
             if store.notificationsEnabled && !store.notificationsAuthorized {
                 Section {

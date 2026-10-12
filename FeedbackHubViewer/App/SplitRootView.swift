@@ -109,7 +109,7 @@ struct SplitRootView: View {
     /// Open while a row is selected, 피드백 is showing, and the user hasn't
     /// folded it away.
     private var isShowingDetail: Binding<Bool> {
-        Binding(get: { selectedFeedback != nil && store.projectSection == .feedback && !isDetailCollapsed },
+        Binding(get: { selectedFeedback != nil && store.projectSection.showsFeedbackDetail && !isDetailCollapsed },
                 set: { isDetailCollapsed = !$0 })
     }
 
@@ -145,7 +145,7 @@ struct SplitRootView: View {
                 Label(isDetailCollapsed ? "상세 펴기" : "상세 접기", systemImage: "sidebar.right")
             }
             .help("오른쪽 피드백 상세 칸을 접거나 폅니다")
-            .disabled(selectedFeedback == nil || store.projectSection != .feedback)
+            .disabled(selectedFeedback == nil || !store.projectSection.showsFeedbackDetail)
             .keyboardShortcut("i", modifiers: [.command, .option])
         }
 
@@ -153,7 +153,7 @@ struct SplitRootView: View {
             Toggle(isOn: $store.notificationsEnabled) {
                 Label("알림", systemImage: "bell.badge")
             }
-            .help("새 피드백·진단이 들어오면 알립니다. 앱 아이콘 뱃지는 이와 상관없이 새로 온 수를 보입니다")
+            .help("새것이 들어오면 알립니다. 무엇을 알리고 뱃지로 셀지는 설정(⌘,) → 알림에서 고릅니다")
             .toggleStyle(.button)
 
             // A stopwatch, not a second round arrow: beside the refresh

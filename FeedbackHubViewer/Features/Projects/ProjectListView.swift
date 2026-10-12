@@ -306,7 +306,7 @@ private struct AllProjectsCard: View {
         let stats = store.overallStats
         let traffic = store.overallTraffic
 
-        NavigationLink(value: FeedbackStore.ProjectRoute(project: nil)) {
+        NavigationLink(value: FeedbackStore.ProjectRoute(project: nil, section: .inbox)) {
             ProjectCardBody(systemImage: "square.grid.3x3",
                             tint: .purple,
                             name: "전체 프로젝트",

@@ -2,8 +2,9 @@
 //  AttentionButton.swift
 //  FeedbackHubViewer
 //
-//  툴바의 종. 새로 온 것(안 읽은 피드백 · 새 진단 · 새 스토어 리뷰)이 몇 건인지 뱃지로
-//  보이고, 누르면 앱마다 무엇이 왔는지 나와서 그 탭으로 바로 간다.
+//  툴바의 종. 새로 온 것이 몇 건인지 뱃지로 보이고, 누르면 앱마다 무엇이 왔는지 나와서
+//  그 탭으로 바로 간다. 무엇을 셀지는 설정의 "알림" 이 정하고(기본: 리뷰 · 피드백),
+//  새 리뷰가 늘 맨 앞 — `AttentionKind` 의 순서.
 //
 //  수는 `FeedbackStore+Attention.swift` 에서 온다. 상태를 읽는 것은 이 뷰 안에서만 —
 //  툴바 항목 자체가 상태에 따라 다시 만들어지면 맥에서 툴바가 깨진 적이 있다
@@ -62,31 +63,54 @@ private struct AttentionList: View {
 
     private struct Entry: Identifiable {
         let project: String
-        let unread: Int
-        let crashes: Int
-        let reviews: Int
+        /// 우선순위 순(리뷰 → 피드백 → 진단), 0건은 뺀 것.
+        let counts: [(kind: AttentionKind, count: Int)]
         var id: String { project }
-        var total: Int { unread + crashes + reviews }
+        func count(_ kind: AttentionKind) -> Int { counts.first { $0.kind == kind }?.count ?? 0 }
+    }
+
+    private func count(_ kind: AttentionKind, in project: String) -> Int {
+        switch kind {
+        case .review: connect.newReviewCount(for: project)
+        case .feedback: store.unreadCount(for: project)
+        case .crash: store.newCrashCount(for: project)
+        }
+    }
+
+    private static func section(for kind: AttentionKind) -> FeedbackStore.ProjectSection {
+        switch kind {
+        case .review: .reviews
+        case .feedback: .feedback
+        case .crash: .crashes
+        }
     }
 
     var body: some View {
+        let kinds = AttentionKind.allCases.filter(store.showsBadge)
         let entries = store.projectCounts.map(\.key)
-            .map { Entry(project: $0,
-                         unread: store.unreadCount(for: $0),
-                         crashes: store.newCrashCount(for: $0),
-                         reviews: connect.newReviewCount(for: $0)) }
-            .filter { $0.total > 0 }
-            .sorted { $0.total > $1.total }
+            .map { project in
+                Entry(project: project,
+                      counts: kinds.map { ($0, count($0, in: project)) }.filter { $0.count > 0 })
+            }
+            .filter { !$0.counts.isEmpty }
+            // 새 리뷰가 많은 앱이 먼저, 같으면 피드백, 그다음 진단.
+            .sorted { a, b in
+                for kind in kinds where a.count(kind) != b.count(kind) {
+                    return a.count(kind) > b.count(kind)
+                }
+                return false
+            }
+        let checkable = kinds.filter { $0 != .feedback }
 
         VStack(alignment: .leading, spacing: 0) {
             HStack {
                 Text("새로 온 것")
                     .font(.headline)
                 Spacer()
-                if !entries.isEmpty {
-                    Button("진단 · 리뷰 모두 확인") {
-                        store.markCrashesViewed(project: nil)
-                        connect.markReviewsViewed(bundleID: nil)
+                if !entries.isEmpty, !checkable.isEmpty {
+                    Button("\(checkable.map(\.name).joined(separator: " · ")) 모두 확인") {
+                        if checkable.contains(.review) { connect.markReviewsViewed(bundleID: nil) }
+                        if checkable.contains(.crash) { store.markCrashesViewed(project: nil) }
                     }
                     .buttonStyle(.borderless)
                     .font(.callout)
@@ -96,7 +120,8 @@ private struct AttentionList: View {
             Divider()
 
             if entries.isEmpty {
-                Text("새로 온 피드백 · 진단 · 리뷰가 없습니다.")
+                Text(kinds.isEmpty ? "설정 → 알림에서 뱃지로 볼 것을 고를 수 있습니다."
+                                   : "새로 온 \(kinds.map(\.name).joined(separator: " · "))가 없습니다.")
                     .font(.callout)
                     .foregroundStyle(.secondary)
                     .padding(12)
@@ -120,14 +145,10 @@ private struct AttentionList: View {
             Text(store.displayName(for: entry.project))
                 .font(.subheadline.weight(.semibold))
             HStack(spacing: 6) {
-                if entry.unread > 0 {
-                    chip(entry.unread, "피드백", "envelope.badge.fill") { open(entry.project, .feedback) }
-                }
-                if entry.crashes > 0 {
-                    chip(entry.crashes, "진단", "exclamationmark.triangle.fill") { open(entry.project, .crashes) }
-                }
-                if entry.reviews > 0 {
-                    chip(entry.reviews, "리뷰", "star.bubble.fill") { open(entry.project, .reviews) }
+                ForEach(entry.counts, id: \.kind) { item in
+                    chip(item.count, item.kind.name, item.kind.systemImage) {
+                        open(entry.project, Self.section(for: item.kind))
+                    }
                 }
             }
         }

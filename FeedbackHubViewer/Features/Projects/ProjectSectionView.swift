@@ -83,7 +83,8 @@ struct ProjectSectionView: View {
         ScrollViewReader { proxy in
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 6) {
-                    ForEach(FeedbackStore.ProjectSection.allCases) { section in
+                    // "할 일" 은 전체 프로젝트에만.
+                    ForEach(FeedbackStore.ProjectSection.allCases.filter { project == nil || $0 != .inbox }) { section in
                         sectionButton(section).id(section)
                     }
                 }
@@ -100,9 +101,10 @@ struct ProjectSectionView: View {
     private func sectionButton(_ section: FeedbackStore.ProjectSection) -> some View {
         let isSelected = store.projectSection == section
         let count = count(for: section)
-        let unread = section == .feedback ? store.unreadCount(for: project) : 0
-        let newCrashes = section == .crashes ? store.newCrashCount(for: project) : 0
-        let newReviews = section == .reviews ? purchases.newReviewCount(for: project) : 0
+        // 설정 → 알림에서 끈 것은 탭에도 뱃지를 달지 않는다(기본: 진단은 안 단다).
+        let unread = section == .feedback && store.showsBadge(.feedback) ? store.unreadCount(for: project) : 0
+        let newCrashes = section == .crashes && store.showsBadge(.crash) ? store.newCrashCount(for: project) : 0
+        let newReviews = section == .reviews && store.showsBadge(.review) ? purchases.newReviewCount(for: project) : 0
         // 답 안 한 리뷰도 같은 자리에 — 할 일이 있다는 표시다.
         let unanswered = section == .reviews ? unansweredReviews : 0
         return Button {
@@ -150,6 +152,7 @@ struct ProjectSectionView: View {
 
     private func count(for section: FeedbackStore.ProjectSection) -> Int {
         switch section {
+        case .inbox: return inboxCount
         case .feedback: return store.scopedFeedback.count
         case .stats: return store.usage(for: project).installs
         // 빨강인 앱 수. 한 앱이면 0 아니면 1.
@@ -167,6 +170,14 @@ struct ProjectSectionView: View {
             guard case .ready(let analytics)? = purchases.storeAnalytics[project]?.value else { return 0 }
             return analytics.insights?.findings.filter { $0.level == .bad }.count ?? 0
         }
+    }
+
+    /// 할 일 — 모든 앱의 답 안 한 리뷰 + 처리 안 한 피드백(버그 포함).
+    private var inboxCount: Int {
+        let reviews = purchases.reviewFeeds
+            .filter { !store.hiddenProjects.contains($0.key) }
+            .values.reduce(0) { $0 + $1.unanswered }
+        return reviews + store.countPending(in: store.feedback(for: nil))
     }
 
     /// 이 앱(전체면 모든 앱)의 받아 둔 리뷰 수.
@@ -189,6 +200,8 @@ struct ProjectSectionView: View {
     /// The second line of each button — the number in words, not a bare digit.
     private func countLabel(for section: FeedbackStore.ProjectSection, count: Int) -> String {
         switch section {
+        case .inbox:
+            return count > 0 ? "\(AppFormat.count(count))건" : "없음"
         case .feedback:
             // 안 읽은 수는 위의 뱃지가 말한다 — 여기서 또 적으면 같은 사실이
             // 한 버튼에 두 번 있다.
@@ -248,6 +261,8 @@ struct ProjectSectionView: View {
     @ViewBuilder
     private var content: some View {
         switch store.projectSection {
+        case .inbox:
+            InboxView(selection: $selection)
         case .feedback:
             FeedbackListView(selection: $selection)
         case .stats:
@@ -275,6 +290,9 @@ struct ProjectSectionView: View {
 
     private var subtitle: String {
         switch store.projectSection {
+        case .inbox:
+            let count = inboxCount
+            return count > 0 ? "모든 앱에서 남은 일 \(AppFormat.count(count))건" : "남은 일 없음"
         case .feedback:
             let shown = store.filteredFeedback.count
             let total = store.scopedFeedback.count
