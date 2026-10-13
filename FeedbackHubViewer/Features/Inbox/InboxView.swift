@@ -4,7 +4,8 @@
 //
 //  "할 일" — 전체 프로젝트를 고르면 처음 보이는 화면. 모든 앱에 걸쳐 아직 손대지 않은
 //  것만 한 목록에 모은다: 답장하지 않은 스토어 리뷰, 처리하지 않은 버그 리포트,
-//  처리하지 않은 피드백. 순서는 뱃지와 같다(`AttentionKind`) — 리뷰가 맨 위.
+//  처리하지 않은 피드백. 앱마다 묶고, 앱 안에서는 뱃지와 같은 순서(`AttentionKind`) —
+//  리뷰가 맨 위. 앱마다 다섯 줄까지 보이고 나머지는 "더 보기".
 //
 //  "버그 리포트"는 앱이 `type` 을 bug 로 보낸 피드백이다(`Feedback.isBugReport`).
 //  진단(크래시)은 넣지 않는다 — 처리했다고 표시할 상태가 없어서, 한 번 들어오면 영영
@@ -31,6 +32,8 @@ struct InboxView: View {
 
     @State private var filter: Filter = .all
     @State private var replying: ReviewItem?
+    /// "더 보기"로 다 펼친 앱.
+    @State private var expanded: Set<String> = []
 
     struct ReviewItem: Identifiable {
         let project: String
@@ -133,10 +136,43 @@ struct InboxView: View {
         var hasher = Hasher()
         hasher.combine(filter)
         hasher.combine(purchases.isConfigured)
+        // "더 보기"로 펼치고 접어도 보이는 행이 바뀐다.
+        for project in expanded.sorted() { hasher.combine(project) }
         for item in reviews { hasher.combine(item.id) }
         for item in feedback { hasher.combine(item.id) }
         return hasher.finalize()
     }
+
+    /// 한 앱의 남은 일. 리뷰 → 버그 → 피드백 순.
+    private struct AppGroup: Identifiable {
+        let project: String
+        let reviews: [ReviewItem]
+        let bugs: [Feedback]
+        let others: [Feedback]
+        var id: String { project }
+        var total: Int { reviews.count + bugs.count + others.count }
+    }
+
+    /// 앱마다 묶는다. 답 안 한 리뷰가 많은 앱이 먼저, 같으면 남은 일이 많은 앱.
+    private func groups(reviews: [ReviewItem], bugs: [Feedback], others: [Feedback]) -> [AppGroup] {
+        let reviewsByApp = Dictionary(grouping: reviews, by: \.project)
+        let bugsByApp = Dictionary(grouping: bugs, by: \.projectKey)
+        let othersByApp = Dictionary(grouping: others, by: \.projectKey)
+        let keys = Set(reviewsByApp.keys).union(bugsByApp.keys).union(othersByApp.keys)
+        return keys.map { key in
+            AppGroup(project: key, reviews: reviewsByApp[key] ?? [],
+                     bugs: bugsByApp[key] ?? [], others: othersByApp[key] ?? [])
+        }
+        .sorted { a, b in
+            if a.reviews.count != b.reviews.count { return a.reviews.count > b.reviews.count }
+            if a.total != b.total { return a.total > b.total }
+            return store.displayName(for: a.project)
+                .localizedStandardCompare(store.displayName(for: b.project)) == .orderedAscending
+        }
+    }
+
+    /// 앱 하나에 처음 보이는 줄 수. 한 앱의 오래된 리뷰 수백 건이 다른 앱을 밀어내지 않게.
+    private static let collapsedLimit = 5
 
     @ViewBuilder
     private func sections(reviews: [ReviewItem]?, bugs: [Feedback]?, others: [Feedback]?,
@@ -149,50 +185,70 @@ struct InboxView: View {
             }
         }
 
-        if let reviews {
-            if !purchases.isConfigured {
-                Section("답장하지 않은 리뷰") {
-                    HStack {
-                        Text("App Store Connect 키를 넣으면 모든 앱의 리뷰가 여기에 모입니다.")
-                            .font(.body)
-                            .foregroundStyle(.secondary)
-                        Spacer(minLength: 8)
-                        OpenSettingsButton(title: "설정 열기")
-                            .font(.body)
-                    }
-                }
-            } else if !reviews.isEmpty {
-                Section {
-                    ForEach(reviews) { item in
-                        reviewRow(item)
-                    }
-                } header: {
-                    header("답장하지 않은 리뷰", count: reviews.count, systemImage: AttentionKind.review.systemImage)
+        if reviews != nil, !purchases.isConfigured {
+            Section {
+                HStack {
+                    Text("App Store Connect 키를 넣으면 모든 앱의 리뷰가 여기에 모입니다.")
+                        .font(.body)
+                        .foregroundStyle(.secondary)
+                    Spacer(minLength: 8)
+                    OpenSettingsButton(title: "설정 열기")
+                        .font(.body)
                 }
             }
         }
 
-        if let bugs, !bugs.isEmpty {
+        ForEach(groups(reviews: reviews ?? [], bugs: bugs ?? [], others: others ?? [])) { group in
             Section {
-                ForEach(bugs) { feedbackRow($0) }
+                appRows(group)
             } header: {
-                header("처리하지 않은 버그 리포트", count: bugs.count, systemImage: "ladybug.fill")
-            }
-        }
-
-        if let others, !others.isEmpty {
-            Section {
-                ForEach(others) { feedbackRow($0) }
-            } header: {
-                header("처리하지 않은 피드백", count: others.count, systemImage: AttentionKind.feedback.systemImage)
+                appHeader(group)
             }
         }
     }
 
-    private func header(_ title: String, count: Int, systemImage: String) -> some View {
-        Label("\(title) \(count)건", systemImage: systemImage)
-            .font(.headline)
-            .textCase(nil)
+    @ViewBuilder
+    private func appRows(_ group: AppGroup) -> some View {
+        let isExpanded = expanded.contains(group.project)
+        let limit = isExpanded ? Int.max : Self.collapsedLimit
+        let reviews = Array(group.reviews.prefix(limit))
+        let bugs = Array(group.bugs.prefix(max(limit - reviews.count, 0)))
+        let others = Array(group.others.prefix(max(limit - reviews.count - bugs.count, 0)))
+
+        ForEach(reviews) { reviewRow($0) }
+        ForEach(bugs) { feedbackRow($0) }
+        ForEach(others) { feedbackRow($0) }
+
+        let hidden = group.total - reviews.count - bugs.count - others.count
+        if hidden > 0 || (isExpanded && group.total > Self.collapsedLimit) {
+            Button {
+                if isExpanded { expanded.remove(group.project) } else { expanded.insert(group.project) }
+            } label: {
+                Label(isExpanded ? "접기" : "\(hidden)건 더 보기",
+                      systemImage: isExpanded ? "chevron.up" : "chevron.down")
+                    .font(.body)
+            }
+            .buttonStyle(.borderless)
+        }
+    }
+
+    private func appHeader(_ group: AppGroup) -> some View {
+        var parts: [String] = []
+        if !group.reviews.isEmpty { parts.append("리뷰 \(group.reviews.count)") }
+        if !group.bugs.isEmpty { parts.append("버그 \(group.bugs.count)") }
+        if !group.others.isEmpty { parts.append("피드백 \(group.others.count)") }
+        return HStack(spacing: 8) {
+            Text(store.displayName(for: group.project))
+                .font(.headline)
+            Text(parts.joined(separator: " · "))
+                .font(.body)
+                .foregroundStyle(.secondary)
+            Spacer(minLength: 8)
+            Button("앱 열기") { store.open(project: group.project, section: .feedback) }
+                .buttonStyle(.borderless)
+                .font(.body)
+        }
+        .textCase(nil)
     }
 
     // MARK: 리뷰 한 줄
