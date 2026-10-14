@@ -52,18 +52,72 @@ struct AppStoreConnectCredentials: Codable, Equatable {
 }
 
 /// 키는 리포도 UserDefaults도 아니라 키체인에 둔다. 한 벌을 JSON 하나로.
+///
+/// **iCloud 키체인**(동기화 항목)에 둔다 — 맥에서 한 번 넣으면 같은 Apple 계정의 아이폰 ·
+/// 아이패드에도 저절로 들어온다. 비밀키(.p8)라 iCloud 키·값 저장소 같은 데가 아니라
+/// 종단 간 암호화되는 키체인이어야 한다.
+///
+/// 항목은 엔타이틀먼트의 첫 `keychain-access-groups`(…FeedbackHubViewer.shared)에 들어간다.
+/// 그래서 Development · Production 빌드(번들 ID 가 다르다)도 같은 키를 본다.
+///
+/// 예전에는 이 기기에만 있는 항목이었다. 그런 것이 있으면 읽을 때 iCloud 쪽으로 옮기고
+/// 옛 사본은 지운다. iCloud 키체인을 못 쓰는 기기(꺼져 있음 등)에서는 지금까지처럼 기기
+/// 항목으로 남는다 — 키가 아예 저장되지 않는 것보다 낫다.
 enum AppStoreConnectKeychain {
     private static let service = "com.Ysoup.FeedbackHubViewer.appstoreconnect"
     private static let account = "api-key"
 
-    private static var baseQuery: [String: Any] {
+    private static var identity: [String: Any] {
         [kSecClass as String: kSecClassGenericPassword,
          kSecAttrService as String: service,
          kSecAttrAccount as String: account]
     }
 
+    /// iCloud 키체인 항목. 맥에서도 데이터 보호 키체인을 써야 동기화 항목이 된다.
+    private static var syncedQuery: [String: Any] {
+        var query = identity
+        query[kSecAttrSynchronizable as String] = kCFBooleanTrue
+        query[kSecUseDataProtectionKeychain as String] = true
+        return query
+    }
+
+    /// 이 기기에만 있는 옛 항목(맥이면 로그인 키체인 파일).
+    private static var deviceQuery: [String: Any] { identity }
+
     static func load() -> AppStoreConnectCredentials? {
-        var query = baseQuery
+        if let synced = read(syncedQuery) { return synced }
+        guard let local = read(deviceQuery) else { return nil }
+        // 옮겨 본다. 못 옮기면(iCloud 키체인 꺼짐) 기기 항목을 그대로 쓴다.
+        if addSynced(local) { SecItemDelete(deviceQuery as CFDictionary) }
+        return local
+    }
+
+    static func save(_ credentials: AppStoreConnectCredentials) throws {
+        if addSynced(credentials) {
+            SecItemDelete(deviceQuery as CFDictionary)
+            return
+        }
+        // iCloud 키체인을 못 쓰면 이 기기에만.
+        let data = try JSONEncoder().encode(credentials)
+        SecItemDelete(deviceQuery as CFDictionary)
+        var query = deviceQuery
+        query[kSecValueData as String] = data
+        query[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlock
+        let status = SecItemAdd(query as CFDictionary, nil)
+        guard status == errSecSuccess else { throw AppStoreConnect.Failure.keychain(status) }
+    }
+
+    /// 지우면 **모든 기기에서** 지워진다 — 동기화 항목이 하나뿐이라서.
+    static func delete() {
+        SecItemDelete(syncedQuery as CFDictionary)
+        SecItemDelete(deviceQuery as CFDictionary)
+    }
+
+    /// 지금 키가 iCloud 키체인에 있는가(다른 기기로 가는가). 설정 화면이 한 줄로 알린다.
+    static var isSynced: Bool { read(syncedQuery) != nil }
+
+    private static func read(_ base: [String: Any]) -> AppStoreConnectCredentials? {
+        var query = base
         query[kSecReturnData as String] = true
         query[kSecMatchLimit as String] = kSecMatchLimitOne
         var item: CFTypeRef?
@@ -72,18 +126,14 @@ enum AppStoreConnectKeychain {
         return try? JSONDecoder().decode(AppStoreConnectCredentials.self, from: data)
     }
 
-    static func save(_ credentials: AppStoreConnectCredentials) throws {
-        let data = try JSONEncoder().encode(credentials)
-        SecItemDelete(baseQuery as CFDictionary)
-        var query = baseQuery
+    private static func addSynced(_ credentials: AppStoreConnectCredentials) -> Bool {
+        guard let data = try? JSONEncoder().encode(credentials) else { return false }
+        SecItemDelete(syncedQuery as CFDictionary)
+        var query = syncedQuery
         query[kSecValueData as String] = data
+        // 동기화 항목은 "이 기기에서만" 접근성을 쓸 수 없다.
         query[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlock
-        let status = SecItemAdd(query as CFDictionary, nil)
-        guard status == errSecSuccess else { throw AppStoreConnect.Failure.keychain(status) }
-    }
-
-    static func delete() {
-        SecItemDelete(baseQuery as CFDictionary)
+        return SecItemAdd(query as CFDictionary, nil) == errSecSuccess
     }
 }
 

@@ -169,6 +169,20 @@ final class AppStoreConnectStore: ObservableObject {
         forgetAccount()
     }
 
+    /// 키가 없을 때 키체인을 다시 본다. 다른 기기에서 넣은 키는 iCloud 키체인이 언제
+    /// 내려 줄지 모른다 — 앱이 켜져 있는 동안 들어와도 알림이 없으므로, 앱이 앞으로 올
+    /// 때마다 한 번 본다.
+    func reloadCredentialsIfMissing() {
+        guard credentials == nil, let found = AppStoreConnectKeychain.load() else { return }
+        credentials = found
+        client = AppStoreConnect(credentials: found)
+        restoreStoreCaches()
+        Task { await refreshAll(project: nil) }
+    }
+
+    /// 키가 iCloud 키체인에 있는가.
+    var isKeySynced: Bool { credentials != nil && AppStoreConnectKeychain.isSynced }
+
     func signOut() {
         AppStoreConnectKeychain.delete()
         credentials = nil

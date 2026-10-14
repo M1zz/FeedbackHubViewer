@@ -154,7 +154,7 @@ struct ConnectKeyForm: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("App Store Connect → 사용자 및 액세스 → 통합 → App Store Connect API에서 팀 키를 만들고, 아래 세 값을 넣어 주세요. 키는 이 기기의 키체인에만 저장됩니다.")
+            Text("App Store Connect → 사용자 및 액세스 → 통합 → App Store Connect API에서 팀 키를 만들고, 아래 세 값을 넣어 주세요. 키는 iCloud 키체인에 저장되어 같은 Apple 계정의 다른 기기(맥 · 아이폰 · 아이패드)에도 저절로 들어갑니다.")
                 .font(.body)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -199,9 +199,25 @@ struct ConnectKeyForm: View {
                         purchases.signOut()
                         onSaved()
                     }
+                    .help("iCloud 키체인의 키를 지웁니다. 같은 Apple 계정의 모든 기기에서 지워집니다.")
                 }
             }
             .font(.body)
+
+            if purchases.isConfigured {
+                // 다른 기기로 가는지 — 안 간다면 왜인지와 무엇을 켜면 되는지.
+                if purchases.isKeySynced {
+                    Label("iCloud 키체인에 저장됨 · 다른 기기에도 들어갑니다", systemImage: "checkmark.icloud")
+                        .font(.callout)
+                        .foregroundStyle(.green)
+                } else {
+                    Label("이 기기에만 저장됨 · 설정 → Apple 계정 → iCloud → 암호 및 키체인을 켜고 다시 저장하면 다른 기기로 갑니다",
+                          systemImage: "icloud.slash")
+                        .font(.callout)
+                        .foregroundStyle(.orange)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
         }
         .onAppear {
             guard let saved = purchases.credentials else { return }
