@@ -18,6 +18,8 @@ struct ContentView: View {
 
     var body: some View {
         layout
+            // 개발 빌드는 강조색부터 다르다(`EnvironmentBadge.swift`).
+            .environmentTint()
             // A refresh writes what it has read every few seconds; this is what
             // keeps the last few from being lost when the app is quit or —
             // on a phone, which is most of the time — switched away from

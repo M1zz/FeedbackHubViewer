@@ -384,7 +384,7 @@ struct FeedbackListView: View {
                 // inside the row would draw its own chevron next to the List's,
                 // and the row needs room for the decide button beside it.
                 .contentShape(Rectangle())
-                .onTapGesture { store.path.append(feedback) }
+                .onTapGesture { store.push(feedback) }
                 #endif
 
             #if os(iOS)

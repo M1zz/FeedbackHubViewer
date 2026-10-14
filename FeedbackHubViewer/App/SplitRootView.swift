@@ -2,12 +2,14 @@
 //  SplitRootView.swift
 //  FeedbackHubViewer
 //
-//  Which project on the left, that project's 피드백 · 통계 · 진단 · 키워드 beside
-//  it. The selected feedback opens as a panel on the right only while
-//  one is selected **and 피드백 is the open section** — on 리뷰 · 통계 and the
-//  rest a feedback detail has nothing to do with what is on screen, so the
-//  section gets the full width. Nothing sits there empty. The Mac's layout, and the
-//  iPad's at a regular width (where rows push their detail instead).
+//  왼쪽부터 기능 → 그 기능으로 본 앱 목록 → 그 앱의 화면. 할 일은 이미 모든 앱을
+//  앱별로 묶은 화면이라 앱 목록 칸 없이 바로 넓게 연다.
+//
+//  The selected feedback opens as a panel on the right only while one is
+//  selected **and 피드백 (or 할 일) is the open feature** — on 리뷰 · 통계 and
+//  the rest a feedback detail has nothing to do with what is on screen, so the
+//  feature gets the full width. Nothing sits there empty. The Mac's layout, and
+//  the iPad's at a regular width (where rows push their detail instead).
 //
 
 import SwiftUI
@@ -22,24 +24,34 @@ struct SplitRootView: View {
 
     var body: some View {
         NavigationSplitView {
-            SidebarView()
-                .navigationSplitViewColumnWidth(min: 220, ideal: 260, max: Self.sidebarMaxWidth)
-                .navigationTitle("프로젝트")
+            FeatureListView()
+                .navigationSplitViewColumnWidth(min: 190, ideal: 210, max: Self.sidebarMaxWidth)
         } detail: {
             contentColumn
         }
-        // The project screen sits beside the project list here rather than on
-        // top of it, so cross-screen links re-scope the column instead of
-        // pushing (see `FeedbackStore.open(project:section:)`).
+        // The app screen sits beside the app list here rather than on top of
+        // it, so cross-screen links re-scope the column instead of pushing
+        // (see `FeedbackStore.open(project:section:)`).
         .task { store.usesStackNavigation = false }
         #if os(macOS)
         .toolbar { macToolbarContent }
         #endif
     }
 
-    /// The selected project's screen. Which project it is comes from the
-    /// sidebar; which of its sections is showing comes from the store.
+    /// 고른 기능의 앱 목록과 고른 앱의 화면. 기능은 사이드바가, 앱은 앱 목록이 정하고
+    /// 둘 다 가게(`store`)에 적힌다.
     private var contentColumn: some View {
+        HStack(spacing: 0) {
+            if store.projectSection.usesAppList {
+                AppListView(section: store.projectSection)
+                    .frame(width: Self.appListWidth)
+                Divider()
+            }
+            featureColumn
+        }
+    }
+
+    private var featureColumn: some View {
         #if os(macOS)
         // 상세는 `.inspector` 가 아니라 이 칸 안에 나란히 둔다.
         //
@@ -79,7 +91,7 @@ struct SplitRootView: View {
 
     private var projectStack: some View {
         NavigationStack(path: $store.path) {
-            ProjectSectionView(project: store.selectedProject, selection: $selection)
+            ProjectSectionView(project: store.selectedProject, section: store.projectSection, selection: $selection)
             #if os(iOS)
             // iPad pushes the detail inside this column when the third column
             // is collapsed; the Mac always has the detail column.
@@ -94,12 +106,14 @@ struct SplitRootView: View {
         }
     }
 
-    /// 창의 최소 너비 = 가장 넓은 사이드바 + 상세 + 상세를 열어도 가운데 목록이 쓸 만한
-    /// 너비(`FeedbackHubViewerApp`). 가운데 칸에 최소 너비를 박는 대신 여기서 받아 낸다.
-    static let sidebarMaxWidth: CGFloat = 340
+    /// 창의 최소 너비 = 가장 넓은 기능 사이드바 + 앱 목록 + 상세 + 상세를 열어도 가운데
+    /// 목록이 쓸 만한 너비(`FeedbackHubViewerApp`). 가운데 칸에 최소 너비를 박는 대신 여기서
+    /// 받아 낸다.
+    static let sidebarMaxWidth: CGFloat = 240
+    static let appListWidth: CGFloat = 250
     static let detailWidth: CGFloat = 360
-    static let contentComfortWidth: CGFloat = 340
-    static var windowMinWidth: CGFloat { sidebarMaxWidth + detailWidth + contentComfortWidth }
+    static let contentComfortWidth: CGFloat = 320
+    static var windowMinWidth: CGFloat { sidebarMaxWidth + appListWidth + detailWidth + contentComfortWidth }
 
     private var selectedFeedback: Feedback? {
         guard let id = selection else { return nil }
@@ -118,6 +132,11 @@ struct SplitRootView: View {
     /// platforms fold the same set into `HubOverflowMenu`.
     @ToolbarContentBuilder
     private var macToolbarContent: some ToolbarContent {
+        // 어느 환경의 데이터인가 — 창이 몇 개든 늘 같은 자리에.
+        ToolbarItem(placement: .navigation) {
+            EnvironmentBadge()
+        }
+
         // 누르면 무엇을 언제 받았는지가 열린다.
         ToolbarItem(placement: .status) {
             DataStatusButton()

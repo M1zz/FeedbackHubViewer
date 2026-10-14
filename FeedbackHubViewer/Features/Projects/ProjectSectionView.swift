@@ -2,11 +2,10 @@
 //  ProjectSectionView.swift
 //  FeedbackHubViewer
 //
-//  One project's screen — the second level of the app. The project is chosen
-//  first (sidebar on a Mac/iPad, the project list on a phone); 피드백 · 통계 ·
-//  릴리즈 · 진단 · 키워드 · 앱 내 구입 · 리뷰 are the things to look at inside it, switched by the buttons
-//  at the top. They are peers of each other and never of the project, which is
-//  what the old 개요/통계 top-level split got backwards.
+//  기능 하나를 앱 하나(nil 이면 전체 앱)에 대해 연 화면 — 앱의 마지막 단계.
+//  기능은 맨 먼저 고르고(`FeatureListView`), 앱은 그 기능의 앱 목록에서 고른다
+//  (`AppListView`). 이 화면은 둘 다 받기만 하고, 칸을 바꾸는 단추를 따로 두지 않는다.
+//  예전의 열한 칸짜리 알약 줄이 그 자리였는데, 기능이 늘수록 줄이 길어져 읽히지 않았다.
 //
 
 import SwiftUI
@@ -16,47 +15,54 @@ struct ProjectSectionView: View {
     @EnvironmentObject private var keywords: KeywordStore
     @EnvironmentObject private var purchases: AppStoreConnectStore
     @EnvironmentObject private var design: DesignDocsStore
-    /// 섹션 칸을 몇 줄로 접을지가 여기에 달렸다.
-    @Environment(\.dynamicTypeSize) private var typeSize
-    /// nil == 전체 프로젝트.
+    @EnvironmentObject private var charts: ChartStore
+    /// nil == 전체 앱.
     let project: String?
+    /// 어느 기능의 화면인가. 아이폰은 탭마다 다른 기능이 열려 있으므로 가게의 "지금 기능"
+    /// 이 아니라 이 값을 따른다.
+    let section: FeedbackStore.ProjectSection
     /// The Mac's inspector follows this; a phone pushes the detail instead.
     @Binding var selection: Feedback.ID?
 
-    init(project: String?, selection: Binding<Feedback.ID?> = .constant(nil)) {
+    init(project: String?, section: FeedbackStore.ProjectSection,
+         selection: Binding<Feedback.ID?> = .constant(nil)) {
         self.project = project
+        self.section = section
         _selection = selection
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            sectionBar
-            // Fills whatever is left, so an empty section's placeholder can't
-            // pull the segmented control down to the middle of the column.
-            content
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-        }
-        // Everything downstream reads the scope off the store, so the pushed
-        // screen and the store can never disagree about which project this is.
-        .task(id: project) { store.selectedProject = project }
-        // 진단 · 리뷰는 탭을 열면 확인한 것으로 — 보고 있는 동안 새로 들어온 것도.
-        .task(id: viewedKey) { markViewed() }
-        .navigationTitle(title)
-        .hubNavigationSubtitle(subtitle)
+        content
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            // Everything downstream reads the scope off the store, so the pushed
+            // screen and the store can never disagree about which project this is.
+            // 다시 보일 때마다(아이폰 탭을 오갈 때도) 맞춘다 — 다른 탭이 가게를 바꿔 놓았을 수 있다.
+            // 할 일은 앱을 가리지 않으므로 다른 기능에서 고른 앱을 지우지 않는다.
+            .onAppear(perform: syncStore)
+            .onChange(of: project) { syncStore() }
+            // 진단 · 리뷰는 열면 확인한 것으로 — 보고 있는 동안 새로 들어온 것도.
+            .task(id: viewedKey) { markViewed() }
+            .navigationTitle(title)
+            .hubNavigationSubtitle(metrics.subtitle(section, project: project))
+    }
+
+    private func syncStore() {
+        if store.projectSection != section { store.projectSection = section }
+        if section.usesAppList, store.selectedProject != project { store.selectedProject = project }
     }
 
     private var viewedKey: String {
         let fresh: Int
-        switch store.projectSection {
+        switch section {
         case .crashes: fresh = store.newCrashCount(for: project)
         case .reviews: fresh = purchases.newReviewCount(for: project)
         default: fresh = 0
         }
-        return "\(project ?? "")|\(store.projectSection.rawValue)|\(fresh)"
+        return "\(project ?? "")|\(section.rawValue)|\(fresh)"
     }
 
     private func markViewed() {
-        switch store.projectSection {
+        switch section {
         case .crashes: store.markCrashesViewed(project: project)
         case .reviews: purchases.markReviewsViewed(bundleID: project)
         default: break
@@ -64,202 +70,18 @@ struct ProjectSectionView: View {
     }
 
     private var title: String {
-        guard let project else { return "전체 프로젝트" }
+        guard section.usesAppList else { return section.rawValue }
+        guard let project else { return "전체 앱" }
         return store.displayName(for: project)
     }
 
-    // MARK: - Section switch
-
-    /// 한 줄짜리 알약 버튼. 넘치면 옆으로 민다.
-    ///
-    /// 예전에는 아이콘 · 이름 · 건수 두 줄짜리 큰 버튼을 격자로 깔았다. 뜻은 잘 보였지만
-    /// 아이폰에서는 여섯 칸이 두 줄로 접혀 화면 윗부분을 통째로 먹었고, 정작 봐야 할
-    /// 목록이 그만큼 밀려 내려갔다. 이제는 이름과 건수를 한 줄에 붙이고, 칸이 모자라면
-    /// 줄을 늘리는 대신 옆으로 넘긴다.
-    ///
-    /// `ScrollView` 라서 `HStack` 이 화면을 밀어내던 옛 문제(칸들의 이상적인 너비 합이
-    /// 화면보다 넓어져 양옆이 잘리던 것)는 생기지 않는다 — 스크롤 뷰는 받은 너비만 쓴다.
-    private var sectionBar: some View {
-        ScrollViewReader { proxy in
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 6) {
-                    // "할 일" 은 전체 프로젝트에만.
-                    ForEach(FeedbackStore.ProjectSection.allCases.filter { project == nil || $0 != .inbox }) { section in
-                        sectionButton(section).id(section)
-                    }
-                }
-            }
-            // 다른 화면에서 링크로 들어와 끝쪽 탭이 골라졌을 때도 보이게.
-            .onAppear { proxy.scrollTo(store.projectSection, anchor: .center) }
-            .onChange(of: store.projectSection) { _, section in
-                withAnimation(.easeOut(duration: 0.2)) { proxy.scrollTo(section, anchor: .center) }
-            }
-        }
-        .hubHeaderBar(verticalPadding: 8)
-    }
-
-    private func sectionButton(_ section: FeedbackStore.ProjectSection) -> some View {
-        let isSelected = store.projectSection == section
-        let count = count(for: section)
-        // 설정 → 알림에서 끈 것은 탭에도 뱃지를 달지 않는다(기본: 진단은 안 단다).
-        let unread = section == .feedback && store.showsBadge(.feedback) ? store.unreadCount(for: project) : 0
-        let newCrashes = section == .crashes && store.showsBadge(.crash) ? store.newCrashCount(for: project) : 0
-        let newReviews = section == .reviews && store.showsBadge(.review) ? purchases.newReviewCount(for: project) : 0
-        // 답 안 한 리뷰도 같은 자리에 — 할 일이 있다는 표시다.
-        let unanswered = section == .reviews ? unansweredReviews : 0
-        return Button {
-            store.projectSection = section
-        } label: {
-            HStack(spacing: 5) {
-                // 안 읽은 피드백은 뱃지가 아이콘 자리를 대신한다. 둘 다 두면 같은
-                // 칸에 표시가 두 개라 눈이 어디로 갈지 모른다.
-                if unread > 0 {
-                    CountBadge(count: unread, systemImage: "envelope.badge.fill",
-                               tint: .red, name: "안 읽은 피드백")
-                } else if newCrashes > 0 {
-                    CountBadge(count: newCrashes, systemImage: "exclamationmark.triangle.fill",
-                               tint: .red, name: "새 진단")
-                } else if newReviews > 0 {
-                    // 새 리뷰가 답 안 한 리뷰보다 먼저 — 새것을 봐야 답할 것도 안다.
-                    CountBadge(count: newReviews, systemImage: "star.bubble.fill",
-                               tint: .red, name: "새 리뷰")
-                } else if unanswered > 0 {
-                    CountBadge(count: unanswered, systemImage: "bubble.left.fill",
-                               tint: .orange, name: "답 안 한 리뷰")
-                } else if !typeSize.isAccessibilitySize {
-                    Image(systemName: section.systemImage)
-                        .font(.subheadline)
-                }
-                Text(section.rawValue)
-                    .font(.subheadline.weight(.semibold))
-                Text(countLabel(for: section, count: count))
-                    .font(.caption)
-                    .opacity(isSelected ? 0.85 : 0.6)
-            }
-            .lineLimit(1)
-            .fixedSize()
-            .padding(.horizontal, 12)
-            .padding(.vertical, 7)
-            .background(isSelected ? Color.accentColor : Color.secondary.opacity(0.12),
-                        in: Capsule())
-            .foregroundStyle(isSelected ? Color.white : Color.primary)
-            .contentShape(Capsule())
-        }
-        .buttonStyle(.plain)
-        .accessibilityAddTraits(isSelected ? [.isSelected] : [])
-        .accessibilityLabel("\(section.rawValue), \(countLabel(for: section, count: count))")
-    }
-
-    private func count(for section: FeedbackStore.ProjectSection) -> Int {
-        switch section {
-        case .inbox: return inboxCount
-        case .feedback: return store.scopedFeedback.count
-        case .stats: return store.usage(for: project).installs
-        // 빨강인 앱 수. 한 앱이면 0 아니면 1.
-        case .release: return releaseRedCount
-        case .acquisition:
-            guard let project else { return AcquisitionCatalog.all.count }
-            return AcquisitionCatalog.map(for: project)?.activeChannels.count ?? 0
-        case .crashes: return store.crashSummary(for: project).total
-        case .keywords: return keywords.standings(for: project).filter(\.isRanked).count
-        case .purchases: return project.flatMap { purchases.products(for: $0)?.count } ?? 0
-        case .reviews: return reviewCount
-        case .design: return design.docs(for: project).count
-        case .storeAnalytics:
-            guard let project else { return purchases.analyticsCoverage?.value?.missing.count ?? 0 }
-            guard case .ready(let analytics)? = purchases.storeAnalytics[project]?.value else { return 0 }
-            return analytics.insights?.findings.filter { $0.level == .bad }.count ?? 0
-        }
-    }
-
-    /// 할 일 — 모든 앱의 답 안 한 리뷰 + 처리 안 한 피드백(버그 포함).
-    private var inboxCount: Int {
-        let reviews = purchases.reviewFeeds
-            .filter { !store.hiddenProjects.contains($0.key) }
-            .values.reduce(0) { $0 + $1.unanswered }
-        return reviews + store.countPending(in: store.feedback(for: nil))
-    }
-
-    /// 이 앱(전체면 모든 앱)의 받아 둔 리뷰 수.
-    private var reviewCount: Int {
-        guard let project else { return purchases.reviewFeeds.values.reduce(0) { $0 + $1.reviews.count } }
-        return purchases.reviewFeeds[project]?.reviews.count ?? 0
-    }
-
-    private var unansweredReviews: Int {
-        guard let project else { return purchases.reviewFeeds.values.reduce(0) { $0 + $1.unanswered } }
-        return purchases.unansweredReviews(for: project)
-    }
-
-    /// 한 앱이면 그 앱이 빨강일 때 1, 전체면 빨강인 앱 수.
-    private var releaseRedCount: Int {
-        let keys = project.map { [$0] } ?? store.projectCounts.map(\.key)
-        return keys.filter { store.releaseLevel(for: $0) == .red }.count
-    }
-
-    /// The second line of each button — the number in words, not a bare digit.
-    private func countLabel(for section: FeedbackStore.ProjectSection, count: Int) -> String {
-        switch section {
-        case .inbox:
-            return count > 0 ? "\(AppFormat.count(count))건" : "없음"
-        case .feedback:
-            // 안 읽은 수는 위의 뱃지가 말한다 — 여기서 또 적으면 같은 사실이
-            // 한 버튼에 두 번 있다.
-            return "\(count)건"
-        case .stats:
-            return count > 0 ? "설치 \(count)대" : "사용 통계"
-        case .release:
-            guard let project else {
-                return count > 0 ? "빨강 \(count)개" : "빨강 없음"
-            }
-            return store.releaseLevel(for: project)?.label ?? "판정 없음"
-        case .acquisition:
-            guard project != nil else { return count > 0 ? "지도 \(count)개" : "지도 없음" }
-            return count > 0 ? "길 \(count)개" : "지도 없음"
-        case .crashes:
-            return count > 0 ? "\(count)건" : "없음"
-        case .keywords:
-            let tracked = keywords.standings(for: project).count
-            guard tracked > 0 else { return "App Store 검색" }
-            // 전체 프로젝트 has no single app whose rank to read, so a "잡힘"
-            // fraction there is a zero that means nothing. Count the terms.
-            guard project != nil else { return "\(tracked)개 추적" }
-            return "\(count)/\(tracked) 잡힘"
-        case .purchases:
-            guard purchases.isConfigured else { return "연결 안 됨" }
-            return count > 0 ? "상품 \(count)개" : "App Store Connect"
-        case .reviews:
-            guard purchases.isConfigured else { return "연결 안 됨" }
-            return count > 0 ? "\(AppFormat.count(count))건" : "App Store"
-        case .storeAnalytics:
-            guard purchases.isConfigured else { return "연결 안 됨" }
-            guard let project else {
-                guard let coverage = purchases.analyticsCoverage?.value else { return "요청 현황" }
-                return "요청 \(coverage.apps.count - coverage.missing.count)/\(coverage.apps.count)"
-            }
-            guard case .ready? = purchases.storeAnalytics[project]?.value else { return "App Store Connect" }
-            return count > 0 ? "문제 \(count)개" : "문제 없음"
-        case .design:
-            guard DesignDocsStore.isSupported else { return "맥에서" }
-            guard design.workspace != nil else { return "폴더 고르기" }
-            return count > 0 ? "\(count)장" : "없음"
-        }
-    }
-
-    /// "(지난주 대비 ▲12%)" — 견줄 것이 없으면 아무 말도 하지 않는다.
-    private static func change(_ current: Int, _ previous: Int) -> String {
-        guard previous > 0 else { return current > 0 ? " (이번 주 처음)" : "" }
-        let ratio = Double(current - previous) / Double(previous)
-        if current == previous { return " (지난주와 같음)" }
-        let magnitude = abs(ratio)
-        let amount = magnitude >= 10 ? String(format: "%.0f배", magnitude)
-                                     : String(format: "%.0f%%", (magnitude * 100).rounded())
-        return " (지난주 대비 \(amount) " + (current > previous ? "▲)" : "▼)")
+    private var metrics: SectionMetrics {
+        SectionMetrics(store: store, keywords: keywords, purchases: purchases, design: design, charts: charts)
     }
 
     @ViewBuilder
     private var content: some View {
-        switch store.projectSection {
+        switch section {
         case .inbox:
             InboxView(selection: $selection)
         case .feedback:
@@ -274,6 +96,8 @@ struct ProjectSectionView: View {
             CrashListView(project: project)
         case .keywords:
             KeywordsView(project: project)
+        case .charts:
+            ChartRanksView(project: project)
         case .purchases:
             InAppPurchasesView(project: project)
         case .reviews:
@@ -282,106 +106,6 @@ struct ProjectSectionView: View {
             DesignDocsView(project: project)
         case .storeAnalytics:
             StoreAnalyticsView(project: project)
-        }
-    }
-
-    // MARK: - Subtitle
-
-    private var subtitle: String {
-        switch store.projectSection {
-        case .inbox:
-            let count = inboxCount
-            return count > 0 ? "모든 앱에서 남은 일 \(AppFormat.count(count))건" : "남은 일 없음"
-        case .feedback:
-            let shown = store.filteredFeedback.count
-            let total = store.scopedFeedback.count
-            var text = shown == total ? "피드백 \(total)건" : "\(shown)건 표시 / 전체 \(total)건"
-            // 남은 일이 몇 건인지가 이 화면의 요점이다 — 다 끝냈다는 사실도.
-            if store.scopedPendingCount > 0 {
-                text += " · 확인 필요 \(store.scopedPendingCount)건"
-            } else if total > 0 {
-                text += " · 모두 처리 완료"
-            }
-            return text
-        case .stats:
-            let usage = store.usage(for: project)
-            guard usage.hasUsageData else {
-                return "사용 통계 없음 · 피드백 \(store.scopedFeedback.count)건"
-            }
-            // 절대값 하나로는 열어 볼 이유가 안 된다. 설치 수는 규모라 그대로
-            // 두고, 움직이는 두 값(사람·건수)은 지난주와 견준 결과를 붙인다.
-            var text = "설치 \(AppFormat.count(usage.installs))대"
-            text += " · 7일 사용자 \(usage.activeInstalls7)명\(Self.change(usage.activeInstalls7, usage.previousActiveInstalls7))"
-            text += " · 7일 사용 \(AppFormat.count(usage.events7))건\(Self.change(usage.events7, usage.previousEvents7))"
-            return text
-        case .release:
-            guard let project else {
-                let levels = store.projectCounts.compactMap { store.releaseLevel(for: $0.key) }
-                guard !levels.isEmpty else { return "판정할 수 있는 앱 없음" }
-                let red = levels.filter { $0 == .red }.count
-                let yellow = levels.filter { $0 == .yellow }.count
-                return "앱 \(levels.count)개 판정 · 빨강 \(red) · 노랑 \(yellow)"
-            }
-            guard let report = store.releaseHealth(for: project) else {
-                return "최근 \(ReleaseHealth.windowDays)일에 버전을 가를 사용 이벤트 없음"
-            }
-            var text = "최신 \(report.latest.version)"
-            if let previous = report.previous { text += " · 앞 버전 \(previous.version)" }
-            return text + " · \(report.verdict.level.label)"
-        case .acquisition:
-            guard let project else { return "앱마다 어디서 새는지" }
-            guard let map = AcquisitionCatalog.map(for: project) else { return "유입 지도 없음" }
-            return "쓰는 길 \(map.activeChannels.count)개" + (map.asOf.map { " · 지도 \($0) 기준" } ?? "")
-        case .crashes:
-            let summary = store.crashSummary(for: project)
-            guard !summary.isEmpty else { return "올라온 진단 없음" }
-            return "전체 \(summary.total)건 · 최근 7일 \(summary.last7Days)건"
-        case .keywords:
-            let standings = keywords.standings(for: project)
-            guard !standings.isEmpty else { return "추적 중인 키워드 없음" }
-            guard project != nil else { return "키워드 \(standings.count)개 추적 중 · 프로젝트를 골라 순위를 봅니다" }
-            let ranked = standings.filter(\.isRanked)
-            let best = ranked.compactMap(\.rank).min()
-            var text = "키워드 \(standings.count)개 · \(ranked.count)개 잡힘"
-            if let best { text += " · 최고 \(best)위" }
-            return text
-        case .purchases:
-            guard purchases.isConfigured else { return "App Store Connect 키를 넣으면 상품과 판매가 나옵니다" }
-            guard let project else { return "앱별 최근 \(AppStoreConnectStore.salesDays)일 판매 순위" }
-            guard let products = purchases.products(for: project) else { return "App Store Connect 상품" }
-            return "상품 \(products.count)개 · 판매 중 \(products.filter(\.isOnSale).count)개"
-        case .reviews:
-            guard purchases.isConfigured else { return "App Store Connect 키를 넣으면 리뷰를 읽고 답할 수 있습니다" }
-            guard let project else {
-                let feeds = purchases.reviewFeeds.filter { !store.hiddenProjects.contains($0.key) }.values
-                let total = feeds.reduce(0) { $0 + $1.reviews.count }
-                guard total > 0 else { return "모든 앱의 App Store 리뷰" }
-                let unanswered = feeds.reduce(0) { $0 + $1.unanswered }
-                var text = "앱 \(feeds.filter { !$0.reviews.isEmpty }.count)개 · 리뷰 \(AppFormat.count(total))건"
-                text += unanswered > 0 ? " · 답 안 함 \(unanswered)건" : " · 모두 답함"
-                return text
-            }
-            guard let feed = purchases.reviewFeeds[project], feed.fetchedAt != nil else { return "App Store 리뷰" }
-            var text = "리뷰 \(AppFormat.count(feed.reviews.count))건"
-            if let average = feed.average { text += String(format: " · 평균 %.2f", average) }
-            text += feed.unanswered > 0 ? " · 답 안 함 \(feed.unanswered)건" : " · 모두 답함"
-            return text
-        case .design:
-            return "문제 정의부터 솔루션까지 · 리포의 \(DesignDocsStore.folder)"
-        case .storeAnalytics:
-            guard purchases.isConfigured else { return "App Store Connect 키를 넣으면 Apple 이 모은 분석 리포트가 나옵니다" }
-            guard let project else {
-                if let analysis = purchases.priority {
-                    return "앱 \(analysis.rows.count)개 위험 · 기회 순위 · \(AppFormat.relative(analysis.date))"
-                }
-                guard let coverage = purchases.analyticsCoverage?.value else { return "앱마다 위험 · 기회 순위와 리포트 현황" }
-                return coverage.missing.isEmpty ? "앱 \(coverage.apps.count)개 모두 쌓는 중"
-                    : "앱 \(coverage.apps.count)개 중 \(coverage.missing.count)개는 요청 없음"
-            }
-            guard case .ready(let analytics)? = purchases.storeAnalytics[project]?.value else { return "App Store Connect 분석 리포트" }
-            var text = "최근 \(analytics.days)일 · 리포트 파일 \(analytics.instances)개"
-            if let surge = analytics.insights?.surge { text += " · \(surge.range) 몰림 제외하고 판정" }
-            return text
         }
     }
 }

@@ -34,6 +34,8 @@ struct InboxView: View {
     @State private var replying: ReviewItem?
     /// "더 보기"로 다 펼친 앱.
     @State private var expanded: Set<String> = []
+    /// 방금 완료로 옮긴 리뷰. 잘못 눌렀을 때 되돌릴 수 있게 잠깐 아래에 띄운다.
+    @State private var justCompleted: String?
 
     struct ReviewItem: Identifiable {
         let project: String
@@ -47,7 +49,9 @@ struct InboxView: View {
         purchases.reviewFeeds
             .filter { !store.hiddenProjects.contains($0.key) }
             .flatMap { key, feed in
-                feed.reviews.filter { $0.response == nil }.map { ReviewItem(project: key, review: $0) }
+                // 답장을 달았거나, 답할 필요가 없어 완료로 둔 것(어느 기기에서든)은 빠진다.
+                feed.reviews.filter { $0.response == nil && !store.isReviewDone($0.id) }
+                    .map { ReviewItem(project: key, review: $0) }
             }
             .sorted { $0.review.createdDate > $1.review.createdDate }
     }
@@ -68,6 +72,7 @@ struct InboxView: View {
             .safeAreaInset(edge: .top, spacing: 0) {
                 filterBar(reviews: reviews.count, bugs: pending.bugs.count, others: pending.others.count)
             }
+            .safeAreaInset(edge: .bottom, spacing: 0) { undoBar }
             .task(id: store.projectCounts.count) { await loadReviews() }
             .sheet(item: $replying) { item in
                 ReviewResponseSheet(review: item.review, project: item.project)
@@ -282,6 +287,15 @@ struct InboxView: View {
                     .font(.body)
                     .foregroundStyle(.secondary)
                 Spacer()
+                // 답할 필요가 없는 리뷰를 치우는 자리. 다른 기기에서도 빠진다.
+                Button {
+                    complete(review.id)
+                } label: {
+                    Label("완료", systemImage: "checkmark.circle")
+                }
+                .buttonStyle(.bordered)
+                .font(.body)
+                .help("답장 없이 할 일에서 뺍니다. 같은 iCloud 계정의 다른 기기에서도 빠집니다.")
                 Button {
                     replying = item
                 } label: {
@@ -292,6 +306,51 @@ struct InboxView: View {
             }
         }
         .padding(.vertical, 6)
+        #if os(iOS)
+        .swipeActions(edge: .trailing) {
+            Button {
+                complete(review.id)
+            } label: {
+                Label("완료", systemImage: "checkmark.circle")
+            }
+            .tint(.green)
+        }
+        #endif
+    }
+
+    private func complete(_ id: String) {
+        withAnimation {
+            store.setReviewDone(true, id: id)
+            justCompleted = id
+        }
+        // 다음 완료가 없으면 몇 초 뒤 스스로 접힌다.
+        Task {
+            try? await Task.sleep(for: .seconds(6))
+            if justCompleted == id { withAnimation { justCompleted = nil } }
+        }
+    }
+
+    @ViewBuilder
+    private var undoBar: some View {
+        if let id = justCompleted {
+            HStack {
+                Label("리뷰를 완료로 옮겼습니다", systemImage: "checkmark.circle.fill")
+                    .foregroundStyle(.green)
+                Spacer()
+                Button("되돌리기") {
+                    withAnimation {
+                        store.setReviewDone(false, id: id)
+                        justCompleted = nil
+                    }
+                }
+            }
+            .font(.callout)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+            .background(.bar)
+            .overlay(alignment: .top) { Divider() }
+            .transition(.move(edge: .bottom).combined(with: .opacity))
+        }
     }
 
     // MARK: 피드백 한 줄
@@ -305,7 +364,7 @@ struct InboxView: View {
                         note: store.note(for: feedback))
                 #if os(iOS)
                 .contentShape(Rectangle())
-                .onTapGesture { store.path.append(feedback) }
+                .onTapGesture { store.push(feedback) }
                 #endif
 
             Button {

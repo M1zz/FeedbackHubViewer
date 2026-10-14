@@ -61,6 +61,8 @@ final class FeedbackStore: ObservableObject {
         /// still one thing you look at *inside* a project, which is what this
         /// enum means.
         case keywords = "키워드"
+        /// 나라마다 App Store 인기 차트 몇 위인가 — 공개 차트 피드를 읽는다(`ChartStore`).
+        case charts = "차트"
         /// App Store Connect에 걸린 상품과 판매 — 키워드처럼 허브 밖을 읽는다
         /// (`AppStoreConnectStore`).
         case purchases = "앱 내 구입"
@@ -68,6 +70,60 @@ final class FeedbackStore: ObservableObject {
         /// (`DesignDocsStore`). 맥의 디스크를 읽는 유일한 칸.
         case design = "설계"
         var id: String { rawValue }
+        /// 할 일은 처음부터 모든 앱을 앱별로 묶어 보여 주는 칸이라 앱 목록을 거치지 않는다.
+        var usesAppList: Bool { self != .inbox }
+        /// 기능 목록에서 이 칸이 놓이는 무리.
+        var group: Group {
+            switch self {
+            case .inbox: .today
+            case .feedback, .reviews: .voice
+            case .crashes, .release: .quality
+            case .stats, .acquisition, .keywords, .charts, .storeAnalytics: .growth
+            case .purchases: .revenue
+            case .design: .build
+            }
+        }
+        /// 기능 목록의 무리. 열한 칸을 한 줄로 늘어놓으면 무엇이 어디 있는지 읽히지 않는다 —
+        /// "무엇을 알고 싶은가" 로 묶는다.
+        enum Group: String, CaseIterable, Identifiable {
+            case today = "오늘"
+            case voice = "사용자 목소리"
+            case quality = "품질"
+            case growth = "성장"
+            case revenue = "수익"
+            case build = "만들기"
+            var id: String { rawValue }
+            var sections: [ProjectSection] { ProjectSection.allCases.filter { $0.group == self } }
+            /// 아이폰 탭에 담을 기능. 설계는 맥의 디스크를 읽는 칸이라(`DesignDocsStore.isSupported`)
+            /// 아이폰에는 없다.
+            var phoneSections: [ProjectSection] {
+                #if os(macOS)
+                sections
+                #else
+                sections.filter { $0 != .design }
+                #endif
+            }
+            /// 아이폰 하단 탭 — 담을 기능이 있는 무리만.
+            static var phoneTabs: [Group] { allCases.filter { !$0.phoneSections.isEmpty } }
+            /// 탭 바에 들어갈 짧은 이름.
+            var tabTitle: String {
+                switch self {
+                case .today: "할 일"
+                case .voice: "목소리"
+                default: rawValue
+                }
+            }
+            var systemImage: String {
+                switch self {
+                case .today: "tray.full"
+                case .voice: "bubble.left.and.bubble.right"
+                case .quality: "checkmark.shield"
+                case .growth: "chart.line.uptrend.xyaxis"
+                case .revenue: "creditcard"
+                case .build: "pencil.and.ruler"
+                }
+            }
+        }
         /// 고른 피드백을 맥의 오른쪽 상세 칸에 여는 칸.
         var showsFeedbackDetail: Bool { self == .feedback || self == .inbox }
         var systemImage: String {
@@ -80,6 +136,7 @@ final class FeedbackStore: ObservableObject {
             case .storeAnalytics: return "chart.xyaxis.line"
             case .crashes: return "exclamationmark.triangle"
             case .keywords: return "magnifyingglass"
+            case .charts: return "list.number"
             case .purchases: return "creditcard"
             case .reviews: return "star.bubble"
             case .design: return "pencil.and.ruler"
@@ -87,9 +144,9 @@ final class FeedbackStore: ObservableObject {
         }
     }
 
-    /// One project's screen, pushed on top of the project list. `project` nil
-    /// == 전체 프로젝트. `section` is the tab to land on; nil keeps whichever
-    /// section was open last.
+    /// One app's screen for one feature, pushed on top of the feature's app
+    /// list. `project` nil == 전체 앱. `section` is the feature to land on; nil
+    /// keeps whichever was open last.
     struct ProjectRoute: Hashable {
         let project: String?
         let section: ProjectSection?
@@ -226,43 +283,63 @@ final class FeedbackStore: ObservableObject {
 
     // Navigation
 
-    /// Which of the selected project's three sections is on screen.
+    /// 지금 고른 기능. 화면의 첫 단계다 — 앱은 그 안에서 고른다.
     @Published var projectSection: ProjectSection = .inbox
-    /// What is pushed on top of the project list: a project's screen, and on
-    /// iOS a single feedback's detail after that.
+    /// 맥 · 아이패드에서 앱 화면 위에 밀려 들어온 것(아이패드의 피드백 상세).
     @Published var path = NavigationPath()
-    /// True on the layout where the project screen is *pushed* (iPhone) rather
-    /// than shown beside the project list (Mac, iPad). Set by the root view;
+    /// 아이폰의 하단 탭 — 기능 무리 하나가 탭 하나다.
+    @Published var phoneTab: ProjectSection.Group = .today
+    /// 아이폰 탭마다 따로 쌓인 화면. 탭을 오가도 각자 보던 자리가 남는다.
+    @Published var phonePaths: [ProjectSection.Group: NavigationPath] = [:]
+    /// 아이폰 탭마다 위쪽 세그먼트에서 고른 기능.
+    @Published var phoneSections: [ProjectSection.Group: ProjectSection] = [:]
+    /// True on the layout where the app screen is *pushed* (iPhone) rather
+    /// than shown beside the app list (Mac, iPad). Set by the root view;
     /// `open(project:section:)` needs it to know whether to push or to swap
     /// what the content column is scoped to.
     var usesStackNavigation = false
 
-    /// Go to one project's screen — the single way every cross-screen link
+    /// 아이폰 탭 하나에서 지금 고른 기능. 고른 적이 없으면 그 무리의 첫 기능.
+    func phoneSection(for tab: ProjectSection.Group) -> ProjectSection {
+        phoneSections[tab] ?? tab.phoneSections.first ?? .inbox
+    }
+
+    /// 지금 보이는 스택에 한 화면을 민다 — 아이폰이면 열린 탭의 스택, 아니면 `path`.
+    func push(_ value: some Hashable) {
+        if usesStackNavigation {
+            phonePaths[phoneTab, default: NavigationPath()].append(value)
+        } else {
+            path.append(value)
+        }
+    }
+
+    /// Go to one app's screen — the single way every cross-screen link
     /// moves, so pushing (iPhone) and re-scoping the column (Mac/iPad) don't
     /// have to be spelled out at each call site.
     func open(project: String?, section: ProjectSection? = nil) {
         selectedProject = project
-        if let section { projectSection = section }
+        if let section {
+            projectSection = section
+        } else if projectSection == .inbox {
+            projectSection = .feedback
+        }
         if usesStackNavigation {
-            path.append(ProjectRoute(project: project, section: section))
+            // 그 기능이 사는 탭으로 옮겨 가서 민다. 뒤로 가면 그 탭의 앱 목록이 나온다.
+            let tab = projectSection.group
+            phoneTab = tab
+            if projectSection.usesAppList { phoneSections[tab] = projectSection }
+            phonePaths[tab, default: NavigationPath()]
+                .append(ProjectRoute(project: project, section: projectSection))
         }
     }
 
     // Filters / sorting
     @Published var searchText = ""
     @Published var sortOption: SortOption = .newest
-    @Published var selectedProject: String? = nil {   // nil == all projects
-        didSet {
-            guard selectedProject != oldValue else { return }
-            // 전체로 오면 "할 일" 부터, 한 앱으로 가면 할 일 칸이 없으니 피드백으로.
-            // `open(project:section:)` 은 이 뒤에 칸을 정하므로 링크가 고른 칸이 이긴다.
-            if selectedProject == nil {
-                projectSection = .inbox
-            } else if projectSection == .inbox {
-                projectSection = .feedback
-            }
-        }
-    }
+    /// 기능 안에서 고른 앱. 기능을 바꿔도 그대로 남아, 한 앱을 여러 기능으로 넘겨 볼 수 있다.
+    /// 할 일은 앱을 가리지 않으므로 할 일에서 앱 링크를 누르면 그 앱의 피드백으로 간다
+    /// (`open(project:section:)`).
+    @Published var selectedProject: String? = nil     // nil == all projects
     @Published var selectedVersion: String? = nil     // nil == all versions
     @Published var minimumRating: Int = 0             // 0 == any rating
     /// Which triage decisions the list shows (see `FeedbackTriage.swift`).
@@ -344,6 +421,8 @@ final class FeedbackStore: ObservableObject {
         }
         readIDs = Set(defaults.stringArray(forKey: Self.readIDsKey) ?? [])
         triage = Self.decodeTriage(defaults.data(forKey: Self.triageKey))
+        reviewsDone = defaults.data(forKey: Self.reviewsDoneKey)
+            .flatMap { try? JSONDecoder().decode([String: ReviewDoneEntry].self, from: $0) } ?? [:]
         statusFilter = defaults.string(forKey: Self.statusFilterKey)
             .flatMap(FeedbackStatusFilter.init(rawValue:)) ?? .pending
         hiddenProjects = Set(defaults.stringArray(forKey: Self.hiddenProjectsKey) ?? [])
@@ -1282,6 +1361,27 @@ final class FeedbackStore: ObservableObject {
         defaults.set(data, forKey: Self.triageKey)
     }
 
+    // MARK: - 리뷰 완료 (할 일)
+
+    /// App Store 리뷰 id → 할 일에서 완료로 뒀는지. 읽음 · 처리와 같은 길로 기기 사이에
+    /// 오간다(`ReviewStateSync`).
+    @Published private(set) var reviewsDone: [String: ReviewDoneEntry] = [:]
+    private static let reviewsDoneKey = "reviewsDone"
+
+    func isReviewDone(_ id: String) -> Bool { reviewsDone[id]?.isDone == true }
+
+    func setReviewDone(_ done: Bool, id: String) {
+        guard isReviewDone(id) != done else { return }
+        reviewsDone[id] = ReviewDoneEntry(isDone: done, decidedAt: Date())
+        persistReviewsDoneLocally()
+        pushReviewState()
+    }
+
+    private func persistReviewsDoneLocally() {
+        guard let data = try? JSONEncoder().encode(reviewsDone) else { return }
+        defaults.set(data, forKey: Self.reviewsDoneKey)
+    }
+
     // MARK: - 기기 사이 동기화
 
     /// 읽음·처리를 iCloud 키·값 저장소와 맞추기 시작한다. 저장소를 못 쓰면
@@ -1298,7 +1398,7 @@ final class FeedbackStore: ObservableObject {
 
     /// 지금 이 기기가 들고 있는 판단.
     private var currentReviewState: ReviewState {
-        ReviewState(readIDs: readIDs, triage: triage)
+        ReviewState(readIDs: readIDs, triage: triage, reviewsDone: reviewsDone)
     }
 
     /// 이 기기의 판단을 저장소에 올리고, 합쳐져 돌아온 것을 다시 받는다.
@@ -1320,6 +1420,10 @@ final class FeedbackStore: ObservableObject {
         if state.triage != triage {
             triage = state.triage
             persistTriageLocally()
+        }
+        if state.reviewsDone != reviewsDone {
+            reviewsDone = state.reviewsDone
+            persistReviewsDoneLocally()
         }
     }
 
@@ -1355,6 +1459,7 @@ final class FeedbackStore: ObservableObject {
         if selectedProject == project {
             selectedProject = nil
             path = NavigationPath()
+            phonePaths = [:]
         }
     }
 
