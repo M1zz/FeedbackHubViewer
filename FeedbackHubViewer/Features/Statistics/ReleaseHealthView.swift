@@ -127,6 +127,15 @@ struct ReleaseHealthView: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .contextMenu {
+            if level != .green {
+                Button {
+                    Platform.copyToPasteboard(ReleaseHealthCard.claudePrompt(report, appName: name, project: row.key))
+                } label: {
+                    Label("Claude에게 맡길 글 복사", systemImage: "doc.on.doc")
+                }
+            }
+        }
         .accessibilityLabel("\(name), 릴리즈 건강 \(level.label), \(report.verdict.headline)")
     }
 }

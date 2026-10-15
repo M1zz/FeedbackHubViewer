@@ -27,6 +27,9 @@ struct ReleaseHealthCard: View {
         VStack(alignment: .leading, spacing: 12) {
             if let report = store.releaseHealth(for: project) {
                 header(report.verdict)
+                if report.verdict.level != .green {
+                    copyForClaude(report)
+                }
                 comparison(report)
                 adoption(report)
                 if report.verdict.reasons.count > 1 { reasons(report.verdict) }
@@ -65,6 +68,88 @@ struct ReleaseHealthCard: View {
                 .foregroundStyle(Self.tint(verdict.level))
                 .fixedSize(horizontal: false, vertical: true)
         }
+    }
+
+    /// 적신호를 Claude 에게 그대로 넘길 글. 판정 · 숫자 · 새 크래시 · 스펙을 한 덩어리로
+    /// 담아, 받는 쪽이 이 화면을 못 봐도 무엇을 고쳐야 하는지 알게 한다.
+    private func copyForClaude(_ report: ReleaseHealth.Report) -> some View {
+        HStack(spacing: 8) {
+            CopyButton(text: Self.claudePrompt(report, appName: store.displayName(for: project), project: project),
+                       title: "Claude에게 맡길 글 복사")
+                .buttonStyle(.bordered)
+            Text("앱 리포에서 연 Claude 에 붙여넣으면 원인을 찾아 고칩니다.")
+                .font(.body)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    static func claudePrompt(_ report: ReleaseHealth.Report, appName: String, project: String) -> String {
+        let latest = report.latest
+        let previous = report.previous
+        var lines: [String] = []
+        lines.append("\(appName) (\(project)) 의 릴리즈 건강이 \(report.verdict.level.label)입니다. 원인을 찾아 고쳐 주세요.")
+        lines.append("")
+        lines.append("## 판정")
+        for reason in report.verdict.reasons { lines.append("- \(reason)") }
+        lines.append("")
+        lines.append("## 버전 비교 (최근 \(ReleaseHealth.windowDays)일)")
+        lines.append("| 항목 | 최신 \(latest.version) |" + (previous.map { " 앞 버전 \($0.version) |" } ?? ""))
+        lines.append("|---|---|" + (previous == nil ? "" : "---|"))
+        func row(_ label: String, _ value: (ReleaseHealth.VersionMetrics) -> String) {
+            lines.append("| \(label) | \(value(latest)) |" + (previous.map { " \(value($0)) |" } ?? ""))
+        }
+        row("활성 설치") { "\($0.activeInstalls)대" }
+        if let core = report.spec.coreAction {
+            row("핵심 행동률 (\(core.label): \(core.events.joined(separator: ", ")))") { metrics in
+                guard let rate = metrics.coreActionRate else { return "설치 없음" }
+                return "\(ReleaseHealth.percent(rate)) (\(metrics.coreActionInstalls ?? 0)대)"
+            }
+        }
+        if report.stabilityKnown {
+            row("크래시 없는 설치") { metrics in
+                guard let rate = metrics.crashFreeRate else { return "설치 없음" }
+                return "\(ReleaseHealth.percent(rate)) (불안정 \(metrics.unstableInstalls ?? 0)대)"
+            }
+        }
+        row("크래시 보고") { "\($0.crashReports)건" }
+        row("피드백") { metrics in
+            metrics.bugFeedback.map { "\(metrics.feedback)건 (버그 \($0))" } ?? "\(metrics.feedback)건"
+        }
+        if let share = report.adoption.share {
+            lines.append("")
+            lines.append("채택: 최근 \(ReleaseHealth.adoptionDays)일 활성 \(report.adoption.active)대 중 \(report.adoption.onLatest)대(\(ReleaseHealth.percent(share)))가 \(latest.version)")
+        }
+        if !latest.newSignatures.isEmpty {
+            lines.append("")
+            lines.append("## \(latest.version)에서 처음 본 진단")
+            for signature in latest.newSignatures {
+                lines.append("- \(CrashReport.label(for: signature.kind)) · \(signature.title) — \(signature.reports)건 (지문 \(signature.fingerprint))")
+            }
+        }
+        lines.append("")
+        lines.append("## 판정 기준")
+        let thresholds = report.spec.thresholds
+        lines.append("- 불안정 이벤트: \(report.spec.stabilityEvents.joined(separator: ", ")) — 이걸 보낸 설치를 불안정으로 셉니다.")
+        lines.append("- 크래시 없는 설치 \(ReleaseHealth.percent(thresholds.crashFreeInstallsMin)) 미만이면 빨강, 핵심 행동률이 앞 버전보다 \(ReleaseHealth.percent(thresholds.coreActionDropMax)) 넘게 떨어지면 빨강, 활성 설치 \(thresholds.minInstallsForVerdict)대 미만이면 비율로 판정하지 않습니다.")
+        if !report.hasReleaseSpec {
+            lines.append("- 앱 리포의 docs/usage-spec.json 에 release 절이 없어 기본값으로 판정했습니다.")
+        }
+        if !report.spec.promises.isEmpty {
+            lines.append("")
+            lines.append("## 이 앱이 지키기로 한 약속")
+            for promise in report.spec.promises {
+                lines.append("- \(promise.title)" + (promise.guardText.map { " (지키는 것: \($0))" } ?? ""))
+            }
+        }
+        lines.append("")
+        lines.append("## 부탁")
+        lines.append("1. \(previous.map { "\($0.version) → " } ?? "")\(latest.version) 사이의 변경(git log · diff)에서 위 신호의 원인을 찾아 주세요.")
+        lines.append("2. 크래시라면 지문 · 제목으로 코드 위치를 짚고, 불안정 이벤트(\(report.spec.stabilityEvents.joined(separator: ", ")))가 늘었다면 그 이벤트를 보내는 경로를 확인해 주세요.")
+        lines.append("3. 원인과 고친 방법을 설명하고, 고칠 수 있으면 고쳐 주세요. 숫자만으로 확실하지 않으면 무엇을 더 봐야 하는지 알려 주세요.")
+        lines.append("")
+        lines.append("참고: 크래시 보고는 MetricKit 이 하루쯤 늦게 일부만 보냅니다. 숫자는 FeedbackHub 사용 이벤트 기준입니다.")
+        return lines.joined(separator: "\n")
     }
 
     private func reasons(_ verdict: ReleaseHealth.Verdict) -> some View {
