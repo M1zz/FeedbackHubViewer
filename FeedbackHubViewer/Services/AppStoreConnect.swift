@@ -152,6 +152,9 @@ struct StoreProduct: Identifiable, Hashable, Codable {
     var period: String?
     /// "₩4,400" — 못 읽었으면 nil.
     var price: String?
+    /// 같은 가격의 숫자와 통화. 한국 가격이 없는 상품을 원화로 어림하는 데 쓴다.
+    var priceAmount: Double?
+    var priceCurrency: String?
 
     enum Kind: String, Hashable, Codable {
         case consumable = "CONSUMABLE"
@@ -223,6 +226,12 @@ struct SalesLine: Hashable, Codable {
     let customerPrice: Double
     /// 프로모션 · 오퍼 코드 이름(없으면 빈 문자열).
     let promoCode: String
+    /// 산 사람의 나라(ISO 3166 두 글자, 대문자 "KR"). 수익 지도가 이것으로 나라를 가른다.
+    ///
+    /// 옵셔널이 아닌 것은 일부러다. 이 칸이 생기기 전에 디스크에 쓴 리포트는 읽다가
+    /// 실패해 버려지고(`CacheFile.read`), 다음 새로고침이 나라가 붙은 것으로 다시 받는다.
+    /// 옵셔널로 두면 지난 날짜는 "이미 받음" 으로 남아 지도에 영영 안 나온다.
+    let countryCode: String
 
     /// 앱 첫 다운로드(업데이트·재다운로드 제외).
     var isFirstDownload: Bool { ["1", "1F", "1T", "F1"].contains(productType) }
@@ -413,13 +422,16 @@ actor AppStoreConnect {
 
         // 가격은 상품마다 한 번씩 물어야 해서 따로 돈다. 하나를 못 읽어도 목록은 선다.
         for index in products.indices {
-            products[index].price = try? await price(for: products[index])
+            guard let found = try? await price(for: products[index]) else { continue }
+            products[index].price = Self.formatMoney(found.amount, currency: found.currency)
+            products[index].priceAmount = found.amount
+            products[index].priceCurrency = found.currency
         }
         return products
     }
 
     /// 지금 적용 중인 가격. 한국 가격이 따로 정해져 있으면 그것, 아니면 기준 국가의 가격.
-    private func price(for product: StoreProduct) async throws -> String? {
+    private func price(for product: StoreProduct) async throws -> (amount: Double, currency: String?)? {
         let today = Self.day.string(from: Date())
         func isCurrent(_ resource: ASCResource) -> Bool {
             let start = resource.string("startDate") ?? "0000-00-00"
@@ -478,13 +490,13 @@ actor AppStoreConnect {
         return doc.data
     }
 
-    private static func formatPrice(_ price: ASCResource, point: String, in doc: ASCDocument) -> String? {
+    private static func formatPrice(_ price: ASCResource, point: String, in doc: ASCDocument) -> (amount: Double, currency: String?)? {
         guard let pointID = price.relationshipID(point),
               let pricePoint = doc.included.first(where: { $0.id == pointID }),
               let amount = pricePoint.string("customerPrice").flatMap(Double.init) else { return nil }
         let territoryID = price.relationshipID("territory")
         let currency = doc.included.first { $0.type == "territories" && $0.id == territoryID }?.string("currency")
-        return formatMoney(amount, currency: currency)
+        return (amount, currency)
     }
 
     static func formatMoney(_ amount: Double, currency: String?) -> String {
@@ -527,15 +539,17 @@ actor AppStoreConnect {
               let currency = column("Currency of Proceeds") else { return [] }
         let price = column("Customer Price")
         let promo = column("Promo Code")
+        let country = column("Country Code")
         return lines.compactMap { row in
-            guard row.count > max(apple, type, units, proceeds, currency, price ?? 0) else { return nil }
+            guard row.count > max(apple, type, units, proceeds, currency, price ?? 0, country ?? 0) else { return nil }
             return SalesLine(appleID: row[apple],
                              productType: row[type],
                              units: Int(Double(row[units]) ?? 0),
                              proceedsPerUnit: Double(row[proceeds]) ?? 0,
                              proceedsCurrency: row[currency],
                              customerPrice: price.flatMap { Double(row[$0]) } ?? 0,
-                             promoCode: promo.map { row[$0].trimmingCharacters(in: .whitespaces) } ?? "")
+                             promoCode: promo.map { row[$0].trimmingCharacters(in: .whitespaces) } ?? "",
+                             countryCode: country.map { row[$0].trimmingCharacters(in: .whitespaces).uppercased() } ?? "")
         }
     }
 

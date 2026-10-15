@@ -34,7 +34,7 @@ struct InAppPurchasesView: View {
             VStack(alignment: .leading, spacing: 16) {
                 if !purchases.isConfigured {
                     Card(title: "App Store Connect 연결 안 됨", systemImage: "key") {
-                        Text("설정에서 App Store Connect API 키(Issuer ID · Key ID · .p8)를 넣으면 상품과 판매가 여기 나옵니다. 키는 이 기기의 키체인에만 저장돼요.")
+                        Text("설정에서 App Store Connect API 키(Issuer ID · Key ID · .p8)를 넣으면 상품과 판매가 여기 나옵니다. 키는 iCloud 키체인에 저장되어 다른 기기에도 들어갑니다.")
                             .font(.body)
                             .foregroundStyle(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
@@ -99,6 +99,9 @@ private struct ProjectPurchases: View {
             }
         case .loaded(let app, let products)?:
             summary(app, products)
+            if let totals = purchases.sales?.totals(app: app, products: products) {
+                SalesMapCard(totals: totals, rates: purchases.rates)
+            }
             RevenueFunnelCard(project: project)
             // 구독을 파는 앱만 — 아니면 구독 이벤트 리포트 서른 날치가 헛걸음이다.
             if products.contains(where: { $0.kind == .autoRenewable }) {
@@ -119,8 +122,14 @@ private struct ProjectPurchases: View {
                      unit: "건", systemImage: "creditcard", tint: .green)
             StatTile(title: "최근 30일 코드로 0원", value: totals.map { "\($0.freeRedemptions)" } ?? "—",
                      unit: "건", systemImage: "gift", tint: .pink)
-            StatTile(title: "최근 30일 수익금", value: totals?.proceedsLabel ?? "—",
-                     systemImage: "wonsign.circle", tint: .orange)
+            // 통화가 섞인 금액을 원 하나로. 환율이 없으면 통화별 그대로.
+            if let money = totals?.money(purchases.rates) {
+                StatTile(title: "최근 30일 수익금 (원화 환산)", value: money.label,
+                         systemImage: "wonsign.circle", tint: .orange)
+            } else {
+                StatTile(title: "최근 30일 수익금", value: totals?.proceedsLabel ?? "—",
+                         systemImage: "wonsign.circle", tint: .orange)
+            }
             StatTile(title: "최근 30일 첫 다운로드", value: totals.map { "\($0.firstDownloads)" } ?? "—",
                      unit: "회", systemImage: "arrow.down.circle", tint: .blue)
         }
@@ -149,12 +158,20 @@ private struct ProjectPurchases: View {
                         if index < products.count - 1 { Divider() }
                     }
                 }
-                Text("결제는 고객이 돈을 낸 것만 셉니다. 오퍼 · 프로모션 코드로 0원에 받은 것은 \"코드\"로 따로 적어요. 수익금은 Apple 수수료와 세금을 뺀 개발자 몫이고, 통화별로 따로 더합니다. 환불은 음수로 들어와 건수에서 빠져요.")
+                Text("결제는 고객이 돈을 낸 것만 셉니다. 오퍼 · 프로모션 코드로 0원에 받은 것은 \"코드\"로 따로 적어요. 수익금은 Apple 수수료와 세금을 뺀 개발자 몫을 오늘 환율로 원화로 바꿔 더한 어림값입니다. 환불은 음수로 들어와 건수에서 빠져요.")
                     .font(.body)
                     .foregroundStyle(.tertiary)
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
+    }
+
+    /// 한국 가격이 없어 다른 통화로 읽은 가격의 원화 어림값. 원화 가격이면 nil(그대로 보인다).
+    private func priceInKRW(_ product: StoreProduct) -> String? {
+        guard let amount = product.priceAmount, let currency = product.priceCurrency,
+              currency.uppercased() != "KRW",
+              let krw = purchases.rates?.krw(amount, currency: currency) else { return nil }
+        return "≈ \(MoneyFormat.krw(krw))"
     }
 
     private func productRow(_ product: StoreProduct) -> some View {
@@ -166,9 +183,17 @@ private struct ProjectPurchases: View {
                     .fixedSize(horizontal: false, vertical: true)
                 Tag(text: product.stateLabel, tint: product.isOnSale ? .green : .orange, font: .body)
                 Spacer(minLength: 8)
-                Text(product.price ?? "가격 모름")
-                    .font(.body.monospacedDigit().weight(.semibold))
-                    .foregroundStyle(product.price == nil ? .secondary : .primary)
+                VStack(alignment: .trailing, spacing: 0) {
+                    Text(priceInKRW(product) ?? product.price ?? "가격 모름")
+                        .font(.body.monospacedDigit().weight(.semibold))
+                        .foregroundStyle(product.price == nil ? .secondary : .primary)
+                    // 원화가 아닌 가격을 어림했으면 원래 가격을 작게 같이 둔다.
+                    if priceInKRW(product) != nil, let original = product.price {
+                        Text(original)
+                            .font(.caption.monospacedDigit())
+                            .foregroundStyle(.secondary)
+                    }
+                }
             }
             Text(product.productID)
                 .font(.body.monospaced())
@@ -181,7 +206,7 @@ private struct ProjectPurchases: View {
                     .foregroundStyle(.secondary)
                 Spacer(minLength: 8)
                 if let sold {
-                    Text("30일 결제 \(sold.purchases)건" + (sold.freeRedemptions != 0 ? " · 코드 \(sold.freeRedemptions)건" : "") + " · \(sold.proceedsLabel)")
+                    Text("30일 결제 \(sold.purchases)건" + (sold.freeRedemptions != 0 ? " · 코드 \(sold.freeRedemptions)건" : "") + " · \(sold.money(purchases.rates)?.label ?? sold.proceedsLabel)")
                         .font(.body.monospacedDigit())
                         .foregroundStyle(sold.units > 0 ? .primary : .secondary)
                 }
@@ -226,8 +251,16 @@ private struct PurchaseComparison: View {
             }
             SalesStatus()
             if let sales = purchases.sales {
+                // 계정 전체 — 어느 나라에서 얼마.
+                SalesMapCard(totals: sales.allTotals, rates: purchases.rates, title: "어디서 벌었나 · 계정 전체")
+                if let rates = purchases.rates {
+                    ranking(rows, title: "수익이 많은 앱", systemImage: "wonsign.circle") { row in
+                        guard let money = row.totals.money(rates), money.usd > 0 else { return nil }
+                        return (money.label, money.usd, "결제 \(row.totals.purchases)건")
+                    }
+                }
                 ranking(rows, title: "인앱 결제가 많은 앱", systemImage: "creditcard") {
-                    $0.totals.purchases > 0 ? ("\($0.totals.purchases)건", Double($0.totals.purchases), $0.totals.proceedsLabel) : nil
+                    $0.totals.purchases > 0 ? ("\($0.totals.purchases)건", Double($0.totals.purchases), $0.totals.money(purchases.rates)?.label ?? $0.totals.proceedsLabel) : nil
                 }
                 ranking(rows, title: "코드로 0원에 받은 건이 많은 앱", systemImage: "gift") {
                     $0.totals.freeRedemptions > 0 ? ("\($0.totals.freeRedemptions)건", Double($0.totals.freeRedemptions), $0.totals.codesLabel) : nil

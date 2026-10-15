@@ -31,6 +31,8 @@ final class AppStoreConnectStore: ObservableObject {
     @Published private(set) var catalogs: [String: CatalogState] = [:]
     /// 최근 30일 판매(계정 전체). nil이면 아직 안 받았다.
     @Published private(set) var sales: SalesWindow?
+    /// 수익금을 원화 · 달러로 모으는 환율(`ExchangeRates`). 없으면 통화별로만 보인다.
+    @Published private(set) var rates: ExchangeRates?
     @Published private(set) var isLoadingSales = false
     @Published private(set) var salesError: String?
 
@@ -116,6 +118,7 @@ final class AppStoreConnectStore: ObservableObject {
     private static var salesFile: URL? { CacheFile.url("sales-days") }
     static var subscriptionEventsFile: URL? { CacheFile.url("subscription-event-days") }
     private static var fetchedAtFile: URL? { CacheFile.url("connect-fetched-at") }
+    private static var ratesFile: URL? { CacheFile.url("exchange-rates") }
 
     /// 디스크의 상품 목록 한 앱치.
     private struct StoredCatalog: Codable {
@@ -126,6 +129,7 @@ final class AppStoreConnectStore: ObservableObject {
     init() {
         credentials = AppStoreConnectKeychain.load()
         client = credentials.map(AppStoreConnect.init)
+        rates = CacheFile.read(ExchangeRates.self, at: Self.ratesFile)
         restoreReviews()
         restoreReferralLedger()
         if credentials != nil { restoreStoreCaches() }
@@ -363,9 +367,39 @@ final class AppStoreConnectStore: ObservableObject {
     // MARK: - 판매
 
     /// 최근 30일 판매. 어제까지만 — 오늘 리포트는 아직 없다.
+    /// 환율을 반나절에 한 번 받는다. 실패하면 갖고 있던 것을 그대로 쓴다(없으면 통화별 표시).
+    func loadRates() async {
+        if let rates, Date().timeIntervalSince(rates.date) < ExchangeRates.refreshInterval { return }
+        guard let fresh = try? await ExchangeRates.fetch() else { return }
+        rates = fresh
+        CacheFile.write(fresh, to: Self.ratesFile)
+    }
+
+    /// 지금 받고 있는 판매 리포트. 화면이 아니라 가게가 쥔다 — 아래 `loadSales` 머리말.
+    private var salesTask: Task<Void, Never>?
+
+    /// 최근 30일 판매를 받는다.
+    ///
+    /// 받는 일은 가게가 띄운 작업에서 한다. 화면의 `.task` 안에서 그대로 받으면 화면이
+    /// 다시 그려질 때 그 작업이 취소되고, 남은 날이 줄줄이 "cancelled" 로 실패한 채
+    /// "30일 중 30일 못 받음" 이 저장돼 다시 받지도 않았다. 여기서는 부른 쪽이 취소돼도
+    /// 받기는 끝까지 간다.
     func loadSales(force: Bool = false) async {
-        guard let client, credentials?.hasVendorNumber == true else { return }
-        guard force || (sales == nil && !isLoadingSales) else { return }
+        Task { await loadRates() }
+        if let running = salesTask {
+            await running.value
+            guard force else { return }
+        }
+        guard client != nil, credentials?.hasVendorNumber == true else { return }
+        guard force || sales == nil else { return }
+        let task = Task { await self.fetchSales() }
+        salesTask = task
+        await task.value
+        salesTask = nil
+    }
+
+    private func fetchSales() async {
+        guard let client else { return }
         isLoadingSales = true
         salesError = nil
         defer { isLoadingSales = false }
@@ -384,13 +418,21 @@ final class AppStoreConnectStore: ObservableObject {
 
         var days: [(key: String, lines: [SalesLine])] = []
         var missingDays = 0
+        var requested = 0
+        var lastFailure: String?
         for (key, date) in window {
             if let cached = reportCache[key] { days.append((key, cached)); continue }
+            requested += 1
             do {
                 let day = try await client.sales(on: date)
                 if Self.keepsDay(key, day) { reportCache[key] = day }
                 days.append((key, day))
             } catch {
+                // 취소는 그날이 없는 것이 아니다 — 받은 데까지만 그리고, 빈 날로 적지 않는다.
+                if error is CancellationError || (error as? URLError)?.code == .cancelled {
+                    if !days.isEmpty { sales = SalesWindow(daily: days, days: Self.salesDays, missingDays: missingDays) }
+                    return
+                }
                 // 하루를 못 읽어도 나머지는 선다. 다만 키·권한 문제면 30번 되풀이할 이유가 없다.
                 if let failure = error as? AppStoreConnect.Failure {
                     switch failure {
@@ -401,7 +443,13 @@ final class AppStoreConnectStore: ObservableObject {
                     }
                 }
                 missingDays += 1
+                lastFailure = error.localizedDescription
             }
+        }
+        // 받으려던 날이 **하나도** 안 왔으면 날짜 탓이 아니다 — 왜인지를 화면에 올린다.
+        // "30일 중 30일 못 받음" 만 남기면 무엇을 고쳐야 할지 아무도 모른다.
+        if requested > 0, missingDays == requested, let lastFailure {
+            salesError = "판매 리포트를 하나도 받지 못했습니다: \(lastFailure)"
         }
         sales = SalesWindow(daily: days, days: Self.salesDays, missingDays: missingDays)
         markFetched("sales")
@@ -428,6 +476,26 @@ final class AppStoreConnectStore: ObservableObject {
             var codes: [String: Int] = [:]
             /// 통화 → 개발자 수익 합계.
             var proceeds: [String: Double] = [:]
+            /// 나라(ISO 두 글자) → 그 나라 사람이 낸 것. 수익 지도의 재료.
+            var countries: [String: CountryTotals] = [:]
+
+            /// 한 나라의 합계.
+            struct CountryTotals {
+                /// 돈을 낸 인앱 결제 건수(0원 코드 빼고).
+                var purchases = 0
+                /// 통화 → 개발자 수익.
+                var proceeds: [String: Double] = [:]
+
+                mutating func add(_ other: CountryTotals) {
+                    purchases += other.purchases
+                    for (currency, amount) in other.proceeds { proceeds[currency, default: 0] += amount }
+                }
+            }
+
+            /// 수익금을 원 · 달러로. 환율이 없거나 수익이 없으면 nil.
+            func money(_ rates: ExchangeRates?) -> Money? {
+                Money(proceeds, rates: rates)
+            }
 
             var proceedsLabel: String {
                 let parts = proceeds.filter { $0.value != 0 }.sorted { $0.key < $1.key }
@@ -449,6 +517,7 @@ final class AppStoreConnectStore: ObservableObject {
                 freeRedemptions += other.freeRedemptions
                 for (code, count) in other.codes { codes[code, default: 0] += count }
                 for (currency, amount) in other.proceeds { proceeds[currency, default: 0] += amount }
+                for (country, totals) in other.countries { countries[country, default: CountryTotals()].add(totals) }
             }
         }
 
@@ -473,13 +542,27 @@ final class AppStoreConnectStore: ObservableObject {
                     totals.freeRedemptions += line.units
                     totals.codes[line.promoCode.isEmpty ? "코드 없음" : line.promoCode, default: 0] += line.units
                 }
-                totals.proceeds[line.proceedsCurrency, default: 0] += Double(line.units) * line.proceedsPerUnit
+                let amount = Double(line.units) * line.proceedsPerUnit
+                totals.proceeds[line.proceedsCurrency, default: 0] += amount
+                // 돈이 오간 줄만 지도에 — 무료 다운로드 줄까지 나라를 세면 수익 지도가 다운로드 지도가 된다.
+                if amount != 0 || line.isPurchase {
+                    let country = line.countryCode.isEmpty ? "??" : line.countryCode
+                    var place = totals.countries[country] ?? Totals.CountryTotals()
+                    if line.isPurchase { place.purchases += line.units }
+                    if amount != 0 { place.proceeds[line.proceedsCurrency, default: 0] += amount }
+                    totals.countries[country] = place
+                }
                 byItem[line.appleID] = totals
             }
             self.byItem = byItem
         }
 
         func totals(for id: String) -> Totals { byItem[id] ?? Totals() }
+
+        /// 계정 전체 — 모든 앱과 상품의 합. 전체 앱 화면의 지도가 이것을 그린다.
+        var allTotals: Totals {
+            byItem.values.reduce(into: Totals()) { $0.add($1) }
+        }
 
         /// 한 앱의 합계 — 앱 자체(다운로드) + 그 앱의 상품들(결제).
         func totals(app: ConnectApp, products: [StoreProduct]) -> Totals {
@@ -488,4 +571,26 @@ final class AppStoreConnectStore: ObservableObject {
             return result
         }
     }
+}
+
+/// 통화가 섞인 수익금 한 묶음의 원화 · 달러 환산.
+struct Money: Equatable {
+    let usd: Double
+    let krw: Double
+    /// 환율이 없어 합계에서 빠진 통화. 비어 있지 않으면 화면이 그렇다고 적는다.
+    let unconverted: [String]
+    let ratesDate: Date
+
+    init?(_ proceeds: [String: Double], rates: ExchangeRates?) {
+        guard let rates, proceeds.values.contains(where: { $0 != 0 }) else { return nil }
+        let converted = rates.usd(proceeds)
+        guard let krw = rates.krw(fromUSD: converted.total) else { return nil }
+        usd = converted.total
+        self.krw = krw
+        unconverted = converted.unconverted
+        ratesDate = rates.date
+    }
+
+    /// "≈ ₩1,234,567" — 화면의 금액은 원화 하나로 통일한다(달러는 지도 원 크기 계산에만).
+    var label: String { "≈ \(MoneyFormat.krw(krw))" }
 }
