@@ -43,6 +43,8 @@ final class DesignDocsStore: ObservableObject {
     static let repos: [String: String] = [
         "com.Ysoup.TokenMemo": "ClipKeyboard",
         "com.xa.toki": "Rereminder",
+        "com.example.ScheduleDensityApp": "ScheduleDensity",
+        "com.Ysoup.LeaveWise": "Goldweek",
     ]
 
     /// 고른 `workspace/code` 폴더. nil 이면 아직 안 골랐다.

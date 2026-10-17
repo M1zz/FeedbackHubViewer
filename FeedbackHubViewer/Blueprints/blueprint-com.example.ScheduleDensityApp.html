@@ -1,0 +1,382 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif}img{max-width:100%}</style></head><body>
+<title>욕망의 무지개 듀오 시안</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* 레이아웃: 한 줄 설명 → 원칙 → 자세별 기기 시안(실측 pt 를 viewBox 로 그대로) → 코드 규칙 → 순서. 두번알림 듀오 시안과 같은 틀 */
+:root {
+  --bg: #f3f4f6;
+  --paper: #ffffff;
+  --fg: #16181d;
+  --muted: #5d6470;
+  --line: #d9dde3;
+  --accent: #0a6fe0;
+  --bolt: #4f8f1f;
+  --warn: #c76a00;
+  --font-body: "IBM Plex Sans KR", system-ui, -apple-system, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0e1013; --paper: #171a1f; --fg: #e9ebef; --muted: #9aa2ad; --line: #2b3038;
+  --accent: #4da3ff; --bolt: #8fd14f; --warn: #ffae3d; color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #0e1013; --paper: #171a1f; --fg: #e9ebef; --muted: #9aa2ad; --line: #2b3038;
+  --accent: #4da3ff; --bolt: #8fd14f; --warn: #ffae3d; color-scheme: dark; }
+
+body { background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 15px; line-height: 1.6; }
+.wrap { max-width: 1080px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 40px 72px; display: grid; gap: 48px; }
+h1 { font-size: 30px; line-height: 1.25; margin: 0; text-wrap: balance; font-weight: 700; }
+h2 { font-size: 21px; margin: 0; text-wrap: balance; }
+h3 { font-size: 16px; margin: 0; }
+p { margin: 0; max-width: 66ch; }
+.lede { color: var(--muted); font-size: 16px; }
+.eyebrow { font-family: var(--font-mono); font-size: 12px; letter-spacing: .06em; color: var(--muted); text-transform: uppercase; }
+header { display: grid; gap: 12px; }
+section { display: grid; gap: 20px; }
+.rules { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px; }
+.rule { background: var(--paper); border: 1px solid var(--line); border-radius: 10px; padding: 16px; display: grid; gap: 6px; align-content: start; }
+.rule span { color: var(--muted); font-size: 14px; }
+.scene { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 28px; align-items: center; background: var(--paper); border: 1px solid var(--line); border-radius: 14px; padding: 24px; }
+.scene.wide { grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); }
+@media (max-width: 760px) { .scene, .scene.wide { grid-template-columns: 1fr; } }
+.scene .copy { display: grid; gap: 10px; min-width: 0; }
+.scene .copy ul { margin: 0; padding-left: 18px; display: grid; gap: 4px; color: var(--muted); font-size: 14px; }
+.tag { display: inline-flex; gap: 6px; align-items: center; font-family: var(--font-mono); font-size: 12px; color: var(--muted); }
+.pill { font-family: var(--font-body); font-size: 12px; padding: 2px 8px; border-radius: 99px; border: 1px solid var(--line); color: var(--fg); }
+.pill.hot { border-color: var(--accent); color: var(--accent); }
+.pill.warn { border-color: var(--warn); color: var(--warn); }
+.device { display: grid; justify-items: center; gap: 8px; min-width: 0; }
+.device svg { width: 100%; height: auto; display: block; border-radius: 14px; }
+.device .cap { font-family: var(--font-mono); font-size: 12px; color: var(--muted); text-align: center; }
+.portrait svg { max-width: 330px; }
+.outer svg { max-width: 260px; }
+.laptop { perspective: 900px; display: grid; justify-items: center; width: 100%; }
+.laptop .top, .laptop .bottom { width: 100%; max-width: 360px; }
+.laptop .top { border-radius: 14px 14px 0 0; }
+.laptop .bottom { transform: rotateX(52deg); transform-origin: top center; margin-top: -2px; border-radius: 0 0 14px 14px; }
+table { border-collapse: collapse; width: 100%; font-size: 14px; }
+.tablebox { overflow-x: auto; background: var(--paper); border: 1px solid var(--line); border-radius: 10px; }
+th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-weight: 500; color: var(--muted); font-size: 13px; }
+tr:last-child td { border-bottom: 0; }
+code { font-family: var(--font-mono); font-size: 13px; }
+ol.steps { margin: 0; padding-left: 20px; display: grid; gap: 8px; }
+ol.steps li { max-width: 70ch; }
+ol.steps small { color: var(--muted); display: block; }
+.note { border-left: 3px solid var(--warn); padding: 10px 14px; background: var(--paper); border-radius: 0 8px 8px 0; color: var(--muted); font-size: 14px; }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">ScheduleDensity · iPhone Duo · 시안 v1 · 2026-10-17</div>
+    <h1>욕망의 무지개, 펼치면 할 일과 그 일의 단계가 마주 본다</h1>
+    <p class="lede">두번알림·클립키보드와 같은 듀오 규칙을 씁니다. 손이 고르는 쪽(왼쪽·아래)에는 목록과 격자를, 눈이 확인하는 쪽(오른쪽·위)에는 고른 것의 속을 둡니다. 지금은 줄을 누를 때마다 화면을 밀어 넣고(push) 다시 빠져나오는데, 펴면 그 왕복이 사라집니다. 접으면 지금 아이폰 화면 그대로입니다.</p>
+  </header>
+
+  <section>
+    <h2>가져온 원칙 넷</h2>
+    <div class="rules">
+      <div class="rule"><b>접으면 지금 그대로</b><span>바깥 화면 466×678pt는 지금 앱 그대로입니다. 탭 넷(할 일, 무지개, 하루, 공유)도 그대로입니다.</span></div>
+      <div class="rule"><b>손은 왼쪽·아래</b><span>할 일 목록, 무지개 격자, 탭 바, 타이머 막대가 고르는 쪽 판에 섭니다.</span></div>
+      <div class="rule"><b>눈은 오른쪽·위</b><span>고른 할 일의 단계, 고른 날의 하루, 지금 도는 조각의 남은 시간을 결과 쪽 판에 둡니다.</span></div>
+      <div class="rule"><b>선 앞뒤 24pt는 비움</b><span>타이머 막대, 쪼개기 권유 막대, 시트, 탭 바 무엇도 접힌 선을 가로지르지 않습니다.</span></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>자세별 화면</h2>
+
+    <div class="scene wide">
+      <div class="device"><svg id="m-todo" viewBox="0 0 951 669" role="img" aria-label="가로로 편 할 일 화면: 왼쪽 목록, 오른쪽 단계"></svg><div class="cap">안쪽 화면 · 가로로 폄 · 951×669pt</div></div>
+      <div class="copy">
+        <span class="tag">할 일 <span class="pill hot">가장 먼저</span></span>
+        <h3>왼쪽 이번 주 할 일 | 오른쪽 그 일의 단계</h3>
+        <p>매일 여는 화면입니다. 지금은 줄을 누르면 <code>TodoDetailView</code> 로 밀려 들어가 목록이 사라지고, 단계를 하나 넘기면 다시 돌아와야 다음 일이 보입니다. 펴면 목록은 그대로 서 있고 오른쪽만 바뀝니다.</p>
+        <ul>
+          <li>오른쪽 맨 위는 "다음에 집을 조각". 번개 한 줄이 곧 시작 버튼</li>
+          <li>단계를 넘기면 왼쪽 줄의 도넛이 같이 찹니다. 두 판이 같은 숫자를 말함</li>
+          <li>아무것도 안 골랐으면 오른쪽에 "바로 하면 되는 일" 전부를 크게</li>
+          <li>탭 바와 타이머 막대는 왼쪽 판 바닥에만</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="scene wide">
+      <div class="device"><svg id="m-rainbow" viewBox="0 0 951 669" role="img" aria-label="가로로 편 무지개 화면: 왼쪽 격자, 오른쪽 그날 하루"></svg><div class="cap">무지개 · 가로로 폄</div></div>
+      <div class="copy">
+        <span class="tag">무지개</span>
+        <h3>왼쪽 무지개 격자 | 오른쪽 고른 날의 하루</h3>
+        <p>지금은 날짜를 누르면 하루 탭으로 건너가 무지개가 사라집니다. "왜 이날이 진하지?"를 확인하려면 탭을 오가야 합니다. 펴면 진한 칸과 그 이유가 나란히 보입니다.</p>
+        <ul>
+          <li>격자는 지금처럼 날짜 50pt + 레인 7개 × 40pt = 330pt. 판 하나(463pt)에 그대로 들어감</li>
+          <li>날짜를 누르면 오른쪽 하루가 바뀌고 탭은 그대로</li>
+          <li>오른쪽에서 일정을 고르면 왼쪽 격자에서 그 일정 칸만 진하게</li>
+          <li>빈 칸을 꾹 눌러 끄는 일정 추가는 왼쪽에서, 추가 시트는 오른쪽 판에만</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="scene">
+      <div class="device portrait"><svg id="m-port" viewBox="0 0 669 951" role="img" aria-label="세로로 편 화면: 위 오늘과 이번 주, 아래 할 일"></svg><div class="cap">세로로 폄 · 669×951pt</div></div>
+      <div class="copy">
+        <span class="tag">할 일 · 세로</span>
+        <h3>위 오늘의 무지개 | 아래 할 일</h3>
+        <p>세로로 펴면 위 판이 넓습니다. 하루를 가로로 눕힌 띠로 그리고 지금 시각에 선을 긋습니다. 아래 판은 바깥 화면과 거의 같은 크기라 할 일 목록이 접었을 때와 같은 모양으로 섭니다.</p>
+        <ul>
+          <li>위: 오늘 일정 띠 + 이번 주 7일의 밀도 막대. 할 일을 고르기 전에 "오늘 비는 시간이 있나"가 먼저 보임</li>
+          <li>아래: 번개 먼저, 그다음 시간을 잡은 일</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="scene">
+      <div class="device">
+        <div class="laptop">
+          <svg class="top" id="m-lap-top" viewBox="0 0 669 463" role="img" aria-label="반쯤 접어 세운 위 판: 지금 조각의 남은 시간"></svg>
+          <svg class="bottom" id="m-lap-bottom" viewBox="0 0 669 463" role="img" aria-label="반쯤 접어 눕힌 아래 판: 단계와 버튼"></svg>
+        </div>
+        <div class="cap">반쯤 접어 세움 · 위 판 세움 / 아래 판 눕힘</div>
+      </div>
+      <div class="copy">
+        <span class="tag">타이머 <span class="pill hot">이 앱만의 자리</span></span>
+        <h3>책상에 세워 두는 조각 타이머</h3>
+        <p>타이머를 켜고 일을 시작하면 폰은 대개 책상에 엎어집니다. 그러면 남은 시간도, 다음 단계도 안 보입니다. 반쯤 접어 세우면 모니터 옆에 서는 작은 시계가 됩니다.</p>
+        <ul>
+          <li>위 판(세움): 남은 시간, 지금 조각 이름, 몇 번째 단계인지</li>
+          <li>아래 판(눕힘): 단계 목록과 크게 누르는 "이 조각 끝냄"</li>
+          <li>끝냄을 누르면 다음 조각이 위 판에 올라옴. 쪼개 둔 단계가 실제로 굴러가는 모습</li>
+          <li>지금 <code>TimerView</code> 시트가 하는 일을 판 둘로</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="scene">
+      <div class="device outer"><svg id="m-outer" viewBox="0 0 466 678" role="img" aria-label="접은 바깥 화면: 지금 앱 그대로"></svg><div class="cap">접음 · 466×678pt · 지금 그대로</div></div>
+      <div class="copy">
+        <span class="tag">접음</span>
+        <h3>접으면 아무것도 바뀌지 않는다</h3>
+        <p>지금 아이폰에서 보는 할 일 화면과 같습니다. 폭이 393pt에서 466pt로 조금 넓어질 뿐입니다.</p>
+        <ul>
+          <li>펼친 채 열어 둔 할 일이 있으면 접는 순간 그 상세로 밀려 들어간 상태가 됨. 보던 것을 잃지 않음</li>
+          <li><code>VaultViews</code> 의 고정 폭 520pt는 466pt를 넘으니 확인할 것</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>그 밖의 화면</h2>
+    <div class="tablebox"><table>
+      <thead><tr><th>화면</th><th>고르는 쪽 (손)</th><th>결과 쪽 (눈)</th></tr></thead>
+      <tbody>
+        <tr><td>하루</td><td>시간축과 일정 알약</td><td>고른 일정의 상세 카드. 지금 시트로 뜨는 것을 판에 고정, 타이머 시작도 여기서</td></tr>
+        <tr><td>할 일 쪼개기 도우미</td><td>두 질문과 답 입력</td><td>쪼갠 단계가 쌓이는 모습을 바로</td></tr>
+        <tr><td>이번 주 결산</td><td>주 고르기</td><td>쓴 시간과 회수한 시간 장부</td></tr>
+        <tr><td>공유 (Pro)</td><td>공유받은 사람 목록</td><td>그 사람 무지개와 내 무지개를 겹쳐서</td></tr>
+        <tr><td>설정</td><td>설정 목록</td><td>고른 항목. 카테고리 관리면 색 미리보기</td></tr>
+        <tr><td>통계 (Pro)</td><td>기간과 카테고리</td><td>차트</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section>
+    <h2>이 앱에서 특히 조심할 것</h2>
+    <div class="tablebox"><table>
+      <thead><tr><th>지금 코드</th><th>펼치면 생기는 일</th><th>할 일</th></tr></thead>
+      <tbody>
+        <tr><td>루트가 <code>TabView</code> 하나 (<code>ScheduleDensityApp.swift:336</code>)</td><td>탭 바가 951pt 전체 폭으로 깔려 선을 가로지름</td><td>펴면 탭 바를 왼쪽 판 바닥으로 (<code>FoldTabBar</code>)</td></tr>
+        <tr><td><code>TimerBar</code> 가 <code>safeAreaInset(.bottom)</code> (<code>TimerView.swift:669</code>)</td><td>타이머 막대가 두 판에 걸침</td><td>왼쪽 판 안쪽 inset 으로</td></tr>
+        <tr><td>쪼개기 권유 막대 <code>.overlay(alignment: .bottom)</code> (<code>TimelineDensityView.swift:291</code>)</td><td>같은 이유로 선을 넘음</td><td>격자 판 안에 가둠</td></tr>
+        <tr><td>하루 트랙 폭 = GeometryReader 폭 (<code>DayTimelineView.swift:273</code>)</td><td>판 하나에 들어가면 괜찮지만, 전체 폭을 받으면 알약이 선 위로 늘어남</td><td>하루는 결과 쪽 판 폭으로만 잰다</td></tr>
+        <tr><td>무지개의 드래그 선택, 오늘로 스크롤, 온보딩 단계가 뷰의 <code>@State</code> (<code>TimelineDensityView.swift:15-83</code>)</td><td>펴고 접을 때 뷰를 갈아 끼우면 선택이 풀리고 오늘로 한 번 더 튐</td><td>같은 뷰로 남게 (<code>FoldSplitView</code> 의 <code>AnyLayout</code> 방식)</td></tr>
+        <tr><td><code>TodoView</code> 의 <code>isAdding</code>·<code>newTitle</code>·<code>pushedTodo</code> 가 <code>@State</code></td><td>적던 할 일이 접는 순간 사라짐</td><td>위와 같음. 펼친 상태의 선택을 <code>pushedTodo</code> 와 한 값으로</td></tr>
+        <tr><td>온보딩 스포트라이트 앵커 (<code>TimelineDensityView.swift:317</code>, <code>TodoDetailView.swift:127</code>)</td><td>접힘이 바뀌면 구멍이 엉뚱한 곳을 가리킴</td><td>접힘이 바뀌면 앵커를 다시 잰다</td></tr>
+        <tr><td>시트 여러 곳 (일정 추가·보기, 마감, 결산, 페이월, 설정)</td><td>창 바닥부터 올라와 선을 덮음</td><td>클립키보드 <code>FoldSheetGuard</code> 그대로</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section>
+    <h2>제안 순서</h2>
+    <ol class="steps">
+      <li><b>클립키보드의 Fold 모듈을 LeeoKit 으로 옮긴다.</b><small>두번알림 시안의 1번과 같은 일입니다. 세 앱이 같은 모듈을 쓰면 한 번 고쳐 세 앱이 같이 낫습니다.</small></li>
+      <li><b>할 일: 목록 | 단계.</b><small>매일 여는 화면이고, <code>TodoDetailView</code> 를 오른쪽 판에 그대로 넣으면 됩니다. 새로 그릴 것이 거의 없습니다.</small></li>
+      <li><b>탭 바·타이머 막대·시트를 선에서 비킨다.</b><small>안 하면 펼친 화면이 깨져 보입니다. 1번을 하면 거의 공짜입니다.</small></li>
+      <li><b>무지개: 격자 | 하루.</b><small>격자가 이미 330pt 고정이라 판 하나에 맞습니다. 하루 탭 화면을 오른쪽에 넣습니다.</small></li>
+      <li><b>반쯤 접어 세우는 조각 타이머.</b><small>스크린샷과 소개 페이지의 얼굴이 될 수 있습니다. 반쯤 접힌 자세를 시스템이 알려 주는지부터 확인합니다.</small></li>
+      <li><b>세로로 편 화면, 그 밖의 화면.</b></li>
+    </ol>
+    <p class="note">펼친 화면은 전부 무료입니다. 화면을 나누는 것은 기능이 아니라 기기를 제대로 쓰는 것이라, 막으면 고장으로 읽힙니다. 공유·통계처럼 원래 '모두 열기'에 들어 있는 것만 지금처럼 잠깁니다. 이 앱은 지금 iPhone 전용(<code>TARGETED_DEVICE_FAMILY = 1</code>)이고 iPad 대응 코드가 하나도 없어서, 맥 앱(무지개 공방)과 달리 넓은 화면 레이아웃을 처음부터 만들어야 합니다.</p>
+  </section>
+</div>
+
+<script>
+(function () {
+  const C = { bg: "#f2f2f7", card: "#ffffff", line: "#e5e5ea", text: "#111111", sub: "#8e8e93", blue: "#007aff",
+    bolt: "#63a82f", boltBg: "#e6f1dc", red: "#ff3b30", orange: "#ff9500", yellow: "#ffcc00", green: "#34c759", hinge: "#c43d3d" };
+  const esc = s => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;");
+  const t = (x, y, s, size, fill, o = {}) =>
+    `<text x="${x}" y="${y}" font-size="${size}" fill="${fill}" font-family="${o.mono ? "IBM Plex Mono, monospace" : "IBM Plex Sans KR, -apple-system, sans-serif"}" font-weight="${o.w || 500}" text-anchor="${o.a || "start"}">${esc(s)}</text>`;
+  const r = (x, y, w, h, fill, rx = 0, extra = "") => `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${rx}" fill="${fill}" ${extra}/>`;
+  const defs = `<defs><pattern id="hatch" width="10" height="10" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="10" height="10" fill="#fbeaea"/><line x1="0" y1="0" x2="0" y2="10" stroke="${C.hinge}" stroke-opacity=".35" stroke-width="3"/></pattern></defs>`;
+  const hingeV = (x, h) => r(x - 12, 0, 24, h, "url(#hatch)") + `<line x1="${x}" y1="0" x2="${x}" y2="${h}" stroke="${C.hinge}" stroke-dasharray="6 6" stroke-width="2"/>`;
+  const hingeH = (y, w) => r(0, y - 12, w, 24, "url(#hatch)") + `<line x1="0" y1="${y}" x2="${w}" y2="${y}" stroke="${C.hinge}" stroke-dasharray="6 6" stroke-width="2"/>`;
+  const status = (x, y) => t(x, y, "9:41", 17, C.text, { w: 700 });
+  const bolt = (x, y, s = 1) => `<path d="M${x + 4 * s} ${y - 9 * s} l-7 ${11 * s} h${6 * s} l-3 ${9 * s} l${8 * s} -${12 * s} h-${6 * s} z" fill="${C.bolt}"/>`;
+  const donut = (cx, cy, rad, done, total, col = C.blue) => {
+    const c = 2 * Math.PI * rad;
+    return `<circle cx="${cx}" cy="${cy}" r="${rad}" fill="none" stroke="${C.line}" stroke-width="4"/><circle cx="${cx}" cy="${cy}" r="${rad}" fill="none" stroke="${col}" stroke-width="4" stroke-dasharray="${c * done / total} ${c}" transform="rotate(-90 ${cx} ${cy})" stroke-linecap="round"/>`;
+  };
+  function tabbar(x, y, w, active) {
+    const items = ["할 일", "무지개", "하루", "공유"];
+    let s = r(x, y, w, 54, C.card, 27, `stroke="${C.line}"`);
+    items.forEach((l, i) => {
+      const cx = x + w * (i + .5) / items.length, on = i === active;
+      if (on) s += r(cx - w / 8 + 6, y + 5, w / 4 - 12, 44, "#e8f1ff", 22);
+      s += `<circle cx="${cx}" cy="${y + 20}" r="7" fill="none" stroke="${on ? C.blue : C.sub}" stroke-width="2.2"/>` + t(cx, y + 43, l, 12, on ? C.blue : C.sub, { a: "middle", w: on ? 700 : 500 });
+    });
+    return s;
+  }
+  function timerbar(x, y, w, label, time) {
+    return r(x, y, w, 48, C.card, 14, `stroke="${C.line}"`) + `<circle cx="${x + 26}" cy="${y + 24}" r="13" fill="${C.blue}"/>` + r(x + 21, y + 17, 4, 14, "#fff", 1) + r(x + 28, y + 17, 4, 14, "#fff", 1) +
+      t(x + 50, y + 30, label, 15, C.text, { w: 700 }) + t(x + w - 16, y + 31, time, 18, C.blue, { a: "end", w: 700, mono: true });
+  }
+  // 할 일 목록 (접은 화면과 펼친 왼쪽 판이 같이 쓴다)
+  function todoList(x, y, w, opts = {}) {
+    let s = "", cy = y;
+    const head = l => { s += t(x + 4, cy, l, 13, C.sub); cy += 10; };
+    const card = (rows, bg = C.card) => {
+      s += r(x, cy, w, rows.length * 50, bg, 12);
+      rows.forEach((row, i) => { row(cy + i * 50); if (i < rows.length - 1) s += r(x + 16, cy + i * 50 + 50, w - 16, 1, C.line); });
+      cy += rows.length * 50 + 22;
+    };
+    if (!opts.skipRainbow) { head("무지개에 걸려 있는 일");
+    card([
+      yy => { s += r(x + 14, yy + 14, 6, 22, C.red, 3) + t(x + 30, yy + 23, "프로젝트 A", 15, C.text, { w: 700 }) + t(x + 30, yy + 41, "3/2 ~ 3/9 · 하루 8시간", 12, C.sub) + t(x + w - 14, yy + 31, "D-3", 15, C.orange, { a: "end", w: 700 }); },
+      yy => { s += r(x + 14, yy + 14, 6, 22, C.yellow, 3) + t(x + 30, yy + 23, "출장", 15, C.text, { w: 700 }) + t(x + 30, yy + 41, "3/5 ~ 3/7 · 하루 10시간", 12, C.sub) + t(x + w - 14, yy + 31, "D-5", 15, C.sub, { a: "end", w: 700 }); }]); }
+    head("바로 하면 되는 일");
+    card([
+      yy => { s += bolt(x + 22, yy + 25) + t(x + 40, yy + 31, "견적서 회신하기", 15, C.text) + t(x + w - 14, yy + 31, "5분", 14, C.bolt, { a: "end", w: 700 }); },
+      yy => { s += bolt(x + 22, yy + 25) + t(x + 40, yy + 31, "리뷰 코멘트에 답하기", 15, C.text) + t(x + w - 14, yy + 31, "5분", 14, C.bolt, { a: "end", w: 700 }); }], C.boltBg);
+    head("시간을 잡은 일");
+    card([
+      yy => { if (opts.selected) s += r(x, yy, w, 50, "#e8f1ff", 12); s += donut(x + 24, yy + 25, 9, 2, 5) + t(x + 44, yy + 23, "기획서 초안 작성", 15, C.text, { w: 700 }) + t(x + 44, yy + 41, "개발 · 프로젝트 A", 12, C.sub) + t(x + w - 14, yy + 31, "2/5", 14, C.blue, { a: "end", w: 700, mono: true }); },
+      yy => { s += donut(x + 24, yy + 25, 9, 0, 3) + t(x + 44, yy + 23, "발표 자료 정리", 15, C.text, { w: 700 }) + t(x + 44, yy + 41, "교육 프로그램", 12, C.sub) + t(x + w - 14, yy + 31, "0/3", 14, C.sub, { a: "end", w: 700, mono: true }); }]);
+    return s;
+  }
+  function navTitle(x, y, w, title) {
+    return `<circle cx="${x + 18}" cy="${y - 6}" r="16" fill="${C.card}" stroke="${C.line}"/>` + r(x + 11, y - 12, 14, 2, C.text) + r(x + 11, y - 7, 14, 2, C.text) + r(x + 11, y - 2, 10, 2, C.text) +
+      t(x + w / 2, y, title, 17, C.text, { a: "middle", w: 700 }) + `<circle cx="${x + w - 18}" cy="${y - 6}" r="16" fill="${C.blue}"/>` + t(x + w - 18, y, "+", 22, "#fff", { a: "middle", w: 700 });
+  }
+
+  // A. 할 일 · 가로
+  (function () {
+    const W = 951, H = 669, hx = W / 2;
+    let s = defs + r(0, 0, W, H, C.bg) + status(28, 30) + navTitle(20, 68, 423, "이번 주 할 일");
+    s += todoList(20, 104, 423, { selected: true }) + timerbar(20, 534, 423, "기획서 초안 작성", "18:24") + tabbar(20, 596, 423, 0);
+    const X = 508, RW = 423;
+    s += t(X, 68, "기획서 초안 작성", 24, C.text, { w: 700 }) + t(X, 94, "개발 · 프로젝트 A · 3/9 마감", 14, C.sub) + donut(X + RW - 22, 66, 18, 2, 5) + t(X + RW - 22, 71, "2/5", 12, C.blue, { a: "middle", w: 700, mono: true });
+    s += t(X + 4, 134, "다음에 집을 조각", 13, C.sub) + r(X, 144, RW, 64, C.boltBg, 14) + bolt(X + 26, 176, 1.2) + t(X + 48, 172, "목차 세 줄 적기", 17, C.text, { w: 700 }) + t(X + 48, 194, "5분이면 됩니다", 13, C.sub) +
+      r(X + RW - 96, 160, 80, 32, C.bolt, 16) + t(X + RW - 56, 181, "시작", 14, "#fff", { a: "middle", w: 700 });
+    s += t(X + 4, 240, "단계", 13, C.sub) + r(X, 250, RW, 5 * 50, C.card, 12);
+    [["자료 모으기", 1], ["핵심 메시지 한 줄", 1], ["목차 세 줄 적기", 2], ["본문 초안", 0], ["다듬고 보내기", 0]].forEach(([l, st], i) => {
+      const yy = 250 + i * 50;
+      if (st === 2) s += r(X, yy, RW, 50, "#f3f9ee", i === 0 ? 12 : 0);
+      s += st === 1 ? `<circle cx="${X + 26}" cy="${yy + 25}" r="10" fill="${C.blue}"/><path d="M${X + 21} ${yy + 25} l4 4 l7 -8" stroke="#fff" stroke-width="2.4" fill="none" stroke-linecap="round"/>` : `<circle cx="${X + 26}" cy="${yy + 25}" r="10" fill="none" stroke="${st === 2 ? C.bolt : C.sub}" stroke-width="2"/>`;
+      s += t(X + 48, yy + 31, `${i + 1}. ${l}`, 15, st === 1 ? C.sub : C.text, { w: st === 2 ? 700 : 500 });
+      if (st === 2) s += t(X + RW - 14, yy + 31, "지금", 13, C.bolt, { a: "end", w: 700 });
+      if (i < 4) s += r(X + 48, yy + 50, RW - 48, 1, C.line);
+    });
+    s += r(X, 528, RW, 52, C.card, 14, `stroke="${C.line}"`) + t(X + RW / 2, 560, "단계 더 쪼개기", 15, C.blue, { a: "middle", w: 700 });
+    s += hingeV(hx, H);
+    document.getElementById("m-todo").innerHTML = s;
+  })();
+
+  // 무지개 격자 데이터 (2026년 3월. 3/1 이 일요일)
+  const EV = [{ n: "프로젝트 A", c: C.red, lane: 0, a: 2, b: 9 }, { n: "프로젝트 B", c: C.orange, lane: 1, a: 4, b: 12 },
+    { n: "출장", c: C.yellow, lane: 2, a: 5, b: 7 }, { n: "교육 프로그램", c: C.green, lane: 3, a: 10, b: 14 }, { n: "컨퍼런스", c: C.blue, lane: 2, a: 11, b: 12 }];
+  const DOW = ["일", "월", "화", "수", "목", "금", "토"];
+
+  // B. 무지개 · 가로
+  (function () {
+    const W = 951, H = 669, hx = W / 2;
+    let s = defs + r(0, 0, W, H, C.bg) + status(28, 30) + t(231, 68, "무지개", 17, C.text, { a: "middle", w: 700 }) + t(66, 98, "2026년 3월", 15, C.text, { w: 700 });
+    const gx = 66, lx = gx + 50, top = 112, rh = 30;
+    s += r(gx, top, 330, rh * 14, C.card, 10);
+    for (let d = 2; d <= 15; d++) {
+      const y = top + (d - 2) * rh, dow = DOW[d % 7], wk = d % 7 === 0 || d % 7 === 6;
+      if (d === 5) s += r(gx, y, 330, rh, "#e8f1ff", 0) + r(gx, y, 330, rh, "none", 6, `stroke="${C.blue}" stroke-width="2"`);
+      s += t(gx + 8, y + 20, `${d} ${dow}`, 13, wk ? C.red : C.text, { w: d === 5 ? 700 : 500 });
+      if (d < 15) s += r(gx, y + rh, 330, 1, C.line);
+    }
+    EV.forEach(e => { s += r(lx + e.lane * 40 + 4, top + (e.a - 2) * rh + 3, 32, (e.b - e.a + 1) * rh - 6, e.c, 8, 'fill-opacity=".85"'); });
+    s += t(gx, top + rh * 14 + 26, "진할수록 많이 겹친 날", 13, C.sub);
+    s += tabbar(20, 596, 423, 1);
+    const X = 508, RW = 423;
+    s += t(X, 68, "3월 5일 목요일", 24, C.text, { w: 700 }) + t(X, 94, "일정 3개가 겹친 날", 14, C.orange, { w: 700 });
+    const ty = 120, hh = 44;
+    for (let h = 9; h <= 19; h++) { const y = ty + (h - 9) * hh; s += t(X + 28, y + 5, `${h}`, 12, C.sub, { a: "end", mono: true }) + r(X + 38, y, RW - 38, 1, C.line); }
+    const pill = (col, h1, h2, label, c, sub) => {
+      const x0 = X + 46 + col * 128;
+      return r(x0, ty + (h1 - 9) * hh + 2, 120, (h2 - h1) * hh - 4, c, 12, 'fill-opacity=".9"') + t(x0 + 12, ty + (h1 - 9) * hh + 24, label, 14, c === C.yellow ? "#5a4500" : "#fff", { w: 700 }) + t(x0 + 12, ty + (h1 - 9) * hh + 42, sub, 12, c === C.yellow ? "#5a4500" : "#ffffffcc");
+    };
+    s += pill(0, 9, 13, "프로젝트 A", C.red, "9:00 ~ 13:00") + pill(1, 10, 18, "출장", C.yellow, "10:00 ~ 18:00") + pill(2, 14, 18, "프로젝트 B", C.orange, "14:00 ~ 18:00");
+    const ny = ty + 2.33 * hh;
+    s += `<circle cx="${X + 40}" cy="${ny}" r="5" fill="${C.red}"/>` + r(X + 40, ny - 1, RW - 40, 2, C.red);
+    s += hingeV(hx, H);
+    document.getElementById("m-rainbow").innerHTML = s;
+  })();
+
+  // C. 세로 폄
+  (function () {
+    const W = 669, H = 951, hy = H / 2;
+    let s = defs + r(0, 0, W, H, C.bg) + status(28, 36);
+    s += t(28, 82, "오늘 · 3월 5일 목", 22, C.text, { w: 700 }) + t(W - 28, 82, "겹친 일정 3개", 14, C.orange, { a: "end", w: 700 });
+    const bx = 60, bw = W - 88, h0 = 9, h1 = 19, xa = h => bx + bw * (h - h0) / (h1 - h0);
+    for (let h = 9; h <= 19; h += 2) s += t(xa(h), 120, `${h}`, 12, C.sub, { a: "middle", mono: true }) + r(xa(h), 128, 1, 132, C.line);
+    [[9, 13, C.red, "프로젝트 A"], [10, 18, C.yellow, "출장"], [14, 18, C.orange, "프로젝트 B"]].forEach(([a, b, c, n], i) => {
+      s += r(xa(a), 136 + i * 40, xa(b) - xa(a) - 4, 32, c, 10, 'fill-opacity=".9"') + t(xa(a) + 10, 157 + i * 40, n, 13, c === C.yellow ? "#5a4500" : "#fff", { w: 700 });
+    });
+    s += r(xa(11.33) - 1, 128, 2, 136, C.red) + `<circle cx="${xa(11.33)}" cy="128" r="5" fill="${C.red}"/>`;
+    s += t(28, 304, "이번 주", 15, C.text, { w: 700 });
+    [2, 3, 4, 3, 1, 0, 0].forEach((n, i) => {
+      const x = 40 + i * 86, hgt = 20 + n * 22;
+      s += r(x, 420 - hgt, 60, hgt, C.red, 8, `fill-opacity="${0.18 + n * 0.2}"`) + t(x + 30, 440, ["월", "화", "수", "목", "금", "토", "일"][i], 13, i === 3 ? C.blue : (i > 4 ? C.red : C.sub), { a: "middle", w: i === 3 ? 700 : 500 });
+    });
+    s += navTitle(20, 524, W - 40, "이번 주 할 일") + todoList(20, 552, W - 40, { skipRainbow: true }) + timerbar(20, 820, W - 40, "기획서 초안 작성", "18:24") + tabbar(20, 880, W - 40, 0);
+    s += hingeH(hy, W);
+    document.getElementById("m-port").innerHTML = s;
+  })();
+
+  // D. 반쯤 접어 세움
+  (function () {
+    const W = 669, H = 463;
+    let top = r(0, 0, W, H, C.bg) + t(32, 54, "기획서 초안 작성", 22, C.text, { w: 700 }) + t(W - 32, 54, "3 / 5 단계", 18, C.blue, { a: "end", w: 700 });
+    top += bolt(40, 98, 1.3) + t(62, 106, "목차 세 줄 적기", 26, C.bolt, { w: 700 });
+    top += t(W / 2, 300, "3:42", 190, C.text, { a: "middle", w: 700, mono: true });
+    top += r(32, 370, W - 64, 12, C.line, 6) + r(32, 370, (W - 64) * 0.26, 12, C.bolt, 6);
+    top += t(32, 420, "이 조각 5분 중 1:18 지남", 15, C.sub) + t(W - 32, 420, "오늘 한 조각 4개", 15, C.sub, { a: "end" });
+    document.getElementById("m-lap-top").innerHTML = defs + top + hingeH(H - 6, W);
+    let bot = r(0, 0, W, H, C.bg) + r(24, 24, W - 48, 250, C.card, 16);
+    [["자료 모으기", 1], ["핵심 메시지 한 줄", 1], ["목차 세 줄 적기", 2], ["본문 초안", 0]].forEach(([l, st], i) => {
+      const y = 70 + i * 54;
+      bot += st === 1 ? `<circle cx="60" cy="${y - 7}" r="12" fill="${C.blue}"/>` : `<circle cx="60" cy="${y - 7}" r="12" fill="none" stroke="${st === 2 ? C.bolt : C.sub}" stroke-width="2.5"/>`;
+      bot += t(86, y, l, 21, st === 1 ? C.sub : C.text, { w: st === 2 ? 700 : 400 });
+    });
+    bot += r(W / 2 - 250, 320, 330, 96, C.bolt, 48) + t(W / 2 - 85, 378, "이 조각 끝냄", 26, "#fff", { a: "middle", w: 700 });
+    bot += `<circle cx="${W / 2 + 160}" cy="368" r="48" fill="${C.card}" stroke="${C.line}" stroke-width="2"/>` + r(W / 2 + 145, 348, 10, 40, C.text, 3) + r(W / 2 + 165, 348, 10, 40, C.text, 3);
+    document.getElementById("m-lap-bottom").innerHTML = defs + bot;
+  })();
+
+  // E. 바깥 화면
+  (function () {
+    const W = 466, H = 678;
+    let s = r(0, 0, W, H, C.bg) + status(24, 32) + navTitle(18, 72, W - 36, "이번 주 할 일") + todoList(18, 108, W - 36) + timerbar(18, 546, W - 36, "기획서 초안 작성", "18:24") + tabbar(18, 608, W - 36, 0);
+    document.getElementById("m-outer").innerHTML = s;
+  })();
+})();
+</script>
+
+</body></html>

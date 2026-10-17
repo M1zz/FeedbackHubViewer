@@ -18,6 +18,12 @@ struct DesignDocsView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
+                // 화면 설계도는 아티팩트 주소라 폴더 허락 없이도, 맥이 아니어도 판정한다.
+                if let project {
+                    DesignBlueprintCard(project: project)
+                } else {
+                    DesignBlueprintRollCall()
+                }
                 if !DesignDocsStore.isSupported {
                     message("설계 문서는 앱 리포가 있는 맥에서만 열 수 있습니다.", systemImage: "desktopcomputer")
                 } else if design.workspace == nil {

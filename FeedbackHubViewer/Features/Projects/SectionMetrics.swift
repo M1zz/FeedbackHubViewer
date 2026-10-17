@@ -147,9 +147,10 @@ struct SectionMetrics {
             guard case .ready? = purchases.storeAnalytics[project]?.value else { return "리포트 없음" }
             return count > 0 ? "문제 \(count)개" : "문제 없음"
         case .design:
-            guard DesignDocsStore.isSupported else { return "맥에서" }
-            guard design.workspace != nil else { return "폴더 고르기" }
-            return count > 0 ? "\(count)장" : "없음"
+            let blueprint = project.map { DesignBlueprints.source(for: $0, design: design) != nil ? "설계도 있음" : "설계도 없음" }
+                ?? "설계도 \(DesignBlueprints.webURLs.count)개"
+            guard DesignDocsStore.isSupported, design.workspace != nil, count > 0 else { return blueprint }
+            return "\(blueprint) · 문서 \(count)장"
         }
     }
 
@@ -253,7 +254,7 @@ struct SectionMetrics {
             text += feed.unanswered > 0 ? " · 답 안 함 \(feed.unanswered)건" : " · 모두 답함"
             return text
         case .design:
-            return "문제 정의부터 솔루션까지 · 리포의 \(DesignDocsStore.folder)"
+            return "화면 설계도 · 문제 정의부터 솔루션까지 · 리포의 \(DesignDocsStore.folder)"
         case .storeAnalytics:
             guard purchases.isConfigured else { return "App Store Connect 키를 넣으면 Apple 이 모은 분석 리포트가 나옵니다" }
             guard let project else {

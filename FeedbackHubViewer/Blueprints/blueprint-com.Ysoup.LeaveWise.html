@@ -1,0 +1,360 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif}img{max-width:100%}</style></head><body>
+<title>골드위크 듀오 시안</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* 레이아웃: 한 줄 설명 → 원칙 → 자세별 기기 시안(실측 pt 를 viewBox 로 그대로) → 코드 규칙 → 순서. 두번알림·욕망의 무지개 듀오 시안과 같은 틀 */
+:root {
+  --bg: #f3f4f6;
+  --paper: #ffffff;
+  --fg: #16181d;
+  --muted: #5d6470;
+  --line: #d9dde3;
+  --accent: #0a6fe0;
+  --bolt: #4f8f1f;
+  --warn: #c76a00;
+  --font-body: "IBM Plex Sans KR", system-ui, -apple-system, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0e1013; --paper: #171a1f; --fg: #e9ebef; --muted: #9aa2ad; --line: #2b3038;
+  --accent: #4da3ff; --bolt: #8fd14f; --warn: #ffae3d; color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #0e1013; --paper: #171a1f; --fg: #e9ebef; --muted: #9aa2ad; --line: #2b3038;
+  --accent: #4da3ff; --bolt: #8fd14f; --warn: #ffae3d; color-scheme: dark; }
+
+body { background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 15px; line-height: 1.6; }
+.wrap { max-width: 1080px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 40px 72px; display: grid; gap: 48px; }
+h1 { font-size: 30px; line-height: 1.25; margin: 0; text-wrap: balance; font-weight: 700; }
+h2 { font-size: 21px; margin: 0; text-wrap: balance; }
+h3 { font-size: 16px; margin: 0; }
+p { margin: 0; max-width: 66ch; }
+.lede { color: var(--muted); font-size: 16px; }
+.eyebrow { font-family: var(--font-mono); font-size: 12px; letter-spacing: .06em; color: var(--muted); text-transform: uppercase; }
+header { display: grid; gap: 12px; }
+section { display: grid; gap: 20px; }
+.rules { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px; }
+.rule { background: var(--paper); border: 1px solid var(--line); border-radius: 10px; padding: 16px; display: grid; gap: 6px; align-content: start; }
+.rule span { color: var(--muted); font-size: 14px; }
+.scene { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 28px; align-items: center; background: var(--paper); border: 1px solid var(--line); border-radius: 14px; padding: 24px; }
+.scene.wide { grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); }
+@media (max-width: 760px) { .scene, .scene.wide { grid-template-columns: 1fr; } }
+.scene .copy { display: grid; gap: 10px; min-width: 0; }
+.scene .copy ul { margin: 0; padding-left: 18px; display: grid; gap: 4px; color: var(--muted); font-size: 14px; }
+.tag { display: inline-flex; gap: 6px; align-items: center; font-family: var(--font-mono); font-size: 12px; color: var(--muted); }
+.pill { font-family: var(--font-body); font-size: 12px; padding: 2px 8px; border-radius: 99px; border: 1px solid var(--line); color: var(--fg); }
+.pill.hot { border-color: var(--accent); color: var(--accent); }
+.pill.warn { border-color: var(--warn); color: var(--warn); }
+.device { display: grid; justify-items: center; gap: 8px; min-width: 0; }
+.device svg { width: 100%; height: auto; display: block; border-radius: 14px; }
+.device .cap { font-family: var(--font-mono); font-size: 12px; color: var(--muted); text-align: center; }
+.portrait svg { max-width: 330px; }
+.outer svg { max-width: 260px; }
+.laptop { perspective: 900px; display: grid; justify-items: center; width: 100%; }
+.laptop .top, .laptop .bottom { width: 100%; max-width: 360px; }
+.laptop .top { border-radius: 14px 14px 0 0; }
+.laptop .bottom { transform: rotateX(52deg); transform-origin: top center; margin-top: -2px; border-radius: 0 0 14px 14px; }
+table { border-collapse: collapse; width: 100%; font-size: 14px; }
+.tablebox { overflow-x: auto; background: var(--paper); border: 1px solid var(--line); border-radius: 10px; }
+th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-weight: 500; color: var(--muted); font-size: 13px; }
+tr:last-child td { border-bottom: 0; }
+code { font-family: var(--font-mono); font-size: 13px; }
+ol.steps { margin: 0; padding-left: 20px; display: grid; gap: 8px; }
+ol.steps li { max-width: 70ch; }
+ol.steps small { color: var(--muted); display: block; }
+.note { border-left: 3px solid var(--warn); padding: 10px 14px; background: var(--paper); border-radius: 0 8px 8px 0; color: var(--muted); font-size: 14px; }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Goldweek · iPhone Duo · 시안 v1 · 2026-10-17</div>
+    <h1>골드위크, 펼치면 달력과 남은 연차가 마주 본다</h1>
+    <p class="lede">두번알림·클립키보드와 같은 듀오 규칙을 씁니다. 손이 고르는 쪽(왼쪽·아래)에는 달력과 추천 목록을, 눈이 확인하는 쪽(오른쪽·위)에는 남은 연차와 그 선택의 결과를 둡니다. 이 앱은 이미 맥·아이패드용 두 칸 화면(<code>WideMainView</code>)을 갖고 있어서, 새로 그리기보다 그 화면을 접힌 선에 맞추는 일이 대부분입니다. 접으면 지금 아이폰 화면 그대로입니다.</p>
+  </header>
+
+  <section>
+    <h2>가져온 원칙 넷</h2>
+    <div class="rules">
+      <div class="rule"><b>접으면 지금 그대로</b><span>바깥 화면 466×678pt는 지금 앱 그대로입니다. 탭(현황, 캘린더, 가족, 설정)도 그대로입니다.</span></div>
+      <div class="rule"><b>손은 왼쪽·아래</b><span>달력에서 날짜를 누르고 추천을 고르는 일은 고르는 쪽 판에서 합니다.</span></div>
+      <div class="rule"><b>눈은 오른쪽·위</b><span>남은 연차, 휴가 페이스, 다가오는 휴가는 결과 쪽 판에 둡니다. 고르는 순간 결과가 바뀝니다.</span></div>
+      <div class="rule"><b>선 앞뒤 24pt는 비움</b><span>달력 칸, 추천 카드, 시트, 탭 바 무엇도 접힌 선을 가로지르지 않습니다.</span></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>자세별 화면</h2>
+
+    <div class="scene wide">
+      <div class="device"><svg id="g-main" viewBox="0 0 951 669" role="img" aria-label="가로로 편 화면: 왼쪽 캘린더, 오른쪽 현황"></svg><div class="cap">안쪽 화면 · 가로로 폄 · 951×669pt</div></div>
+      <div class="copy">
+        <span class="tag">캘린더 + 현황 <span class="pill hot">가장 먼저</span></span>
+        <h3>왼쪽 캘린더 | 오른쪽 연차 현황</h3>
+        <p>지금은 달력에서 추천을 넣고, 남은 연차를 보려면 현황 탭으로 건너가야 합니다. 펴면 둘이 나란히 서서, 추천을 누르기 전에 "넣으면 몇 일 남나"가 오른쪽에 미리 그려집니다.</p>
+        <ul>
+          <li>추천을 고르면 현황 막대에 빗금 칸이 생기고 "추가하면 남음 5일"</li>
+          <li>맥의 <code>WideMainView</code> 와 같은 배치. 캘린더 460pt + 현황 400pt를 선 기준 463pt + 463pt로</li>
+          <li>탭은 현황·캘린더가 한 화면이 되니 펼치면 셋(캘린더, 가족, 설정)만</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="scene">
+      <div class="device portrait"><svg id="g-port" viewBox="0 0 669 951" role="img" aria-label="세로로 편 화면: 위 현황, 아래 캘린더"></svg><div class="cap">세로로 폄 · 669×951pt</div></div>
+      <div class="copy">
+        <span class="tag">캘린더 + 현황 · 세로</span>
+        <h3>위 연차 현황 | 아래 캘린더</h3>
+        <p>지금 <code>WideMainView</code> 는 폭이 860pt 넘게 필요해서 세로로 편 669pt에는 들어가지 않습니다. 그래서 세로로 펴면 위아래로 쌓습니다. 아래 판은 바깥 화면과 거의 같은 크기라 달력이 접었을 때와 같은 크기로 섭니다.</p>
+        <ul>
+          <li>위: 남은 연차와 휴가 페이스. 위 판이 넓어 페이스 축을 길게</li>
+          <li>아래: 한 달 캘린더와 탭 바</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="scene wide">
+      <div class="device"><svg id="g-rec" viewBox="0 0 951 669" role="img" aria-label="추천 고르기: 왼쪽 추천 목록, 오른쪽 그 연휴를 칠한 달력"></svg><div class="cap">추천 고르기 · 가로로 폄</div></div>
+      <div class="copy">
+        <span class="tag">추천 연휴 <span class="pill hot">이 앱만의 자리</span></span>
+        <h3>왼쪽 추천 목록 | 오른쪽 그 연휴를 칠한 달력</h3>
+        <p>이 앱의 핵심은 "연차 3일로 9일 쉬기" 같은 조합인데, 지금은 추천이 캘린더 아래 목록(<code>CalendarRecommendationSection</code>)에 글로만 섭니다. 펴면 추천을 고를 때마다 오른쪽 달력에 그 연휴가 칠해집니다. 연차 칸과 공휴일·주말 칸이 이어 붙는 모습이 곧 이 앱이 파는 것입니다.</p>
+        <ul>
+          <li>목록은 효율순. 연차 1일당 쉬는 날 수를 크게</li>
+          <li>오른쪽 아래에 "추가" 하나. 무료는 지금처럼 3개까지, 4번째부터 페이월</li>
+          <li>스크린샷 첫 장으로 쓰기 좋은 화면</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="scene wide">
+      <div class="device"><svg id="g-family" viewBox="0 0 951 669" role="img" aria-label="가족 화면: 왼쪽 가족 목록, 오른쪽 같이 쉬는 날"></svg><div class="cap">가족 · 가로로 폄</div></div>
+      <div class="copy">
+        <span class="tag">가족 <span class="pill warn">공유받은 일정이 있을 때만</span></span>
+        <h3>왼쪽 가족 | 오른쪽 다 같이 쉬는 날</h3>
+        <p>가족 여행은 "다들 언제 쉬지?"에서 시작합니다. 지금은 공유받은 일정을 한 사람씩 봅니다. 펴면 오른쪽에 모두의 휴가를 한 줄씩 겹쳐, 다 같이 비는 날을 칠합니다.</p>
+        <ul>
+          <li>왼쪽에서 사람을 켜고 끄면 오른쪽 겹침이 바뀜</li>
+          <li>펼쳐서 식탁에 놓고 같이 보는 화면이라 글자를 크게</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="scene">
+      <div class="device outer"><svg id="g-outer" viewBox="0 0 466 678" role="img" aria-label="접은 바깥 화면: 지금 현황 그대로"></svg><div class="cap">접음 · 466×678pt · 지금 그대로</div></div>
+      <div class="copy">
+        <span class="tag">접음</span>
+        <h3>접으면 아무것도 바뀌지 않는다</h3>
+        <p>지금 아이폰에서 보는 현황 탭과 같습니다. 공유 카드 고정 폭 360pt도 466pt 안에 들어갑니다.</p>
+        <ul>
+          <li>펼친 채 보던 달이 있으면 접어도 캘린더 탭이 그 달을 그대로 보여 줌</li>
+          <li>반쯤 접어 세우는 자세는 이 앱에 쓰지 않습니다. 연차는 세워 두고 볼 일이 없습니다</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>그 밖의 화면</h2>
+    <div class="tablebox"><table>
+      <thead><tr><th>화면</th><th>고르는 쪽 (손)</th><th>결과 쪽 (눈)</th></tr></thead>
+      <tbody>
+        <tr><td>휴가 등록</td><td>날짜·종류(연차, 반차, 반반차…)</td><td>등록하면 바뀔 현황 미리보기. 지금은 시트라 현황이 가려짐</td></tr>
+        <tr><td>휴가 사용 내역</td><td>내역 목록</td><td>고른 휴가의 상세와 수정</td></tr>
+        <tr><td>사진에서 가져오기</td><td>사진 고르기</td><td>읽어 낸 날짜를 달력에 칠한 결과</td></tr>
+        <tr><td>설정</td><td>설정 목록</td><td>고른 항목. 공휴일 관리면 그 나라 공휴일 달력</td></tr>
+        <tr><td>페이월</td><td>구매 버튼</td><td>지금까지 아낀 연차와 비교표. 시트는 결과 쪽 판에만</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section>
+    <h2>이 앱에서 특히 조심할 것</h2>
+    <div class="tablebox"><table>
+      <thead><tr><th>지금 코드</th><th>펼치면 생기는 일</th><th>할 일</th></tr></thead>
+      <tbody>
+        <tr><td>넓은 화면 판정이 <code>userInterfaceIdiom != .phone && sizeClass == .regular</code> (<code>ContentView.swift:424</code>)</td><td>듀오가 iPhone 으로 잡히면 951pt 안쪽 화면에서도 한 칸짜리 탭 화면이 그대로 늘어남. 두 칸 화면이 이미 있는데 안 뜸</td><td>판정을 Fold 모듈의 접힘 상태로 바꾼다. 같은 함수를 쓰는 <code>CalendarView.swift:584, 722</code> 도 함께</td></tr>
+        <tr><td><code>WideMainView</code> 고정 폭: 현황 400, 캘린더 최소 460 (<code>ContentView.swift:440-445</code>)</td><td>가로로 펴면 860pt라 선이 캘린더 안쪽으로 들어가 칸을 가름. 세로로 펴면 669pt라 아예 안 들어감</td><td>펼침에서는 판 폭(463pt)을 받는다. 세로는 위아래로 쌓기</td></tr>
+        <tr><td>탭 화면과 두 칸 화면을 <code>if/else</code> 로 가름 (<code>ContentView.swift:377</code>)</td><td>펴고 접을 때마다 뷰 트리가 바뀌어 보던 달(<code>currentMonth</code>), 고른 날짜, 추천, 열린 시트가 전부 초기화</td><td>같은 뷰로 남게 (<code>FoldSplitView</code> 의 <code>AnyLayout</code> 방식). 보던 달은 앱 수준 상태로</td></tr>
+        <tr><td><code>CalendarOverview</code> 열 수를 sizeClass 만으로 정함 (<code>CalendarOverview.swift:79-90</code>)</td><td>위 판정과 기준이 달라 한 화면 안에서 두 칸 화면과 열 수가 어긋남</td><td>같은 판정 하나로</td></tr>
+        <tr><td>설정·가족 시트 <code>.frame(minWidth: 540, minHeight: 640)</code> (<code>ContentView.swift:460-464</code>)</td><td>판 하나(463pt)보다 넓어 시트가 선을 넘음</td><td>펼침에서는 결과 쪽 판 크기로. 클립키보드 <code>FoldSheetGuard</code></td></tr>
+        <tr><td>시트 42곳</td><td>창 바닥부터 올라와 선을 덮음</td><td><code>FoldSheetGuard</code> 를 앱 뿌리에 한 번</td></tr>
+        <tr><td>진행 막대·페이스 축이 GeometryReader 폭 비율 (<code>HomeView.swift:871, 1865</code>)</td><td>깨지지는 않지만 전체 폭을 받으면 선을 가로지름</td><td>현황은 판 안에서만 잰다</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section>
+    <h2>제안 순서</h2>
+    <ol class="steps">
+      <li><b>클립키보드의 Fold 모듈을 LeeoKit 으로 옮긴다.</b><small>두번알림·욕망의 무지개 시안의 1번과 같은 일입니다. 네 앱이 같은 모듈을 씁니다.</small></li>
+      <li><b>넓은 화면 판정을 접힘 상태로 바꾸고, 가로로 펴면 <code>WideMainView</code> 를 선에 맞춘다.</b><small>이미 있는 화면이라 가장 적은 일로 가장 큰 변화가 납니다.</small></li>
+      <li><b>펴고 접어도 보던 달과 시트가 남게 한다.</b><small>지금 구조(<code>if/else</code>)로는 접을 때마다 처음 화면으로 돌아갑니다. 2번과 같이 해야 합니다.</small></li>
+      <li><b>세로로 펴면 위아래로 쌓는다.</b></li>
+      <li><b>추천 고르기: 목록 | 칠한 달력.</b><small>이 앱만의 자리이고 스크린샷 첫 장 후보입니다.</small></li>
+      <li><b>가족: 다 같이 쉬는 날.</b></li>
+    </ol>
+    <p class="note">펼친 화면은 전부 무료입니다. 화면을 나누는 것은 기능이 아니라 기기를 제대로 쓰는 것입니다. 잠금은 지금 그대로 둡니다. 추천 추가는 무료 3개까지, 캘린더 자동 감지와 보너스 휴가는 Pro입니다. 추천 고르기 화면에서 4번째를 누르면 페이월이 결과 쪽 판에만 뜹니다.</p>
+  </section>
+</div>
+
+<script>
+(function () {
+  const C = { bg: "#f2f2f7", card: "#ffffff", line: "#e5e5ea", text: "#111111", sub: "#8e8e93", blue: "#0066e6", cyan: "#32ade6",
+    green: "#34c759", red: "#ff3b30", sat: "#0a60d0", yellow: "#ffcc00", yBg: "#fff4c2", purple: "#af52de", hinge: "#c43d3d" };
+  const esc = s => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;");
+  const t = (x, y, s, size, fill, o = {}) =>
+    `<text x="${x}" y="${y}" font-size="${size}" fill="${fill}" font-family="${o.mono ? "IBM Plex Mono, monospace" : "IBM Plex Sans KR, -apple-system, sans-serif"}" font-weight="${o.w || 500}" text-anchor="${o.a || "start"}">${esc(s)}</text>`;
+  const r = (x, y, w, h, fill, rx = 0, extra = "") => `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${rx}" fill="${fill}" ${extra}/>`;
+  const defs = `<defs><pattern id="hatch" width="10" height="10" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="10" height="10" fill="#fbeaea"/><line x1="0" y1="0" x2="0" y2="10" stroke="${C.hinge}" stroke-opacity=".35" stroke-width="3"/></pattern>` +
+    `<pattern id="ghost" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="8" height="8" fill="#d9e8ff"/><line x1="0" y1="0" x2="0" y2="8" stroke="${C.blue}" stroke-width="3"/></pattern></defs>`;
+  const hingeV = (x, h) => r(x - 12, 0, 24, h, "url(#hatch)") + `<line x1="${x}" y1="0" x2="${x}" y2="${h}" stroke="${C.hinge}" stroke-dasharray="6 6" stroke-width="2"/>`;
+  const hingeH = (y, w) => r(0, y - 12, w, 24, "url(#hatch)") + `<line x1="0" y1="${y}" x2="${w}" y2="${y}" stroke="${C.hinge}" stroke-dasharray="6 6" stroke-width="2"/>`;
+  const status = (x, y) => t(x, y, "9:41", 17, C.text, { w: 700 });
+  function tabbar(x, y, w, items, active) {
+    let s = r(x, y, w, 54, C.card, 27, `stroke="${C.line}"`);
+    items.forEach((l, i) => {
+      const cx = x + w * (i + .5) / items.length, on = i === active;
+      if (on) s += r(cx - w / (2 * items.length) + 6, y + 5, w / items.length - 12, 44, "#e3eeff", 22);
+      s += `<circle cx="${cx}" cy="${y + 20}" r="7" fill="none" stroke="${on ? C.blue : C.sub}" stroke-width="2.2"/>` + t(cx, y + 43, l, 12, on ? C.blue : C.sub, { a: "middle", w: on ? 700 : 500 });
+    });
+    return s;
+  }
+  // 2026년 10월. 10/1 목요일. 개천절 3(토), 대체공휴일 5(월), 한글날 9(금). 추천 연차 6·7·8 → 3~11 아흐레
+  const HOL = { 3: "개천절", 5: "대체", 9: "한글날" };
+  function calendar(x, y, w, ch, o = {}) {
+    const cw = w / 7, first = 4, rec = o.rec !== false;
+    let s = t(x + 4, y, "2026년 10월", o.big ? 20 : 18, C.text, { w: 700 }) + t(x + w - 4, y, "‹   ›", 18, C.blue, { a: "end", w: 700 });
+    ["일", "월", "화", "수", "목", "금", "토"].forEach((d, i) => s += t(x + cw * (i + .5), y + 30, d, 12, i === 0 ? C.red : i === 6 ? C.sat : C.sub, { a: "middle" }));
+    const gy = y + 42;
+    if (rec) {
+      // 3(토)~11(일) 띠: 0행 토칸, 1행 전체, 2행 일칸
+      s += r(x + cw * 6 + 2, gy + 2, cw - 4, ch - 4, C.yBg, 10) + r(x + 2, gy + ch + 2, w - 4, ch - 4, C.yBg, 10) + r(x + 2, gy + ch * 2 + 2, cw - 4, ch - 4, C.yBg, 10);
+    }
+    for (let d = 1; d <= 31; d++) {
+      const idx = first + d - 1, col = idx % 7, row = Math.floor(idx / 7), cx = x + cw * (col + .5), cy = gy + row * ch;
+      const leave = rec && (d >= 6 && d <= 8), mine = o.mine && (d === 21 || d === 22);
+      if (leave) s += `<circle cx="${cx}" cy="${cy + ch * .42}" r="${Math.min(cw, ch) * .34}" fill="${C.yellow}"/>`;
+      if (mine) s += `<circle cx="${cx}" cy="${cy + ch * .42}" r="${Math.min(cw, ch) * .34}" fill="${C.blue}"/>`;
+      if (d === 17 && !leave) s += `<circle cx="${cx}" cy="${cy + ch * .42}" r="${Math.min(cw, ch) * .34}" fill="none" stroke="${C.blue}" stroke-width="2"/>`;
+      const fill = mine ? "#fff" : HOL[d] || col === 0 ? C.red : col === 6 ? C.sat : C.text;
+      s += t(cx, cy + ch * .42 + 6, d, o.big ? 18 : 16, fill, { a: "middle", w: leave || HOL[d] ? 700 : 500 });
+      if (HOL[d] && ch >= 50) s += t(cx, cy + ch * .86, HOL[d], 10, C.red, { a: "middle" });
+      if (leave && ch >= 50) s += t(cx, cy + ch * .86, "연차", 10, "#7a5c00", { a: "middle", w: 700 });
+    }
+    return { svg: s, bottom: gy + 5 * ch };
+  }
+  function statusCard(x, y, w, o = {}) {
+    let s = r(x, y, w, 176, C.card, 16) + t(x + 20, y + 32, "연차 현황", 16, C.text, { w: 700 }) + `<circle cx="${x + w - 26}" cy="${y + 26}" r="14" fill="${C.blue}"/>` + t(x + w - 26, y + 32, "+", 20, "#fff", { a: "middle", w: 700 });
+    s += t(x + 20, y + 86, o.preview ? "5" : "8", 46, o.preview ? C.blue : C.green, { w: 700, mono: true }) + t(x + 60, y + 86, o.preview ? "일 남음 (추가하면)" : "일 남음", 18, C.text, { w: 700 });
+    s += t(x + 20, y + 112, "사용 완료 5일 · 예정 2일 · 총 15일", 13, C.sub);
+    const bx = x + 20, bw = w - 40, u = bw / 15;
+    s += r(bx, y + 128, bw, 14, "#eef0f3", 7) + r(bx, y + 128, u * 5, 14, C.blue, 7) + r(bx + u * 5, y + 128, u * 2, 14, C.cyan) ;
+    if (o.preview) s += r(bx + u * 7, y + 128, u * 3, 14, "url(#ghost)");
+    s += r(bx + u * (o.preview ? 10 : 7), y + 128, u * (o.preview ? 5 : 8), 14, C.green, 7, 'fill-opacity=".85"');
+    s += t(bx, y + 162, "사용", 12, C.blue, { w: 700 }) + t(bx + 44, y + 162, "예정", 12, C.cyan, { w: 700 }) + (o.preview ? t(bx + 88, y + 162, "추천 3일", 12, C.blue, { w: 700 }) : "") + t(bx + bw, y + 162, "남음", 12, C.green, { a: "end", w: 700 });
+    return s;
+  }
+  function paceCard(x, y, w) {
+    const ax = x + 20, aw = w - 40;
+    return r(x, y, w, 104, C.card, 16) + t(x + 20, y + 30, "휴가 페이스", 16, C.text, { w: 700 }) + t(x + w - 20, y + 30, "천천히 쓰는 중", 13, "#c76a00", { a: "end", w: 700 }) +
+      r(ax, y + 58, aw, 6, "#eef0f3", 3) + `<circle cx="${ax + aw * .79}" cy="${y + 61}" r="8" fill="${C.text}"/>` + `<circle cx="${ax + aw * .33}" cy="${y + 61}" r="8" fill="${C.blue}"/>` +
+      t(ax + aw * .33, y + 90, "사용 33%", 12, C.blue, { a: "middle", w: 700 }) + t(ax + aw * .79, y + 90, "올해 79%", 12, C.text, { a: "middle", w: 700 });
+  }
+  function upcoming(x, y, w, n = 3) {
+    const rows = [["개천절 연휴", "10/3 ~ 10/5 · 3일", "D-14", C.red], ["한글날", "10/9 · 금", "D-20", C.red], ["성탄절", "12/25 · 금", "D-89", C.red]].slice(0, n);
+    let s = t(x + 4, y, "다가오는 휴가", 13, C.sub) + r(x, y + 10, w, rows.length * 52, C.card, 14);
+    rows.forEach((rw, i) => { const yy = y + 10 + i * 52; s += r(x + 16, yy + 15, 6, 22, rw[3], 3) + t(x + 32, yy + 24, rw[0], 15, C.text, { w: 700 }) + t(x + 32, yy + 42, rw[1], 12, C.sub) + t(x + w - 16, yy + 32, rw[2], 15, C.blue, { a: "end", w: 700, mono: true }); if (i < rows.length - 1) s += r(x + 32, yy + 52, w - 32, 1, C.line); });
+    return s;
+  }
+  function recCard(x, y, w, o = {}) {
+    return r(x, y, w, 70, o.sel ? C.yBg : C.card, 14, o.sel ? `stroke="${C.yellow}" stroke-width="2"` : `stroke="${C.line}"`) +
+      t(x + 18, y + 30, o.title, 17, C.text, { w: 700 }) + t(x + 18, y + 52, o.sub, 13, C.sub) +
+      t(x + w - 18, y + 36, o.eff, 22, "#9a7400", { a: "end", w: 700, mono: true }) + t(x + w - 18, y + 54, "연차 1일당", 11, C.sub, { a: "end" });
+  }
+
+  // A. 가로: 캘린더 | 현황 (추천 미리보기)
+  (function () {
+    const W = 951, H = 669, hx = W / 2;
+    let s = defs + r(0, 0, W, H, C.bg) + status(28, 30);
+    const cal = calendar(24, 72, 415, 62);
+    s += cal.svg + recCard(24, cal.bottom + 4, 415, { sel: true, title: "연차 3일로 9일 쉬기", sub: "10/3 토 ~ 10/11 일 · 개천절 + 한글날", eff: "3.0" });
+    s += tabbar(24, 596, 415, ["캘린더", "가족", "설정"], 0);
+    const X = 508, RW = 419;
+    s += t(X, 52, "현황", 24, C.text, { w: 700 }) + statusCard(X, 72, RW, { preview: true }) + paceCard(X, 264, RW) + upcoming(X, 400, RW);
+    s += hingeV(hx, H);
+    document.getElementById("g-main").innerHTML = s;
+  })();
+
+  // B. 세로
+  (function () {
+    const W = 669, H = 951, hy = H / 2;
+    let s = defs + r(0, 0, W, H, C.bg) + status(28, 36) + t(28, 84, "현황", 26, C.text, { w: 700 });
+    s += statusCard(24, 104, W - 48) + paceCard(24, 296, W - 48);
+    const cal = calendar(24, 520, W - 48, 58, { rec: false, mine: true });
+    s += cal.svg + tabbar(24, 880, W - 48, ["캘린더", "가족", "설정"], 0);
+    s += hingeH(hy, W);
+    document.getElementById("g-port").innerHTML = s;
+  })();
+
+  // C. 추천 고르기
+  (function () {
+    const W = 951, H = 669, hx = W / 2;
+    let s = defs + r(0, 0, W, H, C.bg) + status(28, 30) + t(24, 76, "추천 연휴", 24, C.text, { w: 700 }) + t(439, 76, "효율순", 14, C.blue, { a: "end", w: 700 });
+    [["연차 3일로 9일 쉬기", "10/3 토 ~ 10/11 일 · 개천절 + 한글날", "3.0", true],
+     ["연차 2일로 5일 쉬기", "12/24 목 ~ 12/28 월 · 성탄절", "2.5"],
+     ["연차 1일로 4일 쉬기", "2027/2/5 금 ~ 2/8 월 · 설날", "4.0"],
+     ["연차 2일로 6일 쉬기", "2027/3/1 월 ~ 3/6 토 · 삼일절", "3.0"]].forEach((d, i) => s += recCard(24, 96 + i * 84, 415, { title: d[0], sub: d[1], eff: d[2], sel: d[3] }));
+    s += t(24, 450, "무료로 추천 3개까지 추가할 수 있어요 · 2개 사용", 13, C.sub);
+    s += tabbar(24, 596, 415, ["캘린더", "가족", "설정"], 0);
+    const X = 508, RW = 419;
+    const cal = calendar(X, 72, RW, 60, { big: true });
+    s += cal.svg;
+    s += r(X, cal.bottom + 8, RW, 96, C.card, 16) + t(X + 20, cal.bottom + 44, "연차 3일 → 9일 쉼", 20, C.text, { w: 700 }) + t(X + 20, cal.bottom + 72, "추가하면 남은 연차 8일 → 5일", 14, C.sub) +
+      r(X + RW - 110, cal.bottom + 34, 92, 40, C.blue, 20) + t(X + RW - 64, cal.bottom + 60, "추가", 16, "#fff", { a: "middle", w: 700 });
+    s += hingeV(hx, H);
+    document.getElementById("g-rec").innerHTML = s;
+  })();
+
+  // D. 가족
+  (function () {
+    const W = 951, H = 669, hx = W / 2;
+    let s = defs + r(0, 0, W, H, C.bg) + status(28, 30) + t(24, 76, "가족", 24, C.text, { w: 700 });
+    const ppl = [["나", C.blue, true], ["배우자", C.purple, true], ["아이 학교", C.green, true], ["어머니", "#ff9500", false]];
+    s += r(24, 96, 415, ppl.length * 60, C.card, 14);
+    ppl.forEach(([n, c, on], i) => {
+      const y = 96 + i * 60;
+      s += `<circle cx="52" cy="${y + 30}" r="14" fill="${c}"/>` + t(78, y + 36, n, 17, C.text, { w: 700 }) +
+        r(375, y + 16, 48, 28, on ? C.green : "#e5e5ea", 14) + `<circle cx="${on ? 409 : 389}" cy="${y + 30}" r="12" fill="#fff"/>`;
+      if (i < ppl.length - 1) s += r(78, y + 60, 361, 1, C.line);
+    });
+    s += tabbar(24, 596, 415, ["캘린더", "가족", "설정"], 1);
+    const X = 508, RW = 419, days = 13, d0 = 1, lx = X + 84, dw = (RW - 84) / days;
+    s += t(X, 76, "10월 1일 ~ 13일", 20, C.text, { w: 700 });
+    for (let i = 0; i < days; i++) { const d = d0 + i, wk = (d + 3) % 7; s += t(lx + dw * (i + .5), 112, d, 12, HOL[d] || wk === 0 ? C.red : wk === 6 ? C.sat : C.sub, { a: "middle", w: 700 }); }
+    s += r(lx + dw * 2, 124, dw * 3, 196, C.yBg, 8);
+    const off = { "나": [3, 4, 5, 6, 7, 8, 9, 10, 11], "배우자": [3, 4, 5, 9, 10, 11], "아이 학교": [3, 4, 5, 9, 10, 11] };
+    ["나", "배우자", "아이 학교"].forEach((n, k) => {
+      const y = 136 + k * 60, c = ppl[k][1];
+      s += t(X, y + 22, n, 14, C.text, { w: 700 });
+      off[n].forEach(d => s += r(lx + dw * (d - d0) + 2, y + 4, dw - 4, 28, c, 6, 'fill-opacity=".85"'));
+    });
+    s += r(X, 340, RW, 108, C.card, 16) + t(X + 20, 376, "셋이 같이 쉬는 날", 15, C.sub) + t(X + 20, 412, "10/3 토 ~ 10/5 월 · 3일", 22, C.text, { w: 700 }) + t(X + 20, 436, "다음은 10/9 ~ 10/11 · 3일", 13, C.sub);
+    s += hingeV(hx, H);
+    document.getElementById("g-family").innerHTML = s;
+  })();
+
+  // E. 바깥 화면
+  (function () {
+    const W = 466, H = 678;
+    let s = defs + r(0, 0, W, H, C.bg) + status(24, 32) + t(20, 80, "현황", 28, C.text, { w: 700 });
+    s += statusCard(18, 98, W - 36) + paceCard(18, 290, W - 36) + upcoming(18, 416, W - 36, 2);
+    s += tabbar(18, 608, W - 36, ["현황", "캘린더", "가족", "설정"], 0);
+    document.getElementById("g-outer").innerHTML = s;
+  })();
+})();
+</script>
+
+</body></html>
