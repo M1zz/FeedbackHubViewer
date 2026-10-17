@@ -59,7 +59,7 @@ struct ReleaseSpec: Decodable, Equatable {
     struct Thresholds: Decodable, Equatable {
         /// 불안정 이벤트가 없는 설치의 비율이 이보다 낮으면 빨강.
         var crashFreeInstallsMin: Double
-        /// 핵심 행동률이 앞 버전보다 이 비율(상대값)을 넘게 떨어지면 빨강.
+        /// 핵심 행동률이 앞 버전보다 이 비율(상대값)을 넘게 떨어지고 우연으로 설명되지 않으면 빨강.
         var coreActionDropMax: Double
         /// 최신 버전의 활성 설치가 이보다 적으면 비율로 판단하지 않는다.
         var minInstallsForVerdict: Int
@@ -432,7 +432,8 @@ enum ReleaseHealth {
     /// 빨강
     ///  - 최신 버전에서 처음 본 크래시 지문이 보고 2건 이상 (설치 수와 무관하다. 크래시는 크래시다)
     ///  - 크래시 없는 설치 비율이 문턱 아래
-    ///  - 핵심 행동률이 앞 버전보다 `coreActionDropMax` 넘게(상대값) 떨어짐
+    ///  - 핵심 행동률이 앞 버전보다 `coreActionDropMax` 넘게(상대값) 떨어졌고, 그 차이가 우연으로
+    ///    설명되지 않음 (`dropIsSignificant`). 문턱만 넘고 표본이 작으면 노랑이다
     /// 노랑
     ///  - 최신 버전 활성 설치가 `minInstallsForVerdict` 미만 (비율 판정은 건너뛴다)
     ///  - 견줄 앞 버전이 없음
@@ -485,10 +486,15 @@ enum ReleaseHealth {
 
             // 핵심 행동
             if let now = latest.coreActionRate {
-                if let before = previous?.coreActionRate, previousEnough, before > 0 {
+                if let previous, let before = previous.coreActionRate, previousEnough, before > 0 {
                     let drop = (before - now) / before
-                    if drop > thresholds.coreActionDropMax {
+                    // 상대 하락률만 보면 표본 스물셋의 22% 와 여든여덟의 33% 가 "34% 떨어짐" 빨강이 된다.
+                    // 그 차이는 같은 사람들에게서도 우연히 나는 폭이라, 우연으로 설명되지 않을 때만 빨강이다.
+                    let significant = dropIsSignificant(before: previous, now: latest)
+                    if drop > thresholds.coreActionDropMax && significant {
                         red.append("핵심 행동률 \(percent(before)) → \(percent(now)) (\(percent(drop)) 떨어짐, 허용 \(percent(thresholds.coreActionDropMax)))")
+                    } else if drop > thresholds.coreActionDropMax {
+                        yellow.append("핵심 행동률 \(percent(before)) → \(percent(now)) (\(percent(drop)) 떨어짐, 표본이 작아 흔들림 안)")
                     } else if drop > thresholds.coreActionDropMax / 2 {
                         yellow.append("핵심 행동률 \(percent(before)) → \(percent(now)) (\(percent(drop)) 떨어짐)")
                     } else {
@@ -516,6 +522,24 @@ enum ReleaseHealth {
         if !red.isEmpty { return Verdict(level: .red, reasons: red + yellow) }
         if !yellow.isEmpty { return Verdict(level: .yellow, reasons: yellow) }
         return Verdict(level: .green, reasons: [green.joined(separator: " · ")])
+    }
+
+    /// 단측 95% 에 해당하는 z. 이보다 작으면 "떨어졌다" 고 말할 근거가 없다.
+    static let dropZ = 1.645
+
+    /// 핵심 행동률이 앞 버전보다 낮은 것이 우연으로 설명되지 않는가(두 비율의 z 검정, 단측).
+    ///
+    /// 5.1.10 의 29/88 와 5.1.11 의 5/23 은 z 가 1.0 남짓이다. 같은 사람들을 다시 세어도
+    /// 그만큼은 흔하게 갈라진다.
+    static func dropIsSignificant(before: VersionMetrics, now: VersionMetrics) -> Bool {
+        guard let beforeHits = before.coreActionInstalls, let nowHits = now.coreActionInstalls,
+              before.activeInstalls > 0, now.activeInstalls > 0 else { return false }
+        let n1 = Double(before.activeInstalls), n2 = Double(now.activeInstalls)
+        let p1 = Double(beforeHits) / n1, p2 = Double(nowHits) / n2
+        let pooled = Double(beforeHits + nowHits) / (n1 + n2)
+        let se = (pooled * (1 - pooled) * (1 / n1 + 1 / n2)).squareRoot()
+        guard se > 0 else { return p2 < p1 }
+        return (p1 - p2) / se >= dropZ
     }
 
     static func percent(_ ratio: Double) -> String {

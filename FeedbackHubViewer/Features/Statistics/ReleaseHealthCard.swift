@@ -131,7 +131,7 @@ struct ReleaseHealthCard: View {
         lines.append("## 판정 기준")
         let thresholds = report.spec.thresholds
         lines.append("- 불안정 이벤트: \(report.spec.stabilityEvents.joined(separator: ", ")) — 이걸 보낸 설치를 불안정으로 셉니다.")
-        lines.append("- 크래시 없는 설치 \(ReleaseHealth.percent(thresholds.crashFreeInstallsMin)) 미만이면 빨강, 핵심 행동률이 앞 버전보다 \(ReleaseHealth.percent(thresholds.coreActionDropMax)) 넘게 떨어지면 빨강, 활성 설치 \(thresholds.minInstallsForVerdict)대 미만이면 비율로 판정하지 않습니다.")
+        lines.append("- 크래시 없는 설치 \(ReleaseHealth.percent(thresholds.crashFreeInstallsMin)) 미만이면 빨강, 핵심 행동률이 앞 버전보다 \(ReleaseHealth.percent(thresholds.coreActionDropMax)) 넘게 떨어지고 그 차이가 우연으로 설명되지 않으면 빨강(표본이 작아 흔들림 안이면 노랑), 활성 설치 \(thresholds.minInstallsForVerdict)대 미만이면 비율로 판정하지 않습니다.")
         if !report.hasReleaseSpec {
             lines.append("- 앱 리포의 docs/usage-spec.json 에 release 절이 없어 기본값으로 판정했습니다.")
         }
