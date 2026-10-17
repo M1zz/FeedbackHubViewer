@@ -647,8 +647,9 @@ struct StatisticsDashboard: View {
 
     private var userTiles: some View {
         LazyVGrid(columns: tileColumns, spacing: 10) {
-            StatTile(title: "설치 (사용 중인 기기)", value: "\(usage.installs)", unit: "대",
+            StatTile(title: "누적 설치", value: "\(usage.installs)", unit: "대",
                      systemImage: "iphone", tint: .accentColor)
+                .help("iCloud에 로그인한 기기에서 스냅샷을 한 번이라도 보낸 설치 수입니다. 앱을 지워도 줄지 않고, 다시 설치하면 새로 셉니다. 지금 쓰는 기기는 '최근 30일 활성'을 보세요.")
             StatTile(title: "최근 7일 활성", value: "\(usage.active7)", unit: "명",
                      systemImage: "bolt.fill", tint: .blue)
             StatTile(title: "최근 30일 활성", value: "\(usage.active30)", unit: "명",

@@ -940,7 +940,7 @@ final class FeedbackStore: ObservableObject {
         hub.events = Self.withinRetention(hub.events)
         hub.crashes = Array(hub.crashes.prefix(Self.crashLimit))
         let recordsChanged = hub.feedback.count != fetchedFeedback.count
-            || hub.snapshots.count != fetchedSnapshots.count
+            || Self.fingerprint(hub.snapshots) != Self.fingerprint(fetchedSnapshots)
             || hub.events.count != fetchedEvents.count
             || hub.crashes.count != fetchedCrashes.count
 

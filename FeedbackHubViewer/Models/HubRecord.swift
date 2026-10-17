@@ -66,10 +66,22 @@ enum RecordMerge {
     /// and everything else is kept.
     static func byID<T: Identifiable>(_ incoming: [T], into existing: [T],
                                       newestFirst: (T, T) -> Bool) -> [T] where T.ID == String {
+        byID(incoming, into: existing, replaces: { _, _ in true }, newestFirst: newestFirst)
+    }
+
+    /// The same fold, but where they overlap the incoming copy wins only when
+    /// `replaces(incoming, held)` says so. For merging with another 기기's
+    /// summary: that copy is not a fresh read and may be older than ours.
+    static func byID<T: Identifiable>(_ incoming: [T], into existing: [T],
+                                      replaces: (T, T) -> Bool,
+                                      newestFirst: (T, T) -> Bool) -> [T] where T.ID == String {
         guard !incoming.isEmpty else { return existing }
         guard !existing.isEmpty else { return incoming.sorted(by: newestFirst) }
         var byID = Dictionary(existing.map { ($0.id, $0) }, uniquingKeysWith: { _, latest in latest })
-        for item in incoming { byID[item.id] = item }
+        for item in incoming {
+            if let held = byID[item.id], !replaces(item, held) { continue }
+            byID[item.id] = item
+        }
         return byID.values.sorted(by: newestFirst)
     }
 }

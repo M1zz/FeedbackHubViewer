@@ -48,7 +48,7 @@ struct ProjectComparisonView: View {
                 } else {
                     leaders(rows)
                     ranking(rows, title: "가장 많이 설치된 앱", systemImage: "iphone",
-                            note: "지금 사용 중인 기기(스냅샷을 보낸 설치) 수입니다. 지운 기기는 남지 않아요.") {
+                            note: "스냅샷을 한 번이라도 보낸 누적 설치 수입니다. 앱을 지워도 줄지 않고, 다시 설치하면 새로 셉니다.") {
                         Metric(value: Double($0.installs), text: "\($0.installs)대",
                                hint: "최근 30일 활성 \($0.active30)명")
                     }
