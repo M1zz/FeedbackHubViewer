@@ -1,5 +1,34 @@
 # todo
 
+## 새 피드백 · 리뷰는 알림, 숫자는 하루 한 번 (2026-10-17)
+- [x] 피드백 · 진단: 공개 DB `CKQuerySubscription` 푸시(앱이 꺼져 있어도). 푸시 entitlement(aps-environment) 네 파일, 원격 알림 등록(`HubAppDelegate`), 푸시가 오면 바로 새로 읽음
+- [x] 푸시가 걸린 종류는 로컬 알림을 또 안 띄움(`pushKinds`)
+- [x] 리뷰: 새 리뷰 알림(별점 · 제목). 알린 리뷰는 따로 기억(`store-reviews-alerted`), 처음 받은 앱은 조용히 기준선
+- [x] 맥: 앱이 떠 있는 동안 5분마다 감시(리뷰는 30분 지난 앱만). 설정에 "로그인할 때 열기"(SMAppService)
+- [x] 아이폰: BGAppRefresh(`com.Ysoup.FeedbackHubViewer.alerts`) + Info.plist(`FeedbackHubViewer-Info.plist`: fetch · remote-notification)
+- [x] 리뷰 알림을 기본 켬, 이미 저장된 설정에도 한 번 넣음
+- [x] 숫자: 사용 현황 · 이벤트는 하루 한 번 또는 ⌘R 때만, 차트 순위는 하루 한 번
+- [x] macOS · iOS 시뮬레이터 빌드 통과(서명 없이)
+- [ ] 실기기에서 푸시 확인 못 함. Xcode 서명에서 Push Notifications capability 가 App ID 에 붙어야 함(자동 서명이면 처음 빌드할 때)
+- [ ] 각 기기에서 설정의 알림을 켜야 함
+- [ ] 아이폰 리뷰 알림은 iOS 가 정한 때라 늦을 수 있음. 확실히 하려면 맥이 찾은 리뷰를 CloudKit 에 적어 아이폰으로 푸시를 넘기는 길
+
+## 화면 설계도 있음 · 없음 (2026-10-17)
+- [x] git pull
+- [x] `DesignBlueprints.urls`: 프로젝트 키 → 설계도 아티팩트 주소. 클립키보드(듀오 화면 대응표) · 두번알림(두번알림 듀오 시안)만
+- [x] 설계 칸 맨 위: 한 앱이면 "화면 설계도 있음 + 열기" / "없음", 전체면 앱마다 있음 · 없음 목록(있는 앱 먼저). 폴더 허락 없이도 뜸
+- [x] 앱 목록 설계 줄 숫자 자리에 "설계도 있음/없음"(문서가 있으면 "· 문서 N장")
+- [x] macOS · iOS 시뮬레이터 빌드 통과
+- [ ] 화면에서 눈으로 확인 못 함
+- [ ] 아이폰 탭에는 설계 칸이 여전히 없음(맥 · 아이패드만)
+- [x] 파일로도 들고 있기: 각 리포 `docs/product/process/screen-blueprint.html`(두번알림은 폴더 새로, README 포함) + 이 앱 `Blueprints/blueprint-<프로젝트 키>.html`
+- [x] 클립키보드 설계도는 스크린샷 92장을 HTML 안에 넣은 한 장(3.8MB)
+- [x] 골드위크(com.Ysoup.LeaveWise → Goldweek) · 욕망의 무지개(com.example.ScheduleDensityApp → ScheduleDensity) 추가 확인, 두 빌드 통과
+- [x] 여는 순서: 리포 파일 → 앱에 든 사본 → 아티팩트. 맥은 기본 브라우저, 폰 · 패드는 앱 안 시트(WKWebView)
+- [ ] ClipKeyboard · Rereminder 리포의 새 파일은 커밋 안 함. docs/ 는 GitHub Pages 라 커밋하면 공개됨
+- [x] 욕망의 무지개(`com.example.ScheduleDensityApp` → ScheduleDensity) · 골드위크(`com.Ysoup.LeaveWise` → Goldweek) 듀오 시안 추가 (2026-10-17). 아티팩트 주소 · 앱 사본 · 리포 사본 셋 다. macOS · iOS 시뮬레이터 빌드 통과
+- [ ] 두 리포의 `docs/product/process/` 도 커밋 안 함(같은 까닭). 욕망의 무지개 허브 키가 실제로 `com.example.ScheduleDensityApp` 로 쌓이는지 확인 못 함
+
 ## 할 일을 앱별로 (2026-10-13)
 - [x] 전체 프로젝트의 할 일을 앱마다 묶음(답 안 한 리뷰 많은 앱 먼저). 앱 안에서는 리뷰 → 버그 → 피드백
 - [x] 앱 머리에 리뷰 · 버그 · 피드백 수와 "앱 열기", 앱마다 5줄 + "더 보기"

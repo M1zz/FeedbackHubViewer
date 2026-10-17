@@ -38,7 +38,7 @@ enum AttentionKind: String, CaseIterable, Identifiable {
 
     /// 처음 켠 기기의 기본값.
     static let defaultBadgeKinds: Set<AttentionKind> = [.review, .feedback]
-    static let defaultAlertKinds: Set<AttentionKind> = [.feedback, .crash]
+    static let defaultAlertKinds: Set<AttentionKind> = [.review, .feedback, .crash]
 }
 
 extension FeedbackStore {

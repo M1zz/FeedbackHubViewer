@@ -38,6 +38,7 @@ extension AppStoreConnectStore {
     private static var reviewsFile: URL? { CacheFile.url("store-reviews") }
     private static var priorityFile: URL? { CacheFile.url("store-review-priority") }
     private static var viewedFile: URL? { CacheFile.url("store-reviews-viewed") }
+    private static var alertedFile: URL? { CacheFile.url("store-reviews-alerted") }
 
     // MARK: - 디스크
 
@@ -50,7 +51,13 @@ extension AppStoreConnectStore {
             priority = history.first
         }
         viewedReviewIDs = CacheFile.read([String: Set<String>].self, at: Self.viewedFile) ?? [:]
-        for bundleID in reviewFeeds.keys { seedViewedReviews(bundleID) }
+        alertedReviewIDs = CacheFile.read([String: Set<String>].self, at: Self.alertedFile) ?? [:]
+        for bundleID in reviewFeeds.keys {
+            seedViewedReviews(bundleID)
+            if alertedReviewIDs[bundleID] == nil {
+                alertedReviewIDs[bundleID] = Set(reviewFeeds[bundleID]?.reviews.map(\.id) ?? [])
+            }
+        }
     }
 
     /// 키를 바꾸거나 지우면 — 다른 계정의 리뷰가 남아 있으면 안 된다.
@@ -60,6 +67,8 @@ extension AppStoreConnectStore {
         priority = nil
         priorityHistory = []
         viewedReviewIDs = [:]
+        alertedReviewIDs = [:]
+        CacheFile.remove(Self.alertedFile)
         CacheFile.remove(Self.reviewsFile)
         CacheFile.remove(Self.priorityFile)
         CacheFile.remove(Self.viewedFile)
@@ -104,6 +113,23 @@ extension AppStoreConnectStore {
         CacheFile.write(viewedReviewIDs, to: Self.viewedFile)
     }
 
+    /// 지난번에 알린 뒤로 새로 온 리뷰를 `onNewReviews` 로 넘긴다. 이 앱의 리뷰를 처음 받았으면
+    /// 그때 있던 것은 조용히 기억만 한다 - 처음 켠 날 리뷰 수백 개로 알림이 쏟아지지 않게.
+    private func announceNewReviews(_ bundleID: String) {
+        guard let feed = reviewFeeds[bundleID] else { return }
+        let ids = Set(feed.reviews.map(\.id))
+        guard let alerted = alertedReviewIDs[bundleID] else {
+            alertedReviewIDs[bundleID] = ids
+            CacheFile.write(alertedReviewIDs, to: Self.alertedFile)
+            return
+        }
+        let fresh = feed.reviews.filter { !alerted.contains($0.id) }
+        guard !fresh.isEmpty else { return }
+        alertedReviewIDs[bundleID] = alerted.union(ids)
+        CacheFile.write(alertedReviewIDs, to: Self.alertedFile)
+        onNewReviews?(bundleID, fresh)
+    }
+
     // MARK: - 읽기
 
     func unansweredReviews(for bundleID: String) -> Int {
@@ -124,6 +150,7 @@ extension AppStoreConnectStore {
             reviewFeeds[bundleID] = ReviewFeed(reviews: reviews, fetchedAt: Date())
             persistReviews()
             seedViewedReviews(bundleID)
+            announceNewReviews(bundleID)
             if let version = try? await client.latestVersion(appID: app.id) {
                 versions[bundleID] = version
             }

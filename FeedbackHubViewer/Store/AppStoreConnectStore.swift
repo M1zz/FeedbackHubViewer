@@ -59,6 +59,11 @@ final class AppStoreConnectStore: ObservableObject {
     @Published var reviewFeeds: [String: ReviewFeed] = [:]
     /// 번들 ID → 리뷰 탭에서 확인한 리뷰 id. 디스크에 남는다.
     @Published var viewedReviewIDs: [String: Set<String>] = [:]
+    /// 번들 ID → 알림을 이미 보낸(또는 처음 받을 때 있던) 리뷰 id. 확인과 따로 센다 -
+    /// 리뷰 탭을 안 열었다고 같은 리뷰로 30분마다 다시 알리면 안 된다.
+    var alertedReviewIDs: [String: Set<String>] = [:]
+    /// 새 리뷰를 받았을 때(앱 번들 ID, 그 리뷰들). 알릴지는 받는 쪽이 정한다.
+    var onNewReviews: ((String, [CustomerReview]) -> Void)?
     /// 번들 ID → 가장 최근 App Store 버전.
     @Published var versions: [String: AppVersionStatus] = [:]
     /// 전체 프로젝트의 우선순위 분석 — 지금 보이는 것과 지난 기록.

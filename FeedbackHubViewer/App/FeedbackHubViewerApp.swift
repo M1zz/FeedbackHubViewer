@@ -22,6 +22,13 @@ struct FeedbackHubViewerApp: App {
     @StateObject private var purchases = AppStoreConnectStore()
     /// 앱 리포의 설계 문서 폴더를 지켜본다(맥만).
     @StateObject private var designDocs = DesignDocsStore()
+    /// 새 피드백 · 리뷰 알림(`AlertWatcher`).
+    @StateObject private var watcher = AlertWatcher()
+    #if os(iOS)
+    @UIApplicationDelegateAdaptor(HubAppDelegate.self) private var appDelegate
+    #else
+    @NSApplicationDelegateAdaptor(HubAppDelegate.self) private var appDelegate
+    #endif
     @Environment(\.scenePhase) private var scenePhase
 
     var body: some Scene {
@@ -36,6 +43,7 @@ struct FeedbackHubViewerApp: App {
                     // Paint the cached hub, then check CloudKit for changes on
                     // a task the store owns — the window never waits for it.
                     store.start()
+                    watcher.start(store: store, purchases: purchases)
                     // The rank history is its own small file and waits for
                     // nothing — it is on screen before the hub has finished
                     // decoding.
@@ -70,12 +78,21 @@ struct FeedbackHubViewerApp: App {
                 // 모른다. 앱이 앞으로 올 때마다 키가 없으면 다시 본다.
                 .onChange(of: scenePhase) { _, phase in
                     if phase == .active { purchases.reloadCredentialsIfMissing() }
+                    #if os(iOS)
+                    // 뒤로 가면 리뷰를 볼 다음 차례를 iOS 에 부탁해 둔다.
+                    if phase == .background { AlertWatcher.scheduleAppRefresh() }
+                    #endif
                 }
                 // 앱 아이콘 뱃지에 새 스토어 리뷰도 — 리뷰는 App Store Connect 쪽이 쥐고 있다.
                 .onChange(of: purchases.newReviewCount(for: nil), initial: true) { _, count in
                     store.newStoreReviewCount = count
                 }
         }
+        #if os(iOS)
+        .backgroundTask(.appRefresh(AlertWatcher.refreshTaskID)) {
+            await watcher.backgroundCheck(store: store, purchases: purchases)
+        }
+        #endif
         #if os(macOS)
         .windowToolbarStyle(.unified)
         .commands {

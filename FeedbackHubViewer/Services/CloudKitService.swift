@@ -180,6 +180,7 @@ final class CloudKitService {
     ///     never treated as the whole type. See `partialBatch`.
     func fetchUsage(modifiedSince: [String: Date] = [:],
                     known: [String: Set<String>] = [:],
+                    types: Set<String>? = nil,
                     onPartial: ((UsageOutcome) -> Void)? = nil) async -> UsageOutcome {
         var outcome = UsageOutcome()
         var problems: [String] = []
@@ -197,6 +198,8 @@ final class CloudKitService {
                           shape: ChangeShape = .appendOnly,
                           _ make: @escaping (CKRecord) -> Record,
                           into slot: WritableKeyPath<UsageOutcome, [Record]?>) async {
+            // 이번에 안 읽는 타입은 nil 로 남는다 - 받는 쪽은 nil 을 "그대로 둔다"로 읽는다.
+            if let types, !types.contains(recordType) { return }
             do {
                 // `known` only narrows an append-only type — see `queryAll`.
                 let records = try await queryAll(recordType: recordType,

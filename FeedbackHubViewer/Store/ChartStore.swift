@@ -39,10 +39,8 @@ final class ChartStore: ObservableObject {
 
     private static let countriesKey = "chartCountries"
     private static let fileName = "chart-ranks"
-    /// 저절로 다시 볼 때까지의 간격. 나라를 많이 고르면(한 번에 수백 MB) 하루 한 번으로 늦춘다.
-    var autoInterval: TimeInterval {
-        (countries.count > Self.manyCountries ? 24 : 12) * 60 * 60
-    }
+    /// 저절로 다시 볼 때까지의 간격. 순위도 숫자라 하루에 한 번이면 된다("지금 확인"은 언제든).
+    var autoInterval: TimeInterval { 24 * 60 * 60 }
     static let manyCountries = 30
     private static let maxConcurrency = 6
 

@@ -381,8 +381,7 @@ private struct ChartCountriesSheet: View {
         let feeds = charts.countries.count * charts.feedsPerCountry
         let megabytes = Double(feeds * ChartStorefronts.approximateFeedBytes) / 1_000_000
         let size = megabytes >= 100 ? String(format: "%.0fMB", megabytes) : String(format: "%.1fMB", megabytes)
-        let cadence = charts.countries.count > ChartStore.manyCountries ? "하루 한 번" : "12시간에 한 번"
-        return "확인 한 번에 차트 피드 \(feeds)개, 약 \(size)를 받습니다. 저절로는 \(cadence), 와이파이에서만 확인합니다(셀룰러 · 저데이터 모드에서는 건너뜀). 지금 확인은 언제든 됩니다."
+        return "확인 한 번에 차트 피드 \(feeds)개, 약 \(size)를 받습니다. 저절로는 하루 한 번, 와이파이에서만 확인합니다(셀룰러 · 저데이터 모드에서는 건너뜀). 지금 확인은 언제든 됩니다."
     }
 
     private func toggle(_ code: String) {

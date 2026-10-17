@@ -11,6 +11,9 @@
 
 import SwiftUI
 import UniformTypeIdentifiers
+#if os(macOS)
+import ServiceManagement
+#endif
 
 struct SettingsView: View {
     @EnvironmentObject private var connect: AppStoreConnectStore
@@ -67,9 +70,8 @@ struct SettingsView: View {
 private struct AttentionSettings: View {
     @EnvironmentObject private var store: FeedbackStore
 
-    /// 시스템 알림을 띄울 수 있는 것. 리뷰는 App Store Connect 를 읽을 때 알게 되어
-    /// 아직 알림을 보내지 않는다.
-    private let alertable: [AttentionKind] = [.feedback, .crash]
+    /// 시스템 알림을 띄울 수 있는 것 - 뱃지와 같은 순서.
+    private let alertable: [AttentionKind] = [.review, .feedback, .crash]
 
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
@@ -89,15 +91,31 @@ private struct AttentionSettings: View {
             VStack(alignment: .leading, spacing: 10) {
                 Text("알림").font(.headline)
                 Toggle(isOn: $store.notificationsEnabled) {
-                    Label("새로고침에서 새것을 찾으면 알림 보내기", systemImage: "bell")
+                    Label("새것이 오면 이 기기에 알림 보내기", systemImage: "bell")
                 }
                 ForEach(alertable) { kind in
-                    Toggle(isOn: binding(for: kind, in: \.alertKinds)) {
-                        Label("새 \(kind.name)", systemImage: kind.systemImage)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Toggle(isOn: binding(for: kind, in: \.alertKinds)) {
+                            Label("새 \(kind.name)", systemImage: kind.systemImage)
+                        }
+                        .disabled(!store.notificationsEnabled)
+                        if store.notificationsEnabled && store.alertKinds.contains(kind) {
+                            Text(how(kind))
+                                .font(.body)
+                                .foregroundStyle(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                                .padding(.leading, 28)
+                        }
                     }
-                    .disabled(!store.notificationsEnabled)
                     .padding(.leading, 20)
                 }
+                Text("사용 통계 · 차트 같은 숫자는 하루에 한 번만 저절로 다시 읽습니다. 바로 보려면 새로고침(⌘R)을 누르세요.")
+                    .font(.body)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                #if os(macOS)
+                LoginItemToggle()
+                #endif
                 if store.notificationsEnabled && !store.notificationsAuthorized {
                     Text("시스템 설정에서 이 앱의 알림을 허용해야 알림이 표시됩니다.")
                         .font(.body)
@@ -107,6 +125,22 @@ private struct AttentionSettings: View {
         }
         .font(.body)
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// 그 종류가 어떻게 오는지. 푸시가 걸렸는지는 기기마다 다르다.
+    private func how(_ kind: AttentionKind) -> String {
+        switch kind {
+        case .review:
+            #if os(macOS)
+            return "App Store 는 리뷰를 푸시로 알려 주지 않아서, 앱이 떠 있는 동안 30분마다 확인합니다. 창을 닫아도 앱이 떠 있으면 확인합니다."
+            #else
+            return "App Store 는 리뷰를 푸시로 알려 주지 않아서, iOS 가 허락할 때 뒤에서 확인합니다. 몇 시간 늦을 수 있습니다."
+            #endif
+        case .feedback, .crash:
+            return store.pushKinds.contains(kind)
+                ? "푸시로 받습니다 - 앱이 꺼져 있어도 옵니다."
+                : "푸시를 걸지 못해 앱이 떠 있을 때만 옵니다(iCloud 로그인 · 네트워크 확인)."
+        }
     }
 
     private func binding(for kind: AttentionKind,
@@ -273,3 +307,33 @@ struct ConnectKeyForm: View {
         }
     }
 }
+
+#if os(macOS)
+/// 맥에 로그인하면 허브가 저절로 떠서 리뷰를 계속 본다.
+private struct LoginItemToggle: View {
+    @State private var isOn = SMAppService.mainApp.status == .enabled
+    @State private var problem: String?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Toggle(isOn: Binding(get: { isOn }, set: set)) {
+                Label("로그인할 때 열기", systemImage: "power")
+            }
+            Text(problem ?? "켜 두면 맥을 켤 때마다 허브가 떠서 새 리뷰를 놓치지 않습니다.")
+                .font(.body)
+                .foregroundStyle(problem == nil ? AnyShapeStyle(.secondary) : AnyShapeStyle(.orange))
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    private func set(_ on: Bool) {
+        do {
+            if on { try SMAppService.mainApp.register() } else { try SMAppService.mainApp.unregister() }
+            problem = nil
+        } catch {
+            problem = "바꾸지 못했습니다: \(error.localizedDescription)"
+        }
+        isOn = SMAppService.mainApp.status == .enabled
+    }
+}
+#endif

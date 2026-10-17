@@ -369,6 +369,7 @@ final class FeedbackStore: ObservableObject {
                     refreshBadge()
                 }
             }
+            syncPushSubscriptions()
         }
     }
     /// 뱃지(앱 아이콘 · 종 · 탭)에 셀 것. 기기마다 따로 둔다.
@@ -394,8 +395,13 @@ final class FeedbackStore: ObservableObject {
         didSet {
             guard alertKinds != oldValue else { return }
             defaults.set(alertKinds.map(\.rawValue), forKey: Self.alertKindsKey)
+            syncPushSubscriptions()
         }
     }
+    /// CloudKit 푸시가 실제로 걸린 종류(`PushSubscriptions`). 이것들은 앱이 꺼져 있어도 Apple 이
+    /// 알려 주므로, 새로고침에서 찾았을 때 로컬 알림을 또 띄우지 않는다.
+    @Published private(set) var pushKinds: Set<AttentionKind> = []
+    private var pushSyncTask: Task<Void, Never>?
     /// False when the system denied notifications — the toggle stays on but the
     /// UI can explain why nothing shows up.
     @Published private(set) var notificationsAuthorized = true
@@ -436,6 +442,13 @@ final class FeedbackStore: ObservableObject {
         }
         if let saved = defaults.stringArray(forKey: Self.alertKindsKey) {
             alertKinds = Set(saved.compactMap(AttentionKind.init(rawValue:)))
+        }
+        // 리뷰 알림이 생기기 전에 저장된 설정에는 리뷰가 없다. 한 번만 넣어 준다 - 그 뒤에
+        // 끈 것은 존중한다.
+        if !defaults.bool(forKey: Self.reviewAlertMigratedKey) {
+            alertKinds.insert(.review)
+            defaults.set(alertKinds.map(\.rawValue), forKey: Self.alertKindsKey)
+            defaults.set(true, forKey: Self.reviewAlertMigratedKey)
         }
         seenFeedbackIDs = defaults.stringArray(forKey: Self.seenFeedbackIDsKey).map(Set.init)
         seenCrashIDs = defaults.stringArray(forKey: Self.seenCrashIDsKey).map(Set.init)
@@ -582,6 +595,8 @@ final class FeedbackStore: ObservableObject {
         startupTask = Task { [weak self] in
             guard let self else { return }
             let restored = await restore.value
+            // 피드백 레코드 타입은 캐시에서 알게 된다 - 그다음에 푸시 구독을 맞춘다.
+            if self.notificationsEnabled { self.syncPushSubscriptions() }
             // 그 다음이 iCloud의 마지막 요약본이다. 이 기기의 캐시가 먼저
             // 그려지고 나서 오는 것이라 첫 프레임을 붙잡지 않고, 다른 기기가
             // 방금 새로고침해 뒀다면 이 기기는 읽을 것이 없다 — 아이폰이
@@ -615,6 +630,20 @@ final class FeedbackStore: ObservableObject {
     /// Read everything again — the refresh button, ⌘R, and pull-to-refresh.
     func load() async {
         await load(mode: .full)
+    }
+
+    /// 사용 현황 · 이벤트를 저절로 다시 읽는 간격. 숫자는 하루에 한 번 보면 된다.
+    static let numbersInterval: TimeInterval = 24 * 60 * 60
+
+    /// 마지막으로 숫자(사용 현황 · 이벤트)를 끝까지 읽은 때. 둘 중 오래된 쪽.
+    var numbersReadAt: Date? {
+        let dates = [CloudKitService.snapshotRecordType, CloudKitService.eventRecordType].map { watermarks[$0] }
+        guard !dates.contains(where: { $0 == nil }) else { return nil }
+        return dates.compactMap { $0 }.min()
+    }
+
+    private var numbersAreStale: Bool {
+        numbersReadAt.map { Date().timeIntervalSince($0) >= Self.numbersInterval } ?? true
     }
 
     func load(mode: RefreshMode) async {
@@ -707,6 +736,13 @@ final class FeedbackStore: ObservableObject {
         // records on disk and nothing older, and a boundary would stop the next
         // read right there — leaving the gap behind it unread for good. Having
         // finished is exactly what a watermark records.
+        // 사용 현황 · 이벤트는 숫자의 재료이고, 숫자는 하루 단위로 움직인다. 1분마다 도는
+        // 자동 갱신 · 알림 감시가 매번 읽을 까닭이 없다 - 손으로 누른 새로고침이거나 마지막으로
+        // 읽은 지 하루가 지났을 때만 읽는다. 진단은 알림거리라 늘 읽는다.
+        let readsNumbers = mode == .full || numbersAreStale
+        let usageTypes: Set<String> = readsNumbers
+            ? [CloudKitService.snapshotRecordType, CloudKitService.eventRecordType, CloudKitService.crashRecordType]
+            : [CloudKitService.crashRecordType]
         var usageKnown: [String: Set<String>] = [:]
         if watermarks[CloudKitService.eventRecordType] != nil {
             usageKnown[CloudKitService.eventRecordType] = rollups.knownEventIDs()
@@ -714,7 +750,8 @@ final class FeedbackStore: ObservableObject {
         if isIncremental, watermarks[CloudKitService.crashRecordType] != nil {
             usageKnown[CloudKitService.crashRecordType] = Set(fetchedCrashes.map(\.id))
         }
-        let usage = await service.fetchUsage(modifiedSince: usageSince, known: usageKnown) { [weak self] partial in
+        let usage = await service.fetchUsage(modifiedSince: usageSince, known: usageKnown,
+                                             types: usageTypes) { [weak self] partial in
             // What has arrived so far, while the read is still running. Merged
             // and written out as it comes: a first launch reads thousands of
             // records over a minute or more, and quitting the app — or, on a
@@ -1139,6 +1176,7 @@ final class FeedbackStore: ObservableObject {
     private static let notificationsEnabledKey = "notificationsEnabled"
     private static let badgeKindsKey = "badgeKinds"
     private static let alertKindsKey = "alertKinds"
+    private static let reviewAlertMigratedKey = "alertKinds.reviewAdded"
     private static let activityOverridesKey = "activityDefinitions"
     private static let seenFeedbackIDsKey = "seenFeedbackIDs"
     private static let seenCrashIDsKey = "seenCrashIDs"
@@ -1167,14 +1205,14 @@ final class FeedbackStore: ObservableObject {
 
         if let previous = seenFeedbackIDs {
             let fresh = allFeedback.filter { !previous.contains($0.id) }
-            if notificationsEnabled, alertKinds.contains(.feedback), !fresh.isEmpty {
+            if notificationsEnabled, alertKinds.contains(.feedback), !pushKinds.contains(.feedback), !fresh.isEmpty {
                 let projects = Array(Set(fresh.map { displayName(for: $0.projectKey) })).sorted()
                 NotificationService.notifyNewFeedback(count: fresh.count, projects: projects)
             }
         }
         if let previous = seenCrashIDs {
             let fresh = allCrashes.filter { !previous.contains($0.id) }
-            if notificationsEnabled, alertKinds.contains(.crash), !fresh.isEmpty {
+            if notificationsEnabled, alertKinds.contains(.crash), !pushKinds.contains(.crash), !fresh.isEmpty {
                 let projects = Array(Set(fresh.map { displayName(for: $0.projectKey) })).sorted()
                 NotificationService.notifyNewCrashes(count: fresh.count, projects: projects)
             }
@@ -1193,6 +1231,24 @@ final class FeedbackStore: ObservableObject {
             defaults.set(Array(crashIDs), forKey: Self.seenCrashIDsKey)
         }
         seedViewedCrashes()
+    }
+
+    /// 스토어 리뷰가 새로 왔을 때(`AppStoreConnectStore.onNewReviews`). 숨긴 앱은 조용히.
+    func announceNewReviews(bundleID: String, reviews: [CustomerReview]) {
+        guard notificationsEnabled, alertKinds.contains(.review), !hiddenProjects.contains(bundleID) else { return }
+        NotificationService.notifyNewReviews(app: displayName(for: bundleID), reviews: reviews)
+    }
+
+    /// 알림 설정에 맞춰 CloudKit 푸시 구독을 걸거나 푼다. 알림을 끄면 다 푼다.
+    func syncPushSubscriptions() {
+        let wanted = notificationsEnabled ? alertKinds : []
+        let recordType = resolvedRecordType ?? "Feedback"
+        pushSyncTask?.cancel()
+        pushSyncTask = Task { [weak self] in
+            let active = await PushSubscriptions.sync(wanted, feedbackRecordType: recordType)
+            guard !Task.isCancelled else { return }
+            self?.pushKinds = active
+        }
     }
 
     /// 앱 아이콘 뱃지 — 설정에서 켠 것(기본: 새 스토어 리뷰 + 안 읽은 피드백). 알림 토글과 따로
