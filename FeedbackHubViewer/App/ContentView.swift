@@ -18,6 +18,8 @@ struct ContentView: View {
 
     var body: some View {
         layout
+            // 개발 빌드는 강조색부터 다르다(`EnvironmentBadge.swift`).
+            .environmentTint()
             // A refresh writes what it has read every few seconds; this is what
             // keeps the last few from being lost when the app is quit or —
             // on a phone, which is most of the time — switched away from
@@ -34,6 +36,7 @@ struct ContentView: View {
             // 맥은 설정 창(⌘,)이고, 터치 기기는 "더 보기 → 설정"이 이 시트를 연다.
             .sheet(isPresented: $connect.isShowingSettings) {
                 SettingsView()
+                    .environmentObject(store)
                     .environmentObject(connect)
             }
             #endif

@@ -23,7 +23,7 @@ extension FeedbackStore {
         projectCounts.map(\.key)
     }
 
-    /// (key, count) pairs, highest DAU first, for the sidebar list. `key` is
+    /// (key, count) pairs, highest MAU first, for the sidebar list. `key` is
     /// the grouping identity (appId); resolve its label with `displayName(for:)`.
     var projectCounts: [(key: String, count: Int)] {
         memoized(\.projectCounts) {
@@ -42,7 +42,7 @@ extension FeedbackStore {
     }
 
     /// Per-project rolled-up numbers for the overview grid, ordered the same
-    /// way as `projectCounts` (highest DAU first, "미분류" last).
+    /// way as `projectCounts` (highest MAU first, "미분류" last).
     var projectSummaries: [ProjectSummary] {
         memoized(\.projectSummaries) {
             let weekAgo = Date().addingTimeInterval(-7 * 24 * 60 * 60)
@@ -97,6 +97,11 @@ extension FeedbackStore {
         /// 세우면 아침마다 순서가 뒤집힌다.
         let dauYesterday: Int
         let dauDayBefore: Int
+        /// 최근 30일(오늘까지)에 이벤트를 보낸 서로 다른 설치와, 그 앞 30일 — 사이드바가
+        /// 이 수를 보이고 목록도 이 순서로 선다. 하루치 DAU 는 작은 앱에서 한두 사람에
+        /// 출렁여 순서가 매일 뒤집혔다. 창은 통계 카드의 MAU(`ActiveUsers.Span.month`)와 같다.
+        let mau: Int
+        let previousMAU: Int
 
         var hasUsageData: Bool { installs > 0 || totalEvents > 0 }
 
@@ -136,7 +141,8 @@ extension FeedbackStore {
                                   previousEvents7: 0, previousActiveInstalls7: 0,
                                   eventsYesterday: 0, eventsDayBefore: 0,
                                   newInstalls7: 0, previousNewInstalls7: 0,
-                                  dauYesterday: 0, dauDayBefore: 0)
+                                  dauYesterday: 0, dauDayBefore: 0,
+                                  mau: 0, previousMAU: 0)
     }
 
     /// Traffic per project in one pass. The lists sort against this map rather
@@ -159,6 +165,12 @@ extension FeedbackStore {
         let dauOffset = ActiveUsers.Span.day.endingDaysAgo
         let yesterdayKey = UsageRollups.windowKeys(days: 1, endingDaysAgo: dauOffset, calendar: calendar).first
         let dayBeforeKey = UsageRollups.windowKeys(days: 1, endingDaysAgo: dauOffset + 1, calendar: calendar).first
+        let month = ActiveUsers.Span.month
+        let monthKeys = Set(UsageRollups.windowKeys(days: month.days, endingDaysAgo: month.endingDaysAgo,
+                                                    calendar: calendar))
+        let previousMonthKeys = Set(UsageRollups.windowKeys(days: month.days,
+                                                            endingDaysAgo: month.endingDaysAgo + month.days,
+                                                            calendar: calendar))
 
         let now = Date()
         let weekAgo = now.addingTimeInterval(-7 * 86_400)
@@ -185,8 +197,15 @@ extension FeedbackStore {
             var previousEvents7 = 0
             var active: Set<String> = []
             var previousActive: Set<String> = []
+            var monthly: Set<String> = []
+            var previousMonthly: Set<String> = []
             for (day, bucket) in days {
                 total += bucket.events
+                if monthKeys.contains(day) {
+                    monthly.formUnion(bucket.installs)
+                } else if previousMonthKeys.contains(day) {
+                    previousMonthly.formUnion(bucket.installs)
+                }
                 if weekKeys.contains(day) {
                     events7 += bucket.events
                     active.formUnion(bucket.installs)
@@ -207,7 +226,9 @@ extension FeedbackStore {
                                   newInstalls7: newInstalls[key] ?? 0,
                                   previousNewInstalls7: previousNewInstalls[key] ?? 0,
                                   dauYesterday: yesterdayKey.map { days[$0]?.installs.count ?? 0 } ?? 0,
-                                  dauDayBefore: dayBeforeKey.map { days[$0]?.installs.count ?? 0 } ?? 0)
+                                  dauDayBefore: dayBeforeKey.map { days[$0]?.installs.count ?? 0 } ?? 0,
+                                  mau: monthly.count,
+                                  previousMAU: previousMonthly.count)
         }
         return result
         }
@@ -244,12 +265,15 @@ extension FeedbackStore {
                             previousNewInstalls7: all.reduce(0) { $0 + $1.previousNewInstalls7 },
                             // 설치는 앱마다 익명이라 앱별 DAU의 합이다.
                             dauYesterday: all.reduce(0) { $0 + $1.dauYesterday },
-                            dauDayBefore: all.reduce(0) { $0 + $1.dauDayBefore })
+                            dauDayBefore: all.reduce(0) { $0 + $1.dauDayBefore },
+                            mau: all.reduce(0) { $0 + $1.mau },
+                            previousMAU: all.reduce(0) { $0 + $1.previousMAU })
         return value
         }
     }
 
-    /// DAU(어제) 높은 앱 먼저. 몇 사람이 매일 쓰고 있는가가 어디부터 볼지를 정한다 —
+    /// MAU 높은 앱 먼저, 같으면 DAU(어제). 몇 사람이 쓰고 있는가가 어디부터 볼지를 정한다 —
+    /// 하루치 DAU 만으로는 작은 앱의 순서가 매일 뒤집혔다.
     /// 사용 건수는 한 사람이 많이 눌러도 오르고, 피드백 수는 쓰는 사람보다 불만을 잰다.
     /// 둘은 동률일 때만 가른다. 미분류는 언제나 맨 아래.
     private func ordered(_ k1: String, _ c1: Int, _ k2: String, _ c2: Int,
@@ -259,6 +283,7 @@ extension FeedbackStore {
 
         let t1 = traffic[k1] ?? .none
         let t2 = traffic[k2] ?? .none
+        if t1.mau != t2.mau { return t1.mau > t2.mau }
         if t1.dauYesterday != t2.dauYesterday { return t1.dauYesterday > t2.dauYesterday }
         if t1.activeInstalls7 != t2.activeInstalls7 { return t1.activeInstalls7 > t2.activeInstalls7 }
         if t1.events7 != t2.events7 { return t1.events7 > t2.events7 }
@@ -279,13 +304,19 @@ extension FeedbackStore {
     /// dashboard can focus on one project. `nil` selection == every project.
     var scopedFeedback: [Feedback] { feedback(for: selectedProject) }
 
-    var filteredFeedback: [Feedback] {
+    var filteredFeedback: [Feedback] { filteredFeedback(keeping: nil) }
+
+    /// `keptID` 는 지금 상세에 열어 둔 피드백이다. 그 줄은 처리 상태가 필터와
+    /// 어긋나도 목록에 남긴다. 맥의 `List(selection:)` 은 선택된 줄이 빠지면 선택을
+    /// 풀고, 그러면 상세 칸이 닫힌다 — "처리 완료"를 보다가 확인 필요로 되돌리는
+    /// 순간 상세가 사라졌다. 다른 줄을 고르면 그때 빠진다.
+    func filteredFeedback(keeping keptID: Feedback.ID?) -> [Feedback] {
         var items = scopedFeedback
 
         // 처리한 피드백은 기본적으로 목록에서 빠진다. 통계는 `scopedFeedback`을
         // 그대로 쓰므로 숫자에서는 사라지지 않는다.
         if statusFilter != .all {
-            items = items.filter { statusFilter.accepts(status(of: $0)) }
+            items = items.filter { $0.id == keptID || statusFilter.accepts(status(of: $0)) }
         }
 
         if let version = selectedVersion {

@@ -44,6 +44,10 @@ struct UsageDayBucket: Codable {
     var installs: Set<String> = []
     /// This day's count per event name, slice included ("paywall_view:memo").
     var byEvent: [String: Int] = [:]
+    /// 이벤트 이름(슬라이스 앞부분)마다 그날 그 이벤트를 보낸 설치. "가치 행동을 한
+    /// 사람"으로 활동을 셀 때 쓴다(`FeedbackStore+Habit.swift`). 이것이 생기기 전의
+    /// 날에는 nil 이다 — 그날은 가치 행동 기준으로 잴 수 없다는 뜻이지 0명이 아니다.
+    var eventInstalls: [String: Set<String>]?
     /// The newest `occurredAt` folded into this day.
     var lastAt: Date?
     /// Record names already counted here. `nil` means the day is closed (its
@@ -59,6 +63,7 @@ struct UsageDayBucket: Codable {
     func isSameSums(as other: UsageDayBucket) -> Bool {
         events == other.events && installs == other.installs
             && byEvent == other.byEvent && lastAt == other.lastAt
+            && eventInstalls == other.eventInstalls
     }
 }
 
@@ -299,7 +304,11 @@ struct UsageRollups: Codable {
 
             bucket.events += 1
             bucket.byEvent[event.name, default: 0] += 1
-            if let install = event.installID { bucket.installs.insert(install) }
+            if let install = event.installID {
+                bucket.installs.insert(install)
+                bucket.eventInstalls = bucket.eventInstalls ?? [:]
+                bucket.eventInstalls?[event.baseName, default: []].insert(install)
+            }
             if (bucket.lastAt ?? .distantPast) < event.occurredAt { bucket.lastAt = event.occurredAt }
 
             days[key] = bucket
@@ -499,6 +508,11 @@ struct UsageRollups: Codable {
                 for (name, count) in incoming.byEvent {
                     mine.byEvent[name] = max(mine.byEvent[name] ?? 0, count)
                 }
+                if let incomingSets = incoming.eventInstalls {
+                    var sets = mine.eventInstalls ?? [:]
+                    for (name, ids) in incomingSets { sets[name, default: []].formUnion(ids) }
+                    mine.eventInstalls = sets
+                }
                 if (mine.lastAt ?? .distantPast) < (incoming.lastAt ?? .distantPast) {
                     mine.lastAt = incoming.lastAt
                 }
@@ -607,6 +621,11 @@ struct UsageRollups: Codable {
                 existing.events += bucket.events
                 existing.installs.formUnion(bucket.installs)
                 for (name, count) in bucket.byEvent { existing.byEvent[name, default: 0] += count }
+                if let sets = bucket.eventInstalls {
+                    var merged = existing.eventInstalls ?? [:]
+                    for (name, ids) in sets { merged[name, default: []].formUnion(ids) }
+                    existing.eventInstalls = merged
+                }
                 if (existing.lastAt ?? .distantPast) < (bucket.lastAt ?? .distantPast) {
                     existing.lastAt = bucket.lastAt
                 }
@@ -692,5 +711,29 @@ struct UsageRollups: Codable {
             guard let date = calendar.date(byAdding: .day, value: -(index + offset), to: today) else { return nil }
             return dayKey(date, calendar: calendar)
         }
+    }
+}
+
+extension UsageRollups {
+
+    /// 이미 센 이벤트로 `eventInstalls` 를 채운다 — 이 칸이 생기기 전에 접힌 날도, 아직
+    /// 들고 있는 원본(최근 `rawEventRetentionDays`)만큼은 가치 행동 기준으로 잴 수 있게.
+    /// 건수는 건드리지 않고 집합에 넣기만 하므로 몇 번을 불러도 같다.
+    ///
+    /// - Returns: 무엇이든 바뀌었는가.
+    @discardableResult
+    mutating func backfillEventInstalls(_ events: [UsageEvent], calendar: Calendar = .current) -> Bool {
+        var changed = false
+        for event in events {
+            guard let install = event.installID else { continue }
+            let key = Self.dayKey(event.occurredAt, calendar: calendar)
+            guard var bucket = projects[event.projectKey]?[key] else { continue }
+            var sets = bucket.eventInstalls ?? [:]
+            guard sets[event.baseName, default: []].insert(install).inserted else { continue }
+            bucket.eventInstalls = sets
+            projects[event.projectKey]?[key] = bucket
+            changed = true
+        }
+        return changed
     }
 }

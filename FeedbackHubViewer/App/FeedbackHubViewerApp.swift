@@ -16,8 +16,20 @@ struct FeedbackHubViewerApp: App {
     /// source entirely (see `KeywordStore`) and must not be disturbed by — or
     /// disturb — anything the CloudKit refresh does.
     @StateObject private var keywords = KeywordStore()
+    /// 나라별 App Store 인기 차트 순위. 공개 피드를 읽고 파일도 제 것이다(`ChartStore`).
+    @StateObject private var charts = ChartStore()
     /// App Store Connect — 상품과 판매. 키가 있을 때만 읽는다(`AppStoreConnectStore`).
     @StateObject private var purchases = AppStoreConnectStore()
+    /// 앱 리포의 설계 문서 폴더를 지켜본다(맥만).
+    @StateObject private var designDocs = DesignDocsStore()
+    /// 새 피드백 · 리뷰 알림(`AlertWatcher`).
+    @StateObject private var watcher = AlertWatcher()
+    #if os(iOS)
+    @UIApplicationDelegateAdaptor(HubAppDelegate.self) private var appDelegate
+    #else
+    @NSApplicationDelegateAdaptor(HubAppDelegate.self) private var appDelegate
+    #endif
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some Scene {
         WindowGroup {
@@ -25,19 +37,24 @@ struct FeedbackHubViewerApp: App {
                 .environmentObject(store)
                 .environmentObject(keywords)
                 .environmentObject(purchases)
+                .environmentObject(designDocs)
+                .environmentObject(charts)
                 .task {
                     // Paint the cached hub, then check CloudKit for changes on
                     // a task the store owns — the window never waits for it.
                     store.start()
+                    watcher.start(store: store, purchases: purchases)
                     // The rank history is its own small file and waits for
                     // nothing — it is on screen before the hub has finished
                     // decoding.
                     keywords.restore()
+                    charts.restore()
                     // The daily rank check does wait: the apps it looks for in
                     // each result list are the hub's project keys, and before
                     // the restore there are none.
                     await store.awaitRestore()
                     keywords.start(bundleIds: store.allProjectKeys)
+                    startChartsIfDue()
                 }
                 // 그리고 그 뒤로도. 위의 목록은 캐시가 그려진 순간의 것이고,
                 // 앱이 처음 리포트를 보내면 그 앱은 **새로고침이 끝난 뒤에야**
@@ -46,6 +63,7 @@ struct FeedbackHubViewerApp: App {
                 // 않으므로(`syncLinks`) 새로고침마다 요청이 늘지 않는다.
                 .onChange(of: store.allProjectKeys) { _, keys in
                     keywords.syncLinks(bundleIds: keys)
+                    startChartsIfDue()
                 }
                 // 앱 이름은 스토어에 걸린 이름으로. 두 스토어가 나누는 것은 여기
                 // 이 이름표 하나뿐이다(`FeedbackStore.storeAppNames`).
@@ -54,14 +72,33 @@ struct FeedbackHubViewerApp: App {
                 // 그 순간 `keywords.history`를 읽으면 한 박자 늦은 이름이 된다.
                 .onReceive(keywords.$history) { history in
                     store.storeAppNames = history.storeNames
+                    startChartsIfDue(links: history.links)
+                }
+                // 다른 기기에서 넣은 App Store Connect 키는 iCloud 키체인이 언제 내려 줄지
+                // 모른다. 앱이 앞으로 올 때마다 키가 없으면 다시 본다.
+                .onChange(of: scenePhase) { _, phase in
+                    if phase == .active { purchases.reloadCredentialsIfMissing() }
+                    #if os(iOS)
+                    // 뒤로 가면 리뷰를 볼 다음 차례를 iOS 에 부탁해 둔다.
+                    if phase == .background { AlertWatcher.scheduleAppRefresh() }
+                    #endif
+                }
+                // 앱 아이콘 뱃지에 새 스토어 리뷰도 — 리뷰는 App Store Connect 쪽이 쥐고 있다.
+                .onChange(of: purchases.newReviewCount(for: nil), initial: true) { _, count in
+                    store.newStoreReviewCount = count
                 }
         }
+        #if os(iOS)
+        .backgroundTask(.appRefresh(AlertWatcher.refreshTaskID)) {
+            await watcher.backgroundCheck(store: store, purchases: purchases)
+        }
+        #endif
         #if os(macOS)
         .windowToolbarStyle(.unified)
         .commands {
             CommandGroup(after: .toolbar) {
-                Button("Refresh") {
-                    Task { await store.load() }
+                Button("모두 새로고침") {
+                    Task { await HubRefresh.now(store, purchases) }
                 }
                 .keyboardShortcut("r", modifiers: .command)
             }
@@ -69,19 +106,28 @@ struct FeedbackHubViewerApp: App {
         #endif
 
         #if os(macOS)
-        // ⌘, — App Store Connect 키를 넣는 곳.
+        // ⌘, — App Store Connect 키, 뱃지 · 알림.
         Settings {
             SettingsView()
+                .environmentObject(store)
                 .environmentObject(purchases)
         }
         #endif
+    }
+
+    /// 차트는 스토어와 이어진 내 앱만 본다. 앱 목록이 생길 때(복원 뒤) · 이음이 새로 생길 때
+    /// 불리고, 볼 때가 아니면 그냥 돌아온다 — 저절로는 12시간에 한 번(`ChartStore.startIfDue`).
+    /// `links` 는 `$history` 가 울린 순간의 새 값(그때 `keywords.history` 는 아직 옛것이다).
+    private func startChartsIfDue(links: [String: Int]? = nil) {
+        let links = links ?? keywords.history.links
+        charts.startIfDue(trackIds: Set(store.allProjectKeys.compactMap { links[$0] }))
     }
 
     @ViewBuilder
     private var rootView: some View {
         #if os(macOS)
         ContentView()
-            .frame(minWidth: 900, minHeight: 560)
+            .frame(minWidth: SplitRootView.windowMinWidth, minHeight: 560)
         #else
         ContentView()
         #endif

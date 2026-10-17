@@ -88,6 +88,34 @@ final class CloudKitService {
         container = CKContainer(identifier: Self.containerIdentifier)
     }
 
+    // MARK: - Replies
+
+    /// LeeoKit's reply record type. One reply per feedback, named
+    /// `reply-<feedback recordName>`, so the app fetches it by ID: no query,
+    /// no Queryable index. Must exist in Production with World: Read.
+    static let replyRecordType = "FeedbackReply"
+
+    nonisolated static func replyRecordID(forFeedback id: String) -> CKRecord.ID {
+        CKRecord.ID(recordName: "reply-\(id)")
+    }
+
+    /// The reply already written for this feedback, if any.
+    func fetchReply(forFeedback id: String) async -> String? {
+        (try? await database.record(for: Self.replyRecordID(forFeedback: id)))?["message"] as? String
+    }
+
+    /// Writes (or rewrites) the reply. The sender sees it in their app under
+    /// Settings > 보낸 의견, whether or not they left an email.
+    func saveReply(_ message: String, forFeedback id: String, appId: String?) async throws {
+        let recordID = Self.replyRecordID(forFeedback: id)
+        let record = (try? await database.record(for: recordID))
+            ?? CKRecord(recordType: Self.replyRecordType, recordID: recordID)
+        record["feedbackID"] = id
+        record["message"] = message
+        if let appId { record["appId"] = appId }
+        _ = try await database.save(record)
+    }
+
     /// Usage statistics record types, written by LeeoKit's `LeeoUsageReporter`
     /// into this same container. Fixed names — unlike feedback, there is no
     /// guessing to do (see `Usage.swift`).
@@ -152,6 +180,7 @@ final class CloudKitService {
     ///     never treated as the whole type. See `partialBatch`.
     func fetchUsage(modifiedSince: [String: Date] = [:],
                     known: [String: Set<String>] = [:],
+                    types: Set<String>? = nil,
                     onPartial: ((UsageOutcome) -> Void)? = nil) async -> UsageOutcome {
         var outcome = UsageOutcome()
         var problems: [String] = []
@@ -169,6 +198,8 @@ final class CloudKitService {
                           shape: ChangeShape = .appendOnly,
                           _ make: @escaping (CKRecord) -> Record,
                           into slot: WritableKeyPath<UsageOutcome, [Record]?>) async {
+            // 이번에 안 읽는 타입은 nil 로 남는다 - 받는 쪽은 nil 을 "그대로 둔다"로 읽는다.
+            if let types, !types.contains(recordType) { return }
             do {
                 // `known` only narrows an append-only type — see `queryAll`.
                 let records = try await queryAll(recordType: recordType,

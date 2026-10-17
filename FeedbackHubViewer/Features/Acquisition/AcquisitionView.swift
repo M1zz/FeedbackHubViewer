@@ -22,32 +22,70 @@ struct AcquisitionView: View {
     /// nil == 전체 프로젝트.
     let project: String?
 
+    /// 링크 카드로 내려가는 단추가 겨누는 곳.
+    private static let referralAnchor = "referrals"
+
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 14) {
-                ForEach(AcquisitionCatalog.failures) { failure in
-                    Card(title: "유입 지도를 못 읽었습니다", systemImage: "exclamationmark.triangle") {
-                        Text("\(failure.file): \(failure.reason)")
-                            .font(.body)
-                            .foregroundStyle(.orange)
-                            .fixedSize(horizontal: false, vertical: true)
+        ScrollViewReader { proxy in
+            ScrollView {
+                VStack(alignment: .leading, spacing: 14) {
+                    ForEach(AcquisitionCatalog.failures) { failure in
+                        Card(title: "유입 지도를 못 읽었습니다", systemImage: "exclamationmark.triangle") {
+                            Text("\(failure.file): \(failure.reason)")
+                                .font(.body)
+                                .foregroundStyle(.orange)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
                     }
-                }
-                if let project {
-                    if let map = AcquisitionCatalog.map(for: project) {
-                        AcquisitionDetail(project: project, map: map)
+                    if let project {
+                        referralJump(project) {
+                            withAnimation(.easeOut(duration: 0.25)) {
+                                proxy.scrollTo(Self.referralAnchor, anchor: .top)
+                            }
+                        }
+                        if let map = AcquisitionCatalog.map(for: project) {
+                            AcquisitionDetail(project: project, map: map)
+                        } else {
+                            missingMap
+                        }
+                        ReferralCard(project: project)
+                            .id(Self.referralAnchor)
                     } else {
-                        missingMap
+                        AcquisitionOverview()
                     }
-                    ReferralCard(project: project)
-                } else {
-                    AcquisitionOverview()
                 }
+                .padding()
+                .frame(maxWidth: 900, alignment: .leading)
+                .frame(maxWidth: .infinity)
             }
-            .padding()
-            .frame(maxWidth: 900, alignment: .leading)
-            .frame(maxWidth: .infinity)
         }
+    }
+
+    /// 맨 아래 "누가 내 앱을 링크했나" 카드로 바로 내려가는 단추. 판정 · 지도 아래에
+    /// 있어 스크롤해야 닿던 카드다. 새로 링크한 곳이 있으면 그 수를 같이 단다.
+    private func referralJump(_ project: String, action: @escaping () -> Void) -> some View {
+        let alerts: Int
+        if case .ready(let detection, _)? = connect.referrals[project]?.value {
+            alerts = detection.alerts.count
+        } else {
+            alerts = 0
+        }
+        return Button(action: action) {
+            HStack(spacing: 8) {
+                Label("누가 내 앱을 링크했나 보기", systemImage: "link")
+                if alerts > 0 {
+                    Text("새 소식 \(alerts)")
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 2)
+                        .background(Color.orange.opacity(0.2), in: Capsule())
+                        .foregroundStyle(.orange)
+                }
+                Image(systemName: "arrow.down")
+            }
+            .font(.body)
+        }
+        .buttonStyle(.bordered)
+        .help("이 화면 아래의 링크 출처 카드로 바로 내려갑니다")
     }
 
     private var missingMap: some View {

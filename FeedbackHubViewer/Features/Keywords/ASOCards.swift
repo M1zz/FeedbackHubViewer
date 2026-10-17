@@ -222,9 +222,6 @@ struct StoreMetadataCard: View {
                 }
                 .fixedSize()
                 Spacer()
-                Button {
-                    Task { await connect.loadMetadata(bundleID: project, force: true) }
-                } label: { Label("다시 읽기", systemImage: "arrow.clockwise") }
                 Button { isEditing = true } label: { Label("고치기", systemImage: "pencil") }
                     .buttonStyle(.borderedProminent)
             }

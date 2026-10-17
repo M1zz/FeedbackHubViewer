@@ -34,25 +34,19 @@ extension AppStoreConnectStore {
         CacheFile.remove(Self.ledgerFile)
     }
 
+    /// 디스크에 둔 상세 리포트로 먼저 그리고, 새 파일이 있으면 받아 다시 가린다.
+    /// 처음 본 날의 기록은 새로 받은 것으로만 고친다.
     func loadReferrals(bundleID: String, force: Bool = false) async {
-        guard let client else { return }
-        if !force, let state = referrals[bundleID], !(state.value == nil && !state.isLoading) { return }
-        referrals[bundleID] = .loading
-        do {
-            let app = try await resolveApp(bundleID)
-            guard let request = try await client.analyticsRequestID(appID: app.id) else {
-                referrals[bundleID] = .loaded(.noRequest)
-                return
-            }
-            let report = try await client.referrals(requestID: request, appID: app.id, days: Self.salesDays)
+        await loadAnalytics("referrals", bundleID: bundleID, force: force, into: \.referrals,
+                            noRequest: .noRequest) { client, requestID, appID in
+            let report = try await client.referrals(requestID: requestID, appID: appID, days: Self.salesDays)
+            if requestID == nil && report.instances == 0 { return nil }
             let detection = ReferralDetection(report: report, ledger: referralLedger[bundleID] ?? [:])
-            if detection.ledger != referralLedger[bundleID] {
+            if requestID != nil, detection.ledger != referralLedger[bundleID] {
                 referralLedger[bundleID] = detection.ledger
                 CacheFile.write(referralLedger, to: Self.ledgerFile)
             }
-            referrals[bundleID] = .loaded(.ready(detection, report))
-        } catch {
-            referrals[bundleID] = .failed(error.localizedDescription)
+            return .ready(detection, report)
         }
     }
 }

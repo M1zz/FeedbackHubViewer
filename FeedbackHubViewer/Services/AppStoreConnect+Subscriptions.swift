@@ -17,7 +17,7 @@
 import Foundation
 
 /// 구독 이벤트 리포트의 한 줄에서 필요한 것만.
-struct SubscriptionEventLine: Hashable {
+struct SubscriptionEventLine: Hashable, Codable {
     /// 앱의 Apple ID — 판매 요약의 앱 줄 Apple Identifier 와 같은 값.
     let appAppleID: String
     let event: String

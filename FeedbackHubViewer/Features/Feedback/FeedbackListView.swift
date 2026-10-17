@@ -252,7 +252,7 @@ struct FeedbackListView: View {
         #if os(macOS)
         List(selection: $selection) {
             statusSection
-            ForEach(store.filteredFeedback) { feedback in
+            ForEach(store.filteredFeedback(keeping: selection)) { feedback in
                 triageAffordances(row(for: feedback).tag(feedback.id), for: feedback)
             }
             handledSwitch
@@ -384,7 +384,7 @@ struct FeedbackListView: View {
                 // inside the row would draw its own chevron next to the List's,
                 // and the row needs room for the decide button beside it.
                 .contentShape(Rectangle())
-                .onTapGesture { store.path.append(feedback) }
+                .onTapGesture { store.push(feedback) }
                 #endif
 
             #if os(iOS)
@@ -441,7 +441,8 @@ struct FeedbackListView: View {
 
 }
 
-private struct FeedbackRow: View {
+/// 한 피드백 줄. "할 일"(`InboxView`)도 같은 줄을 쓴다.
+struct FeedbackRow: View {
     let feedback: Feedback
     let projectLabel: String
     let isUnread: Bool
