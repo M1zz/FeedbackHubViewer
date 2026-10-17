@@ -41,6 +41,9 @@ final class FeedbackStore: ObservableObject {
         /// 전체 프로젝트에만 있는 칸 — 모든 앱의 답 안 한 리뷰 · 처리 안 한 버그 리포트 ·
         /// 피드백(`InboxView`). 전체 프로젝트를 고르면 이 칸으로 연다.
         case inbox = "할 일"
+        /// 전체 프로젝트의 소식 — 차트 진입 · 링크 · 기사 · 출시 · 이정표처럼 한 번 일어난 일
+        /// (`NewsView`, `AppNews.swift`). 할 일처럼 처음부터 모든 앱을 한 목록에 둔다.
+        case news = "소식"
         case feedback = "피드백"
         /// App Store 리뷰와 개발자 응답. 피드백 바로 옆에 둔다 — 앱 안에서 온 목소리와
         /// 스토어에 남긴 목소리는 나란히 봐야 한다. 허브가 아니라 App Store Connect 를
@@ -71,11 +74,11 @@ final class FeedbackStore: ObservableObject {
         case design = "설계"
         var id: String { rawValue }
         /// 할 일은 처음부터 모든 앱을 앱별로 묶어 보여 주는 칸이라 앱 목록을 거치지 않는다.
-        var usesAppList: Bool { self != .inbox }
+        var usesAppList: Bool { self != .inbox && self != .news }
         /// 기능 목록에서 이 칸이 놓이는 무리.
         var group: Group {
             switch self {
-            case .inbox: .today
+            case .inbox, .news: .today
             case .feedback, .reviews: .voice
             case .crashes, .release: .quality
             case .stats, .acquisition, .keywords, .charts, .storeAnalytics: .growth
@@ -129,6 +132,7 @@ final class FeedbackStore: ObservableObject {
         var systemImage: String {
             switch self {
             case .inbox: return "tray.full"
+            case .news: return "newspaper"
             case .feedback: return "text.bubble"
             case .stats: return "chart.bar"
             case .release: return "stethoscope"

@@ -20,12 +20,13 @@ struct AppListView: View {
     @EnvironmentObject private var purchases: AppStoreConnectStore
     @EnvironmentObject private var design: DesignDocsStore
     @EnvironmentObject private var charts: ChartStore
+    @EnvironmentObject private var news: NewsStore
     let section: FeedbackStore.ProjectSection
     /// 아이폰은 고르면 민다. 맥 · 아이패드는 `store.selectedProject` 만 바꾼다.
     var pushes = false
 
     var body: some View {
-        let metrics = SectionMetrics(store: store, keywords: keywords, purchases: purchases, design: design, charts: charts)
+        let metrics = SectionMetrics(store: store, keywords: keywords, purchases: purchases, design: design, charts: charts, news: news)
         let traffic = section == .stats ? store.trafficByProject : [:]
         // 릴리즈는 빨강이 먼저 와야 그 기능의 목록이다. 나머지는 MAU 순 그대로 — 기능을
         // 바꿔도 앱 자리가 그대로여야 눈이 앱을 다시 찾지 않는다.

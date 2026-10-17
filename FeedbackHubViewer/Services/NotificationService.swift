@@ -92,6 +92,36 @@ enum NotificationService {
         }
     }
 
+    // MARK: - 앱 소식
+
+    /// 큰 소식 하나(`NewsKind.isBig`). 제목이 이미 앱 이름을 말한다.
+    static func notifyNews(title: String, body: String, app: String) {
+        post(id: "news", title: title, body: body)
+    }
+
+    /// 한 번에 큰 소식이 넷 이상이면 한 장으로 — 화면을 덮지 않게.
+    static func notifyNewsSummary(_ items: [(app: String, title: String)]) {
+        guard !items.isEmpty else { return }
+        let lines = items.prefix(3).map(\.title)
+        let more = items.count > 3 ? "\n외 \(items.count - 3)건" : ""
+        post(id: "news", title: "내 앱 소식 \(items.count)건", body: lines.joined(separator: "\n") + more)
+    }
+
+    /// 아침 묶음. 미리 예약해 두어 앱이 꺼져 있어도 울린다. 같은 id 로 다시 걸면 앞의 예약을
+    /// 바꾸고, 줄이 없으면 예약을 지운다.
+    static func scheduleNewsDigest(id: String, at date: Date, lines: [String]) {
+        let center = UNUserNotificationCenter.current()
+        center.removePendingNotificationRequests(withIdentifiers: [id])
+        guard !lines.isEmpty else { return }
+        let content = UNMutableNotificationContent()
+        content.title = "어제부터 내 앱 소식 \(lines.count)건"
+        content.body = lines.prefix(4).joined(separator: "\n") + (lines.count > 4 ? "\n외 \(lines.count - 4)건" : "")
+        content.sound = .default
+        let parts = Calendar.current.dateComponents([.year, .month, .day, .hour, .minute], from: date)
+        let trigger = UNCalendarNotificationTrigger(dateMatching: parts, repeats: false)
+        center.add(UNNotificationRequest(identifier: id, content: content, trigger: trigger))
+    }
+
     private static func post(id: String, title: String, body: String) {
         let content = UNMutableNotificationContent()
         content.title = title

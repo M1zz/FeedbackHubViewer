@@ -16,6 +16,7 @@ struct ProjectSectionView: View {
     @EnvironmentObject private var purchases: AppStoreConnectStore
     @EnvironmentObject private var design: DesignDocsStore
     @EnvironmentObject private var charts: ChartStore
+    @EnvironmentObject private var news: NewsStore
     /// nil == 전체 앱.
     let project: String?
     /// 어느 기능의 화면인가. 아이폰은 탭마다 다른 기능이 열려 있으므로 가게의 "지금 기능"
@@ -76,7 +77,7 @@ struct ProjectSectionView: View {
     }
 
     private var metrics: SectionMetrics {
-        SectionMetrics(store: store, keywords: keywords, purchases: purchases, design: design, charts: charts)
+        SectionMetrics(store: store, keywords: keywords, purchases: purchases, design: design, charts: charts, news: news)
     }
 
     @ViewBuilder
@@ -84,6 +85,8 @@ struct ProjectSectionView: View {
         switch section {
         case .inbox:
             InboxView(selection: $selection)
+        case .news:
+            NewsView()
         case .feedback:
             FeedbackListView(selection: $selection)
         case .stats:

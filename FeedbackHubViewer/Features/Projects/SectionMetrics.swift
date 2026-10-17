@@ -18,6 +18,7 @@ struct SectionMetrics {
     let purchases: AppStoreConnectStore
     let design: DesignDocsStore
     let charts: ChartStore
+    let news: NewsStore
 
     /// 기능 이름 옆에 붙는 "손볼 것" 표시 하나. 숫자 칸과 같은 활자로 적으면 읽을 것과
     /// 구경할 것이 같은 무게로 보여서 따로 뱃지로 뺀다.
@@ -37,6 +38,9 @@ struct SectionMetrics {
         case .inbox:
             let count = inboxCount
             return count > 0 ? Badge(count: count, systemImage: "tray.full.fill", tint: .orange, name: "남은 일") : nil
+        case .news:
+            let count = news.unreadCount(for: project)
+            return count > 0 ? Badge(count: count, systemImage: "newspaper.fill", tint: .purple, name: "새 소식") : nil
         case .feedback:
             guard store.showsBadge(.feedback) else { return nil }
             let unread = store.unreadCount(for: project)
@@ -68,6 +72,7 @@ struct SectionMetrics {
     func count(_ section: FeedbackStore.ProjectSection, project: String?) -> Int {
         switch section {
         case .inbox: return inboxCount
+        case .news: return news.items.filter { project == nil || $0.project == project }.count
         case .feedback: return store.feedback(for: project).count
         case .stats: return store.usage(for: project).installs
         // 빨강인 앱 수. 한 앱이면 0 아니면 1.
@@ -101,6 +106,8 @@ struct SectionMetrics {
         switch section {
         case .inbox:
             return count > 0 ? "\(AppFormat.count(count))건" : "없음"
+        case .news:
+            return count > 0 ? "\(AppFormat.count(count))건" : "아직 없음"
         case .feedback:
             // 안 읽은 수는 뱃지가 말한다 — 여기서 또 적으면 같은 사실이 한 줄에 두 번 있다.
             return "\(count)건"
@@ -172,6 +179,9 @@ struct SectionMetrics {
         case .inbox:
             let count = inboxCount
             return count > 0 ? "모든 앱에서 남은 일 \(AppFormat.count(count))건" : "남은 일 없음"
+        case .news:
+            let fresh = news.unreadCount
+            return fresh > 0 ? "새 소식 \(AppFormat.count(fresh))건" : "차트 · 링크 · 기사 · 출시 · 이정표"
         case .feedback:
             let shown = store.filteredFeedback.count
             let total = store.scopedFeedback.count

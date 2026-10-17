@@ -22,9 +22,10 @@ struct FeatureListView: View {
     @EnvironmentObject private var purchases: AppStoreConnectStore
     @EnvironmentObject private var design: DesignDocsStore
     @EnvironmentObject private var charts: ChartStore
+    @EnvironmentObject private var news: NewsStore
 
     var body: some View {
-        let metrics = SectionMetrics(store: store, keywords: keywords, purchases: purchases, design: design, charts: charts)
+        let metrics = SectionMetrics(store: store, keywords: keywords, purchases: purchases, design: design, charts: charts, news: news)
 
         List {
             if CloudKitEnvironment.current == .development {

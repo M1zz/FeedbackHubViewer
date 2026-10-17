@@ -22,9 +22,10 @@ struct PhoneRootView: View {
     @EnvironmentObject private var purchases: AppStoreConnectStore
     @EnvironmentObject private var design: DesignDocsStore
     @EnvironmentObject private var charts: ChartStore
+    @EnvironmentObject private var news: NewsStore
 
     var body: some View {
-        let metrics = SectionMetrics(store: store, keywords: keywords, purchases: purchases, design: design, charts: charts)
+        let metrics = SectionMetrics(store: store, keywords: keywords, purchases: purchases, design: design, charts: charts, news: news)
 
         TabView(selection: tabSelection) {
             ForEach(FeedbackStore.ProjectSection.Group.phoneTabs) { tab in
@@ -94,7 +95,9 @@ private struct PhoneTab: View {
                 .onChange(of: section) { _, new in store.projectSection = new }
         } else {
             ProjectSectionView(project: nil, section: section)
-                .safeAreaInset(edge: .top, spacing: 0) { banner }
+                .safeAreaInset(edge: .top, spacing: 0) { header(current: section) }
+                .onAppear { store.projectSection = section }
+                .onChange(of: section) { _, new in store.projectSection = new }
         }
     }
 
