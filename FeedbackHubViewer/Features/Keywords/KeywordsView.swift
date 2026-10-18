@@ -62,6 +62,8 @@ struct KeywordsView: View {
             .padding(16)
         }
         .task { addCountries = Set(keywords.countries.prefix(1)) }
+        // 하루 확인이 이 앱의 말부터 하게 — 보고 있는 것이 먼저 차야 한다.
+        .onChange(of: project, initial: true) { _, project in keywords.focusProject = project }
         .overlay(alignment: .top) { checkBanner }
     }
 
@@ -232,6 +234,7 @@ struct KeywordsView: View {
     private var rankCard: some View {
         Card(title: "키워드 순위", systemImage: "list.number") {
             VStack(alignment: .leading, spacing: 0) {
+                todayStatus
                 if standings.contains(where: { $0.blockers != nil }) {
                     Text("순위순입니다. 각 줄의 **‘N개 앞섬’** 은 위에 있는 앱 중 내 앱보다 리뷰가 많은 것의 수 — 18위인데 위 17개 중 7개가 나보다 작으면 실제로는 10개 뒤입니다. 순위가 낮아도 앞선 앱이 적으면 그쪽이 더 가깝습니다.")
                         .font(.caption).foregroundStyle(.secondary)
@@ -385,6 +388,22 @@ struct KeywordsView: View {
             Text(detail).font(.caption2).foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// 이 앱의 오늘 확인이 어디까지 왔나. 하루 확인은 앱 하나씩 끝내고, 보고 있는 앱부터 한다.
+    @ViewBuilder
+    private var todayStatus: some View {
+        let pending = keywords.pendingToday(for: project)
+        if pending == 0 {
+            Label("오늘 확인 끝", systemImage: "checkmark.circle")
+                .font(.caption).foregroundStyle(.secondary)
+                .padding(.bottom, 10)
+        } else if keywords.isChecking {
+            Label(project == nil ? "오늘 확인 \(pending)개 남음"
+                                 : "오늘 확인 \(pending)개 남음 — 이 앱부터 하는 중", systemImage: "hourglass")
+                .font(.caption).foregroundStyle(.secondary)
+                .padding(.bottom, 10)
+        }
     }
 
     // MARK: - Progress
