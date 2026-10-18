@@ -77,6 +77,7 @@ struct FeedbackHubViewerApp: App {
                 .onReceive(keywords.$history) { history in
                     store.storeAppNames = history.storeNames
                     startChartsIfDue(links: history.links)
+                    syncKeywordFieldsIfDue()
                 }
                 // 다른 기기에서 넣은 App Store Connect 키는 iCloud 키체인이 언제 내려 줄지
                 // 모른다. 앱이 앞으로 올 때마다 키가 없으면 다시 본다.
@@ -84,6 +85,7 @@ struct FeedbackHubViewerApp: App {
                     if phase == .active {
                         purchases.reloadCredentialsIfMissing()
                         news.collect()
+                        syncKeywordFieldsIfDue()
                     }
                     #if os(iOS)
                     // 뒤로 가면 리뷰를 볼 다음 차례를 iOS 에 부탁해 둔다.
@@ -129,6 +131,12 @@ struct FeedbackHubViewerApp: App {
     /// 차트는 스토어와 이어진 내 앱만 본다. 앱 목록이 생길 때(복원 뒤) · 이음이 새로 생길 때
     /// 불리고, 볼 때가 아니면 그냥 돌아온다 — 저절로는 12시간에 한 번(`ChartStore.startIfDue`).
     /// `links` 는 `$history` 가 울린 순간의 새 값(그때 `keywords.history` 는 아직 옛것이다).
+    /// 스토어에 걸린 키워드 칸을 하루 한 번 들인다(`KeywordStore+StoreField.swift`). 앱이 스토어에
+    /// 이어진 뒤라야 읽을 것이 있어, 링크가 바뀔 때마다 불러 두고 하루 한 번만 실제로 돈다.
+    private func syncKeywordFieldsIfDue() {
+        Task { await keywords.syncStoreFieldsIfDue(connect: purchases, projects: store.allProjectKeys) }
+    }
+
     private func startChartsIfDue(links: [String: Int]? = nil) {
         let links = links ?? keywords.history.links
         charts.startIfDue(trackIds: Set(store.allProjectKeys.compactMap { links[$0] }))

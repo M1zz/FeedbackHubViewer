@@ -48,7 +48,7 @@ enum NewsKind: String, Codable, CaseIterable {
     // 경고
     case releaseRed, newCrash, versionRejected, reviewLowCluster
     // 스토어
-    case versionLive, chartEntered, chartBest, storeSurge, keywordTop10, chartDropped, versionInReview
+    case versionLive, chartEntered, chartBest, storeSurge, keywordTop10, keywordRefresh, chartDropped, versionInReview
     // 사람들
     case webMention, referralNew, referralSurge, reviewGlowing, reviewNewTerritory
     // 이정표
@@ -57,7 +57,7 @@ enum NewsKind: String, Codable, CaseIterable {
     var category: NewsCategory {
         switch self {
         case .releaseRed, .newCrash, .versionRejected, .reviewLowCluster: .warning
-        case .versionLive, .chartEntered, .chartBest, .storeSurge, .keywordTop10, .chartDropped, .versionInReview: .store
+        case .versionLive, .chartEntered, .chartBest, .storeSurge, .keywordTop10, .keywordRefresh, .chartDropped, .versionInReview: .store
         case .webMention: .web
         case .referralNew, .referralSurge, .reviewGlowing, .reviewNewTerritory: .people
         case .installMilestone, .dailyInstallRecord, .dauRecord, .newCountry: .milestone
@@ -77,6 +77,7 @@ enum NewsKind: String, Codable, CaseIterable {
         case .chartDropped: "chart.line.downtrend.xyaxis"
         case .storeSurge: "sparkles"
         case .keywordTop10: "magnifyingglass"
+        case .keywordRefresh: "arrow.triangle.2.circlepath"
         case .webMention: "newspaper.fill"
         case .referralNew: "link"
         case .referralSurge: "arrow.up.forward.app"
@@ -98,7 +99,7 @@ enum NewsKind: String, Codable, CaseIterable {
         case .reviewLowCluster, .reviewGlowing, .reviewNewTerritory: .reviews
         case .chartEntered, .chartBest, .chartDropped: .charts
         case .storeSurge: .storeAnalytics
-        case .keywordTop10: .keywords
+        case .keywordTop10, .keywordRefresh: .keywords
         case .webMention, .referralNew, .referralSurge: .acquisition
         case .installMilestone, .dailyInstallRecord, .dauRecord, .newCountry: .stats
         }
@@ -112,7 +113,7 @@ extension NewsKind {
         let order: [NewsKind] = [
             .releaseRed, .versionRejected, .reviewLowCluster, .newCrash,
             .webMention, .chartEntered, .storeSurge, .referralNew, .versionLive,
-            .installMilestone, .chartBest, .keywordTop10, .referralSurge, .reviewGlowing,
+            .installMilestone, .chartBest, .keywordTop10, .keywordRefresh, .referralSurge, .reviewGlowing,
             .dailyInstallRecord, .dauRecord, .reviewNewTerritory
         ]
         return order.firstIndex(of: self)
@@ -132,6 +133,7 @@ extension NewsKind {
         case .chartDropped: "차트에서 순위를 확인해 보세요"
         case .storeSurge: "어디서 몰려왔는지 스토어 분석에서 보세요"
         case .keywordTop10: "이 말을 부제 · 키워드에서 지키세요"
+        case .keywordRefresh: "키워드 칸에서 글을 복사해 Claude 에게 맡기세요"
         case .webMention: "글을 읽고, 틀린 내용이 있으면 바로잡을 수 있어요"
         case .referralNew: "어떤 곳인지 들어가 보세요"
         case .referralSurge: "그곳에 무슨 글이 올라왔는지 보세요"
@@ -335,6 +337,27 @@ enum NewsDetector {
                             date: standing.seenAt ?? now, foundAt: now)
         }
         return NewsBatch(group: group, ready: true, items: items)
+    }
+
+    // MARK: 키워드 칸
+
+    /// 키워드 칸을 바꾼 지 두 주가 지났다 — 다시 짤 때. 한 번 바꾼 칸마다 한 번만(바뀐 날이 id 에 있다).
+    static func keywordRefresh(project: String, name: String, states: [KeywordRefreshState], now: Date) -> NewsBatch {
+        let group = "kwrefresh:\(project)"
+        guard !states.isEmpty else { return NewsBatch(group: group, ready: false, items: []) }
+        let settled = states.filter(\.isSettled)
+        guard let oldest = settled.max(by: { $0.days < $1.days }) else { return NewsBatch(group: group, ready: true, items: []) }
+        let ranked = settled.map(\.ranked).reduce(0, +)
+        let total = settled.map(\.terms.count).reduce(0, +)
+        let title = oldest.changedAt == nil
+            ? "\(name) · 키워드 칸이 \(oldest.days)일째 그대로예요"
+            : "\(name) · 키워드 칸을 바꾼 지 \(oldest.days)일, 다시 짤 때예요"
+        return NewsBatch(group: group, ready: true, items: [
+            NewsItem(id: "kw-refresh:\(project):\(day(oldest.current.seenAt))", project: project, kind: .keywordRefresh,
+                     title: title,
+                     body: "칸의 말 \(total)개 중 \(ranked)개가 검색 200위 안에 있어요. 순위가 자리 잡았으니 무엇이 먹혔는지 보고 다시 짤 수 있어요.",
+                     date: now, foundAt: now)
+        ])
     }
 
     // MARK: 링크 출처

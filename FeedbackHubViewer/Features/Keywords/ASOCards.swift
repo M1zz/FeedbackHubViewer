@@ -195,7 +195,11 @@ struct StoreMetadataCard: View {
                 }
             }
         }
-        .task(id: project) { await connect.loadMetadata(bundleID: project) }
+        .task(id: project) {
+            await connect.loadMetadata(bundleID: project)
+            // 읽은 김에 키워드 칸을 들인다 — 하루 한 번 도는 것보다 먼저 볼 수 있게.
+            if let metadata = connect.metadata[project]?.value { keywords.absorb(metadata, for: project) }
+        }
         .sheet(isPresented: $isEditing) {
             if let metadata = connect.metadata[project]?.value, let locale = currentLocale(metadata) {
                 MetadataEditor(project: project, metadata: metadata, locale: locale) { isEditing = false }

@@ -32,7 +32,10 @@ struct KeywordsView: View {
     var body: some View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 14) {
+                if project == nil { KeywordRefreshOverviewCard() }
                 if let app = linkedApp { linkedAppCard(app) } else { unlinkedCard }
+                // 칸을 다시 짤 때가 됐나 — 이 화면에서 가장 먼저 할 결정이라 앱 카드 바로 아래.
+                if let project, linkedApp != nil { KeywordRefreshCard(project: project) }
                 if linkedApp != nil && standings.isEmpty { startCard }
                 // 무엇을 추적할지 고르는 카드라 추가 칸보다 먼저 온다.
                 if let project, linkedApp != nil {

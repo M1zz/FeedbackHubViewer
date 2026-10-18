@@ -39,6 +39,9 @@ final class KeywordStore: ObservableObject {
     /// 추천 검색어, 프로젝트마다 마지막으로 돌린 것. 돌리는 데 몇 분 걸려서
     /// 다음 실행까지 디스크에 남긴다(`recommend(for:country:)`).
     @Published private(set) var recommendations: [String: KeywordRecommendation.Report] = [:]
+    /// 스토어 키워드 칸의 기록 — `KeywordField.key(project:locale:)` → 본 값들, 오래된 것부터.
+    /// `syncStoreFields` 만 쓴다(`KeywordStore+StoreField.swift`).
+    @Published var fieldLog: [String: [KeywordFieldSnapshot]] = [:]
 
     /// Storefronts offered when adding a term. Seeded from what is already
     /// tracked so the picker matches the data, and persisted as a plain
@@ -51,6 +54,7 @@ final class KeywordStore: ObservableObject {
     private static let lastCheckDayKey = "keywordLastCheckDay"
     private static let lastListingRefreshDayKey = "keywordLastListingRefreshDay"
     private static let recommendationsFile = "keyword-recommendations"
+    static let fieldLogFile = "keyword-fields"
 
     private let directory = AppStoreDirectory.shared
     private var checkTask: Task<Void, Never>?
@@ -99,6 +103,10 @@ final class KeywordStore: ObservableObject {
             if let saved = CacheFile.read([String: KeywordRecommendation.Report].self,
                                           at: CacheFile.url(Self.recommendationsFile)) {
                 self.recommendations = saved
+            }
+            if let saved = CacheFile.read([String: [KeywordFieldSnapshot]].self,
+                                          at: CacheFile.url(Self.fieldLogFile)) {
+                self.fieldLog = saved
             }
             guard let restored = await KeywordCache.shared.load() else { return }
             self.history = restored

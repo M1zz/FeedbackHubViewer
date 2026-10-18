@@ -124,6 +124,8 @@ final class NewsStore: ObservableObject {
                                                history: charts.history, now: now))
             batches.append(NewsDetector.keywords(project: project, name: name,
                                                  standings: keywords.standings(for: project), now: now))
+            batches.append(NewsDetector.keywordRefresh(project: project, name: name,
+                                                       states: keywords.refreshStates(for: project, now: now), now: now))
 
             var insights: StoreInsights?
             if case .ready(let analytics)? = purchases.storeAnalytics[project]?.value { insights = analytics.insights }
