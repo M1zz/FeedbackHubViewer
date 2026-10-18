@@ -90,6 +90,9 @@ struct ChartScan: Codable {
     let hits: [ChartHit]
     /// 받지 못한 피드 수. 0이 아니면 이번 확인의 "없음" 중 일부는 모르는 것이다.
     let failedFeeds: Int
+    /// 받지 못한 차트 칸. 여기 든 칸의 순위는 이번에 본 것이 아니라 직전 확인에서 이어 쓴
+    /// 것이다(`ChartHistory.carryingOver`). 이 칸이 생기기 전 기록은 nil.
+    var failedSlots: [ChartSlot]?
 }
 
 /// 차트를 고르는 데 필요한 앱의 사실 — 기기, 무료인지, 장르. `iTunes lookup` 이 준다.
@@ -157,6 +160,8 @@ struct ChartHistory: Codable {
         guard scans.count >= 2 else { return .unknown }
         let previous = scans[scans.count - 2]
         guard previous.countries.contains(hit.slot.country) else { return .unknown }
+        // 못 받은 칸을 적지 않던 때의 기록은, 피드를 놓쳤으면 "없었다" 를 믿을 수 없다.
+        guard previous.failedFeeds == 0 || previous.failedSlots != nil else { return .unknown }
         guard let before = previous.hits.first(where: { $0.trackId == hit.trackId && $0.slot == hit.slot }) else {
             return .entered
         }
@@ -164,13 +169,26 @@ struct ChartHistory: Codable {
         return before.rank > hit.rank ? .up(before.rank - hit.rank) : .down(hit.rank - before.rank)
     }
 
-    /// 직전에는 들었는데 이번에 빠진 차트 — 이번에도 그 나라를 봤을 때만.
+    /// 직전에는 들었는데 이번에 빠진 차트 — 이번에도 그 나라를 봤을 때만, 그리고 그 차트를
+    /// 이번에 실제로 받았을 때만. 못 받은 차트는 빠진 게 아니라 모르는 것이다.
     func dropped(for trackId: Int) -> [ChartHit] {
         guard scans.count >= 2, let last = lastScan else { return [] }
         let now = Set(last.hits.filter { $0.trackId == trackId }.map(\.slot))
+        let unknown = Set(last.failedSlots ?? [])
+        // 직전 확인이 피드를 놓치고도 어느 칸인지 적지 않았다면 견줄 수 없다 — 이번 기록이 옛 것이면 마찬가지.
+        guard last.failedFeeds == 0 || last.failedSlots != nil else { return [] }
         return scans[scans.count - 2].hits.filter {
-            $0.trackId == trackId && last.countries.contains($0.slot.country) && !now.contains($0.slot)
+            $0.trackId == trackId && last.countries.contains($0.slot.country)
+                && !now.contains($0.slot) && !unknown.contains($0.slot)
         }
+    }
+
+    /// 이번 확인에서 받지 못한 칸의 순위를 직전 확인에서 이어 쓴다. 못 받은 차트를 "없음" 으로
+    /// 적으면 순위가 다 빠진 것처럼 보이고, 다음 확인에서는 "새로 들어갔다" 가 된다.
+    func carryingOver(failed: [ChartSlot], into hits: [ChartHit]) -> [ChartHit] {
+        guard !failed.isEmpty, let previous = lastScan else { return hits }
+        let failed = Set(failed)
+        return hits + previous.hits.filter { failed.contains($0.slot) }
     }
 
     /// 최근 `days` 일 동안 차트 칸마다 가장 높았던 자리와 그날.

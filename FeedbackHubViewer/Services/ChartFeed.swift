@@ -9,8 +9,9 @@
 //   · 앱 정보: `itunes.apple.com/lookup?id=1,2,3` — 여러 앱을 한 번에. 무료인지 · 장르 ·
 //     맥 앱인지를 여기서 안다(`StoreApp` 에는 장르 번호와 가격이 없다).
 //
-//  키워드 검색(`AppStoreDirectory`)과 같은 서버지만 다른 길이라 그쪽의 속도 제한에
-//  묶지 않는다. 대신 동시에 여섯 개까지만 연다.
+//  키워드 검색(`AppStoreDirectory`)과 같은 주소라 한도도 같다. 그래서 같은 줄(`ITunesGate`)에
+//  서서 3초씩 벌려 받는다. 한꺼번에 받으면 몇 개 지나 다 403 이 오고, 그 차트의 순위가
+//  "100위 밖" 처럼 보인다. 403 을 받으면 줄이 쉬었다가 두 번까지 다시 묻는다.
 //
 
 import Foundation
@@ -40,14 +41,21 @@ enum ChartFeed {
     /// `thrifty` 면 비싼 네트워크에서는 받지 않고 오류로 끝난다.
     static func rankedIDs(for slot: ChartSlot, thrifty: Bool = false) async throws -> [Int] {
         guard let url = slot.feedURL else { return [] }
-        let (data, response) = try await (thrifty ? thriftySession : session).data(from: url)
-        if let http = response as? HTTPURLResponse, http.statusCode != 200 {
+        for attempt in 0...maxRetries {
+            try await ITunesGate.shared.wait()
+            let (data, response) = try await (thrifty ? thriftySession : session).data(from: url)
+            guard let http = response as? HTTPURLResponse, http.statusCode != 200 else { return parse(data) }
             // 없는 나라 · 없는 차트는 404/400 으로 온다 — 오류가 아니라 "차트 없음".
             if http.statusCode == 404 || http.statusCode == 400 { return [] }
-            throw URLError(.badServerResponse)
+            // 403 은 "너무 자주" 다. 줄을 쉬게 하고 다시 줄 선다.
+            guard http.statusCode == 403, attempt < maxRetries else { break }
+            await ITunesGate.shared.backOff()
         }
-        return parse(data)
+        throw URLError(.badServerResponse)
     }
+
+    /// 403 을 받은 피드를 다시 물어볼 횟수.
+    private static let maxRetries = 2
 
     /// `{ "feed": { "entry": [ { "id": { "attributes": { "im:id": "123" } } } ] } }`.
     /// 항목이 하나뿐이면 `entry` 가 배열이 아니라 객체로 온다.
@@ -96,6 +104,7 @@ enum ChartFeed {
                 URLQueryItem(name: "country", value: country),
             ]
             guard let url = components.url,
+                  (try? await ITunesGate.shared.wait()) != nil,
                   let (data, _) = try? await session.data(from: url),
                   let decoded = try? JSONDecoder().decode(LookupResponse.self, from: data) else { continue }
             for result in decoded.results {

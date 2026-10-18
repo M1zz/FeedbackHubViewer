@@ -113,7 +113,7 @@ final class ChartStore: ObservableObject {
         progress = (0, list.count)
 
         var hits: [ChartHit] = []
-        var failed = 0
+        var failedSlots: [ChartSlot] = []
         var done = 0
         await withTaskGroup(of: (ChartSlot, [Int]?).self) { group in
             var iterator = list.makeIterator()
@@ -130,24 +130,27 @@ final class ChartStore: ObservableObject {
                         hits.append(ChartHit(trackId: id, slot: slot, rank: index + 1))
                     }
                 } else {
-                    failed += 1
+                    failedSlots.append(slot)
                 }
                 enqueue()
             }
         }
 
         // 다 실패했으면 기록하지 않는다 — "아무 데도 없음" 으로 적히면 순위가 다 빠진 것처럼 보인다.
+        let failed = failedSlots.count
         guard failed < list.count else {
             // 저절로 하는 확인이 셀룰러에서 막힌 것은 오류가 아니다 — 다음 와이파이 때 본다.
             if !automatic { errorMessage = "차트를 받지 못했습니다. 네트워크를 확인해 주세요." }
             return
         }
         if failed > 0 {
-            errorMessage = "차트 \(list.count)개 중 \(failed)개는 받지 못했습니다. 그 칸의 순위는 이번에 빠져 있을 수 있습니다."
+            errorMessage = "차트 \(list.count)개 중 \(failed)개는 받지 못했습니다. 그 차트는 직전 확인의 순위를 그대로 보여 줍니다."
         }
 
-        // 3. 한 장 적고, 한 번 쓴다.
-        history.record(ChartScan(date: Date(), countries: countries, hits: hits, failedFeeds: failed))
+        // 3. 한 장 적고, 한 번 쓴다. 못 받은 칸은 직전 순위를 이어 쓴다.
+        history.record(ChartScan(date: Date(), countries: countries,
+                                 hits: history.carryingOver(failed: failedSlots, into: hits),
+                                 failedFeeds: failed, failedSlots: failedSlots))
         CacheFile.write(history, to: CacheFile.url(Self.fileName))
     }
 
