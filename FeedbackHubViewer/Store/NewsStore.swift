@@ -13,9 +13,10 @@
 //
 //  ── 언제 알리나 ──
 //
-//  큰 소식(`NewsKind.isBig`)은 찾는 대로. 나머지는 아침 9시에 한 번 묶어서 — 그 알림은
-//  미리 예약해 두므로(`scheduleDigest`) 앱이 꺼져 있어도 울린다. 알림은 설정의 "알림" 이
-//  켜져 있고 "앱 소식" 이 켜져 있을 때만.
+//  하루 한 번, 아침 9시 브리핑(`Briefing`). 일어난 일을 다 알리지 않고 볼 만한 것만 골라
+//  최대 다섯 줄로. 볼 만한 게 없는 날은 울리지 않는다. 그 알림은 미리 예약해 두므로
+//  (`scheduleBriefing`) 앱이 꺼져 있어도 울린다. 알림은 설정의 "알림" 이 켜져 있고
+//  "내 앱 소식" 이 켜져 있을 때만.
 //
 
 import Foundation
@@ -34,7 +35,10 @@ final class NewsStore: ObservableObject {
     @Published private(set) var searchTerms: [String: [String]] = [:]
     /// 소식 알림을 보낼지. 설정의 알림 스위치 아래에 따로 있다.
     @Published var alertsEnabled = true {
-        didSet { UserDefaults.standard.set(alertsEnabled, forKey: Self.alertsKey) }
+        didSet {
+            UserDefaults.standard.set(alertsEnabled, forKey: Self.alertsKey)
+            scheduleBriefing()
+        }
     }
 
     static let collectInterval: TimeInterval = 10 * 60
@@ -177,7 +181,7 @@ final class NewsStore: ObservableObject {
             .sorted { $0.foundAt == $1.foundAt ? $0.kind.order < $1.kind.order : $0.foundAt > $1.foundAt }
             .prefix(Self.keepCount))
         save()
-        announce(fresh, now: now)
+        scheduleBriefing(now: now)
     }
 
     private func projects(_ store: FeedbackStore) -> [String] {
@@ -236,33 +240,28 @@ final class NewsStore: ObservableObject {
         save()
     }
 
-    // MARK: - 알림
+    // MARK: - 브리핑
 
-    private func announce(_ fresh: [NewsItem], now: Date) {
-        guard alertsEnabled, store?.notificationsEnabled == true else { return }
-        let big = fresh.filter(\.isBig)
-        if big.count > 3 {
-            NotificationService.notifyNewsSummary(big.map { (name(of: $0), $0.title) })
-        } else {
-            for item in big {
-                NotificationService.notifyNews(title: item.title, body: item.body, app: name(of: item))
-            }
-        }
-        scheduleDigest(now: now)
+    /// 지금 화면에 보일 브리핑 — 지난 하루 동안 찾은 것에서 고른다.
+    func briefing(now: Date = Date()) -> Briefing {
+        let since = now.addingTimeInterval(-24 * 3600)
+        return Briefing(items: items.filter { $0.foundAt > since }, name: name(of:))
     }
 
-    private func name(of item: NewsItem) -> String { store?.displayName(for: item.project) ?? item.project }
+    private func name(of project: String) -> String { store?.displayName(for: project) ?? project }
 
-    /// 다음 아침 9시에 울릴 묶음 알림을 다시 건다. 지난 9시 뒤에 찾은 작은 소식이 재료다 —
-    /// 9시 전에 찾은 것은 오늘 9시에, 뒤에 찾은 것은 내일 9시에 울린다.
-    private func scheduleDigest(now: Date) {
+    /// 다음 아침 9시 브리핑을 다시 건다. 지난 9시 뒤에 찾은 것이 재료다 — 9시 전에 찾은
+    /// 것은 오늘 9시에, 뒤에 찾은 것은 내일 9시에 나온다. 고를 게 없으면 예약을 지운다.
+    func scheduleBriefing(now: Date = Date()) {
         let calendar = Calendar.current
         guard let todayAt = calendar.date(bySettingHour: Self.digestHour, minute: 0, second: 0, of: now) else { return }
         let lastBoundary = todayAt <= now ? todayAt : calendar.date(byAdding: .day, value: -1, to: todayAt) ?? todayAt
         let next = calendar.date(byAdding: .day, value: 1, to: lastBoundary) ?? todayAt
-        let small = items.filter { !$0.isBig && $0.foundAt > lastBoundary }
-        NotificationService.scheduleNewsDigest(id: Self.digestID, at: next,
-                                               lines: small.map { $0.title })
+        let briefing = Briefing(items: items.filter { $0.foundAt > lastBoundary }, name: name(of:))
+        let enabled = alertsEnabled && store?.notificationsEnabled == true
+        NotificationService.scheduleBriefing(id: Self.digestID, at: next,
+                                             lines: enabled ? briefing.lines.map(\.title) : [],
+                                             more: briefing.more)
     }
 
     // MARK: - 디스크

@@ -116,7 +116,7 @@ private struct AttentionSettings: View {
                     }
                     .disabled(!store.notificationsEnabled)
                     if store.notificationsEnabled && news.alertsEnabled {
-                        Text("차트 진입 · 스토어 소개 흔적 · 새 링크 · 바깥 기사 · 출시 · 거절 · 적신호는 찾는 대로, 나머지(최고 기록 · 이정표 · 키워드 10위 · 새 나라)는 아침 9시에 묶어서 알립니다.")
+                        Text("아침 9시에 하루 한 번, 일어난 일 가운데 볼 만한 것만 골라 다섯 줄까지 브리핑합니다. 볼 만한 게 없는 날은 울리지 않아요.")
                             .font(.body)
                             .foregroundStyle(.secondary)
                             .fixedSize(horizontal: false, vertical: true)

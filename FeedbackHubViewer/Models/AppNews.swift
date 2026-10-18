@@ -17,6 +17,9 @@
 //     묶음이 처음 준비됐을 때(`ready`) 그 안의 것은 다 본 것으로 친다.
 //  3. 소식마다 더 볼 곳이 있다 — 바깥 링크거나 앱 안의 한 칸.
 //
+//  전하는 것은 따로다. 일어난 일은 다 기록하지만, 사람에게는 그중 볼 만한 것만 골라
+//  하루 한 번 짧게 전한다(`Briefing`).
+//
 //  탐지는 여기 순수 함수로만 한다. 데이터를 받아 오는 일 · 기억 · 알림은 `NewsStore`.
 //
 
@@ -38,8 +41,6 @@ struct NewsItem: Codable, Identifiable, Hashable {
     let foundAt: Date
     /// 바깥 링크(기사 · 레딧 · 링크를 건 사이트).
     var url: URL?
-
-    var isBig: Bool { kind.isBig }
 }
 
 /// 소식의 종류. 순서가 곧 같은 날 안에서의 차례다.
@@ -60,21 +61,6 @@ enum NewsKind: String, Codable, CaseIterable {
         case .webMention: .web
         case .referralNew, .referralSurge, .reviewGlowing, .reviewNewTerritory: .people
         case .installMilestone, .dailyInstallRecord, .dauRecord, .newCountry: .milestone
-        }
-    }
-
-    /// 바로 알릴 만한가. 아닌 것은 아침 9시에 묶어 알린다.
-    ///
-    /// 기준은 "오늘 안에 무엇을 할 수 있나". 차트에 들었으면 지금 홍보를 얹을 수 있고,
-    /// 기사가 났으면 지금 답글을 달 수 있고, 거절됐으면 지금 고칠 수 있다. 하루 설치 최고
-    /// 기록은 기쁘지만 내일 아침에 알아도 할 일이 달라지지 않는다.
-    var isBig: Bool {
-        switch self {
-        case .releaseRed, .newCrash, .versionRejected, .reviewLowCluster,
-             .versionLive, .chartEntered, .storeSurge, .webMention, .referralNew:
-            true
-        default:
-            false
         }
     }
 
@@ -115,6 +101,109 @@ enum NewsKind: String, Codable, CaseIterable {
         case .keywordTop10: .keywords
         case .webMention, .referralNew, .referralSurge: .acquisition
         case .installMilestone, .dailyInstallRecord, .dauRecord, .newCountry: .stats
+        }
+    }
+}
+
+extension NewsKind {
+    /// 브리핑에 올릴 차례. nil 이면 기록에만 남고 브리핑에는 안 오른다 — 심사 시작 · 차트에서
+    /// 빠짐 · 새 나라의 설치는 일어난 일이지만, 일부러 보러 갈 만한 일은 아니다.
+    var briefingRank: Int? {
+        let order: [NewsKind] = [
+            .releaseRed, .versionRejected, .reviewLowCluster, .newCrash,
+            .webMention, .chartEntered, .storeSurge, .referralNew, .versionLive,
+            .installMilestone, .chartBest, .keywordTop10, .referralSurge, .reviewGlowing,
+            .dailyInstallRecord, .dauRecord, .reviewNewTerritory
+        ]
+        return order.firstIndex(of: self)
+    }
+
+    /// "그래서 무엇을" 한 줄. 브리핑의 화살표 뒤에 붙는다.
+    var action: String {
+        switch self {
+        case .releaseRed: "릴리즈 화면에서 무엇이 빨강인지 보세요"
+        case .newCrash: "진단에서 어디서 죽는지 보세요"
+        case .versionRejected: "해결 센터에서 까닭을 보고 고쳐 다시 내세요"
+        case .reviewLowCluster: "무엇이 깨졌는지 리뷰를 읽어 보세요"
+        case .versionLive: "새 버전 소식을 알려도 좋을 때예요"
+        case .versionInReview: "결과를 기다리면 돼요"
+        case .chartEntered: "지금 그 나라 말로 홍보를 얹을 때예요"
+        case .chartBest: "무엇이 먹혔는지 유입에서 확인해 보세요"
+        case .chartDropped: "차트에서 순위를 확인해 보세요"
+        case .storeSurge: "어디서 몰려왔는지 스토어 분석에서 보세요"
+        case .keywordTop10: "이 말을 부제 · 키워드에서 지키세요"
+        case .webMention: "글을 읽고, 틀린 내용이 있으면 바로잡을 수 있어요"
+        case .referralNew: "어떤 곳인지 들어가 보세요"
+        case .referralSurge: "그곳에 무슨 글이 올라왔는지 보세요"
+        case .reviewGlowing: "답장으로 고마움을 전해 보세요"
+        case .reviewNewTerritory: "그 나라 말로 답장해 보세요"
+        case .installMilestone: "기념으로 알려도 좋아요"
+        case .dailyInstallRecord, .dauRecord: "그날 무슨 일이 있었는지 보세요"
+        case .newCountry: "통계에서 나라별로 보세요"
+        }
+    }
+}
+
+// MARK: - 브리핑
+
+/// "오늘 볼 만한 것" — 소식을 다 늘어놓지 않고 골라서 짧게 전한다.
+///
+/// 같은 앱의 같은 종류는 한 줄로 합친다(차트 세 곳에 든 것은 세 줄이 아니라
+/// "차트 세 곳에 들었어요" 한 줄). 그리고 중요한 차례(`briefingRank`)로 `limit` 줄까지만.
+struct Briefing {
+    struct Line: Identifiable {
+        let id: String
+        let project: String
+        let kind: NewsKind
+        let title: String
+        let detail: String?
+        let url: URL?
+        var action: String { kind.action }
+    }
+
+    let lines: [Line]
+    /// 줄 수를 넘겨 빠진 것.
+    let more: Int
+
+    static let limit = 5
+
+    var isEmpty: Bool { lines.isEmpty }
+
+    init(items: [NewsItem], name: (String) -> String) {
+        let picked = items.filter { $0.kind.briefingRank != nil }
+        let groups = Dictionary(grouping: picked) { "\($0.project)|\($0.kind.rawValue)" }
+        let merged: [Line] = groups.values.compactMap { group in
+            let sorted = group.sorted { $0.date > $1.date }
+            guard let first = sorted.first else { return nil }
+            if sorted.count == 1 {
+                return Line(id: first.id, project: first.project, kind: first.kind,
+                            title: first.title, detail: first.body, url: first.url)
+            }
+            return Line(id: first.id, project: first.project, kind: first.kind,
+                        title: Self.mergedTitle(first.kind, app: name(first.project), count: sorted.count),
+                        detail: sorted.prefix(3).map(\.title).joined(separator: "\n"),
+                        url: first.url)
+        }
+        let ranked = merged.sorted {
+            let (a, b) = ($0.kind.briefingRank ?? .max, $1.kind.briefingRank ?? .max)
+            return a == b ? $0.title < $1.title : a < b
+        }
+        lines = Array(ranked.prefix(Self.limit))
+        more = max(0, ranked.count - Self.limit)
+    }
+
+    private static func mergedTitle(_ kind: NewsKind, app: String, count: Int) -> String {
+        switch kind {
+        case .chartEntered: "\(app.이가) 차트 \(count)곳에 새로 들었어요"
+        case .chartBest: "\(app.이가) 차트 \(count)곳에서 최고 순위예요"
+        case .webMention: "\(app) 이야기가 바깥에 \(count)건 나왔어요"
+        case .referralNew: "\(count)곳에서 \(app) 링크를 새로 걸었어요"
+        case .referralSurge: "\(count)곳에서 \(app.으로) 오는 사람이 늘었어요"
+        case .reviewGlowing: "\(app)에 정성 들인 5점 리뷰가 \(count)건 왔어요"
+        case .reviewNewTerritory: "\(app)에 처음 보는 나라의 리뷰가 \(count)곳에서 왔어요"
+        case .keywordTop10: "\(app.이가) 검색어 \(count)개에서 10위 안에 들었어요"
+        case .newCrash: "\(app)에서 처음 보는 크래시가 \(count)가지 나왔어요"
+        default: "\(app) 소식 \(count)건"
         }
     }
 }
@@ -267,7 +356,7 @@ enum NewsDetector {
             case .surging:
                 let week = item.tally.lastDate ?? day(now)
                 items.append(NewsItem(id: "ref-surge:\(project):\(item.source.id):\(week)", project: project, kind: .referralSurge,
-                                      title: "\(source)에서 \(name)(으)로 오는 사람이 늘었어요",
+                                      title: "\(source)에서 \(name.으로) 오는 사람이 늘었어요",
                                       body: "최근 \(ReferralDetection.recentDays)일 \(item.recent)명, 그 앞 \(ReferralDetection.recentDays)일 \(item.previous)명.",
                                       date: now, foundAt: now, url: url))
             default:
@@ -407,7 +496,7 @@ enum NewsDetector {
         }
         for code in regions {
             items.append(NewsItem(id: "country:\(project):\(code)", project: project, kind: .newCountry,
-                                  title: "\(name)이 처음으로 \(regionName(code))에서 설치됐어요",
+                                  title: "\(name.이가) 처음으로 \(regionName(code))에서 설치됐어요",
                                   body: "기기 지역 설정이 \(regionName(code))인 사람이 처음 설치했습니다.",
                                   date: now, foundAt: now))
         }
@@ -464,4 +553,28 @@ enum NewsDetector {
         "TR": "TUR", "IL": "ISR", "AE": "ARE", "SA": "SAU", "EG": "EGY", "ZA": "ZAF", "CZ": "CZE", "HU": "HUN",
         "RO": "ROU", "SK": "SVK", "KZ": "KAZ", "PK": "PAK", "BD": "BGD", "MO": "MAC", "MN": "MNG"
     ]
+}
+
+// MARK: - 조사
+
+/// 앱 이름 뒤의 조사를 받침에 맞춘다 — "두번알림이", "클립키보드가". 한글로 끝나지 않는
+/// 이름(Goldweek)은 받침을 알 수 없어 "이(가)" 처럼 둘 다 적는다.
+extension String {
+    /// 마지막 글자의 받침. 한글이 아니면 nil, ㄹ 받침이면 `rieul` 이 true.
+    private var finalConsonant: (has: Bool, rieul: Bool)? {
+        guard let scalar = unicodeScalars.last, (0xAC00...0xD7A3).contains(scalar.value) else { return nil }
+        let jong = (scalar.value - 0xAC00) % 28
+        return (jong != 0, jong == 8)
+    }
+
+    var 이가: String {
+        guard let final = finalConsonant else { return self + "이(가)" }
+        return self + (final.has ? "이" : "가")
+    }
+
+    /// "(으)로" — 받침이 없거나 ㄹ 받침이면 "로".
+    var 으로: String {
+        guard let final = finalConsonant else { return self + "(으)로" }
+        return self + (final.has && !final.rieul ? "으로" : "로")
+    }
 }
