@@ -23,6 +23,7 @@ struct PhoneRootView: View {
     @EnvironmentObject private var design: DesignDocsStore
     @EnvironmentObject private var charts: ChartStore
     @EnvironmentObject private var news: NewsStore
+    @ObservedObject private var changes = SectionChanges.shared
 
     var body: some View {
         let metrics = SectionMetrics(store: store, keywords: keywords, purchases: purchases, design: design, charts: charts, news: news)
@@ -35,6 +36,7 @@ struct PhoneRootView: View {
                     .tag(tab)
             }
         }
+        .modifier(SectionChangesBaseline(metrics: metrics))
         // Cross-screen links push here rather than re-scoping a column.
         .task { store.usesStackNavigation = true }
     }

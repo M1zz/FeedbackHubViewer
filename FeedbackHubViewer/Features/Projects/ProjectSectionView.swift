@@ -43,6 +43,10 @@ struct ProjectSectionView: View {
             .onChange(of: project) { syncStore() }
             // 진단 · 리뷰는 열면 확인한 것으로 — 보고 있는 동안 새로 들어온 것도.
             .task(id: viewedKey) { markViewed() }
+            // 통계 · 차트 같은 칸은 열어 본 지금의 말을 본 것으로 — 보는 동안 바뀐 것도.
+            .onChange(of: seenSignatures, initial: true) { _, signatures in
+                SectionChanges.shared.markSeen(section, signatures: signatures)
+            }
             .navigationTitle(title)
             .hubNavigationSubtitle(metrics.subtitle(section, project: project))
     }
@@ -60,6 +64,11 @@ struct ProjectSectionView: View {
         default: fresh = 0
         }
         return "\(project ?? "")|\(section.rawValue)|\(fresh)"
+    }
+
+    private var seenSignatures: [String: String] {
+        guard SectionChanges.tracked.contains(section) else { return [:] }
+        return SectionChanges.signatures(section, project: project, metrics: metrics)
     }
 
     private func markViewed() {

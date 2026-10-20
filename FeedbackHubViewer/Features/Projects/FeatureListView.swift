@@ -23,6 +23,8 @@ struct FeatureListView: View {
     @EnvironmentObject private var design: DesignDocsStore
     @EnvironmentObject private var charts: ChartStore
     @EnvironmentObject private var news: NewsStore
+    /// 본 뒤 바뀐 칸의 뱃지(`SectionChanges`).
+    @ObservedObject private var changes = SectionChanges.shared
 
     var body: some View {
         let metrics = SectionMetrics(store: store, keywords: keywords, purchases: purchases, design: design, charts: charts, news: news)
@@ -57,6 +59,7 @@ struct FeatureListView: View {
             }
         }
         .hubSidebarListStyle()
+        .modifier(SectionChangesBaseline(metrics: metrics))
         .navigationTitle("FeedbackHub")
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
@@ -104,7 +107,7 @@ private struct FeatureRow: View {
             Spacer(minLength: 4)
             if let badge {
                 CountBadge(count: badge.count, systemImage: badge.systemImage,
-                           tint: badge.tint, name: badge.name)
+                           tint: badge.tint, name: badge.name, text: badge.text)
             }
         }
         .padding(.vertical, 3)

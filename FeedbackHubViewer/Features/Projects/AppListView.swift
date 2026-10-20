@@ -21,6 +21,8 @@ struct AppListView: View {
     @EnvironmentObject private var design: DesignDocsStore
     @EnvironmentObject private var charts: ChartStore
     @EnvironmentObject private var news: NewsStore
+    /// 본 뒤 바뀐 앱의 "새" 뱃지가 따라 움직이게.
+    @ObservedObject private var changes = SectionChanges.shared
     let section: FeedbackStore.ProjectSection
     /// 아이폰은 고르면 민다. 맥 · 아이패드는 `store.selectedProject` 만 바꾼다.
     var pushes = false
@@ -211,7 +213,7 @@ private struct AppRow: View {
 
             if let badge {
                 CountBadge(count: badge.count, systemImage: badge.systemImage,
-                           tint: badge.tint, name: badge.name)
+                           tint: badge.tint, name: badge.name, text: badge.text)
             }
             if let stats, stats.traffic.hasUsageData {
                 VStack(alignment: .trailing, spacing: 3) {

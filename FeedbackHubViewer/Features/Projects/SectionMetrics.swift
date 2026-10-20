@@ -27,6 +27,8 @@ struct SectionMetrics {
         let systemImage: String
         let tint: Color
         let name: String
+        /// 수 대신 쓸 글자 — 앱 한 줄의 "새로 바뀜" 처럼 셀 것이 하나뿐일 때.
+        var text: String? = nil
     }
 
     // MARK: - Badge
@@ -34,6 +36,20 @@ struct SectionMetrics {
     /// 우선순위: 안 읽은 피드백 → 새 진단 → 새 리뷰 → 답 안 한 리뷰.
     /// 설정 → 알림에서 끈 종류는 뱃지를 달지 않는다(기본: 진단은 안 단다).
     func badge(_ section: FeedbackStore.ProjectSection, project: String?) -> Badge? {
+        itemBadge(section, project: project) ?? changedBadge(section, project: project)
+    }
+
+    /// 마지막으로 이 칸을 본 뒤 말이 달라진 앱(`SectionChanges`). 전체면 그런 앱 수,
+    /// 한 앱이면 "새".
+    private func changedBadge(_ section: FeedbackStore.ProjectSection, project: String?) -> Badge? {
+        let changed = SectionChanges.shared.changedApps(section, project: project, metrics: self)
+        guard !changed.isEmpty else { return nil }
+        return Badge(count: changed.count, systemImage: "sparkles", tint: .blue,
+                     name: project == nil ? "본 뒤 바뀐 앱" : "본 뒤 바뀜",
+                     text: project == nil ? nil : "새")
+    }
+
+    private func itemBadge(_ section: FeedbackStore.ProjectSection, project: String?) -> Badge? {
         switch section {
         case .inbox:
             let count = inboxCount

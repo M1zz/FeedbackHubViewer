@@ -106,13 +106,15 @@ struct CountBadge: View {
     var tint: Color = .red
     /// "안 읽은 피드백" — 음성 안내와 툴팁이 읽는 이름.
     let name: String
+    /// 수 대신 쓸 글자("새"). 음성 안내는 그대로 이름과 수를 읽는다.
+    var text: String? = nil
 
     var body: some View {
         if count > 0 {
             HStack(spacing: 3) {
                 Image(systemName: systemImage)
                     .font(.system(size: 10, weight: .bold))
-                Text("\(count)")
+                Text(text ?? "\(count)")
                     .font(.caption.monospacedDigit().weight(.semibold))
             }
             .foregroundStyle(.white)
