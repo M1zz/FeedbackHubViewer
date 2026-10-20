@@ -71,13 +71,16 @@ struct SalesMapCard: View {
             if let total {
                 Text("≈ \(MoneyFormat.krw(total.krw))")
                     .font(.title2.weight(.bold).monospacedDigit())
+                Text("≈ \(MoneyFormat.usd(total.usd))")
+                    .font(.title3.weight(.semibold).monospacedDigit())
+                    .foregroundStyle(.secondary)
                 Text("\(countries)개 나라 · 결제 \(AppFormat.count(totals.purchases))건")
                     .font(.body.monospacedDigit())
                     .foregroundStyle(.secondary)
             } else {
                 Text(totals.proceedsLabel)
                     .font(.title3.weight(.semibold).monospacedDigit())
-                Text("환율을 받으면 원화 합계와 지도가 나옵니다.")
+                Text("환율을 받으면 원화 · 달러 합계와 지도가 나옵니다.")
                     .font(.body)
                     .foregroundStyle(.secondary)
             }
@@ -121,7 +124,7 @@ struct SalesMapCard: View {
                             .lineLimit(1)
                         if place.purchases > 0 {
                             Text("결제 \(place.purchases)건")
-                                .font(.caption)
+                                .font(.body)
                                 .foregroundStyle(.secondary)
                         }
                         Spacer(minLength: 8)
@@ -129,6 +132,9 @@ struct SalesMapCard: View {
                             if let money = place.money {
                                 Text(MoneyFormat.krw(money.krw))
                                     .font(.body.monospacedDigit().weight(.semibold))
+                                Text(MoneyFormat.usd(money.usd))
+                                    .font(.body.monospacedDigit())
+                                    .foregroundStyle(.secondary)
                             } else {
                                 Text(place.rawLabel)
                                     .font(.body.monospacedDigit())
@@ -154,14 +160,14 @@ struct SalesMapCard: View {
     @ViewBuilder
     private func footnote(_ total: Money?) -> some View {
         VStack(alignment: .leading, spacing: 2) {
-            Text("개발자 수익금(Apple 수수료 · 세금 뺀 금액)을 \(total.map { AppFormat.relative($0.ratesDate) } ?? "오늘") 환율로 바꾼 어림값입니다. 실제 지급액은 지급일 환율을 따릅니다.")
+            Text("개발자 수익금(Apple 수수료 · 세금 뺀 금액)을 \(total.map { AppFormat.relative($0.ratesDate) } ?? "오늘") 환율로 원화 · 달러로 바꾼 어림값입니다. 실제 지급액은 지급일 환율을 따릅니다.")
             if let missing = total?.unconverted, !missing.isEmpty {
                 Text("환율이 없어 합계에서 빠진 통화: \(missing.joined(separator: ", "))")
                     .foregroundStyle(.orange)
             }
             Link(ExchangeRates.attribution, destination: ExchangeRates.attributionURL)
         }
-        .font(.caption)
+        .font(.body)
         .foregroundStyle(.secondary)
         .fixedSize(horizontal: false, vertical: true)
     }

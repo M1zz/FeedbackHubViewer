@@ -596,6 +596,7 @@ struct Money: Equatable {
         ratesDate = rates.date
     }
 
-    /// "≈ ₩1,234,567" — 화면의 금액은 원화 하나로 통일한다(달러는 지도 원 크기 계산에만).
-    var label: String { "≈ \(MoneyFormat.krw(krw))" }
+    /// "≈ ₩1,234,567 ($920.15)" — 원화를 앞에, 달러를 괄호로 같이. Apple 이 달러로 값을
+    /// 매기고 해외 판매도 달러로 견주는 일이 많아서 둘 다 보인다.
+    var label: String { "≈ \(MoneyFormat.krwWithUSD(krw: krw, usd: usd))" }
 }
