@@ -480,6 +480,19 @@ final class FeedbackStore: ObservableObject {
         case incremental
     }
 
+    /// 허브에서 무엇을 읽을지. 화면마다 새로고침이 제 것만 읽게(`SectionRefresh`) — 피드백
+    /// 화면에서 누른 새로고침이 몇 분 걸리는 사용 현황까지 기다리게 하지 않는다.
+    struct CloudParts: OptionSet {
+        let rawValue: Int
+        /// 피드백 레코드.
+        static let feedback = CloudParts(rawValue: 1 << 0)
+        /// 숫자의 재료 — 사용 현황 · 이벤트.
+        static let numbers = CloudParts(rawValue: 1 << 1)
+        /// 진단(크래시 · 행 리포트).
+        static let crashes = CloudParts(rawValue: 1 << 2)
+        static let all: CloudParts = [.feedback, .numbers, .crashes]
+    }
+
     /// How far along a refresh is.
     ///
     /// There is no percentage to show: CloudKit answers a query by handing back
@@ -636,6 +649,11 @@ final class FeedbackStore: ObservableObject {
         await load(mode: .full)
     }
 
+    /// 손으로 누른 새로고침이되 `parts` 만 — 화면마다의 새로고침 단추가 부른다.
+    func load(_ parts: CloudParts) async {
+        await load(mode: .full, parts: parts)
+    }
+
     /// 사용 현황 · 이벤트를 저절로 다시 읽는 간격. 숫자는 하루에 한 번 보면 된다.
     static let numbersInterval: TimeInterval = 24 * 60 * 60
 
@@ -650,7 +668,7 @@ final class FeedbackStore: ObservableObject {
         numbersReadAt.map { Date().timeIntervalSince($0) >= Self.numbersInterval } ?? true
     }
 
-    func load(mode: RefreshMode) async {
+    func load(mode: RefreshMode, parts: CloudParts = .all) async {
         guard !isRefreshing else { return }
         isRefreshing = true
         errorMessage = nil
@@ -682,7 +700,7 @@ final class FeedbackStore: ObservableObject {
 
         refreshProgress = Self.progressStep(for: Self.feedbackSyncKey)
 
-        do {
+        if parts.contains(.feedback) { do {
             let startedAt = Date()
             let outcome = try await service.fetchFeedback(modifiedSince: since(Self.feedbackSyncKey),
                                                           knownRecordType: resolvedRecordType,
@@ -709,7 +727,7 @@ final class FeedbackStore: ObservableObject {
                     + "\n\n등록할 내 CloudKit User Record Name:\n\(name)\n\n"
                     + "CloudKit Console → 컨테이너 → Security Roles에서 admin 역할에 이 값을 추가하고 피드백 레코드 타입에 read 권한을 준 뒤, Production으로 배포하세요."
             }
-        }
+        } }
 
 
         refreshProgress = Self.progressStep(for: CloudKitService.eventRecordType)
@@ -743,10 +761,11 @@ final class FeedbackStore: ObservableObject {
         // 사용 현황 · 이벤트는 숫자의 재료이고, 숫자는 하루 단위로 움직인다. 1분마다 도는
         // 자동 갱신 · 알림 감시가 매번 읽을 까닭이 없다 - 손으로 누른 새로고침이거나 마지막으로
         // 읽은 지 하루가 지났을 때만 읽는다. 진단은 알림거리라 늘 읽는다.
-        let readsNumbers = mode == .full || numbersAreStale
-        let usageTypes: Set<String> = readsNumbers
-            ? [CloudKitService.snapshotRecordType, CloudKitService.eventRecordType, CloudKitService.crashRecordType]
-            : [CloudKitService.crashRecordType]
+        let readsNumbers = parts.contains(.numbers) && (mode == .full || numbersAreStale)
+        var usageTypes: Set<String> = readsNumbers
+            ? [CloudKitService.snapshotRecordType, CloudKitService.eventRecordType]
+            : []
+        if parts.contains(.crashes) { usageTypes.insert(CloudKitService.crashRecordType) }
         var usageKnown: [String: Set<String>] = [:]
         if watermarks[CloudKitService.eventRecordType] != nil {
             usageKnown[CloudKitService.eventRecordType] = rollups.knownEventIDs()
@@ -754,6 +773,8 @@ final class FeedbackStore: ObservableObject {
         if isIncremental, watermarks[CloudKitService.crashRecordType] != nil {
             usageKnown[CloudKitService.crashRecordType] = Set(fetchedCrashes.map(\.id))
         }
+        // 피드백만 읽는 새로고침이면 사용 기록은 건드리지 않는다.
+        if !usageTypes.isEmpty {
         let usage = await service.fetchUsage(modifiedSince: usageSince, known: usageKnown,
                                              types: usageTypes) { [weak self] partial in
             // What has arrived so far, while the read is still running. Merged
@@ -773,6 +794,7 @@ final class FeedbackStore: ObservableObject {
         }
         changed = apply(usage, incremental: isIncremental) || changed
         usageNotice = usage.notice
+        }
 
         // Only after both fetches: a notification should reflect the whole
         // refresh, and the badge the unread count it leaves behind.

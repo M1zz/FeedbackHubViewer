@@ -163,12 +163,13 @@ extension AppStoreConnectStore {
 
     /// 여러 앱의 리뷰를 차례로(한꺼번에 쏘면 시간당 한도를 쓴다). 30분 안에 받은 앱은
     /// 건너뛰고(`reviewFreshness`), 이번 실행에서 한 번 못 받은 앱(스토어에 없는 앱)은
-    /// 다시 묻지 않는다. "할 일"과 리뷰 탭의 전체 화면이 쓴다.
-    func loadReviews(bundleIDs: [String]) async {
+    /// 다시 묻지 않는다. "할 일"과 리뷰 탭의 전체 화면이 쓴다. `force` 는 손으로 누른
+    /// 새로고침 — 30분 안에 받은 앱도, 못 받았던 앱도 다시 묻는다.
+    func loadReviews(bundleIDs: [String], force: Bool = false) async {
         guard isConfigured else { return }
         for key in bundleIDs where key != Feedback.unclassifiedProject {
-            if reviewFeeds[key]?.error != nil { continue }
-            await loadReviews(bundleID: key)
+            if !force, reviewFeeds[key]?.error != nil { continue }
+            await loadReviews(bundleID: key, force: force)
         }
     }
 

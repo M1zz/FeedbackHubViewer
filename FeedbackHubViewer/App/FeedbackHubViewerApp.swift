@@ -109,10 +109,18 @@ struct FeedbackHubViewerApp: App {
         .windowToolbarStyle(.unified)
         .commands {
             CommandGroup(after: .toolbar) {
+                // ⌘R 은 지금 보는 화면의 것만(`SectionRefresh`), ⇧⌘R 은 전부.
+                Button("이 화면 새로고침") {
+                    Task {
+                        await SectionRefresh(store: store, connect: purchases, keywords: keywords,
+                                             charts: charts, news: news, design: designDocs).run()
+                    }
+                }
+                .keyboardShortcut("r", modifiers: .command)
                 Button("모두 새로고침") {
                     Task { await HubRefresh.now(store, purchases) }
                 }
-                .keyboardShortcut("r", modifiers: .command)
+                .keyboardShortcut("r", modifiers: [.command, .shift])
             }
         }
         #endif

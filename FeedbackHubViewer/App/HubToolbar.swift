@@ -22,6 +22,11 @@ struct HubOverflowMenu: View {
 
     var body: some View {
         Menu {
+            // 툴바의 새로고침은 아이콘뿐이라, 무엇을 받는지 이름으로 한 번 더.
+            Section {
+                RefreshButton()
+                RefreshAllButton()
+            }
             Button {
                 showsDataSources = true
             } label: {
@@ -74,7 +79,7 @@ struct HubToolbar: ViewModifier {
                     HubOverflowMenu(showsDataSources: $showsDataSources)
                 }
             }
-            .refreshable { await HubRefresh.now(store, connect) }
+            .modifier(SectionRefreshable())
             .sheet(isPresented: $showsDataSources) {
                 NavigationStack {
                     ScrollView { DataSourcesPanel() }
