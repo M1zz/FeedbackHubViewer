@@ -1,0 +1,3436 @@
+[
+ {
+  "id": "1ee1cbf7-e862-5ba1-8888-b8d17c69bdd6",
+  "project": "com.Ysoup.TokenMemo",
+  "kind": "cardNews",
+  "channel": "인스타그램",
+  "title": "계좌번호를 또 치고 있다면",
+  "angle": "카톡·메일로 같은 계좌번호, 주소, 첫인사를 매일 다시 치는 직장인에게. 복사하러 메모 앱을 오가는 피로를 짚고, 탭 한 번으로 끝나는 장면을 보여 줘서 '이거 나도 매일 하는데' 싶게 만든다.",
+  "plannedAt": "2026-12-01T01:00:00Z",
+  "stage": "ready",
+  "slides": [
+   {
+    "id": "99d4053c-4a03-5e57-93d6-f0291d2295cf",
+    "headline": "오늘 계좌번호 몇 번 쳤어요?",
+    "text": "메모 앱 열고, 찾고, 복사하고, 돌아와서 붙여넣기.\n하루에도 몇 번씩 하는 그 왕복."
+   },
+   {
+    "id": "de431dd9-4215-5f2a-9106-449b26656f58",
+    "headline": "같은 말은 한 번만 저장",
+    "text": "계좌번호, 주소, 자기소개, 메일 첫인사.\n한 번 저장해 두면 다음부터는 탭 한 번입니다."
+   },
+   {
+    "id": "02c4bd7d-0414-5777-9e98-ffa2c7eba371",
+    "headline": "어디서든 키보드로",
+    "text": "카톡이든 메일이든 사파리든.\n글자를 칠 수 있는 곳이면 키보드만 바꿔서 탭하면 끝."
+   },
+   {
+    "id": "f0541507-3fdc-51d7-9692-9431b7fd5f76",
+    "headline": "바뀌는 자리는 빈칸으로",
+    "text": "템플릿은 매번 달라지는 자리를 비워 두고\n쓸 때 저장해 둔 값 중에서 골라 채워요."
+   },
+   {
+    "id": "c65ff860-4ebd-575d-826f-3fc5ccb56c2e",
+    "headline": "민감한 건 Face ID로",
+    "text": "여권번호, 카드번호는 보안 단축어로 잠가 두고\n필요할 때만 열어서 넣습니다."
+   },
+   {
+    "id": "be3f111c-47e7-5ab0-9d3d-c30c80d23f68",
+    "headline": "아낀 시간이 쌓여요",
+    "text": "쓸 때마다 아낀 시간이 동전처럼 쌓입니다.\n은근히 뿌듯해요."
+   },
+   {
+    "id": "6056f6eb-d6b0-57c9-80ef-d525d741ad81",
+    "headline": "클립키보드",
+    "text": "같은 말은 다시 치지 말고, 탭 한 번으로."
+   }
+  ],
+  "script": "",
+  "body": "같은 말을 다시 치는 시간, 생각보다 깁니다. 계좌번호 하나 넣으려고 메모 앱 열고, 찾고, 복사하고, 돌아오고. 클립키보드는 자주 쓰는 문구를 저장해 두고 키보드에서 탭 한 번으로 넣는 앱이에요. 템플릿으로 바뀌는 자리만 골라 채우고, 여권번호 같은 건 Face ID로 잠가 둘 수 있어요. 단축어 100번 넣을 때까지는 모든 기능이 무료입니다.\n\n#클립키보드 #상용구 #자주쓰는문구 #아이폰키보드 #생산성앱 #직장인앱 #시간절약 #고객응대 #아이폰꿀팁 #1인개발자",
+  "theme": 0
+ },
+ {
+  "id": "b4117059-e1b3-5141-97d5-d48c4471962a",
+  "project": "com.Ysoup.TokenMemo",
+  "kind": "video",
+  "channel": "유튜브 쇼츠",
+  "title": "계좌번호, 아직도 복사해서 붙여넣어요?",
+  "angle": "반복 입력의 번거로움을 화면 녹화 하나로 비교. 왼쪽은 메모 앱 왕복, 오른쪽은 탭 한 번. 첫 2초에 '아직도?'로 멈춰 세운다.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "[0-2초] 화면: 카톡 입력창에서 메모 앱으로 넘어가 계좌번호를 길게 눌러 복사하는 장면(빠르게) / 자막: 계좌번호, 아직도 이렇게 보내요? / 내레이션: 계좌번호, 아직도 이렇게 보내세요?\n[2-7초] 화면: 다시 카톡으로 돌아와 붙여넣기 / 자막: 열고, 찾고, 복사하고, 돌아오고 / 내레이션: 열고, 찾고, 복사하고, 돌아오고.\n[7-12초] 화면: 같은 입력창에서 지구본 버튼으로 클립키보드로 바꾸고 계좌번호 버튼 탭 / 자막: 클립키보드면 탭 한 번 / 내레이션: 클립키보드로 바꾸면 탭 한 번이에요.\n[12-18초] 화면: 메일 앱에서 첫인사 템플릿 탭, 빈칸에 이름 골라 채우기 / 자막: 바뀌는 자리는 골라서 채우고 / 내레이션: 매번 바뀌는 자리는 저장해 둔 값에서 골라 채우고요.\n[18-23초] 화면: 보안 단축어 탭 후 Face ID 확인 / 자막: 카드번호는 Face ID로 잠가 두고 / 내레이션: 카드번호 같은 건 Face ID로 잠가 둡니다.\n[23-28초] 화면: 앱 안의 아낀 시간 화면, 동전이 쌓이는 모습 / 자막: 아낀 시간은 이렇게 쌓여요 / 내레이션: 쓸수록 아낀 시간이 쌓이는 게 보여요.\n[28-31초] 화면: 앱 아이콘과 이름 / 자막: 클립키보드, App Store에서 / 내레이션: 클립키보드였습니다.",
+  "body": "계좌번호, 아직도 복사해서 붙여넣어요? | 자주 쓰는 문구를 저장해 두고 키보드에서 탭 한 번으로 넣는 클립키보드. 단축어 100번까지 모든 기능 무료.\n#클립키보드 #아이폰꿀팁 #상용구",
+  "theme": 0
+ },
+ {
+  "id": "26aaf109-7ed2-58d0-afe3-5310c001bdae",
+  "project": "com.Ysoup.TokenMemo",
+  "kind": "post",
+  "channel": "스레드",
+  "title": "같은 말을 오늘 몇 번 쳤나",
+  "angle": "매일 반복 입력을 하면서도 당연하게 여기는 사람에게 '그거 안 해도 된다'를 친구 말투로 건넨다.",
+  "plannedAt": "2026-10-26T01:00:00Z",
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "오늘 계좌번호, 주소, \"안녕하세요 문의 주셔서 감사합니다\" 몇 번 치셨어요?\n\n저는 이걸 메모 앱에 적어 두고 매번 복사해서 붙여넣었는데, 그 왕복이 은근히 귀찮더라고요.\n\n클립키보드는 그런 문구를 한 번 저장해 두면 키보드에서 탭 한 번으로 넣어 줍니다. 카톡이든 메일이든 어디서나요. 단축어 100번 넣을 때까지는 전부 무료예요.\nhttps://apps.apple.com/kr/app/id1543660502",
+  "theme": 0
+ },
+ {
+  "id": "66580395-5df0-5732-a1f4-4e75e89f6295",
+  "project": "com.Ysoup.TokenMemo",
+  "kind": "post",
+  "channel": "X",
+  "title": "클립키보드가 하는 일",
+  "angle": "기능을 짧게 나열해 무엇이 되는지 한눈에. 단순 저장이 아니라 템플릿, 스택, 보안까지 된다는 걸 보여 준다.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "클립키보드가 하는 일\n\n단축어: 저장한 문구를 탭 한 번으로 입력\n템플릿: 바뀌는 자리만 골라 채우기\n스택: 값 여러 개를 순서대로 넣기\n보안 단축어: 카드번호는 Face ID로 잠금\n스마트 클립보드: 복사한 이메일, 전화번호, 주소를 알아서 분류\n문자 인식: 서류를 찍고 필요한 부분만 훑어서 저장\n\n평소 키보드를 대신하는 게 아니라, 필요할 때 잠깐 바꿔 쓰는 키보드예요.\nhttps://apps.apple.com/kr/app/id1543660502",
+  "theme": 0
+ },
+ {
+  "id": "17705006-7366-57be-8201-f5a58a8de12a",
+  "project": "com.Ysoup.TokenMemo",
+  "kind": "post",
+  "channel": "디스콰이엇",
+  "title": "같은 말을 다시 치기 싫어서 만든 키보드",
+  "angle": "1인 개발자가 만든 이유 → 지금 하는 일 → 피드백 요청. 오래 다듬어 온 앱이라는 점을 담백하게.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "안녕하세요, 1인 개발자입니다.\n\n매일 같은 인사말과 계좌번호를 다시 치는 게 아까워서 클립키보드를 만들었습니다. 처음엔 문구를 저장해 두는 게 전부였는데, 쓰다 보니 필요한 게 하나씩 늘었어요.\n\n지금은 저장해 둔 문구를 키보드에서 탭 한 번으로 넣고, 매번 바뀌는 자리는 템플릿 빈칸으로 남겨 두었다가 골라 채웁니다. 카드번호처럼 민감한 건 Face ID로 잠가 두고, 복사한 이메일이나 전화번호는 알아서 분류돼요. 쓸 때마다 아낀 시간이 쌓여 보이는 화면도 있습니다.\n\n단축어 100번 넣을 때까지 모든 기능이 무료라서 부담 없이 써 보실 수 있어요. 써 보시고 불편한 점이나 이런 게 있으면 좋겠다 싶은 게 있으면 편하게 알려 주세요. 다음 업데이트에 반영하겠습니다.\nhttps://apps.apple.com/kr/app/id1543660502",
+  "theme": 0
+ },
+ {
+  "id": "a0805249-c601-549c-b542-382860fa30c1",
+  "project": "com.Ysoup.TokenMemo",
+  "kind": "post",
+  "channel": "네이버 블로그",
+  "title": "계좌번호, 주소, 첫인사 매번 다시 치지 않는 법 (클립키보드 사용기)",
+  "angle": "반복 입력이 많은 직장인이 검색해서 들어왔을 때 사용법까지 따라 할 수 있게.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "하루에 같은 문장을 몇 번이나 치는지 세어 본 적이 있나요. 저는 계좌번호, 회사 주소, 메일 첫인사만 해도 하루 열 번은 넘었습니다. 매번 메모 앱을 열어 찾고, 복사하고, 다시 돌아와 붙여넣는 과정이 쌓이니 꽤 큰 시간이더라고요.\n\n클립키보드는 어떤 앱인가요\n\n자주 쓰는 문구를 저장해 두고 키보드에서 탭 한 번으로 넣는 앱입니다. 카카오톡이든 메일이든 사파리든, 글자를 칠 수 있는 곳이면 키보드만 클립키보드로 바꿔서 버튼을 누르면 입력칸에 그대로 들어갑니다. 평소 쓰는 키보드를 대신하는 건 아니고, 필요할 때 잠깐 바꿔 쓰고 다시 돌아가는 방식이에요.\n\n써 보니 좋았던 기능\n\n템플릿이 특히 편합니다. 메일 첫인사처럼 대부분 같고 이름만 바뀌는 문장은 바뀌는 자리를 빈칸으로 두고, 쓸 때 저장해 둔 값 중에서 골라 채웁니다. 여러 값을 한 자리에 담는 스택도 있어서 순서대로 넣을 수 있어요.\n\n여권번호나 카드번호처럼 민감한 내용은 보안 단축어로 저장해 Face ID로 잠가 둘 수 있습니다. 복사한 내용 중 이메일, 전화번호, 주소, 카드번호는 스마트 클립보드가 알아서 분류해 주고, 카드나 서류를 찍어 필요한 부분만 손가락으로 훑으면 그 글자만 저장되는 문자 인식도 됩니다. iCloud 백업을 켜 두면 기기를 바꿔도 그대로 남아요.\n\n아낀 시간이 보인다\n\n쓸 때마다 아낀 시간이 쌓여 보이는 화면이 있습니다. 작은 숫자지만 쌓이는 걸 보면 괜히 뿌듯해집니다.\n\n가격\n\n단축어를 100번 넣을 때까지는 모든 기능이 무료이고, 이후에는 Pro로 한도를 풀 수 있습니다. 만들어 둔 단축어는 그대로 쓸 수 있어요.\n\n같은 말을 자주 치는 분이라면 한번 써 보시길 권합니다.\nhttps://apps.apple.com/kr/app/id1543660502",
+  "theme": 0
+ },
+ {
+  "id": "0badebe3-e3d9-51d8-af63-24a08025039b",
+  "project": "com.Ysoup.TokenMemo",
+  "kind": "post",
+  "channel": "레딧",
+  "title": "A keyboard for the stuff I type 20 times a day",
+  "angle": "r/iphone, r/productivity 류. 개인 경험으로 시작해 기능은 짧게, 홍보 티를 덜.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "I kept a notes file with my bank account number, address, and a couple of email openers, and I was copy-pasting from it many times a day. I ended up making a small keyboard for it.\n\nClip Keyboard lets you save frequent phrases and insert them with one tap from any app. You switch to it when you need a saved phrase, tap, then switch back. It is not meant to replace your normal keyboard.\n\nA few things it does:\n- Templates with blanks you fill in when you use them\n- Stacks for inserting several values in order\n- Secure snippets locked behind Face ID (passport or card numbers)\n- Copied emails, phone numbers and addresses get sorted automatically\n- Scan a document and swipe over just the text you want to save\n\nEverything is free for your first 100 inserts, then there is a Pro unlock. Happy to hear what would make it more useful.\nhttps://apps.apple.com/us/app/id1543660502",
+  "theme": 0
+ },
+ {
+  "id": "b127319e-2ccd-5609-9ba5-6a3e6a652a1f",
+  "project": "com.ysoup.TokenMemo-tap",
+  "kind": "cardNews",
+  "channel": "인스타그램",
+  "title": "맥에서도 계좌번호를 다시 치고 있다면",
+  "angle": "아이폰 클립키보드에 문구를 모아 둔 사람이 맥 앞에서 다시 타이핑하는 아쉬움을 짚는다. 단축키 한 번으로 쓰던 앱 위에 패널이 뜨는 장면을 보여 준다.",
+  "plannedAt": "2026-12-02T01:00:00Z",
+  "stage": "ready",
+  "slides": [
+   {
+    "id": "578118ce-02d9-59ac-a0f4-28be2a74c541",
+    "headline": "맥에선 또 치고 있죠?",
+    "text": "아이폰엔 저장해 뒀는데\n맥 앞에선 계좌번호를 다시 치고 있다면."
+   },
+   {
+    "id": "cdeb65fd-52f0-5648-9012-f0f1e484e11c",
+    "headline": "⌃⇧V 한 번",
+    "text": "쓰던 앱 위에 단축어 패널이 뜹니다.\n포커스를 빼앗지 않아요."
+   },
+   {
+    "id": "8583c9a8-03fd-5b44-aeab-a894ec45f4b6",
+    "headline": "고르고 ⌘V",
+    "text": "고르면 클립보드에 담기고\n쓰던 자리에서 ⌘V면 끝."
+   },
+   {
+    "id": "00bf6be0-a370-5330-9dc1-a1ca78871467",
+    "headline": "메뉴바에 조용히",
+    "text": "Dock을 차지하지 않고 메뉴바에 있어요.\n검색하거나 ⌘1~9로 바로 고릅니다."
+   },
+   {
+    "id": "5faeb92b-4833-52ed-abf5-136beb31b2b7",
+    "headline": "아이폰과 똑같이",
+    "text": "iCloud 실시간 동기화를 켜면\n단축어, 카테고리, 순서가 두 기기에서 같아요."
+   },
+   {
+    "id": "06f07ebf-789b-58c3-99b9-0b9bc74e5738",
+    "headline": "아까 복사한 그 문장",
+    "text": "클립보드 기록이 최대 100개, 7일 동안 남아요.\n다시 꺼내 쓰면 됩니다."
+   },
+   {
+    "id": "ff8df975-375c-5fbf-a7b5-7cdbc8f4a644",
+    "headline": "클립키보드: 빠른 붙여넣기",
+    "text": "자주 쓰는 말, 맥에서도 한 번에."
+   }
+  ],
+  "script": "",
+  "body": "아이폰 클립키보드에 문구를 잔뜩 모아 놓고, 정작 일은 맥에서 하잖아요. 클립키보드 맥 앱은 ⌃⇧V 한 번이면 쓰던 앱 위에 단축어 패널을 띄워 줍니다. 고르면 클립보드에 담기고 ⌘V로 붙여넣으면 끝. iCloud 동기화를 켜면 아이폰과 단축어, 카테고리, 순서까지 똑같이 맞춰져요.\n\n#클립키보드 #맥앱 #macOS #자주쓰는문구 #상용구 #생산성 #업무효율 #메뉴바앱 #직장인 #1인개발자",
+  "theme": 1
+ },
+ {
+  "id": "25e0135a-cd15-559c-b8ee-31f5f4ea0207",
+  "project": "com.ysoup.TokenMemo-tap",
+  "kind": "video",
+  "channel": "유튜브 쇼츠",
+  "title": "맥에서 계좌번호 붙여넣는 가장 빠른 방법",
+  "angle": "단축키 한 번의 속도감을 보여 주는 화면 녹화. 첫 2초에 메일 창에서 바로 패널이 뜨는 장면.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "[0-2초] 화면: 메일 작성 창에서 ⌃⇧V를 누르자 단축어 패널이 바로 뜸 / 자막: 이거 단축키 하나예요 / 내레이션: 이거 단축키 하나예요.\n[2-7초] 화면: 패널에서 계좌번호를 고르고 ⌘V로 붙여넣기 / 자막: 고르고, ⌘V / 내레이션: 고르고, 붙여넣으면 끝.\n[7-12초] 화면: 메뉴바 아이콘 클릭, 검색창에 '주소' 입력, ⌘2로 선택 / 자막: 메뉴바에서 검색하거나 ⌘1~9 / 내레이션: 메뉴바에서 검색하거나 숫자키로 바로 고를 수 있어요.\n[12-18초] 화면: { } 빈칸이 있는 템플릿을 고르자 채우는 창이 열리고 날짜가 자동으로 들어감 / 자막: 바뀌는 자리는 채우는 창으로 / 내레이션: 바뀌는 자리는 복사할 때 채우고, 날짜 같은 건 저절로 들어가요.\n[18-24초] 화면: 맥에서 단축어 순서를 끌어 바꾼 뒤 옆에 놓인 아이폰 키보드에 같은 순서가 보임 / 자막: 아이폰 클립키보드와 같은 순서로 / 내레이션: 아이폰 클립키보드와도 순서까지 똑같이 맞춰집니다.\n[24-28초] 화면: 클립보드 기록 목록 스크롤 / 자막: 아까 복사한 것도 다시 / 내레이션: 아까 복사한 것도 다시 꺼내 쓰고요.\n[28-30초] 화면: 앱 아이콘과 이름 / 자막: 클립키보드: 빠른 붙여넣기 / 내레이션: 맥 App Store에서 찾아보세요.",
+  "body": "맥에서 계좌번호 붙여넣는 가장 빠른 방법 | ⌃⇧V 한 번으로 쓰던 앱 위에 단축어 패널. 아이폰 클립키보드와 iCloud 동기화.\n#맥꿀팁 #macOS #클립키보드",
+  "theme": 1
+ },
+ {
+  "id": "6fbb7e9c-a643-57ad-a54d-d6aadb06e5d6",
+  "project": "com.ysoup.TokenMemo-tap",
+  "kind": "post",
+  "channel": "스레드",
+  "title": "아이폰엔 있는데 맥엔 없던 것",
+  "angle": "아이폰 클립키보드 사용자를 정확히 겨냥. '맥에서는 다시 친다'는 아쉬움에 공감.",
+  "plannedAt": "2026-10-27T01:00:00Z",
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "아이폰 클립키보드에 계좌번호, 주소, 메일 서명 다 저장해 놓고\n맥 앞에 앉으면 다시 치고 있었어요.\n\n그래서 맥 앱을 따로 만들었습니다. ⌃⇧V 한 번이면 쓰던 앱 위에 단축어 패널이 뜨고, 고르면 클립보드에 담겨요. ⌘V로 붙여넣으면 끝.\n\niCloud 동기화를 켜면 아이폰에서 만든 단축어가 순서까지 그대로 보입니다.\nhttps://apps.apple.com/kr/app/id6756433372",
+  "theme": 1
+ },
+ {
+  "id": "c01be1af-83c0-57ed-bb7a-618cc0a9d3d3",
+  "project": "com.ysoup.TokenMemo-tap",
+  "kind": "post",
+  "channel": "X",
+  "title": "클립키보드 맥 앱이 하는 일",
+  "angle": "맥 쪽 기능만 추려 짧게.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "클립키보드 맥 앱이 하는 일\n\n⌃⇧V: 쓰던 앱 위에 단축어 패널\n메뉴바 상주: 검색하거나 ⌘1~9로 바로 선택\n템플릿: { } 자리는 복사할 때 채우고 날짜·시간은 자동\n클립보드 기록: 최대 100개, 7일\n이미지 단축어: 명함, 서명 이미지도 바로 복사\n보안 단축어: Touch ID로 확인 후 꺼내기\n아이폰 클립키보드와 iCloud 실시간 동기화\nhttps://apps.apple.com/kr/app/id6756433372",
+  "theme": 1
+ },
+ {
+  "id": "6d945ae3-a393-5e77-885e-8de67021330e",
+  "project": "com.ysoup.TokenMemo-tap",
+  "kind": "post",
+  "channel": "디스콰이엇",
+  "title": "아이폰 키보드 앱의 맥 짝꿍을 만들었습니다",
+  "angle": "만든 이유(사용자 요청 + 본인 업무가 맥) → 하는 일 → 맥 사용 흐름 피드백 부탁.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "안녕하세요, 1인 개발자입니다.\n\n자주 쓰는 문구를 키보드에서 탭 한 번으로 넣는 아이폰 앱 클립키보드를 오래 만들어 왔는데, 가장 많이 들은 말이 \"맥에서도 쓰고 싶다\"였어요. 저도 일하는 시간 대부분이 맥 앞이라 공감이 됐습니다.\n\n그래서 맥 앱을 따로 만들었습니다. ⌃⇧V를 누르면 쓰던 앱의 포커스를 빼앗지 않고 그 위에 단축어 패널이 뜨고, 고르면 클립보드에 담겨 ⌘V로 붙여넣습니다. 메뉴바에 있어서 Dock을 차지하지 않고, 템플릿, 스택, 클립보드 기록, 이미지 단축어, Touch ID 보안 단축어도 됩니다. 아이폰 클립키보드와 iCloud 동기화를 켜면 단축어와 순서가 두 기기에서 똑같이 유지돼요.\n\n계정은 필요 없고, 저장한 내용은 내 맥과 내 iCloud에만 있습니다. 유료 앱이에요. 맥에서 쓰는 흐름이 어색한 곳이 있으면 알려 주세요. 많이 참고하겠습니다.\nhttps://apps.apple.com/kr/app/id6756433372",
+  "theme": 1
+ },
+ {
+  "id": "d16fa501-2c05-5265-948d-a49b82aec802",
+  "project": "com.ysoup.TokenMemo-tap",
+  "kind": "post",
+  "channel": "네이버 블로그",
+  "title": "맥에서 자주 쓰는 문구 빠르게 붙여넣기, 클립키보드 맥 앱 사용기",
+  "angle": "맥에서 상용구 붙여넣기 방법을 찾는 사람에게 실제 사용 흐름을 보여 준다.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "맥으로 일하다 보면 같은 문장을 반복해서 쓰는 순간이 많습니다. 계좌번호, 회사 주소, 메일 서명, 매일 보내는 답장 같은 것들이죠. 저는 아이폰에서는 클립키보드로 해결하고 있었는데, 맥에서는 여전히 손으로 치거나 메모를 열어 복사하고 있었습니다.\n\n단축키 한 번으로 뜨는 패널\n\n클립키보드 맥 앱은 ⌃⇧V를 누르면 지금 쓰고 있는 앱 위에 단축어 패널이 뜹니다. 포커스를 빼앗지 않아서 쓰던 흐름이 끊기지 않아요. 원하는 단축어를 고르면 클립보드에 담기고, 원래 자리에서 ⌘V로 붙여넣으면 끝입니다.\n\n메뉴바에서 바로\n\nDock에는 나타나지 않고 메뉴바에 있습니다. 메뉴바 아이콘을 눌러 검색하거나 ⌘1부터 9까지로 바로 고를 수 있어요. 업무, 개인, 여행처럼 카테고리로 나누고 자주 쓰는 건 즐겨찾기로 올려 둘 수 있습니다.\n\n템플릿과 클립보드 기록\n\n바뀌는 자리를 중괄호로 비워 두면 복사할 때 채우는 창이 열리고, 날짜나 시간 같은 값은 자동으로 들어갑니다. 복사한 내용은 최대 100개, 7일 동안 기록으로 남아서 아까 복사한 문장을 다시 꺼내 쓸 수 있어요. 명함이나 서명 이미지도 단축어로 저장해 둘 수 있고, 민감한 내용은 Touch ID로 확인해야 꺼낼 수 있습니다.\n\n아이폰과 같이 쓰면\n\n아이폰 클립키보드와 iCloud 실시간 동기화를 켜면 단축어, 카테고리, 순서가 두 기기에서 똑같이 유지됩니다. 맥에서 정리한 순서가 아이폰 키보드에도 그대로 나와요. 백업과 복원, 최근 15개 시점으로 되돌리기도 지원합니다.\n\n계정을 만들 필요가 없고 저장한 내용은 내 맥과 내 iCloud에만 있다는 점도 마음에 들었습니다. 맥에서 반복 입력이 많다면 한번 살펴보세요.\nhttps://apps.apple.com/kr/app/id6756433372",
+  "theme": 1
+ },
+ {
+  "id": "188ee3d1-39f7-5df0-908b-998ea5a6f067",
+  "project": "com.ysoup.TokenMemo-tap",
+  "kind": "post",
+  "channel": "레딧",
+  "title": "I made a Mac companion for my iPhone snippet keyboard",
+  "angle": "r/macapps 류. 담백하게 무엇을 하는지만.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "I make Clip Keyboard, an iPhone keyboard for saved phrases. The most common request was a Mac version, so I built one.\n\nPress Control-Shift-V and a snippet panel appears over whatever app you are in, without stealing focus. Pick one, it goes to the clipboard, then Command-V. It lives in the menu bar (no Dock icon), and you can search or use Command-1 to 9.\n\nAlso: templates with { } blanks (date and time fill in automatically), stacks, clipboard history (100 items, 7 days), image snippets, and Touch ID protected snippets. With iCloud sync on, snippets and their order match the iPhone app.\n\nNo account; your snippets stay on your Mac and your own iCloud. It is a paid app. Feedback on the Mac workflow is welcome.\nhttps://apps.apple.com/us/app/id6756433372",
+  "theme": 1
+ },
+ {
+  "id": "7fd89f6e-9eeb-5591-ba93-5c7913b6fc7f",
+  "project": "com.xa.toki",
+  "kind": "cardNews",
+  "channel": "인스타그램",
+  "title": "타이머가 울리면 이미 늦다",
+  "angle": "발표·수업·회의 진행자에게. 끝나고 울리는 타이머의 한계를 짚고, 끝나기 전에 미리 알려 주는 장면으로 안심을 준다.",
+  "plannedAt": "2026-12-03T01:00:00Z",
+  "stage": "ready",
+  "slides": [
+   {
+    "id": "0aa36a39-25fb-5b07-92e6-e8d119985e40",
+    "headline": "땡, 이미 늦었어요",
+    "text": "발표 중에 타이머가 울리는 순간\n마무리 멘트는 아직 시작도 못 했죠."
+   },
+   {
+    "id": "c38b12aa-501d-5df8-bf84-5785b349f556",
+    "headline": "필요한 건 '전' 신호",
+    "text": "끝나고 알려 주는 타이머 말고\n끝나기 전에 알려 주는 타이머."
+   },
+   {
+    "id": "ec2d7d5b-ad88-5e1e-b585-0dce35ca4548",
+    "headline": "5분 전, 3분 전, 1분 전",
+    "text": "종료 1·3·5·10·15·30분 전\n원하는 시점에 미리 알림을 받아요."
+   },
+   {
+    "id": "429078a8-f5e0-5feb-83bf-6bb222ecdd2c",
+    "headline": "알림마다 한 마디",
+    "text": "\"슬라이드 마무리하세요\"\n\"쿨다운 시작\" 같은 메시지를 붙일 수 있어요."
+   },
+   {
+    "id": "b7b6312e-30db-5443-9bff-4b63e23a4a62",
+    "headline": "화면 안 켜도, 손목에서도",
+    "text": "다이나믹 아일랜드와 잠금 화면에서 바로 보이고\nApple Watch에서도 확인돼요."
+   },
+   {
+    "id": "2e826652-35d2-5430-8992-9c4e69cf0e8b",
+    "headline": "자주 쓰는 건 템플릿으로",
+    "text": "발표 20분, 수업 50분처럼 저장해 두고\n한 번에 시작합니다."
+   },
+   {
+    "id": "3484d70d-0c8f-5777-9732-7b85f03b53ea",
+    "headline": "두번알림",
+    "text": "끝나기 전에, 미리 알려 주는 타이머."
+   }
+  ],
+  "script": "",
+  "body": "발표 중에 타이머가 \"땡\" 울리면 이미 늦은 거더라고요. 두번알림은 끝나기 5분 전, 3분 전, 1분 전처럼 원하는 시점에 미리 알려 주는 타이머예요. 알림마다 \"슬라이드 마무리하세요\" 같은 메시지를 붙일 수 있고, 다이나믹 아일랜드와 애플워치에서도 보여요. 광고 없고, 구독 강요 없고, 인터넷 없이도 돼요.\n\n#두번알림 #발표타이머 #수업타이머 #타이머앱 #회의진행 #뽀모도로 #다이나믹아일랜드 #애플워치 #아이폰앱추천 #1인개발자",
+  "theme": 2
+ },
+ {
+  "id": "100bab08-1751-5f92-a5ec-f7b9b23fa4e5",
+  "project": "com.xa.toki",
+  "kind": "video",
+  "channel": "유튜브 쇼츠",
+  "title": "발표 타이머, 끝나고 울리면 소용없어요",
+  "angle": "발표·수업하는 사람이 공감할 '이미 늦은 알림'을 첫 2초에. 나머지는 예비 알림 설정 화면 녹화.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "[0-2초] 화면: 타이머가 0:00이 되며 울리는 일반 타이머 / 자막: 이때 울리면 이미 늦었죠 / 내레이션: 발표 타이머, 이때 울리면 이미 늦었죠.\n[2-7초] 화면: 두번알림에서 20분 타이머를 만들고 예비 알림 5분 전, 1분 전 선택 / 자막: 끝나기 전에 미리 / 내레이션: 두번알림은 끝나기 전에 미리 알려 줘요.\n[7-12초] 화면: 5분 전 알림에 '슬라이드 마무리' 메시지 입력 / 자막: 알림마다 한 마디 / 내레이션: 알림마다 해야 할 말도 적어 둘 수 있고요.\n[12-18초] 화면: 잠금 화면과 다이나믹 아일랜드에 남은 시간이 보이는 모습 / 자막: 화면 안 켜도 보여요 / 내레이션: 화면을 켜지 않아도 남은 시간이 보입니다.\n[18-23초] 화면: Apple Watch에서 타이머 확인 / 자막: 손목에서도 / 내레이션: 애플워치에서도 확인되고요.\n[23-28초] 화면: 종료 후 오버타임이 올라가는 화면 / 자막: 넘친 시간도 보여 줘요 / 내레이션: 끝난 뒤엔 얼마나 넘겼는지도 보여 줘요.\n[28-31초] 화면: 앱 아이콘과 이름 / 자막: 두번알림, App Store에서 / 내레이션: 두번알림이었습니다.",
+  "body": "발표 타이머, 끝나고 울리면 소용없어요 | 끝나기 1·3·5분 전에 미리 알려 주는 타이머 두번알림. 광고 없음.\n#발표꿀팁 #타이머 #두번알림",
+  "theme": 2
+ },
+ {
+  "id": "b93465e8-f883-5db6-86cf-0fd5d55c638b",
+  "project": "com.xa.toki",
+  "kind": "post",
+  "channel": "스레드",
+  "title": "타이머는 왜 끝나야 울릴까",
+  "angle": "발표·수업 경험에서 출발한 공감 글.",
+  "plannedAt": "2026-10-28T01:00:00Z",
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "발표할 때마다 느낀 건데, 타이머가 울리는 순간은 이미 늦은 순간이에요. 마무리 멘트를 하려면 몇 분 전에 알아야 하거든요.\n\n그래서 끝나기 전에 미리 알려 주는 타이머를 쓰고 있어요. 두번알림은 종료 5분 전, 3분 전, 1분 전처럼 원하는 시점에 알려 주고, 알림마다 \"슬라이드 마무리\" 같은 메시지도 붙일 수 있어요. 광고 없고 인터넷 없이도 돼요.\nhttps://apps.apple.com/kr/app/id6752551268",
+  "theme": 2
+ },
+ {
+  "id": "e0b9423d-3b2c-56b3-986d-8de648c3d8b4",
+  "project": "com.xa.toki",
+  "kind": "post",
+  "channel": "X",
+  "title": "두번알림이 하는 일",
+  "angle": "예비 알림 중심으로 기능을 짧게.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "두번알림 = 끝나기 전에 알려 주는 타이머\n\n종료 1·3·5·10·15·30분 전 예비 알림\n알림마다 맞춤 메시지\n다이나믹 아일랜드, Live Activity\nApple Watch 연동\n타이머 템플릿, 용도별 라벨과 색상\n종료 후 오버타임 표시\n\n광고 없음, 구독 강요 없음, 인터넷 연결 필요 없음.\nhttps://apps.apple.com/kr/app/id6752551268",
+  "theme": 2
+ },
+ {
+  "id": "2e6269d0-5d2b-5117-969c-c12977d57895",
+  "project": "com.xa.toki",
+  "kind": "post",
+  "channel": "디스콰이엇",
+  "title": "끝나기 전에 알려 주는 타이머를 만들었습니다",
+  "angle": "만든 이유 → 하는 일 → 필요한 알림 시점 피드백 요청.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "안녕하세요, 1인 개발자입니다.\n\n발표나 회의를 하다 보면 타이머가 울리는 순간은 이미 늦었다는 걸 자주 느꼈어요. 필요한 건 끝나기 전 신호였습니다. 그래서 예비 알림이 핵심인 타이머, 두번알림을 만들었습니다. re와 reminder를 합쳐 한 번 더 알려 준다는 뜻이에요.\n\n종료 1분, 3분, 5분, 10분 전 등 원하는 시점에 미리 알림을 받고, 알림마다 맞춤 메시지를 붙일 수 있습니다. 다이나믹 아일랜드와 Live Activity로 화면을 켜지 않아도 보이고, Apple Watch에서도 시작하고 확인할 수 있어요. 자주 쓰는 설정은 템플릿으로 저장하고, 끝난 뒤엔 초과 시간도 보여 줍니다.\n\n광고 없고 구독 강요 없고 인터넷도 필요 없어요. 발표, 수업, 회의, 운동에 써 보시고 이런 알림 시점이 있으면 좋겠다 싶은 게 있으면 알려 주세요.\nhttps://apps.apple.com/kr/app/id6752551268",
+  "theme": 2
+ },
+ {
+  "id": "7d370178-868e-59c8-a6ff-e6207fb04c95",
+  "project": "com.xa.toki",
+  "kind": "post",
+  "channel": "네이버 블로그",
+  "title": "발표 시간 지키는 법, 끝나기 전에 알려 주는 타이머 두번알림",
+  "angle": "발표·수업 시간 관리 방법을 찾는 사람에게 사용 장면 중심으로.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "발표나 수업을 하다 보면 시간 관리가 생각보다 어렵습니다. 휴대폰 타이머를 맞춰 두어도 그게 울리는 순간은 이미 시간이 끝난 뒤라서, 마무리할 여유 없이 급하게 끝내게 되더라고요. 정말 필요한 건 끝나기 몇 분 전의 신호였습니다.\n\n두번알림은 어떤 앱인가요\n\n끝나기 전에 미리 알려 주는 타이머입니다. 일반 타이머가 시간이 다 되어야 울리는 것과 달리, 종료 1분, 3분, 5분, 10분, 15분, 30분 전처럼 원하는 시점에 예비 알림을 받을 수 있어요.\n\n알림마다 메시지를 붙인다\n\n각 예비 알림에 \"슬라이드 마무리하세요\", \"질문 받기 시작\" 같은 메시지를 적어 둘 수 있습니다. 발표 중에 알림이 오면 무엇을 해야 하는지 바로 알 수 있어서 편했어요.\n\n화면을 켜지 않아도 보인다\n\n다이나믹 아일랜드와 Live Activity로 잠금 화면에서 남은 시간이 보이고, Apple Watch에서도 타이머를 시작하고 확인할 수 있습니다. 강단에서 휴대폰을 계속 들여다보지 않아도 되는 점이 좋았습니다.\n\n자주 쓰는 설정은 템플릿으로\n\n발표 20분, 수업 50분, 운동 세트 휴식처럼 자주 쓰는 설정은 템플릿으로 저장해 한 번에 시작합니다. 용도별로 라벨과 색을 정할 수 있고, 소리와 진동도 고를 수 있어요. 시간이 끝난 뒤에는 초과 시간이 계속 표시됩니다.\n\n광고와 구독 강요가 없고 인터넷 연결 없이도 동작합니다. 발표나 수업, 회의 진행을 자주 하는 분이라면 써 볼 만합니다.\nhttps://apps.apple.com/kr/app/id6752551268",
+  "theme": 2
+ },
+ {
+  "id": "36a34e3d-b4a8-5410-a968-c3a54abb71b3",
+  "project": "com.xa.toki",
+  "kind": "post",
+  "channel": "레딧",
+  "title": "A timer that warns you before time is up",
+  "angle": "r/iphone, r/teachers 류. 개인 경험 + 기능 짧게.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "Every time I gave a talk, the timer went off exactly when it was already too late to wrap up. What I actually needed was a heads-up a few minutes before the end.\n\nSo I made Double Reminder. You set pre-alerts at 1, 3, 5, 10, 15 or 30 minutes before the end, and each alert can carry its own message, like \"start wrapping up\". It shows on the Dynamic Island and Lock Screen, works on Apple Watch, saves timers as templates, and shows overtime after the end.\n\nNo ads, no forced subscription, works offline. Useful for talks, classes, meetings and workouts.\nhttps://apps.apple.com/us/app/id6752551268",
+  "theme": 2
+ },
+ {
+  "id": "53aef6c3-0fe8-51b0-b247-7de239c3ea43",
+  "project": "com.example.ScheduleDensityApp",
+  "kind": "cardNews",
+  "channel": "인스타그램",
+  "title": "이번 주, 얼마나 겹쳐 있나요",
+  "angle": "하고 싶은 게 많아 일을 자꾸 벌리는 사람에게. 캘린더가 안 보여 주는 '겹침'을 색으로 보여 주고, 5분짜리 조각으로 쪼개는 방법을 건넨다.",
+  "plannedAt": "2026-12-04T01:00:00Z",
+  "stage": "ready",
+  "slides": [
+   {
+    "id": "a8773b8e-39f3-5185-95af-d58c5a9a7924",
+    "headline": "캘린더는 비어 보이는데",
+    "text": "일정은 몇 개 없는데 왜 이렇게 버거울까요.\n끝나지 않은 일들이 겹겹이 쌓여 있어서예요."
+   },
+   {
+    "id": "97616eac-96b3-5438-bf44-281a07b43eac",
+    "headline": "겹칠수록 짙어지는 색",
+    "text": "욕망의 무지개는 한 주를 격자로 그리고\n일이 겹칠수록 색을 짙게 칠합니다."
+   },
+   {
+    "id": "bdd5939c-17db-59c3-8638-95c319d6e1f2",
+    "headline": "빡빡한 주를 먼저 본다",
+    "text": "들어서기 전에 어느 날이 꽉 찼는지 보여요.\n그래서 하나 더 벌리기 전에 멈출 수 있어요."
+   },
+   {
+    "id": "fa17a3e2-7b7b-51c8-9542-8995150b3f8e",
+    "headline": "물음은 딱 둘",
+    "text": "시동 없이 바로 시작되나요?\n5분 안에 끝까지 가나요?"
+   },
+   {
+    "id": "68df280b-b6ed-5c16-9b4c-51e59adf79c1",
+    "headline": "둘 다 예면 조각",
+    "text": "5분이 비면 바로 집는 일이에요.\n나머지는 따로 시간을 떼어 둡니다."
+   },
+   {
+    "id": "f152488c-4ddf-5417-a0e8-120f0e7201a8",
+    "headline": "번개 붙은 일부터",
+    "text": "지금 할 수 있는 일에 번개를 붙이면 맨 위로.\n짬이 나면 거기만 보면 됩니다."
+   },
+   {
+    "id": "612fdf9b-e01c-59ac-af2f-9565041664b5",
+    "headline": "욕망의 무지개",
+    "text": "벌려 놓은 일, 겹친 만큼 보이게."
+   }
+  ],
+  "script": "",
+  "body": "캘린더는 일정이 잡혔는지만 알려 주지, 그 일들이 얼마나 겹쳐 있는지는 안 알려 주더라고요. 욕망의 무지개는 한 주를 격자로 그리고 일이 겹칠수록 색을 짙게 칠해요. 큰 일은 단계로 쪼개서 5분 안에 끝나는 조각만 따로 표시해 두고요. 할 일 적기, 무지개, 단계 쪼개기, 타이머는 모두 무료이고 가입도 필요 없어요.\n\n#욕망의무지개 #일벌리기 #시간관리 #할일관리 #주간계획 #번아웃 #사이드프로젝트 #생산성앱 #자기관리 #1인개발자",
+  "theme": 3
+ },
+ {
+  "id": "44dec0d8-41c4-52ee-900e-39066025b0ca",
+  "project": "com.example.ScheduleDensityApp",
+  "kind": "video",
+  "channel": "유튜브 쇼츠",
+  "title": "일정은 적은데 왜 이렇게 바쁠까",
+  "angle": "'일정은 몇 개 없는데 버겁다'는 감각을 첫 2초에. 격자가 짙어지는 장면이 답.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "[0-2초] 화면: 텅 비어 보이는 기본 캘린더 주간 화면 / 자막: 일정은 3개뿐인데 왜 바쁘죠? / 내레이션: 일정은 세 개뿐인데, 왜 이렇게 바쁠까요?\n[2-7초] 화면: 욕망의 무지개로 넘어가 진하고 옅은 색이 겹친 주간 격자 / 자막: 끝나지 않은 일이 겹쳐 있어서 / 내레이션: 끝나지 않은 일들이 겹쳐 있어서예요.\n[7-12초] 화면: 빈칸을 길게 눌러 시작, 끝나는 날을 탭해 줄이 그어짐 / 자막: 길게 누르고, 끝나는 날 탭 / 내레이션: 시작하는 날을 길게 누르고 끝나는 날을 누르면 줄이 생겨요.\n[12-19초] 화면: 큰 일을 단계로 쪼개고 두 질문에 예·아니오 표시가 붙는 모습 / 자막: 바로 시작? 5분 안에 끝? / 내레이션: 단계마다 두 가지만 물어요. 바로 시작되는지, 5분 안에 끝나는지.\n[19-24초] 화면: 할 일을 오른쪽으로 밀어 번개를 붙이자 맨 위로 올라감 / 자막: 번개 붙이면 맨 위로 / 내레이션: 지금 할 수 있는 건 번개를 붙여 맨 위로 올리고요.\n[24-28초] 화면: 다이나믹 아일랜드에 타이머 / 자막: 일정 끝까지 세는 타이머 / 내레이션: 타이머는 일정이 끝나는 시각까지 세 줘요.\n[28-31초] 화면: 앱 아이콘과 이름 / 자막: 욕망의 무지개, App Store에서 / 내레이션: 욕망의 무지개였습니다.",
+  "body": "일정은 적은데 왜 이렇게 바쁠까 | 일이 겹칠수록 색이 짙어지는 주간 격자, 욕망의 무지개. 기본 기능 무료, 가입 없음.\n#시간관리 #할일관리 #욕망의무지개",
+  "theme": 3
+ },
+ {
+  "id": "fe45fb50-f468-5e43-bf9a-c412fe2114ab",
+  "project": "com.example.ScheduleDensityApp",
+  "kind": "post",
+  "channel": "스레드",
+  "title": "하고 싶은 게 많은 사람의 문제",
+  "angle": "일을 벌리는 사람의 과부하를 '의지 문제가 아니라 겹침 문제'로 다시 짚는다.",
+  "plannedAt": "2026-10-29T01:00:00Z",
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "하고 싶은 게 많아서 자꾸 일을 벌리는 편인데요, 캘린더를 보면 이번 주는 비어 보여요. 그런데 왜 이렇게 버거운지.\n\n알고 보니 끝나지 않은 일들이 손대지 않는 날에도 저를 붙잡고 있었더라고요. 그래서 그걸 눈에 보이게 하는 앱을 만들었어요.\n\n욕망의 무지개는 한 주를 격자로 그리고, 일이 겹칠수록 색을 짙게 칠합니다. 빡빡한 주는 들어서기 전에 먼저 보여요. 기본 기능은 무료고 가입도 없어요.\nhttps://apps.apple.com/kr/app/id6755280882",
+  "theme": 3
+ },
+ {
+  "id": "45588a69-94af-5cdf-9c0d-897001006080",
+  "project": "com.example.ScheduleDensityApp",
+  "kind": "post",
+  "channel": "X",
+  "title": "욕망의 무지개가 하는 일",
+  "angle": "기능을 짧게. 무지개 격자, 두 질문, 번개, 타이머, 위젯, 맥 연동.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "욕망의 무지개가 하는 일\n\n무지개: 한 주 격자에 겹친 만큼 짙어지는 색\n두 질문: 바로 시작되나, 5분 안에 끝나나. 둘 다 예면 짬에 집는 조각\n번개: 지금 할 수 있는 일을 맨 위로\n타이머: 일정이 끝나는 시각까지, 다이나믹 아일랜드에서도\n캘린더 일정도 함께 보기(읽기만 함)\n맥 앱 무지개 공방과 iCloud로 오감\n\n할 일, 무지개, 단계 쪼개기, 타이머는 무료. 가입 없음.\nhttps://apps.apple.com/kr/app/id6755280882",
+  "theme": 3
+ },
+ {
+  "id": "3fc6ed87-28c9-5053-962a-935d7a4e3c3c",
+  "project": "com.example.ScheduleDensityApp",
+  "kind": "post",
+  "channel": "디스콰이엇",
+  "title": "일을 자꾸 벌리는 저를 위해 만든 앱",
+  "angle": "만든 이유 → 하는 일 → 두 질문 판정이 맞는지 피드백 부탁.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "안녕하세요, 1인 개발자입니다.\n\n저는 하고 싶은 게 많아서 일을 자주 벌리는데, 캘린더로는 그게 얼마나 쌓였는지 안 보이더라고요. 일정은 몇 개 없는데 늘 버거웠던 이유가 끝나지 않은 일들이 겹쳐 있어서였습니다. 그래서 욕망의 무지개를 만들었어요.\n\n한 주를 격자로 그리고 일이 겹칠수록 색을 짙게 칠합니다. 실제로 손대는 날은 진하게, 나머지 날은 옅게 남아요. 큰 일은 단계로 쪼개고, 단계마다 '바로 시작되나', '5분 안에 끝나나' 두 가지만 묻습니다. 둘 다 예인 단계는 짬에 집는 조각, 나머지는 따로 시간을 떼어 두는 덩어리예요. 지금 할 수 있는 일엔 번개를 붙여 맨 위로 올립니다. 맥에서는 무지개 공방과 같은 iCloud로 오갑니다.\n\n할 일 적기, 무지개, 단계 쪼개기, 타이머는 무료이고 가입도 없어요. 앱이 먼저 답해 두는 두 질문 판정이 잘 맞는지 써 보시고 알려 주시면 큰 도움이 됩니다.\nhttps://apps.apple.com/kr/app/id6755280882",
+  "theme": 3
+ },
+ {
+  "id": "00605928-0419-5a7c-ae74-50ed9e1885d5",
+  "project": "com.example.ScheduleDensityApp",
+  "kind": "post",
+  "channel": "네이버 블로그",
+  "title": "일정은 적은데 늘 바쁜 이유, 욕망의 무지개로 한 주 보기",
+  "angle": "일 벌리는 사람의 과부하를 다루는 사용기. 앱의 생각(겹침, 조각과 덩어리)을 설명.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "캘린더를 보면 이번 주는 여유로워 보이는데, 막상 지내 보면 숨이 찰 때가 있습니다. 저는 그 이유가 끝나지 않은 일들이라는 걸 나중에야 알았어요. 손대지 않는 날에도 그 일들은 머릿속 한쪽을 붙잡고 있었습니다.\n\n겹친 만큼 짙어지는 무지개\n\n욕망의 무지개는 한 주를 격자로 그리고, 일이 겹칠수록 색을 짙게 칠합니다. 일이 시작되는 날 빈칸을 길게 누르고 끝나는 날을 한 번 더 누르면 줄이 그어지는데, 실제로 손대는 날은 진하게, 나머지 날은 옅게 남아요. 한 줄에 놓인 칸은 그날 동시에 굴리는 일이라서, 줄이 꽉 찬 날이 한눈에 보입니다. 고른 캘린더의 일정도 함께 보이고, 캘린더에는 아무것도 쓰지 않습니다.\n\n물음 둘로 조각과 덩어리 나누기\n\n큰 일을 단계로 쪼개면 단계마다 두 가지를 묻습니다. 시동 없이 바로 시작되는지, 5분 안에 끝까지 가는지. 둘 다 예인 단계는 5분이 비면 집는 조각이고, 나머지는 따로 떼어 둔 시간에 하는 덩어리입니다. 앱이 먼저 답해 두니 틀렸을 때만 고치면 돼요. 조각난 시간은 합쳐지지 않으니 처음부터 나눠 두는 게 핵심이라는 설명이 와닿았습니다.\n\n번개와 타이머\n\n할 일을 오른쪽으로 밀어 번개를 붙이면 맨 위로 올라갑니다. 짬이 났을 때 목록 전체를 읽지 않고 거기만 보면 돼요. 타이머는 일정이 끝나는 시각까지 세고 다이나믹 아일랜드와 잠금 화면에서도 보입니다.\n\n가격과 개인정보\n\n할 일 적기, 무지개, 단계 쪼개기, 두 질문, 타이머는 모두 무료이고 가입도 필요 없습니다. 위젯, 캘린더 가져오기, 일정 공유 같은 기능은 무지개 Pro로 열려요. 서버가 없어 적은 내용은 내 기기와 내 iCloud에만 있습니다. 맥을 쓴다면 무지개 공방과 함께 쓸 수 있어요.\nhttps://apps.apple.com/kr/app/id6755280882",
+  "theme": 3
+ },
+ {
+  "id": "fcb937ed-14ea-5fe8-8107-5ce482cc0f8c",
+  "project": "com.example.ScheduleDensityApp",
+  "kind": "post",
+  "channel": "레딧",
+  "title": "My calendar looked empty but my week felt full",
+  "angle": "r/productivity, r/ADHD 류. 개념 중심으로 담백하게.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "My calendar always looked fairly empty, yet the week felt packed. The reason was all the unfinished things I was carrying across days, which a calendar never shows.\n\nSo I built Rainbow Of Desire. It draws your week as a grid and shades it darker the more things overlap, so you can see a heavy week before you walk into it.\n\nWhen you break a big task into steps, it asks two questions per step: can you start without warming up, and can you finish within 5 minutes? Steps that pass are pieces you can grab in a spare 5 minutes; the rest need dedicated time. You can also pin what you can do right now to the top.\n\nThe core (tasks, the grid, steps, timer) is free with no account. Curious whether the two-question split works for others.\nhttps://apps.apple.com/us/app/id6755280882",
+  "theme": 3
+ },
+ {
+  "id": "a585b708-f66e-5aae-940b-7bb0e45d4af9",
+  "project": "com.devkoan.ScheduleDensityApp",
+  "kind": "cardNews",
+  "channel": "인스타그램",
+  "title": "이번 주에 다 들어갈까요?",
+  "angle": "할 일 목록만 보고 약속부터 하는 Mac 사용자에게. 168시간에서 고정 시간을 먼저 빼면 실제로 쓸 수 있는 시간이 생각보다 적다는 걸 보여 준다.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [
+   {
+    "id": "af58c6bb-dedd-5de2-ac44-ded2a59a683b",
+    "headline": "할 일, 이번 주에 다 될까",
+    "text": "목록은 길어지는데\n그게 이번 주에 들어가는지는 아무도 안 알려 줘요."
+   },
+   {
+    "id": "01c59311-55f1-583b-ac6b-a96576249402",
+    "headline": "한 주는 168시간",
+    "text": "잠, 끼니, 회사처럼 빠질 수 없는 시간을 먼저 깔면\n남은 시간이 숫자로 보여요."
+   },
+   {
+    "id": "d7492d0b-f61e-5620-90e5-7ed6f8a47211",
+    "headline": "빈 요일로 끌어다 놓기",
+    "text": "할 일을 요일에 놓으면 계획 블록이 돼요.\n틀어지면 목록으로 되돌리면 됩니다."
+   },
+   {
+    "id": "46960402-cf59-5471-bb4d-17d157b39ff3",
+    "headline": "하루는 24시간 자 위에",
+    "text": "시간축으로 펼치면\n빈틈과 겹침이 한눈에 보여요."
+   },
+   {
+    "id": "a72268f8-7318-5bfa-9739-02874af6005e",
+    "headline": "캘린더 일정도 같이",
+    "text": "맥 캘린더의 회의와 약속을 다시 적지 않고\n그대로 가져옵니다."
+   },
+   {
+    "id": "0d1d8f11-90ec-5c9b-b112-b9165ed359c6",
+    "headline": "주말엔 한 주 돌아보기",
+    "text": "한 것, 반쯤 한 것, 건너뛴 것을 찍고\n다음 주를 짜는 데 씁니다."
+   },
+   {
+    "id": "a127f207-1c35-532c-9295-babc29fd4510",
+    "headline": "무지개 공방",
+    "text": "약속하기 전에, 이번 주에 들어가는지 먼저."
+   }
+  ],
+  "script": "",
+  "body": "할 일 목록은 길어지는데, 그게 이번 주에 다 들어가는지는 아무도 안 알려 주잖아요. 무지개 공방은 한 주 168시간에서 잠, 끼니, 회사처럼 빠질 수 없는 시간을 먼저 깔고, 남은 시간에 할 일을 끌어다 놓는 Mac 앱이에요. 맥 캘린더 일정도 그대로 가져오고, 아이폰 욕망의 무지개와 iCloud로 할 일이 오가요.\n\n#무지개공방 #주간계획표 #맥앱 #macOS #시간관리 #타임블로킹 #위클리플래너 #생산성 #할일관리 #1인개발자",
+  "theme": 0
+ },
+ {
+  "id": "e7243e5d-adc6-58ae-8ad8-b2a3360537ad",
+  "project": "com.devkoan.ScheduleDensityApp",
+  "kind": "video",
+  "channel": "유튜브 쇼츠",
+  "title": "168시간에서 진짜 남는 시간",
+  "angle": "'일주일 168시간 중 실제로 쓸 수 있는 시간'이라는 숫자로 첫 2초에 멈춰 세운다. Mac 화면 녹화.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "[0-2초] 화면: 무지개 공방 주간 화면에서 168시간 숫자가 고정 루틴을 깔수록 줄어드는 장면 / 자막: 일주일 168시간, 진짜 남는 건? / 내레이션: 일주일 168시간, 진짜 남는 시간은 얼마일까요.\n[2-8초] 화면: 잠, 끼니, 회사 루틴 블록을 차례로 까는 모습 / 자막: 빠질 수 없는 시간부터 / 내레이션: 잠, 밥, 회사처럼 빠질 수 없는 시간부터 깔아요.\n[8-14초] 화면: 할 일 목록에서 항목을 빈 요일로 드래그해 계획 블록이 됨 / 자막: 남은 칸에 끌어다 놓기 / 내레이션: 남은 칸에 할 일을 끌어다 놓으면 계획이 됩니다.\n[14-19초] 화면: 시간축 보기로 전환, 겹친 일정이 보임 / 자막: 겹침이 한눈에 / 내레이션: 하루를 24시간 자 위에 펼치면 겹친 게 바로 보여요.\n[19-24초] 화면: 맥 캘린더 회의가 배경처럼 들어와 있는 주간 화면 / 자막: 캘린더 일정은 그대로 / 내레이션: 캘린더 회의는 다시 적지 않아도 들어와 있고요.\n[24-28초] 화면: 주간 회고 카드에서 한 것·건너뛴 것 체크 / 자막: 한 주 돌아보기 / 내레이션: 주말엔 한 주를 돌아보고 다음 주를 짭니다.\n[28-30초] 화면: 앱 아이콘과 이름 / 자막: 무지개 공방, Mac App Store / 내레이션: 무지개 공방이었습니다.",
+  "body": "168시간에서 진짜 남는 시간 | 빠질 수 없는 시간을 먼저 깔고 남은 칸에 할 일을 놓는 Mac 주간 계획표, 무지개 공방.\n#맥앱 #주간계획 #무지개공방",
+  "theme": 0
+ },
+ {
+  "id": "e26d0bc9-1947-57b4-81c5-a60fbbf5bc25",
+  "project": "com.devkoan.ScheduleDensityApp",
+  "kind": "post",
+  "channel": "스레드",
+  "title": "할 일 목록이 안 알려 주는 것",
+  "angle": "약속을 먼저 하고 나중에 시간이 없어 허덕이는 경험에 공감.",
+  "plannedAt": "2026-10-30T01:00:00Z",
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "할 일 목록은 \"이거 해야 해\"는 알려 주는데, \"이번 주에 이게 다 들어가?\"는 안 알려 주더라고요. 그래서 늘 약속부터 하고 주말에 허덕였어요.\n\n무지개 공방은 한 주를 요일과 시간대로 펼쳐서, 잠이나 회사처럼 빠질 수 없는 시간을 먼저 깔고 남은 시간을 숫자로 보여 주는 Mac 앱이에요. 그다음 할 일을 빈 요일로 끌어다 놓으면 됩니다.\nhttps://apps.apple.com/kr/app/id6777737322",
+  "theme": 0
+ },
+ {
+  "id": "aa91f944-40a3-55d2-ad7d-6a86bae8afde",
+  "project": "com.devkoan.ScheduleDensityApp",
+  "kind": "post",
+  "channel": "X",
+  "title": "무지개 공방이 하는 일",
+  "angle": "Mac 주간 계획표 기능을 짧게.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "무지개 공방(Mac)이 하는 일\n\n고정 루틴을 먼저 깔고 남은 시간을 숫자로\n할 일을 요일로 끌어다 놓아 계획 블록으로\n24시간 시간축 보기로 빈틈과 겹침 확인\n맥 캘린더 일정 가져오기\n시작 시각에 진행 중, 지나면 끝냈는지 묻기\n주간 회고 체크리스트\n아이폰 욕망의 무지개와 iCloud로 할 일 연동\nhttps://apps.apple.com/kr/app/id6777737322",
+  "theme": 0
+ },
+ {
+  "id": "6016cc98-0ba5-5219-a021-e1d0d54dbe88",
+  "project": "com.devkoan.ScheduleDensityApp",
+  "kind": "post",
+  "channel": "디스콰이엇",
+  "title": "약속하기 전에 이번 주를 먼저 보는 Mac 앱",
+  "angle": "만든 이유 → 하는 일 → 피드백 요청.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "안녕하세요, 1인 개발자입니다.\n\n할 일 목록을 아무리 정리해도 그 일들이 이번 주에 실제로 들어가는지는 알 수 없어서, 매번 약속부터 하고 나중에 허덕였습니다. 그래서 한 주를 요일과 시간대로 펼쳐 보여 주는 Mac 앱 무지개 공방을 만들었어요.\n\n잠, 끼니, 회사처럼 빠질 수 없는 시간을 먼저 깔면 168시간 중 남는 시간이 숫자로 보입니다. 그다음 할 일을 빈 요일로 끌어다 놓으면 계획 블록이 되고, 하루를 24시간 자 위에 펼쳐 겹침을 확인할 수 있어요. 맥 캘린더 일정은 다시 적지 않고 가져오고, 주말에는 요일별 카드로 한 주를 돌아봅니다. 아이폰의 욕망의 무지개와 같은 iCloud면 할 일이 오갑니다.\n\n계정도 서버도 없고 적은 내용은 내 기기와 내 iCloud에만 있어요. 무료로 받을 수 있으니 써 보시고, 주간 계획을 짜는 흐름에서 걸리는 곳이 있으면 알려 주세요.\nhttps://apps.apple.com/kr/app/id6777737322",
+  "theme": 0
+ },
+ {
+  "id": "4620b6a2-d136-5439-a0f6-8148044853d4",
+  "project": "com.devkoan.ScheduleDensityApp",
+  "kind": "post",
+  "channel": "네이버 블로그",
+  "title": "맥 주간 계획표 앱, 무지개 공방으로 한 주 짜 보기",
+  "angle": "주간 계획 방법을 찾는 맥 사용자에게 실제 짜는 순서대로.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "할 일 목록을 정리하는 앱은 많지만, 그 일들이 이번 주에 다 들어가는지 알려 주는 앱은 드뭅니다. 저는 늘 할 수 있을 것 같아서 약속하고, 주말이 되어서야 시간이 모자랐다는 걸 알곤 했어요. 무지개 공방은 그 순서를 바꿔 주는 Mac 앱입니다.\n\n먼저 빠질 수 없는 시간을 깐다\n\n한 주는 168시간입니다. 잠, 끼니, 회사처럼 빼놓을 수 없는 고정 루틴을 먼저 깔면, 남은 시간이 숫자로 보입니다. 생각보다 적어서 처음엔 좀 놀랐어요. 요일마다 무지개가 그날 할 일이 몇 개인지도 보여 줍니다.\n\n할 일을 끌어다 놓는다\n\n할 일을 빈 요일로 끌어다 놓으면 계획 블록이 됩니다. 다른 날로 옮기거나 시각을 바꿀 수 있고, 날짜가 틀어지면 목록으로 되돌리면 돼요. 시간축 보기에서는 하루를 24시간 자 위에 펼쳐서 빈틈과 겹침을 한눈에 볼 수 있습니다.\n\n쪼개기와 타이머\n\n큰 일은 단계로 쪼개고, 단계마다 준비 없이 바로 시작할 수 있는지, 5분 안에 끝나는지 두 가지를 묻습니다. 둘 다 그렇다면 5분이 빌 때마다 집어 들 수 있는 조각이에요. 시작 시각이 되면 계획이 진행 중으로 바뀌고, 시간이 지나면 끝냈는지 묻습니다.\n\n캘린더와 회고\n\n맥 캘린더의 회의와 약속은 다시 적지 않고 가져옵니다. 원하면 계획을 앱이 만든 무지개 공방 캘린더에 적어 아이폰 캘린더에서도 볼 수 있어요. 주말에는 요일마다 카드 한 장으로 된 회고에서 한 것, 반쯤 한 것, 건너뛴 것을 찍고 다음 주를 짭니다.\n\n아이폰에서 욕망의 무지개를 쓴다면 같은 iCloud로 할 일이 오갑니다. 계정이 없고 적은 내용은 내 기기와 내 iCloud에만 있어요.\nhttps://apps.apple.com/kr/app/id6777737322",
+  "theme": 0
+ },
+ {
+  "id": "4ad7c0ee-69c4-546a-8f3b-da6f4243d175",
+  "project": "com.devkoan.ScheduleDensityApp",
+  "kind": "post",
+  "channel": "레딧",
+  "title": "A Mac weekly planner that starts with the hours you don't have",
+  "angle": "r/macapps, r/productivity 류.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "To-do lists never told me whether everything would actually fit into the week, so I kept overcommitting. I built a small Mac app to check that first.\n\nRainbow Workshop lays out the week by day and hour. You block out fixed routines first (sleep, meals, work) and it shows how many of the 168 hours are actually left. Then you drag tasks onto open days to turn them into plan blocks. A timeline view shows gaps and overlaps on a 24-hour ruler, it pulls in your Mac Calendar events, and there is a short weekly review.\n\nNo account and no server; data stays on your devices and your iCloud. It syncs tasks with the iPhone app Rainbow Of Desire. Free to download.\nhttps://apps.apple.com/us/app/id6777737322",
+  "theme": 0
+ },
+ {
+  "id": "ae9a7ae2-061c-50a2-9f59-69ff5e9f21d0",
+  "project": "com.Ysoup.LeaveWise",
+  "kind": "cardNews",
+  "channel": "인스타그램",
+  "title": "연차 하루로 나흘 쉬기",
+  "angle": "연차를 아무 날에나 쓰고 후회해 본 직장인에게. '어디에 붙이느냐'가 휴식의 길이를 바꾼다는 걸 숫자로 느끼게 한다.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [
+   {
+    "id": "f5d65ba3-9a93-5568-b521-cf79ee07eba4",
+    "headline": "연차 쓰고 후회한 적?",
+    "text": "\"다음 주에 붙였으면 나흘이었는데…\"\n한 번쯤 해 본 그 계산."
+   },
+   {
+    "id": "dd1622fe-6f86-5c48-9637-b9cfa27216f2",
+    "headline": "어디에 붙이느냐가 전부",
+    "text": "같은 연차 하루도\n공휴일 옆에 붙이면 연휴가 됩니다."
+   },
+   {
+    "id": "8eb1d407-4069-5b2a-8b02-bccfd85fed5d",
+    "headline": "앱이 대신 세어 줘요",
+    "text": "다가오는 공휴일마다\n연차 며칠로 며칠을 쉴 수 있는지 보여 줘요."
+   },
+   {
+    "id": "654e8a2c-52be-59f4-bd16-422b82b2c41b",
+    "headline": "징검다리도 놓치지 않게",
+    "text": "달력을 한 장씩 넘기지 않아도\n최소 연차로 최대 연휴가 되는 조합이 보여요."
+   },
+   {
+    "id": "18450f32-1209-516c-9a0c-41cc5a023bfd",
+    "headline": "남은 연차도 한 화면에",
+    "text": "총 연차, 쓴 연차, 남은 연차.\n반차, 반반차, 대체휴무까지 기록돼요."
+   },
+   {
+    "id": "a3dc202f-ca80-52ac-b4fc-13e97af70058",
+    "headline": "홈 화면에서 바로",
+    "text": "위젯으로 남은 연차와\n다가오는 휴가를 확인합니다."
+   },
+   {
+    "id": "e2ef5a0a-2ca0-5fce-bc62-5c4064ffac6e",
+    "headline": "골드위크",
+    "text": "올해 연차, 가장 길게 쉬는 곳에."
+   }
+  ],
+  "script": "",
+  "body": "같은 연차 하루도 어디에 붙이느냐에 따라 하루 휴식이 되기도, 나흘 연휴가 되기도 하잖아요. 골드위크는 다가오는 공휴일마다 연차 며칠을 쓰면 며칠을 이어서 쉴 수 있는지 보여 주는 연휴 플래너예요. 남은 연차, 반차, 대체휴무까지 한 화면에서 관리하고, 위젯으로도 볼 수 있어요. 달력 펴 놓고 손으로 세던 계산은 이제 앱에 맡기세요.\n\n#골드위크 #황금연휴 #연차 #연차계산 #휴가계획 #직장인 #공휴일 #징검다리휴일 #여행계획 #1인개발자",
+  "theme": 1
+ },
+ {
+  "id": "0abecb9f-b8a9-50f6-99d7-12db24f32d3e",
+  "project": "com.Ysoup.LeaveWise",
+  "kind": "video",
+  "channel": "유튜브 쇼츠",
+  "title": "연차 하루로 나흘 쉬는 법",
+  "angle": "첫 2초에 '연차 1일 → 4일 연휴' 숫자로 멈춰 세운다. 추천 화면 녹화.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "[0-2초] 화면: 골드위크 추천 카드에 '연차 1일 → 4일 연휴'가 크게 보이는 장면 / 자막: 연차 하루로 나흘 쉬기 / 내레이션: 연차 하루로 나흘 쉬는 법, 알려 드릴게요.\n[2-8초] 화면: 다가오는 공휴일 목록을 스크롤 / 자막: 공휴일마다 계산해 줘요 / 내레이션: 골드위크는 다가오는 공휴일마다 연차를 며칠 쓰면 며칠 쉬는지 보여 줘요.\n[8-14초] 화면: 추천 하나를 눌러 달력에 연휴 구간이 칠해지는 모습 / 자막: 어디에 붙일지 한눈에 / 내레이션: 어디에 붙여야 하는지 달력에 바로 보이고요.\n[14-19초] 화면: 캘린더에서 날짜를 눌러 연차 등록 / 자막: 누르면 바로 등록 / 내레이션: 날짜를 누르면 바로 연차로 등록돼요.\n[19-24초] 화면: 총·쓴·남은 연차 화면, 반차 기록 / 자막: 남은 연차도 한 화면에 / 내레이션: 남은 연차, 반차, 대체휴무까지 한 화면에서 관리하고요.\n[24-28초] 화면: 홈 화면 위젯 / 자막: 위젯으로도 / 내레이션: 홈 화면 위젯으로도 볼 수 있어요.\n[28-31초] 화면: 앱 아이콘과 이름 / 자막: 골드위크, App Store에서 / 내레이션: 골드위크였습니다.",
+  "body": "연차 하루로 나흘 쉬는 법 | 공휴일 사이 어디에 연차를 끼우면 가장 길게 쉬는지 찾아 주는 골드위크.\n#연차꿀팁 #황금연휴 #골드위크",
+  "theme": 1
+ },
+ {
+  "id": "9570f725-f420-5ddc-9647-98c89d23a5c3",
+  "project": "com.Ysoup.LeaveWise",
+  "kind": "post",
+  "channel": "스레드",
+  "title": "연차, 아무 날에나 쓰고 계신가요",
+  "angle": "연차 배치 후회 경험에 공감.",
+  "plannedAt": "2026-11-02T01:00:00Z",
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "연차 쓰고 나서 \"아, 다음 주 목요일에 붙였으면 나흘 쉬는 거였는데\" 하고 후회한 적 있으세요? 저는 매년 그랬어요.\n\n골드위크는 다가오는 공휴일마다 연차를 며칠 쓰면 며칠을 이어서 쉴 수 있는지 보여 줘요. 징검다리 휴일도 놓치지 않고요. 달력 펴 놓고 손으로 세던 걸 앱이 대신해 줍니다.\nhttps://apps.apple.com/kr/app/id6755983135",
+  "theme": 1
+ },
+ {
+  "id": "f24298cb-acda-5d0d-8b21-4b07a1a12d66",
+  "project": "com.Ysoup.LeaveWise",
+  "kind": "post",
+  "channel": "X",
+  "title": "골드위크가 하는 일",
+  "angle": "기능을 짧게.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "골드위크가 하는 일\n\n연휴 추천: 공휴일마다 연차 며칠로 며칠 쉬는지\n42개 나라 공휴일, 지역 선택, 직접 추가\n연차 관리: 총·쓴·남은 연차, 반차·반반차\n대체휴무, 포상휴가는 만료일과 함께\n회사 휴가 내역 사진으로 기록 불러오기\n홈 화면 위젯, iCloud 백업\nhttps://apps.apple.com/kr/app/id6755983135",
+  "theme": 1
+ },
+ {
+  "id": "a77fa167-5d69-5f08-97c0-c578f050d197",
+  "project": "com.Ysoup.LeaveWise",
+  "kind": "post",
+  "channel": "디스콰이엇",
+  "title": "매년 손으로 세던 황금연휴 계산을 앱으로",
+  "angle": "만든 이유 → 하는 일 → 피드백 요청.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "안녕하세요, 1인 개발자입니다.\n\n매년 새해가 되면 달력을 펴 놓고 \"여기에 연차를 붙이면 며칠 쉬지?\"를 손으로 세곤 했는데, 이건 앱이 할 일이다 싶어서 골드위크를 만들었습니다.\n\n다가오는 공휴일마다 연차를 며칠 쓰면 며칠을 이어서 쉴 수 있는지 보여 주고, 징검다리 휴일도 챙겨 줍니다. 한국뿐 아니라 42개 나라 공휴일이 들어 있고, 목록에 없는 공휴일은 직접 넣을 수 있어요. 총 연차, 쓴 연차, 남은 연차를 한 화면에서 보고, 반차와 반반차, 만료일이 있는 대체휴무나 포상휴가도 기록합니다. 회사 휴가 내역 화면을 찍은 사진으로 기록을 한 번에 불러오는 기능도 있어요.\n\n무료로 받을 수 있으니 남은 연차 계획 세우실 때 써 보시고, 계산 방식이나 화면에서 아쉬운 점을 알려 주시면 고치겠습니다.\nhttps://apps.apple.com/kr/app/id6755983135",
+  "theme": 1
+ },
+ {
+  "id": "4d0d5d5b-5a4b-5870-9648-3bac1d994a31",
+  "project": "com.Ysoup.LeaveWise",
+  "kind": "post",
+  "channel": "네이버 블로그",
+  "title": "연차 언제 쓰면 제일 오래 쉴까, 골드위크로 황금연휴 계산하기",
+  "angle": "연차 계산 방법을 검색해 들어온 직장인에게 앱 사용 순서대로.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "직장인에게 연차는 한정된 자원입니다. 그런데 같은 하루라도 어디에 쓰느냐에 따라 하루 휴식으로 끝나기도 하고, 공휴일과 주말이 이어져 나흘, 닷새 연휴가 되기도 하죠. 저는 매년 달력을 넘기며 이걸 손으로 계산했는데, 골드위크를 쓰고 나서 그 시간이 없어졌습니다.\n\n연휴 추천\n\n골드위크를 열면 다가오는 공휴일마다 연차를 며칠 쓰면 며칠을 이어서 쉴 수 있는지 보여 줍니다. 징검다리 휴일도 놓치지 않고 알려 줘서, 최소 연차로 최대 연휴가 되는 조합을 한눈에 볼 수 있어요.\n\n42개 나라 공휴일\n\n한국은 물론 일본, 미국, 유럽, 중동, 남미, 오세아니아까지 42개 나라의 공휴일이 들어 있습니다. 주나 지역마다 공휴일이 다른 나라는 내 지역을 고를 수 있고, 목록에 없는 공휴일은 직접 넣어 쓸 수 있어요. 주말 요일과 한 주의 시작 요일도 바꿀 수 있습니다.\n\n연차 관리\n\n총 연차, 쓴 연차, 남은 연차를 한 화면에서 확인합니다. 반차와 반반차도 기록되고, 대체휴무나 포상휴가처럼 따로 받은 휴가는 만료일과 함께 관리돼요. 캘린더에서 날짜를 눌러 바로 등록할 수 있고, 회사 휴가 내역 화면을 찍은 사진으로 기록을 한 번에 불러올 수도 있습니다.\n\n위젯과 백업\n\n앱을 열지 않아도 홈 화면 위젯에서 남은 연차와 다가오는 휴가를 볼 수 있습니다. 기록은 iCloud에 백업되고, 가족과 휴가 일정을 함께 볼 수도 있어요. iPhone과 iPad에서 쓸 수 있습니다.\n\n올해 남은 연차를 아직 계획하지 않았다면 한번 넣어 보세요. 생각보다 긴 연휴가 숨어 있을지도 모릅니다.\nhttps://apps.apple.com/kr/app/id6755983135",
+  "theme": 1
+ },
+ {
+  "id": "b66b38d4-af98-5c2d-a995-4a68f36d4cc3",
+  "project": "com.Ysoup.LeaveWise",
+  "kind": "post",
+  "channel": "레딧",
+  "title": "An app that finds where to put your PTO for the longest break",
+  "angle": "r/iphone, r/personalfinance 류보다 r/apps 쪽. 담백하게.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "Every year I sat with a calendar figuring out which days off would bridge a holiday into a long weekend. I turned that into an app.\n\nGoldweek looks at upcoming public holidays and shows how many leave days you need for how many consecutive days off, including bridge days. It has holidays for 42 countries (with regional options and custom holidays), lets you set which days count as the weekend, and tracks your leave balance including half days and leave with expiry dates. There is a home screen widget and iCloud backup.\n\nFree to download on iPhone and iPad. Would love to hear if the suggestions match how leave works where you are.\nhttps://apps.apple.com/us/app/id6755983135",
+  "theme": 1
+ },
+ {
+  "id": "772427ff-ee01-533f-9a04-d80b2b7a3a00",
+  "project": "com.leeo.ReboundJournal",
+  "kind": "cardNews",
+  "channel": "인스타그램",
+  "title": "계획대로 안 된 날, 조약돌과 돌아보기",
+  "angle": "계획이 틀어진 날 스스로를 탓하며 넘기는 사람에게. 일기를 쓰라고 다그치지 않고, 작은 조약돌이 먼저 말을 걸어 준다는 다정함을 느끼게 한다.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [
+   {
+    "id": "107824ef-acb8-57bb-9cd6-75808353be5a",
+    "headline": "헛디딘 날이었나요",
+    "text": "헛디뎌도 개울에 빠진 건 아니에요.\n오늘 일을 잠깐 돌아볼까요."
+   },
+   {
+    "id": "bbbc409e-4e0e-5945-bca7-2e2ca572c959",
+    "headline": "일기는 늘 미루게 돼서",
+    "text": "빈 화면 앞에 앉으면\n무엇부터 써야 할지 막막하죠."
+   },
+   {
+    "id": "83b03f41-6a42-5d38-8af0-80a9952c5ce5",
+    "headline": "조약돌이 먼저 물어요",
+    "text": "지난번 이야기를 기억했다가\n그 뒤로 어땠는지 먼저 말을 걸어요."
+   },
+   {
+    "id": "c5c45f51-7623-5896-b249-80d721624df3",
+    "headline": "고르거나, 말로 하거나",
+    "text": "답은 고르거나 직접 써도 되고\n쓰기 어려운 날엔 말로 남겨도 돼요."
+   },
+   {
+    "id": "7d99499c-fc75-55e7-b16d-e8602371f304",
+    "headline": "힘든 날엔 거기서 멈춤",
+    "text": "답하기 힘든 날에는\n더 묻지 않고 거기서 멈춥니다."
+   },
+   {
+    "id": "030ffc85-4f14-5e5f-9553-5e58b15ca4df",
+    "headline": "한 주가 징검다리로",
+    "text": "밟지 않은 날의 돌도\n지우지 않고 그 자리에 남겨 둬요."
+   },
+   {
+    "id": "228455e9-01dc-593a-8259-4678a05552b6",
+    "headline": "징검돌",
+    "text": "계획대로 되지 않은 날을\n조약돌과 이야기하며 돌아보는 기록 앱."
+   }
+  ],
+  "script": "",
+  "body": "계획대로 안 된 날, 그냥 잊고 넘기고 있진 않나요.\n\n징검돌은 작은 조약돌이 먼저 말을 걸어 오늘 무슨 일이 있었는지, 지금 마음은 어떤지 따로 물어봐 주는 기록 앱이에요. 답하기 힘든 날엔 더 묻지 않고요. 회원가입 없이 기록은 기기와 내 iCloud에만 남아요. 무료로 쓸 수 있어요.\n\n#징검돌 #회고일기 #실패일기 #감정일기 #마음기록 #멘탈관리 #회복탄력성 #자기돌봄 #일기앱 #1인개발",
+  "theme": 2
+ },
+ {
+  "id": "c8fd2660-9266-5543-9add-2932d30d40b4",
+  "project": "com.leeo.ReboundJournal",
+  "kind": "video",
+  "channel": "유튜브 쇼츠",
+  "title": "일기 대신 조약돌이랑 얘기하기",
+  "angle": "앱을 열자마자 조약돌이 먼저 말을 거는 장면으로 시작해, 빈 일기장과 다르다는 걸 보여 준다. 차분한 톤.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "[0-2초] 화면: 앱을 열자 화면 가운데 조약돌이 말풍선으로 먼저 말을 거는 모습 / 자막: 일기장이 먼저 말을 걸어요 / 내레이션: 오늘은 어땠어요?\n[2-7초] 화면: 조약돌이 지난번 이야기를 꺼내며 그 뒤로 어땠는지 묻는 말풍선 / 자막: 지난번 얘기를 기억해요 / 내레이션: 지난번에 남긴 이야기를 기억했다가, 그 뒤로 어땠는지 물어요.\n[7-13초] 화면: 보기 중 하나를 고르고, 이어서 마이크 버튼으로 말로 답하는 장면 / 자막: 고르거나, 쓰거나, 말로 / 내레이션: 답은 고르거나 쓰면 되고, 쓰기 어려운 날엔 말로 남겨도 돼요.\n[13-18초] 화면: 무슨 일이 있었는지 묻는 말풍선, 이어서 지금 마음을 따로 묻는 말풍선 / 자막: 있었던 일과 마음은 따로 / 내레이션: 무슨 일이 있었는지와 지금 마음은 따로 물어요.\n[18-24초] 화면: 지나온 길 화면, 한 주가 징검다리로 놓이고 밟지 않은 돌도 그대로 있음 / 자막: 밟지 않은 돌도 그대로 / 내레이션: 한 주가 징검다리로 놓여요. 건너뛴 날의 돌도 지우지 않아요.\n[24-30초] 화면: 잠금 화면 위젯의 조약돌, 앱 아이콘과 이름 / 자막: 징검돌, 무료로 시작 / 내레이션: 헛디뎌도 개울에 빠진 건 아니에요. 징검돌.",
+  "body": "일기 대신 조약돌이랑 얘기하기\n\n계획대로 되지 않은 날을 조약돌과 이야기하며 돌아보는 기록 앱 징검돌. 말로도 남길 수 있고, 기록은 기기와 내 iCloud에만 있어요.\n#징검돌 #회고 #감정일기 #일기앱",
+  "theme": 2
+ },
+ {
+  "id": "5c1ab188-24b9-54f6-aa9a-9eabc7c088bd",
+  "project": "com.leeo.ReboundJournal",
+  "kind": "post",
+  "channel": "스레드",
+  "title": "계획대로 안 된 날을 그냥 넘기면",
+  "angle": "계획이 틀어진 날을 자책하며 흘려보내는 사람에게 공감한다.",
+  "plannedAt": "2026-11-03T01:00:00Z",
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "계획대로 안 된 날은 빨리 잊고 싶어서 그냥 자 버리곤 했어요.\n그런데 그렇게 넘긴 날이 쌓이면, 다음에도 같은 데서 또 헛디디더라고요.\n\n징검돌은 그런 날을 작은 조약돌과 이야기하며 돌아보는 기록 앱이에요. 조약돌이 먼저 말을 걸고, 무슨 일이 있었는지와 지금 마음은 따로 물어요. 답하기 힘든 날엔 더 묻지 않고요.\n무료로 쓸 수 있어요.\nhttps://apps.apple.com/kr/app/id6450388408",
+  "theme": 2
+ },
+ {
+  "id": "605ce7ac-4a56-5d10-9917-9f31330ffe20",
+  "project": "com.leeo.ReboundJournal",
+  "kind": "post",
+  "channel": "X",
+  "title": "징검돌은 이렇게 써요",
+  "angle": "빈 일기장과 무엇이 다른지 기능으로 짧게 보여 준다.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "막힌 날을 돌아보는 기록 앱, 징검돌이에요.\n\n조약돌이 지난번 이야기를 기억했다가 먼저 말을 걸어요\n답은 고르거나 쓰거나, 말로 남겨도 돼요(음성 인식은 기기 안에서)\n한 주가 징검다리로 놓이고, 건너뛴 날의 돌도 그대로\n남긴 것들을 날짜순으로 보고 고치거나 지우기\n홈 화면 위젯과 정한 시간의 알림\n회원가입 없음, 비밀번호 잠금\n\n무료로 시작할 수 있어요.\nhttps://apps.apple.com/kr/app/id6450388408",
+  "theme": 2
+ },
+ {
+  "id": "07484d3a-f955-5860-8097-6e98a64657e0",
+  "project": "com.leeo.ReboundJournal",
+  "kind": "post",
+  "channel": "디스콰이엇",
+  "title": "계획대로 안 된 날을 돌아보는 앱, 징검돌",
+  "angle": "만든 이유, 일기 앱과 다른 점, 어떤 순간에 위로가 되는지 피드백을 부탁한다.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "안녕하세요, 1인 개발자입니다.\n\n계획대로 되지 않은 날을 그냥 흘려보내면 남는 게 없는데, 막상 일기를 쓰려고 빈 화면 앞에 앉으면 아무것도 못 쓰겠더라고요. 그래서 처음에는 리바운드 저널이라는 실패 기록 앱을 만들었고, 이번에 징검돌로 이름과 방식을 통째로 바꿨습니다.\n\n징검돌은 앱을 열면 작은 조약돌이 먼저 말을 거는 기록 앱입니다. 지난번에 남긴 이야기를 기억했다가 그 뒤로 어땠는지 묻고, 무슨 일이 있었는지와 지금 마음은 따로 묻습니다. 답은 고르거나 직접 쓰면 되고, 쓰기 어려운 날엔 말로 남길 수 있습니다. 답하기 힘든 날에는 더 묻지 않고 거기서 멈춥니다. 한 주는 징검다리로 놓이는데, 밟지 않은 날의 돌도 지우지 않고 그대로 둡니다.\n\n회원가입이 없고 기록은 기기와 내 iCloud에만 있으며, 비밀번호로 잠글 수 있습니다. 기본은 무료이고, 목표를 3개보다 많이 두거나 조약돌 결을 고르거나 기록을 내보내려면 한 번 사는 징검돌 프로가 있습니다. 구독은 아닙니다.\n\n써 보시고 조약돌의 말이 어떤 순간에 도움이 됐는지, 어디서 어색했는지 알려 주시면 정말 고맙겠습니다.\nhttps://apps.apple.com/kr/app/id6450388408",
+  "theme": 2
+ },
+ {
+  "id": "4b7a460b-fd1e-5130-a3be-8332dbe838ab",
+  "project": "com.leeo.ReboundJournal",
+  "kind": "post",
+  "channel": "네이버 블로그",
+  "title": "일기가 안 써질 때, 조약돌과 이야기하며 하루를 돌아보는 앱 징검돌",
+  "angle": "회고 일기나 감정 일기를 시작하려다 포기한 사람에게, 쓰지 않고 대답만 해도 된다는 점을 차분히 소개한다.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "빈 일기장 앞에서 멈춘 적 있다면\n\n계획대로 되지 않은 날일수록 돌아보는 게 도움이 된다는 건 알지만, 막상 빈 화면 앞에 앉으면 무엇부터 써야 할지 모르겠습니다. 그래서 오늘도 그냥 넘기게 되고요.\n\n징검돌은 어떤 앱인가요\n\n징검돌은 계획대로 되지 않은 날을 작은 조약돌과 이야기하며 돌아보는 기록 앱입니다. 앱을 열면 목록이나 그래프 대신 조약돌이 화면 가운데 앉아 있고, 먼저 말을 겁니다. 이전에는 리바운드 저널이라는 이름이었습니다.\n\n쓰는 대신 대답하기\n\n조약돌은 지난번에 남긴 이야기를 기억했다가 그 뒤로 어땠는지 묻습니다. 답은 보기에서 고르거나 직접 쓰면 됩니다. 무슨 일이 있었는지와 지금 마음은 따로 물어봅니다. 둘은 다른 이야기니까요. 답하기 힘든 날에는 더 묻지 않고 거기서 멈춥니다.\n\n말로 남기기\n\n쓰기 어려운 날에는 말로 남길 수 있습니다. 음성 인식은 기기 안에서 이뤄지고, 지원하는 기기에서는 말한 내용을 읽기 쉽게 다듬어 줍니다.\n\n지나온 길과 남긴 것들\n\n한 주가 징검다리로 놓입니다. 밟지 않은 날의 돌도 지우지 않고 그대로 남겨 둡니다. 남긴 것들에서는 그날 있었던 일, 기분, 다음에 해볼 일을 날짜순으로 다시 보고 고치거나 지울 수 있습니다.\n\n나만 보는 기록\n\n회원가입이 없고 기록은 기기와 내 iCloud에만 있습니다. 비밀번호로 잠글 수 있고, 조약돌의 말투도 존댓말과 반말 중에서 고를 수 있습니다. 홈 화면 위젯에서 조약돌의 한 마디를 보고, 정한 시간에 오늘 어땠는지 묻는 알림을 받을 수도 있습니다.\n\n무료와 프로\n\n기본 기능은 무료입니다. 목표를 3개보다 많이 두거나, 조약돌을 여섯 가지 결 중에서 고르거나, 지나온 기록을 글 파일로 내보내려면 한 번 사서 계속 쓰는 징검돌 프로가 필요합니다. 구독이 아닙니다.\n\n헛디딘 날이 있었다면 오늘 밤 조약돌에게 한 마디만 해 보세요.\nhttps://apps.apple.com/kr/app/id6450388408",
+  "theme": 2
+ },
+ {
+  "id": "7c979342-dde3-56b2-9370-32168e4394e3",
+  "project": "com.leeo.ReboundJournal",
+  "kind": "post",
+  "channel": "레딧",
+  "title": "I couldn't keep a journal, so I made one that asks you questions instead",
+  "angle": "r/journaling, r/apps 류 독자에게. 저널을 꾸준히 못 쓰는 사람의 입장에서 담백하게, 무료 범위와 일회성 구매를 숨기지 않는다.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "Every time I tried journaling after a bad day, I'd open a blank page and close it again.\n\nZinggumDol is a small journaling app built around a pebble that talks first. It remembers what you told it last time and asks how things went since. It asks what happened and how you feel as separate questions. You can pick an answer, type, or just speak (speech recognition runs on device). On a day when answering is hard, it stops and doesn't push.\n\nYour week shows up as stepping stones across a stream, and the days you skipped stay there instead of disappearing. You can go back through everything by date and edit or delete it. There's a widget and an optional daily reminder.\n\nNo sign-up. Entries live on your device and your iCloud, and you can lock the app with a passcode.\n\nIt's free to use. A one-time Pro purchase (not a subscription) unlocks more than three goals, six pebble finishes, and text export.\n\nWould love to hear whether the pebble's questions feel helpful or annoying.\nhttps://apps.apple.com/kr/app/id6450388408",
+  "theme": 2
+ },
+ {
+  "id": "a89b12ec-1de2-54e4-a83a-9ddd532e5f88",
+  "project": "com.burningparchment.app",
+  "kind": "cardNews",
+  "channel": "인스타그램",
+  "title": "오늘 저녁, 어디로 갔을까",
+  "angle": "퇴근 후 폰 좀 보다 보면 자정이 되는 직장인에게. 남은 시간이 숫자가 아니라 타들어가는 양피지로 보이면 시간이 다르게 느껴진다는 걸 보여 주고, 후 불어 하루를 끄는 작은 의식을 권한다.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [
+   {
+    "id": "53b36f3b-d85d-55cd-afc4-d394d8a9c7c7",
+    "headline": "오늘 저녁 어디 갔지",
+    "text": "퇴근하고 잠깐 폰 봤을 뿐인데\n벌써 자정."
+   },
+   {
+    "id": "23d394f1-abbe-5afd-83b6-6febc334d149",
+    "headline": "숫자로는 안 느껴져요",
+    "text": "남은 3시간이라는 숫자는\n줄어드는 게 잘 안 보이니까요."
+   },
+   {
+    "id": "64ea10bb-c89f-5b1c-9b92-e81e8f1f49cb",
+    "headline": "양피지가 타들어가요",
+    "text": "일어난 순간부터 잠들 시각까지\n남은 시간이 눈앞에서 천천히 탑니다."
+   },
+   {
+    "id": "adde5f9e-6b3e-50a2-bb1d-cb438e382174",
+    "headline": "후 불어 끄는 하루",
+    "text": "잠들기 30분 전부터 숨을 불어 불을 꺼요.\n숨의 세기만 쓰고 녹음은 하지 않아요."
+   },
+   {
+    "id": "ad10f624-d331-5096-ab8f-4a5a72e9d0e9",
+    "headline": "재로 남는 하루",
+    "text": "남은 조각 뒷면에 한 줄 회고.\n시간이 어디로 갔는지 돌아볼 수 있어요."
+   },
+   {
+    "id": "e19b0924-2117-538e-b243-1d7bd77c095c",
+    "headline": "불타는 내인생",
+    "text": "남은 시간을 눈으로 보는 앱.\n잠금화면과 다이나믹 아일랜드에서도."
+   }
+  ],
+  "script": "",
+  "body": "오늘 저녁, 뭐 하다가 끝났는지 기억나세요? 불타는 내인생은 잠들 시각까지 남은 시간을 숫자 대신 타오르는 양피지로 보여 주는 앱이에요. 잠들기 30분 전부터는 양피지에 후 불어 불을 끄고, 남은 조각에 한 줄 회고를 남길 수 있어요. 숨의 세기만 쓰고 녹음은 하지 않아요. 오늘 저녁부터 켜 보세요.\n\n#불타는내인생 #시간관리 #저녁루틴 #퇴근후 #취침루틴 #하루회고 #갓생 #잠금화면위젯 #아이폰앱 #1인개발자",
+  "theme": 3
+ },
+ {
+  "id": "cfefafb3-e0d2-560f-914b-102048224817",
+  "project": "com.burningparchment.app",
+  "kind": "video",
+  "channel": "유튜브 쇼츠",
+  "title": "내 저녁이 불타는 걸 봤다",
+  "angle": "타오르는 양피지 화면 자체가 멈춰 서게 만드는 장면이라 첫 2초에 바로 보여 주고, 후 불어 끄는 장면으로 끝낸다. 화면 녹화와 입김 장면 정도로 찍을 수 있다.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "[0-2초] 화면: 타오르는 양피지 전체 화면 확대 / 자막: 지금 타고 있는 건 내 저녁입니다 / 내레이션: 이게 오늘 남은 내 시간이에요.\n[2-6초] 화면: 양피지 위 남은 시간 표시, 불꽃이 천천히 번짐 / 자막: 잠들 시각까지 남은 시간 / 내레이션: 일어난 순간부터 잠들 시각까지 천천히 타들어가요.\n[6-11초] 화면: 하루, 한 주, 한 달, 한 해 탭을 차례로 넘김 / 자막: 이번 주, 이번 달, 올해도 / 내레이션: 이번 주, 이번 달, 올해 남은 시간도 같은 양피지로 볼 수 있고요.\n[11-17초] 화면: 잠금화면 위젯과 다이나믹 아일랜드 / 자막: 폰 켤 때마다 보이게 / 내레이션: 잠금화면이랑 다이나믹 아일랜드에도 띄워 둘 수 있어요.\n[17-23초] 화면: 잠들기 30분 전, 화면에 입김을 불자 불이 꺼짐 / 자막: 후 불어서 하루 끄기 / 내레이션: 자기 전엔 후 불어서 불을 끕니다. 녹음은 안 해요.\n[23-27초] 화면: 남은 조각을 뒤집어 한 줄 회고 입력 / 자막: 남은 조각에 한 줄 / 내레이션: 남은 조각 뒷면에 오늘 한 줄을 적고요.\n[27-30초] 화면: 앱 아이콘과 이름 / 자막: 불타는 내인생 / 내레이션: 불타는 내인생이었습니다.",
+  "body": "내 저녁 시간이 눈앞에서 타들어갑니다\n\n잠들 시각까지 남은 시간을 타오르는 양피지로 보여 주는 앱, 불타는 내인생. 잠들기 30분 전에는 후 불어 하루를 끄세요.\nhttps://apps.apple.com/kr/app/id6758995390\n\n#불타는내인생 #시간관리 #쇼츠",
+  "theme": 3
+ },
+ {
+  "id": "d21c304e-cbb2-5e9f-b89b-05f5fa74c369",
+  "project": "com.burningparchment.app",
+  "kind": "post",
+  "channel": "스레드",
+  "title": "분명 자유시간이 있었는데",
+  "angle": "저녁 시간을 흘려보내고 허무한 사람에게, 개발자 본인의 같은 경험으로 공감을 산다.",
+  "plannedAt": "2026-11-04T01:00:00Z",
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "퇴근하고 잠깐 폰 봤을 뿐인데 어느새 자정. 분명 자유시간이 있었는데 뭘 했는지 기억이 안 나요.\n\n저도 제 저녁이 다 타고 없어진 걸 보고 이 앱을 만들었어요. 불타는 내인생은 잠들 시각까지 남은 시간을 숫자 대신 타오르는 양피지로 보여 줍니다. 눈으로 보면 시간이 다르게 느껴지더라고요.\nhttps://apps.apple.com/kr/app/id6758995390",
+  "theme": 3
+ },
+ {
+  "id": "75f3ed24-4186-524b-8c1a-c814c0684237",
+  "project": "com.burningparchment.app",
+  "kind": "post",
+  "channel": "X",
+  "title": "불타는 내인생의 기능들",
+  "angle": "시간 관리 앱을 찾는 사람에게 다른 앱과 다른 장면들(양피지, 후 불기, 회고)을 짧게 나열한다.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "불타는 내인생에서 할 수 있는 것\n\n남은 시간을 타오르는 양피지로 보기 (하루, 한 주, 한 달, 한 해)\n마감 있는 목표까지 남은 시간 함께 세기\n잠들기 30분 전, 숨을 불어 불 끄기 (녹음 안 함)\n남은 조각 뒷면에 한 줄 회고, 회고 책으로 다시 읽기\n시간이 어디로 갔는지 분포 그래프와 불씨 달력\n홈 화면, 잠금화면 위젯과 다이나믹 아일랜드\n\nhttps://apps.apple.com/kr/app/id6758995390",
+  "theme": 3
+ },
+ {
+  "id": "99561b0e-7d6c-5286-a694-e889373431ef",
+  "project": "com.burningparchment.app",
+  "kind": "post",
+  "channel": "디스콰이엇",
+  "title": "제 저녁이 타 없어지는 걸 보고 만든 앱, 불타는 내인생",
+  "angle": "만든 계기의 개인적인 이야기를 앞세우고, 시간 시각화와 하루 끝 의식이 실제로 습관이 되는지 피드백을 받고 싶다.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "안녕하세요, 1인 개발자입니다.\n\n어느 날 문득 제 저녁시간이 다 타고 없어진 걸 봤습니다. 분명 자유시간이 있었는데 뭘 했는지 기억이 안 나더라고요. 그래서 남은 시간이 타서 없어지는 모습을 그대로 보여 주는 앱을 만들었습니다.\n\n불타는 내인생은 일어난 순간부터 잠들 시각까지 남은 시간을 타오르는 양피지로 보여 줍니다. 이번 주, 이번 달, 올해 남은 시간도 같은 방식으로 볼 수 있고, 마감이 있는 목표를 더하면 그날까지 남은 시간도 함께 셉니다. 잠들기 30분 전부터는 양피지에 숨을 불어 불을 끌 수 있는데, 숨의 세기만 쓰고 아무것도 녹음하지 않아요. 불을 끄고 남은 조각 뒷면에 한 줄 회고를 남기면 회고 책에 쌓이고, 시간이 어디로 갔는지 분포 그래프와 불씨 달력으로 돌아볼 수 있습니다. 위젯과 다이나믹 아일랜드에서도 남은 시간이 보여요.\n\n타오르는 양피지와 회고, 후 불어 끄기는 모두 무료입니다. 이게 실제로 저녁 습관을 바꾸는지, 어떤 장면이 있으면 더 오래 쓰게 될지 의견 주시면 감사히 반영하겠습니다.\nhttps://apps.apple.com/kr/app/id6758995390",
+  "theme": 3
+ },
+ {
+  "id": "9a1a5f0c-27d8-53ae-b4e6-5b2b0389addc",
+  "project": "com.burningparchment.app",
+  "kind": "post",
+  "channel": "네이버 블로그",
+  "title": "퇴근 후 저녁 시간이 사라질 때, 남은 시간을 눈으로 보는 앱 불타는 내인생",
+  "angle": "저녁 루틴, 시간 관리, 취침 습관을 검색한 사람에게. 숫자 시계와 다른 감각을 경험담처럼 풀어 쓴다.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "저녁은 왜 늘 사라질까\n퇴근하고 밥 먹고 잠깐 폰을 봤을 뿐인데 어느새 자정이 넘어 있는 날이 많습니다. 분명 몇 시간의 자유시간이 있었는데 돌아보면 뭘 했는지 기억이 잘 안 나요. 시계를 봐도 남은 시간은 그냥 숫자라서, 그게 줄어들고 있다는 감각이 잘 오지 않습니다.\n\n남은 시간을 양피지로 보기\n불타는 내인생은 남은 시간을 숫자 대신 타오르는 양피지로 보여 주는 앱입니다. 일어난 순간부터 잠들 시각까지 양피지가 천천히 타들어가요. 이번 주, 이번 달, 올해 남은 시간도 같은 양피지로 볼 수 있고, 마감이 있는 목표를 더하면 그날까지 남은 시간을 함께 셉니다.\n\n후 불어 끄는 하루의 끝\n가장 좋아하는 부분은 하루를 마치는 방식입니다. 잠들기 30분 전부터 타오르는 양피지에 숨을 불어 불을 끌 수 있어요. 숨의 세기만 쓰고 아무것도 녹음하지 않습니다. 이 작은 동작 하나가 이제 그만 폰을 내려놓자는 신호가 되어 줍니다.\n\n재로 남는 하루\n불을 끄고 남은 조각은 모아 둡니다. 조각을 뒤집어 뒷면에 한 줄을 적을 수 있고, 지나간 시간을 무엇에 썼는지 두 축 위에 점으로 나눌 수 있어요. 회고는 주제별 항아리에 쌓이고 회고 책에서 다시 읽을 수 있습니다. 재의 흐름 화면에서는 시간이 어디로 갔는지 분포 그래프와 불씨 달력으로 보여 줍니다.\n\n언제나 눈앞에\n홈 화면과 잠금화면 위젯, 다이나믹 아일랜드와 잠금화면 실시간 현황에서 남은 시간을 확인할 수 있습니다. 라이트와 다크 테마, 추천 취침 시각, 보고 싶은 탭만 고르는 설정도 있어요.\n\n정리하며\n타오르는 양피지와 회고, 후 불어 끄는 의식은 모두 무료로 쓸 수 있습니다. 오늘 저녁이 또 그냥 사라질 것 같다면 한번 켜 두고 지켜보세요.\n\nhttps://apps.apple.com/kr/app/id6758995390",
+  "theme": 3
+ },
+ {
+  "id": "7a72292c-1ae4-507d-987e-244f6b6c3ff3",
+  "project": "com.burningparchment.app",
+  "kind": "post",
+  "channel": "레딧",
+  "title": "I made an app that shows the rest of my day as a burning sheet of parchment",
+  "angle": "A personal, low-key post for r/iphone or r/productivity. Lead with the evening-disappears feeling and the blow-out-the-flame ritual.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "My evenings kept vanishing. I would get home, look at my phone for a bit, and suddenly it was past midnight. A clock saying 3h left never felt like anything, so I built something that makes it visible.\n\nBurning Parchment shows the time left until bedtime as a sheet of parchment slowly burning down. You can switch to the week, month or year, and add a deadline to count down to. Starting 30 minutes before bed, you can blow on the screen to put the flame out (it only uses breath strength, nothing is recorded). The leftover scrap can get a one-line note on the back, and those notes collect into a small reflection book. There are home and lock screen widgets plus a Live Activity for the Dynamic Island.\n\nThe parchment, reflections and the blow-out ritual are free. Curious whether this kind of visual actually changes anyone else's evenings.\nhttps://apps.apple.com/kr/app/id6758995390",
+  "theme": 3
+ },
+ {
+  "id": "da5e4de5-d0fa-54f6-a3d3-10e8ee49f387",
+  "project": "com.devkoan.FireTracker",
+  "kind": "cardNews",
+  "channel": "인스타그램",
+  "title": "퇴사각, 감 말고 숫자로",
+  "angle": "회사에서 힘든 날마다 언제 그만둘 수 있을지 막연히 계산해 보는 직장인에게. 흩어진 자산을 모으면 목표까지 얼마 남았는지 숫자로 보인다는 안도감과 현실감을 주고 싶다.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [
+   {
+    "id": "caac5f8b-30d3-5129-9f02-4e42609d5d01",
+    "headline": "나 언제 퇴사해도 돼?",
+    "text": "힘든 날마다 떠올리지만\n답은 늘 막연하죠."
+   },
+   {
+    "id": "1db41fc1-a758-5c0a-93fc-c5e8ebefb832",
+    "headline": "감으로는 못 정해요",
+    "text": "집, 주식, 연금, 예금, 대출.\n흩어져 있으니 합계도 모릅니다."
+   },
+   {
+    "id": "39ac9c5d-7781-50a9-8bb4-846fd1ba4cfb",
+    "headline": "자산을 한 곳에",
+    "text": "종류별로 모으면 자산 구성과 부채 비율이 보이고\n주식과 코인은 시세로 평가액이 갱신돼요."
+   },
+   {
+    "id": "fa034632-886c-5ec4-98fc-b35b9fa12cc2",
+    "headline": "목표는 내가 정해요",
+    "text": "월 지출, 안전 인출률, 예상 수익률을 넣으면\nFIRE 목표 금액이 계산됩니다."
+   },
+   {
+    "id": "29026d18-04f9-5855-b1ca-04532a5e85b9",
+    "headline": "얼마나 남았는지",
+    "text": "달성률과 예상 달성 시점,\n한 달에 얼마를 모아야 하는지까지."
+   },
+   {
+    "id": "2289c82a-5a16-5ef2-90b2-77b34fd6b503",
+    "headline": "퇴사각",
+    "text": "막연한 퇴사를 숫자로.\n기록은 내 기기에만."
+   }
+  ],
+  "script": "",
+  "body": "퇴사각 재는 중, 농담처럼 말하지만 다들 진심이잖아요. 퇴사각은 자산을 기록하면 경제적 자유(FIRE) 목표까지 달성률과 예상 달성 시점을 보여 주는 은퇴 계산기예요. 부동산, 주식, 연금, 예금, 코인, 대출까지 한 곳에 모으고, 목표까지 한 달에 얼마를 모아야 하는지도 알려 줘요. 기록은 기기에만 저장되고 계정도 필요 없어요. 프로필 링크에서 확인해 주세요.\n\n#퇴사각 #파이어족 #조기은퇴 #경제적자유 #은퇴계산기 #자산관리 #재테크 #직장인 #1인개발자 #iOS앱",
+  "theme": 0
+ },
+ {
+  "id": "f8679bca-1ade-53a4-87aa-dd116c4e11dd",
+  "project": "com.devkoan.FireTracker",
+  "kind": "video",
+  "channel": "유튜브 쇼츠",
+  "title": "내 퇴사각, 숫자로 재 봤다",
+  "angle": "출근길 직장인이 멈춰 서게 첫 2초에 질문을 던지고, 데모 모드 화면으로 대시보드와 여정 그래프를 보여 준다. 실제 개인 자산을 노출하지 않도록 데모 모드로 녹화.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "[0-2초] 화면: 검은 배경에 큰 글자 / 자막: 나 언제 퇴사해도 돼? / 내레이션: 회사 그만둬도 되는 날, 계산해 본 적 있어요?\n[2-7초] 화면: 퇴사각 실행, 데모 모드 대시보드의 목표 달성률 / 자막: 목표까지 몇 퍼센트 왔는지 / 내레이션: 퇴사각은 경제적 자유 목표까지 얼마나 왔는지 숫자로 보여 줘요.\n[7-12초] 화면: 자산 탭, 부동산 주식 연금 예금 대출 목록 스크롤 / 자막: 흩어진 자산을 한 곳에 / 내레이션: 집, 주식, 연금, 대출까지 한 곳에 모으면\n[12-17초] 화면: 목표 설정, 월 지출과 안전 인출률 입력 / 자막: 목표 금액은 내 기준으로 / 내레이션: 내 월 지출 기준으로 목표 금액이 계산되고요.\n[17-23초] 화면: 여정 그래프, 한 달에 모아야 할 금액 표시 / 자막: 한 달에 얼마 모아야 할까 / 내레이션: 목표까지 한 달에 얼마를 모아야 하는지도 나옵니다.\n[23-27초] 화면: 계산기 목록, 월급의 구매력 계산기 열기 / 자막: 계산기 여섯 가지 / 내레이션: 대출 상환, 적금, 월급의 구매력 계산기도 들어 있어요.\n[27-30초] 화면: 앱 아이콘과 이름 / 자막: 퇴사각. 막연한 퇴사를 숫자로 / 내레이션: 퇴사각이었습니다.",
+  "body": "내 퇴사각, 감 말고 숫자로 재 봤습니다\n\n자산을 기록하면 경제적 자유 목표까지 달성률과 예상 달성 시점을 보여 주는 은퇴 계산기 퇴사각. 계산 결과는 참고용이며 투자 권유가 아닙니다.\nhttps://apps.apple.com/kr/app/id6779654854\n\n#퇴사각 #파이어족 #쇼츠",
+  "theme": 0
+ },
+ {
+  "id": "082024ef-d508-5a7e-833d-46a3293dd75f",
+  "project": "com.devkoan.FireTracker",
+  "kind": "post",
+  "channel": "스레드",
+  "title": "언제까지 다녀야 하지",
+  "angle": "힘든 하루 끝에 퇴사를 상상하는 직장인에게, 그 상상을 계획으로 바꾸는 첫 단계를 보여 준다.",
+  "plannedAt": "2026-11-05T01:00:00Z",
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "회사에서 힘든 날마다 언제까지 다녀야 하지 생각하잖아요. 근데 답은 늘 막연해요. 집, 주식, 연금, 대출이 다 흩어져 있으니 내가 지금 어디쯤인지도 모르고요.\n\n퇴사각은 자산을 기록하면 경제적 자유 목표까지 달성률과 예상 달성 시점을 보여 주는 은퇴 계산기예요. 목표까지 한 달에 얼마를 모아야 하는지도 알려 줘요. 숫자가 보이면 계획이 시작됩니다.\nhttps://apps.apple.com/kr/app/id6779654854",
+  "theme": 0
+ },
+ {
+  "id": "6b291068-f64b-50c1-88d8-88c154b08a1c",
+  "project": "com.devkoan.FireTracker",
+  "kind": "post",
+  "channel": "X",
+  "title": "은퇴 계산기 퇴사각이 하는 일",
+  "angle": "FIRE를 이미 알고 엑셀로 계산해 본 사람에게, 엑셀 대신 쓸 수 있는 기능을 짧게 보여 준다.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "엑셀로 굴리던 FIRE 계산, 앱 하나로\n\n퇴사각이 하는 일\n목표 달성률, 패시브 인컴 달성률, 지난주 대비 변화\n부동산, 주식, ETF, 연금, 예금, 코인, 대출을 한 곳에\n주식과 코인은 시세로 평가액 자동 갱신\n월 지출, 안전 인출률, 예상 수익률로 목표 금액 계산\n대출 상환, 예적금, 투자, 월급 구매력 등 계산기 6종\n\n계정 없이 기기에만 저장, 파일 백업과 복원 지원.\nhttps://apps.apple.com/kr/app/id6779654854",
+  "theme": 0
+ },
+ {
+  "id": "57f08738-64b0-5d7d-bb52-6e92e62dbcfa",
+  "project": "com.devkoan.FireTracker",
+  "kind": "post",
+  "channel": "디스콰이엇",
+  "title": "엑셀로 굴리던 퇴사 계산을 앱으로, 퇴사각",
+  "angle": "직장인 시절의 경험에서 출발했다는 이야기와 함께, 유료 앱으로서 값을 하려면 무엇이 필요한지 솔직한 피드백을 받고 싶다.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "안녕하세요, 1인 개발자입니다.\n\n직장 다닐 때 나는 언제쯤 그만둘 수 있을까를 엑셀로 자주 계산해 봤어요. 자산은 여기저기 흩어져 있고, 시세는 계속 바뀌고, 시트는 점점 복잡해지더라고요. 그 계산을 앱으로 옮긴 게 퇴사각입니다.\n\n자산을 종류별로 기록하면 경제적 자유(FIRE) 목표까지의 달성률과 예상 달성 시점이 대시보드 맨 위에 보여요. 주식과 코인은 시세를 불러와 평가액을 갱신하고, 자산이 바뀌면 그 주의 기록이 저절로 남아서 지나온 길을 그래프로 볼 수 있습니다. 월 지출, 안전 인출률, 예상 수익률을 넣으면 목표 금액이 계산되고, 목표까지 하루, 한 주, 한 달에 얼마를 모아야 하는지도 알려 줍니다. 대출 상환, 예적금, 월급의 구매력 같은 계산기도 여섯 가지 들어 있어요. 가상 인물의 데모 자산으로 모든 화면을 먼저 둘러볼 수 있고, 기록은 기기에만 저장되며 계정이 필요 없습니다.\n\n인생의 큰 재무 결정을 다루는 도구라 유료 앱으로 냈고, 그 값을 하도록 계속 다듬고 있습니다. FIRE를 준비하시는 분들이 실제로 어떤 계산이 필요하신지, 무엇이 있으면 돈 낼 가치가 있다고 느끼시는지 솔직하게 알려 주세요.\nhttps://apps.apple.com/kr/app/id6779654854",
+  "theme": 0
+ },
+ {
+  "id": "32302285-8501-5932-9036-48394f4dd1c1",
+  "project": "com.devkoan.FireTracker",
+  "kind": "post",
+  "channel": "네이버 블로그",
+  "title": "파이어족 은퇴 계산, 엑셀 대신 앱으로 해 본 후기: 퇴사각",
+  "angle": "FIRE와 조기 은퇴를 검색해 들어온 사람에게, 목표 금액을 정하고 진행 상황을 꾸준히 보는 방법을 앱 중심으로 설명한다.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "퇴사각을 잰다는 말\n회사 다니면서 퇴사각 잰다는 말 많이 하죠. 농담처럼 하지만 사실 다들 한 번쯤은 진지하게 계산해 봤을 거예요. 문제는 그 계산이 늘 감으로 끝난다는 겁니다. 집, 주식, 연금, 예금, 대출이 다 흩어져 있으니 지금 내가 어디쯤인지부터 알기 어렵거든요.\n\n퇴사각은 어떤 앱인가\n퇴사각은 자산을 기록하면 경제적 자유(FIRE) 목표까지의 달성률과 예상 달성 시점을 보여 주는 은퇴 계산기입니다. 대시보드 맨 위에 목표 달성률과 패시브 인컴 달성률이 보이고, 지난주 대비 무엇이 얼마나 바뀌었는지, 지금 쓸 수 있는 돈과 묶인 돈이 얼마인지도 한눈에 나옵니다.\n\n흩어진 자산을 한 곳에\n부동산, 주식, 펀드와 ETF, 연금, 현금과 예금, 보증금, 암호화폐, 대출까지 종류별로 모아 자산 구성과 부채 비율을 봅니다. 주식과 코인은 시세를 불러와 평가액을 자동으로 갱신할 수 있어서 매번 손으로 고칠 필요가 없어요.\n\n목표 금액은 내 기준으로\n원하는 월 지출, 안전 인출률, 예상 수익률을 넣으면 FIRE 목표 금액이 자동으로 계산됩니다. 여정 화면에서는 기간별 목표와 지나온 기록을 그래프 한 장으로 보고, 목표까지 하루, 한 주, 한 달에 얼마를 모아야 하는지 알려 줍니다. 자산이 바뀌면 그 주의 기록이 저절로 남아요.\n\n여섯 가지 계산기\n생애주기 자산 추이, 대출 상환, 예금과 적금, 투자, 월급의 구매력, 돈을 시간으로 바꿔 보는 계산기가 들어 있습니다. 계산한 조건은 이름을 붙여 저장해 두고 다시 불러와 바꿔 볼 수 있어요.\n\n데이터는 내 기기에\n기록은 기기에 저장되고 계정이 필요 없습니다. 모든 데이터를 파일로 백업하고 복원할 수 있어요. 처음이라면 데모 모드로 가상 인물의 자산을 먼저 둘러보는 걸 추천합니다.\n\n덧붙이는 말\n앱의 계산은 입력값을 바탕으로 한 참고용 결과이고 투자 권유가 아닙니다. 다만 막연한 상상을 숫자로 바꿔 보는 것만으로도 계획의 출발점이 달라지더라고요.\n\nhttps://apps.apple.com/kr/app/id6779654854",
+  "theme": 0
+ },
+ {
+  "id": "817c9516-8b10-5949-aadf-78444ceaf6bd",
+  "project": "com.devkoan.FireTracker",
+  "kind": "post",
+  "channel": "레딧",
+  "title": "I turned my 'when can I quit' spreadsheet into an iPhone app",
+  "angle": "For r/financialindependence-adjacent iPhone users. Lead with the spreadsheet pain, keep it factual, mention local-only storage.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "Back when I had a salaried job, I tracked my FIRE progress in a spreadsheet: property, stocks, pension, savings, loans, all in different tabs, updated by hand. Eventually I turned it into an app.\n\nYou log your assets by type and it shows how far you are toward your FI number and when you might get there. Stock and crypto values can refresh from market prices. You set your own monthly spending, safe withdrawal rate and expected return, and it tells you how much you need to save per day, week or month to stay on track. Each week is recorded automatically, so you get a history chart. There are also a few calculators (loan payoff, savings, investment, salary purchasing power).\n\nNo account, data stays on the device, and you can back up to a file. There is a demo mode with a fictional profile if you just want to look around. It is Korean-first right now, so I would love to hear whether it makes sense to non-Korean users. Numbers are estimates, not financial advice.\nhttps://apps.apple.com/kr/app/id6779654854",
+  "theme": 0
+ },
+ {
+  "id": "63c243ac-53f2-5b61-80dc-e554e27fd3d0",
+  "project": "com.leeo.DontGoMart",
+  "kind": "cardNews",
+  "channel": "인스타그램",
+  "title": "마트 앞에서 돌아선 적 있다면",
+  "angle": "주말에 장 보러 가는 사람, 자취생, 살림하는 사람에게. 휴무일은 매달 바뀌는데 기억하기는 어렵다. 가기 전에 한 번 보면 끝난다는 가벼운 안도감을 주고 싶다.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [
+   {
+    "id": "83dcb894-a64f-5c79-bac7-a3feff335fa7",
+    "headline": "오늘 마트 쉬는 날?",
+    "text": "장바구니 챙겨 나갔는데\n문 앞에 붙은 정기휴무 안내문."
+   },
+   {
+    "id": "8ed0e410-109e-5693-9dd6-1442b5061eef",
+    "headline": "휴무일은 매번 헷갈려",
+    "text": "둘째 넷째 일요일, 수요일, 지역마다 다르고\n명절엔 또 다르니까요."
+   },
+   {
+    "id": "e3431ea5-781c-5464-a272-9bc70186a7b4",
+    "headline": "열면 바로 보여요",
+    "text": "고른 매장이 오늘 영업하는지가 맨 먼저.\n다음 휴무까지 며칠 남았는지도 함께."
+   },
+   {
+    "id": "ad34c275-9342-5ac1-bbbf-57da5c3273d5",
+    "headline": "미리 알려 줘요",
+    "text": "1일, 2일, 3일, 7일 전 중에 고르면 끝.\n휴무 전날엔 오늘 장 보기 좋은 날이라고 한 번 더."
+   },
+   {
+    "id": "4975526c-a544-5c50-b3d8-bf7f161b0dde",
+    "headline": "단골 식당까지",
+    "text": "네이버지도 링크나 스크린샷 한 장이면\n식당 휴무일도 알아서 채워져요."
+   },
+   {
+    "id": "d6fd5b43-978a-50a8-a3f1-2973733fa7c5",
+    "headline": "돈꼬마트",
+    "text": "헛걸음 없는 장보기.\n모든 기능 무료."
+   }
+  ],
+  "script": "",
+  "body": "마트 앞까지 갔는데 문이 닫혀 있던 날, 다들 한 번쯤 있죠. 돈꼬마트는 가기 전에 오늘 문 여는지부터 보여 주는 앱이에요. 대형마트와 코스트코 의무휴업일, 지역마다 다른 휴무 요일, 설날과 추석까지 챙기고 쉬는 날이 다가오면 미리 알려 줘요. 단골 식당 쉬는 날도 같이 넣어 둘 수 있고, 위젯으로 홈 화면에서 바로 확인됩니다. 모든 기능이 무료예요.\n\n#돈꼬마트 #마트휴무일 #의무휴업일 #코스트코휴무 #장보기 #살림팁 #자취생 #위젯추천 #아이폰앱 #1인개발자",
+  "theme": 1
+ },
+ {
+  "id": "8faa093a-ac92-5a00-ab15-af10d052d806",
+  "project": "com.leeo.DontGoMart",
+  "kind": "video",
+  "channel": "유튜브 쇼츠",
+  "title": "마트 가기 전 3초 확인",
+  "angle": "닫힌 마트 문 앞에서 돌아서는 장면으로 시작해 공감을 끌고, 위젯 한 번 보는 습관으로 끝낸다. 화면 녹화만으로 찍을 수 있게 구성.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "[0-2초] 화면: 검은 배경에 큰 글자 / 자막: 장 보러 갔는데 마트가 쉬는 날이었다 / 내레이션: 마트 앞에서 돌아선 적 있죠?\n[2-6초] 화면: 돈꼬마트 실행, 오늘 영업 여부가 맨 위에 보이는 첫 화면 / 자막: 열면 오늘 문 여는지부터 / 내레이션: 이 앱은 열자마자 오늘 문을 여는지부터 보여 줘요.\n[6-11초] 화면: 매장 고르기, 수요일 휴무 지역과 코스트코 지점 선택 / 자막: 지역마다 다른 휴무 요일도 / 내레이션: 수요일에 쉬는 곳, 코스트코 지점별 휴무도 따로 고를 수 있고요.\n[11-16초] 화면: 알림 설정에서 휴무 1일 전 선택, 시각 지정 / 자막: 쉬는 날 전에 미리 알림 / 내레이션: 쉬는 날이 다가오면 미리 알려 줍니다.\n[16-22초] 화면: 단골 식당 추가, 네이버지도 링크 붙여넣기 후 휴무일 자동 입력 / 자막: 단골 식당 휴무도 링크 한 번 / 내레이션: 단골 식당은 네이버지도 링크만 붙여넣으면 휴무일이 채워져요.\n[22-27초] 화면: 홈 화면으로 나가 위젯 확대 / 자막: 앱 안 열어도 위젯으로 / 내레이션: 홈 화면 위젯으로 다음 휴무일까지 바로 보이고요.\n[27-30초] 화면: 앱 아이콘과 이름 / 자막: 돈꼬마트, 모든 기능 무료 / 내레이션: 돈꼬마트, 무료예요.",
+  "body": "마트 쉬는 날, 이제 가기 전에 3초면 확인\n\n대형마트, 코스트코 의무휴업일을 미리 알려 주는 무료 앱 돈꼬마트. 지역별 휴무 요일, 명절 휴무, 단골 식당 휴무까지 위젯으로 확인하세요.\nhttps://apps.apple.com/kr/app/id6450387984\n\n#돈꼬마트 #마트휴무일 #쇼츠",
+  "theme": 1
+ },
+ {
+  "id": "8a60753b-0a3e-5a6e-a555-c7a26c3ae2e1",
+  "project": "com.leeo.DontGoMart",
+  "kind": "post",
+  "channel": "스레드",
+  "title": "닫힌 마트 문 앞의 허탈함",
+  "angle": "주말 장보기를 앞둔 사람에게, 누구나 겪어 본 헛걸음 장면으로 말을 건다.",
+  "plannedAt": "2026-11-06T01:00:00Z",
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "장바구니 들고 마트 앞까지 갔는데 정기휴무 안내문. 이 허탈함 아시죠.\n\n휴무일이 둘째 넷째 일요일인 곳도 있고 수요일인 곳도 있고, 명절엔 또 달라서 매번 헷갈리더라고요.\n\n돈꼬마트는 가기 전에 오늘 문 여는지부터 보여 주는 앱이에요. 쉬는 날이 다가오면 미리 알려 주고, 위젯으로 홈 화면에서도 보여요. 모든 기능 무료입니다.\nhttps://apps.apple.com/kr/app/id6450387984",
+  "theme": 1
+ },
+ {
+  "id": "cd914ced-36fc-59de-be08-8e5d065ee115",
+  "project": "com.leeo.DontGoMart",
+  "kind": "post",
+  "channel": "X",
+  "title": "돈꼬마트로 할 수 있는 것",
+  "angle": "기능을 짧게 훑어서, 이미 휴무일 앱이 필요하다고 느끼는 사람이 바로 받게 한다.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "마트 휴무일 앱 돈꼬마트로 할 수 있는 것\n\n오늘 고른 매장이 영업하는지 바로 확인\n대형마트, 코스트코 지점별 의무휴업일과 명절 휴무\n목록에 없는 동네 마트는 휴무 규칙을 정해 직접 추가\n단골 식당 휴무는 네이버지도 링크나 스크린샷으로\n휴무 1, 2, 3, 7일 전 알림과 홈 화면, 잠금 화면 위젯\n\n전부 무료예요.\nhttps://apps.apple.com/kr/app/id6450387984",
+  "theme": 1
+ },
+ {
+  "id": "5531234f-7d83-53f0-a20c-015949065dd2",
+  "project": "com.leeo.DontGoMart",
+  "kind": "post",
+  "channel": "디스콰이엇",
+  "title": "마트 헛걸음에서 시작한 앱, 돈꼬마트",
+  "angle": "1인 개발자로서 만든 계기와 지금 하는 일을 솔직하게 소개하고, 실제 쓰는 사람의 불편을 듣고 싶다.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "안녕하세요, 1인 개발자입니다.\n\n마트까지 갔는데 문이 닫혀 있어서 그냥 돌아온 날이 있었어요. 가기 전에 확인만 하면 되는 일인데, 휴무일이 지역마다 달라서 매번 찾아보기가 귀찮더라고요. 그래서 돈꼬마트를 만들었습니다.\n\n앱을 열면 고른 매장이 오늘 영업하는지가 가장 먼저 보이고, 다음 휴무일까지 남은 날짜가 나옵니다. 대형마트와 코스트코 의무휴업일, 울산과 제주처럼 휴무 요일이 다른 지역, 설날과 추석 당일 휴무까지 챙겨요. 목록에 없는 동네 마트는 몇째 주 무슨 요일에 쉬는지 정해서 직접 넣을 수 있고, 최근에는 단골 식당 휴무도 네이버지도 링크나 스크린샷으로 넣을 수 있게 했습니다. 알림과 홈 화면, 잠금 화면 위젯도 있어요.\n\n모든 기능은 무료입니다. 자주 가시는 마트가 빠져 있거나 휴무일이 틀리게 나오면 꼭 알려 주세요. 바로 고치겠습니다.\nhttps://apps.apple.com/kr/app/id6450387984",
+  "theme": 1
+ },
+ {
+  "id": "d603d66f-ddcf-50b9-8b88-aa0869b1ccb9",
+  "project": "com.leeo.DontGoMart",
+  "kind": "post",
+  "channel": "네이버 블로그",
+  "title": "마트 휴무일 헷갈릴 때, 가기 전에 확인하는 무료 앱 돈꼬마트",
+  "angle": "마트 휴무일을 검색해서 들어온 사람에게, 검색 대신 앱 하나로 해결하는 방법을 차분히 설명한다.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "마트 휴무일, 왜 이렇게 헷갈릴까\n대형마트 의무휴업일은 보통 둘째 넷째 일요일이라고 알고 있지만, 지역에 따라 수요일에 쉬는 곳도 있고 울산이나 제주처럼 휴무 요일이 다른 곳도 있습니다. 코스트코는 지점마다 또 다르고요. 설날과 추석 당일에도 문을 닫습니다. 그래서 장 보러 나가기 전에 매번 검색을 하게 되는데, 그걸 깜빡한 날 꼭 헛걸음을 하게 되더라고요.\n\n돈꼬마트는 이런 앱입니다\n돈꼬마트는 마트 가기 전에 오늘 문을 여는지부터 확인하는 앱입니다. 앱을 열면 고른 매장이 오늘 영업하는지가 가장 먼저 보이고, 다음 휴무일까지 며칠 남았는지와 다가오는 휴무일 목록도 함께 나옵니다. 달력에서는 한 달 치 휴무일을 한 번에 볼 수 있어요.\n\n동네 마트와 단골 식당도\n목록에 없는 매장은 둘째, 넷째 일요일처럼 몇째 주 무슨 요일에 쉬는지 정해서 나만의 마트로 등록할 수 있습니다. 자주 가는 식당의 정기 휴무도 넣어 둘 수 있는데, 네이버지도에서 식당을 공유해 복사한 링크를 붙여넣거나 식당 정보 화면 스크린샷을 고르면 휴무일이 알아서 채워집니다. 사진 속 글자는 기기 안에서만 읽어요.\n\n잊지 않게 알림과 위젯\n휴무 1일, 2일, 3일, 7일 전 중에 골라 원하는 시각에 알림을 받을 수 있고, 휴무 전날에는 오늘이 장 보기 좋은 날이라고 한 번 더 알려 줍니다. 홈 화면 위젯에는 가까운 휴무일과 남은 날짜가, 잠금 화면에는 이번 주 일요일 영업 여부가 보입니다.\n\n가족에게 공유하기\n휴무 소식은 2주 달력과 장보기 팁이 담긴 카드로 만들어 가족 단톡방에 보낼 수 있습니다.\n\n정리하며\n모든 기능이 무료라서 부담 없이 써 보셔도 됩니다. 주말 장보기 전에 위젯 한 번 보는 습관만 들이면 헛걸음은 확실히 줄어들어요.\n\nhttps://apps.apple.com/kr/app/id6450387984",
+  "theme": 1
+ },
+ {
+  "id": "64a47d07-e2b7-5aaa-bb47-58cd1f2eeac4",
+  "project": "com.leeo.DontGoMart",
+  "kind": "post",
+  "channel": "레딧",
+  "title": "I kept showing up at closed supermarkets in Korea, so I made a tiny app",
+  "angle": "Korean big-box stores close on mandated days that differ by region. Frame it as a local quirk and a small fix, not an ad.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "Small thing, but maybe useful if you live in Korea.\n\nBig supermarkets here (E-mart, Homeplus, Costco and so on) have mandatory closing days, usually the 2nd and 4th Sunday, but some regions close on Wednesdays and a few areas use different days altogether. Holidays like Seollal and Chuseok add more. I walked to a closed store one too many times.\n\nSo I built DontGoMart. You pick your stores and it shows whether they are open today, counts down to the next closing day, and notifies you 1, 2, 3 or 7 days before. You can add your own store with its own closing rule, and there are home and lock screen widgets. It also tracks regular closing days for restaurants you go to.\n\nEverything is free. The app is Korean-first, so feedback from anyone using it here is welcome.\nhttps://apps.apple.com/kr/app/id6450387984",
+  "theme": 1
+ },
+ {
+  "id": "d192dc95-f511-5701-9602-027bde82f314",
+  "project": "com.leeo.HandsFreeMetronome",
+  "kind": "cardNews",
+  "channel": "인스타그램",
+  "title": "템포는 말로 바꾸는 메트로놈",
+  "angle": "기타, 피아노, 드럼처럼 두 손이 바쁜 연주자에게. 템포 하나 바꾸려고 손을 떼던 습관을 떠올리게 하고, 말 한마디로 끝난다는 시원함을 느끼게 한다.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [
+   {
+    "id": "483838df-85ab-54bc-aae2-a5c558c142c1",
+    "headline": "템포 바꾸다 흐름 끊김",
+    "text": "손 떼고, 폰 만지고, 다시 자세 잡고.\n그 사이에 연습은 이미 멈췄어요."
+   },
+   {
+    "id": "740a1d07-1343-55ee-b825-23ef87d7e027",
+    "headline": "그냥 말하세요",
+    "text": "start 라고 하면 시작,\nfaster 라고 하면 빨라집니다."
+   },
+   {
+    "id": "655de27e-e222-5c42-98b4-94ea4a52cfed",
+    "headline": "숫자도 말로",
+    "text": "tempo 120 이라고 하면 120.\ndouble, half 로 두 배와 절반도."
+   },
+   {
+    "id": "25d4a293-e2e5-57b7-b9c2-ff2e6686771c",
+    "headline": "설정 없이 바로",
+    "text": "앱이 직접 듣고 기기 안에서 알아들어요.\niOS 음성 제어를 켤 필요가 없어요."
+   },
+   {
+    "id": "b68253cb-e3f2-5988-8068-69cdf3113b0c",
+    "headline": "기본기는 모두 무료",
+    "text": "1박부터 8박, 셋잇단과 16분 나누기,\n탭 템포와 타이밍 체크까지."
+   },
+   {
+    "id": "7d06b640-4229-5719-9ad6-2d08b57774a6",
+    "headline": "명령이 기억 안 나면",
+    "text": "help 라고 말하면\n말할 수 있는 말이 화면에 떠요."
+   },
+   {
+    "id": "301797ef-bc6e-5be4-a38d-4aeb314057ad",
+    "headline": "낫마템포",
+    "text": "두 손은 악기에 두고,\n템포는 말로 바꾸는 메트로놈."
+   }
+  ],
+  "script": "",
+  "body": "연습하다 템포 바꾸려고 손 떼는 순간, 흐름이 끊기죠.\n\n낫마템포는 start, faster, tempo 120 처럼 영어 단어로 말하면 알아듣는 메트로놈이에요. 앱이 직접 기기 안에서 알아들어서 따로 설정할 것도 없어요. 메트로놈 기본 기능은 모두 무료입니다.\n\n#낫마템포 #메트로놈 #기타연습 #피아노연습 #드럼연습 #악기연습 #연습루틴 #음악앱 #아이폰앱 #1인개발",
+  "theme": 2
+ },
+ {
+  "id": "ba3e69fc-aae8-5f71-9f43-8201835e16bf",
+  "project": "com.leeo.HandsFreeMetronome",
+  "kind": "video",
+  "channel": "유튜브 쇼츠",
+  "title": "기타 치면서 메트로놈한테 말 걸기",
+  "angle": "기타를 든 채 말로만 템포를 바꾸는 장면 하나로 끝까지 간다. 손이 한 번도 화면에 닿지 않는 게 포인트.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "[0-2초] 화면: 기타를 든 채 'faster' 라고 말하자 화면의 숫자가 바로 올라감 / 자막: 손 안 대고 템포 올리기 / 내레이션: faster.\n[2-6초] 화면: 기타 치는 손과 휴대폰 화면을 한 프레임에 / 자막: 두 손은 기타에 / 내레이션: 두 손은 기타에 그대로 두고요.\n[6-11초] 화면: 'tempo 90' 이라고 말하자 90으로 바뀜, 이어서 'slower' 로 85 / 자막: 숫자를 말하면 그 템포로 / 내레이션: 숫자를 말하면 그 템포로, slower 하면 5씩 내려가요.\n[11-16초] 화면: 'triplet' 이라고 말하자 셋잇단으로 바뀌어 박이 나뉨 / 자막: 셋잇단도 말로 / 내레이션: triplet, 이렇게 박을 나누는 것도 말로 됩니다.\n[16-21초] 화면: 'help' 라고 말하자 명령어 목록이 화면 위에 표시 / 자막: 기억 안 나면 help / 내레이션: 명령이 기억 안 나면 help 라고 하면 돼요.\n[21-26초] 화면: 'stop' 으로 멈춤, 튀는 공 화면 잠깐 / 자막: 설정 없이, 기기 안에서 알아들어요 / 내레이션: 음성 제어 같은 설정 없이 앱이 바로 알아들어요.\n[26-30초] 화면: 앱 아이콘과 이름 / 자막: 낫마템포, 기본 기능 무료 / 내레이션: 말로 바꾸는 메트로놈, 낫마템포.",
+  "body": "기타 치면서 메트로놈한테 말 걸기\n\nstart, faster, tempo 90. 손 안 대고 말로 템포를 바꾸는 메트로놈 낫마템포. 메트로놈 기본 기능은 모두 무료예요.\n#낫마템포 #메트로놈 #기타연습 #악기연습",
+  "theme": 2
+ },
+ {
+  "id": "650a1490-4275-5105-87ab-528866045882",
+  "project": "com.leeo.HandsFreeMetronome",
+  "kind": "post",
+  "channel": "스레드",
+  "title": "템포 바꾸려고 손 떼는 순간",
+  "angle": "악기 연습하는 사람이 매일 겪는 작은 끊김에 공감한다.",
+  "plannedAt": "2026-11-09T01:00:00Z",
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "기타 연습하다 템포 5만 올리고 싶은데, 손 떼고 폰 만지고 다시 자세 잡고 나면 방금까지 잡힌 감이 사라져 있더라고요.\n\n낫마템포는 faster 라고 말하면 빨라지는 메트로놈이에요. tempo 120 처럼 숫자를 말해도 되고요. 앱이 기기 안에서 직접 알아들어서 따로 설정할 게 없어요.\n메트로놈 기본 기능은 모두 무료예요.\nhttps://apps.apple.com/kr/app/id6781537149",
+  "theme": 2
+ },
+ {
+  "id": "e504948e-dbc3-5954-acd5-dc518b0ef006",
+  "project": "com.leeo.HandsFreeMetronome",
+  "kind": "post",
+  "channel": "X",
+  "title": "낫마템포가 알아듣는 말",
+  "angle": "음성 명령 목록을 그대로 보여 주어 어떻게 쓰는지 한눈에 알게 한다.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "말로 쓰는 메트로놈 낫마템포가 알아듣는 말(영어 단어)\n\nstart, stop 켜고 끄기\nfaster, slower 5씩 / up, down 1씩\ntempo 120 그 템포로\ndouble, half 두 배, 절반\nquarter, eighth, triplet, sixteenth 박 나누기\nlouder, quieter, mute 소리\nhelp 말할 수 있는 말 보기\n\n메트로놈 기본 기능은 무료, 스피드 트레이너 같은 Pro 기능은 따로 있어요.\nhttps://apps.apple.com/kr/app/id6781537149",
+  "theme": 2
+ },
+ {
+  "id": "cb20a761-594e-56fa-bf16-774906eddd2e",
+  "project": "com.leeo.HandsFreeMetronome",
+  "kind": "post",
+  "channel": "디스콰이엇",
+  "title": "연주하면서 말로 바꾸는 메트로놈, 낫마템포",
+  "angle": "만든 이유, 하는 일, 어떤 악기를 연습하는지와 인식이 잘 되는지 피드백을 부탁한다.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "안녕하세요, 1인 개발자입니다.\n\n악기를 연습하다 템포를 바꾸려면 손을 떼고 메트로놈을 만져야 하는 게 늘 아까웠습니다. 몇 초지만 그 사이에 흐름이 끊기니까요.\n\n그래서 낫마템포를 만들었습니다. start, faster, tempo 120 처럼 영어 단어로 말하면 바로 알아듣는 메트로놈입니다. 앱이 직접 마이크로 듣고 기기 안에서 알아듣기 때문에 iOS 음성 제어나 손쉬운 사용 설정을 켜지 않아도 됩니다. 명령이 생각나지 않으면 help 라고 하면 화면에 말할 수 있는 말이 뜹니다.\n\n1박부터 8박까지 박자, 셋잇단과 16분 나누기, 탭 템포, 박에 맞춰 두드리면 얼마나 정확한지 보여 주는 타이밍 체크까지 메트로놈 기본기는 모두 무료입니다. 몇 마디마다 템포를 올려 주는 스피드 트레이너, 악센트 에디터, 크로매틱 튜너는 Pro(연간 구독 또는 평생 이용권)에 들어 있어요.\n\n어떤 악기로 쓰시는지, 악기 소리가 클 때 인식이 잘 되는지 알려 주시면 정말 큰 도움이 됩니다.\nhttps://apps.apple.com/kr/app/id6781537149",
+  "theme": 2
+ },
+ {
+  "id": "00496349-1511-5f8a-ac0e-c6897aaa6ce9",
+  "project": "com.leeo.HandsFreeMetronome",
+  "kind": "post",
+  "channel": "네이버 블로그",
+  "title": "악기 연습할 때 손 안 대고 템포 바꾸는 메트로놈 앱 (낫마템포 사용기)",
+  "angle": "연습용 메트로놈 앱을 찾는 사람에게 음성 명령과 무료 범위를 정확히 알려 준다.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "메트로놈의 작은 모순\n\n메트로놈은 연습에 꼭 필요하지만, 템포를 바꾸려면 악기에서 손을 떼야 합니다. 기타를 내려놓고 화면을 누르고 다시 자세를 잡는 몇 초 사이에 연습의 흐름이 끊깁니다. 템포를 조금씩 올려 가며 연습할수록 이 끊김이 자주 생깁니다.\n\n낫마템포는 말로 바꿉니다\n\n낫마템포는 두 손은 악기에 두고 템포는 말로 바꾸는 메트로놈입니다. start 라고 하면 시작하고 faster 라고 하면 빨라집니다. 앱이 직접 마이크로 듣고 기기 안에서 음성을 알아듣기 때문에 iOS 음성 제어나 손쉬운 사용 설정을 따로 켜지 않아도 됩니다. 음성 명령은 영어 단어로 말합니다.\n\n알아듣는 말\n\nstart, stop 으로 켜고 끕니다. faster, slower 로 5씩, up, down 으로 1씩 바꿉니다. tempo 120 처럼 숫자를 말하면 그 템포로 맞추고, double, half 로 두 배와 절반으로 바꿉니다. quarter, eighth, triplet, sixteenth 로 한 박을 나누고, louder, quieter, mute 로 소리를 조절합니다. 명령이 생각나지 않으면 help 라고 말하면 화면 위에 말할 수 있는 말이 표시됩니다.\n\n무료로 쓸 수 있는 것\n\n1박부터 8박까지 박자를 고르고 마디 첫 박은 더 크게 울립니다. 튀는 공, 원 궤도, 링 세 가지 화면으로 박을 눈으로 따라갈 수 있고, 큰 숫자를 두드리는 탭 템포, 박에 맞춰 두드리면 정확도를 보여 주는 타이밍 체크도 있습니다. 연주 중에는 화면이 꺼지지 않고 마지막에 쓴 템포와 박자를 기억합니다.\n\nPro 에 들어 있는 것\n\n몇 마디마다 템포를 조금씩 올려 목표 속도까지 끌어올리는 연습 모드, 클릭 하나하나의 세기를 정해 곡마다 저장하는 악센트 에디터, 크로매틱 튜너가 Pro 기능입니다. 연간 구독 또는 한 번 결제로 평생 쓸 수 있습니다.\n\n손을 떼지 않는 연습이 얼마나 편한지 한 번 해 보시면 압니다.\nhttps://apps.apple.com/kr/app/id6781537149",
+  "theme": 2
+ },
+ {
+  "id": "fb107d09-a184-5fb0-b97a-f75098f0f92f",
+  "project": "com.leeo.HandsFreeMetronome",
+  "kind": "post",
+  "channel": "레딧",
+  "title": "I got tired of letting go of my instrument to change the metronome, so I made one you just talk to",
+  "angle": "r/guitar, r/drums, r/iphone 류 독자에게. 무료 범위와 Pro 를 숨기지 않고 담백하게.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "Every time I wanted to bump the tempo by 5 while practicing, I had to let go of the instrument, tap the phone, and find my position again. By then the groove was gone.\n\nNot My Tempo is a metronome you control by voice. Say \"start\", \"faster\", \"tempo 120\", \"triplet\", \"half\". It listens through its own mic and recognizes speech on device, so you don't need to set up iOS Voice Control. Say \"help\" and the commands you can use show up on screen.\n\nAll the basic metronome stuff is free: 1 to 8 beats with an accented downbeat, quarter, eighth, triplet and sixteenth subdivisions, tap tempo, three beat visualizers, and a timing check that shows how close your taps land.\n\nThere's a Pro tier (yearly or one-time) for a speed trainer that ramps the tempo every few bars, an accent editor with presets, and a chromatic tuner.\n\nCurious how well it hears you over a loud amp or a drum kit. Feedback welcome.\nhttps://apps.apple.com/kr/app/id6781537149",
+  "theme": 2
+ },
+ {
+  "id": "f6e51ab0-17bd-565b-a498-bd964c98bccc",
+  "project": "com.devkoan.StaffSinger",
+  "kind": "cardNews",
+  "channel": "인스타그램",
+  "title": "헷갈리는 두 마디, 소리로 들어 보기",
+  "angle": "합창단, 성가대, 레슨생, 음대 입시 준비생에게. 연습 전날 밤 처음 보는 악보 앞에서 막막한 순간에, 머릿속으로 세지 않고 들어 보면 된다는 가벼움을 전한다.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [
+   {
+    "id": "ce018f9a-03fb-5b68-b10d-30881f190453",
+    "headline": "이 두 마디, 어떻게 불러요?",
+    "text": "처음 보는 악보 앞에서\n머릿속으로 박자만 세고 있진 않나요?"
+   },
+   {
+    "id": "f7df13de-7581-5bee-8a01-1ae4507baedc",
+    "headline": "세는 것보다 듣는 게 빠름",
+    "text": "음높이도 박자도\n한 번 들으면 바로 감이 옵니다."
+   },
+   {
+    "id": "822010c7-f627-5f5f-99c4-57b6b8f15700",
+    "headline": "오선지에 옮겨 적기",
+    "text": "오선을 길게 눌러 음높이를 고르거나\n2옥타브 건반으로 음표를 넣어요."
+   },
+   {
+    "id": "fd407e3d-8da1-5a2f-a26e-3a3e8f590324",
+    "headline": "메트로놈에 맞춰 재생",
+    "text": "카운트인 뒤에 클릭에 맞춰 연주하고\n지금 울리는 음표를 색으로 짚어 줘요."
+   },
+   {
+    "id": "7654b32e-cd58-5468-83ad-963419800f66",
+    "headline": "도레미로 말해도 돼요",
+    "text": "박에 맞춰 계이름을 소리 내면\n음표와 박자가 함께 들어갑니다."
+   },
+   {
+    "id": "107abb09-afc9-5c4c-9186-1671ccc95d76",
+    "headline": "악보 사진 띄워 두기",
+    "text": "보고 있는 악보를 찍어 두면\n옆에 띄워 놓고 비교하며 적을 수 있어요."
+   },
+   {
+    "id": "5e1fadd4-a201-542e-8280-7c2e407c6c1b",
+    "headline": "초견",
+    "text": "헷갈리는 두 마디를 오선지에 적고\n박자와 음높이 그대로 들어 보는 앱."
+   }
+  ],
+  "script": "",
+  "body": "연습 전날 처음 받은 악보, 헷갈리는 두 마디가 꼭 있죠.\n\n초견은 그 부분을 오선지에 옮겨 적으면 메트로놈에 맞춰 박자와 음높이 그대로 들려줘요. 건반으로 넣어도 되고, 박에 맞춰 도레미로 말해도 들어갑니다. 무료예요.\n\n#초견 #시창 #악보읽기 #합창 #성가대 #음대입시 #청음 #음악연습 #보컬연습 #아이폰앱",
+  "theme": 3
+ },
+ {
+  "id": "6b67fbb3-b77e-59bc-9db7-1de66b8bc110",
+  "project": "com.devkoan.StaffSinger",
+  "kind": "video",
+  "channel": "유튜브 쇼츠",
+  "title": "도레미라고 말하면 악보가 된다",
+  "angle": "계이름 받아쓰기를 첫 장면으로 보여 주어 멈춰 서게 하고, 재생까지 이어서 '들어 본다'는 핵심을 보여 준다.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "[0-2초] 화면: 메트로놈 박 위에서 '도 레 미 솔' 말하는 순간 오선지에 음표가 하나씩 찍힘 / 자막: 말했더니 악보가 됐어요 / 내레이션: 도, 레, 미, 솔.\n[2-6초] 화면: 찍힌 음표 전체 / 자막: 박에 맞춰 말하면 박자까지 / 내레이션: 박에 맞춰 말하면 박자까지 같이 들어갑니다.\n[6-12초] 화면: 피아노 건반에서 8분음표, 점음표, 쉼표를 골라 넣고 방금 넣은 음표 지우기 / 자막: 건반으로 넣어도 돼요 / 내레이션: 건반으로 넣어도 되고, 틀리면 방금 넣은 것만 지우면 돼요.\n[12-19초] 화면: 재생 버튼, 카운트인 뒤 메트로놈 클릭과 함께 연주, 울리는 음표가 색으로 표시됨 / 자막: 지금 울리는 음표를 짚어 줘요 / 내레이션: 재생하면 메트로놈에 맞춰 연주하고, 지금 어느 음인지 짚어 줘요.\n[19-25초] 화면: 악보 사진을 찍어 오선지 옆에 띄워 둔 화면 / 자막: 보고 있는 악보를 옆에 / 내레이션: 보고 있는 악보는 사진으로 찍어 옆에 띄워 두면 됩니다.\n[25-30초] 화면: 앱 아이콘과 이름 / 자막: 초견, 무료 / 내레이션: 헷갈리는 두 마디는 초견으로 들어 보세요.",
+  "body": "도레미라고 말했더니 악보가 됐다\n\n처음 보는 악보의 헷갈리는 부분을 오선지에 적고 박자와 음높이 그대로 들어 보는 앱, 초견. 계이름 받아쓰기, 메트로놈 재생, 화음까지 됩니다. 무료예요.\n#초견 #시창 #악보 #합창 #음악연습",
+  "theme": 3
+ },
+ {
+  "id": "83c1978c-1eb7-59b9-aa67-a9c68f5b869a",
+  "project": "com.devkoan.StaffSinger",
+  "kind": "post",
+  "channel": "스레드",
+  "title": "연습 전날 처음 보는 악보",
+  "angle": "성가대나 합창단원처럼 악보를 빨리 읽어야 하는 사람의 막막함에 공감한다.",
+  "plannedAt": "2026-11-10T01:00:00Z",
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "성가대나 합창 연습 전날, 처음 받은 악보에서 꼭 막히는 두 마디가 있어요.\n점음표에 셋잇단까지 섞여 있으면 머릿속으로 세다가 결국 포기하게 되고요.\n\n초견은 그 두 마디만 오선지에 옮겨 적으면 메트로놈에 맞춰 박자와 음높이 그대로 들려주는 앱이에요. 듣고 나면 바로 감이 와요.\n무료입니다.\nhttps://apps.apple.com/kr/app/id6779262832",
+  "theme": 3
+ },
+ {
+  "id": "5216252a-4961-500f-8f74-597710df88bf",
+  "project": "com.devkoan.StaffSinger",
+  "kind": "post",
+  "channel": "X",
+  "title": "초견으로 할 수 있는 것",
+  "angle": "기능을 짧게 나열해 악보를 다루는 사람이 필요한 게 있는지 바로 알게 한다.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "악보 일부를 적어서 바로 들어 보는 앱, 초견이에요.\n\n오선을 탭하거나 2옥타브 건반으로 음표 입력\n온음표부터 16분음표, 점음표, 셋잇단, 쉼표까지\n메트로놈 카운트인 뒤 재생, 울리는 음표 표시\n화음과 여러 성부, 높은음 가온음 낮은음자리표\n박에 맞춰 도레미로 말하면 음표로 입력(기기 안에서만 인식)\n\n무료입니다.\nhttps://apps.apple.com/kr/app/id6779262832",
+  "theme": 3
+ },
+ {
+  "id": "0ca2a064-781e-5eb1-9909-10089a5c2c1a",
+  "project": "com.devkoan.StaffSinger",
+  "kind": "post",
+  "channel": "디스콰이엇",
+  "title": "헷갈리는 두 마디를 들어 보려고 만든 앱, 초견",
+  "angle": "만든 계기, 하는 일, 악보를 다루는 사람들의 피드백 부탁 순서로.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "안녕하세요, 1인 개발자입니다.\n\n악보를 보다가 특정 부분이 실제로 어떤 소리인지 궁금할 때마다 건반 앱을 켜고 한 음씩 찾아 누르는 게 번거로웠습니다. 박자까지 맞춰 들어 보려면 더 어렵고요.\n\n그래서 초견을 만들었습니다. 헷갈리는 몇 마디를 오선지에 옮겨 적으면 메트로놈 카운트인 뒤 박자와 음높이 그대로 재생하고, 지금 울리는 음표를 색으로 짚어 줍니다. 입력은 오선을 길게 눌러 음높이를 고르거나 2옥타브 건반으로 하고, 박에 맞춰 도레미를 소리 내어 말하면 박자까지 함께 들어갑니다. 화음과 여러 성부, 조표와 세 가지 음자리표를 지원하고, 정해진 규칙대로 적은 텍스트를 붙여넣어 오선지를 채울 수도 있습니다. 보고 있는 악보를 사진으로 찍어 옆에 띄워 둘 수도 있어요.\n\n합창, 성가대, 악기 레슨, 입시 준비하시는 분들이 써 보시고 입력이 불편한 곳이나 꼭 필요한 기호가 있다면 알려 주세요. 다음 업데이트에 반영하겠습니다.\nhttps://apps.apple.com/kr/app/id6779262832",
+  "theme": 3
+ },
+ {
+  "id": "5679b980-8736-57f2-b334-c6c004471040",
+  "project": "com.devkoan.StaffSinger",
+  "kind": "post",
+  "channel": "네이버 블로그",
+  "title": "처음 보는 악보, 헷갈리는 부분을 소리로 들어 보는 방법 (무료 앱 초견)",
+  "angle": "시창이나 초견 연습 방법을 찾아 들어온 사람에게 앱 사용 순서를 따라 설명한다.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "머릿속으로만 세다가 막히는 순간\n\n합창이나 성가대, 악기 레슨을 하다 보면 처음 보는 악보를 빨리 읽어야 할 때가 많습니다. 대부분은 따라가지만, 점음표와 셋잇단이 섞인 두 마디쯤에서 꼭 막힙니다. 머릿속으로 박자를 세어 봐도 확신이 서지 않을 때, 한 번 들어 보면 금방 풀립니다.\n\n초견은 어떤 앱인가요\n\n초견은 헷갈리는 부분을 오선지에 옮겨 적고 박자와 음높이 그대로 재생해 주는 무료 앱입니다. 작곡 프로그램처럼 배울 게 많지 않고, 필요한 몇 마디만 빠르게 적어 듣는 데 맞춰져 있습니다.\n\n음표 넣기\n\n오선을 길게 눌러 음높이를 고르거나, 아래 2옥타브 피아노 건반을 눌러 음표를 넣습니다. 온음표부터 16분음표, 점음표, 셋잇단음표, 쉼표까지 고를 수 있고, 잘못 넣었으면 방금 넣은 음표만 한 번에 지우면 됩니다. 같은 박에 음을 쌓으면 화음이 되고, 성부를 나눠 적을 수도 있습니다. 조표와 높은음자리표, 가온음자리표, 낮은음자리표도 지원합니다.\n\n말로 넣기\n\n메트로놈 박에 맞춰 도레미를 소리 내어 말하면 음표로 들어갑니다. 박에 맞춰 말하면 박자까지 함께 잡힙니다. 음성 인식은 기기 안에서만 처리됩니다.\n\n들어 보기\n\n재생을 누르면 카운트인 뒤 메트로놈 클릭에 맞춰 악보를 연주하고, 지금 울리는 음표를 색으로 짚어 줍니다. 템포와 박자표는 설정에서 바꿉니다.\n\n악보 사진과 함께\n\n보고 있는 악보를 찍어 두면 화면에 함께 띄워 놓고 비교하며 옮겨 적을 수 있습니다. 정해진 규칙의 텍스트를 붙여넣어 오선지를 채우는 기능도 있어서, 규칙을 복사해 악보 사진과 함께 AI에게 건네고 받은 글을 붙여넣는 방법도 쓸 수 있습니다.\n\n연습 전날 막히는 부분이 있다면 한 번 적어서 들어 보세요.\nhttps://apps.apple.com/kr/app/id6779262832",
+  "theme": 3
+ },
+ {
+  "id": "c9e717ec-d949-527f-9471-a27db6bec82d",
+  "project": "com.devkoan.StaffSinger",
+  "kind": "post",
+  "channel": "레딧",
+  "title": "I made a small iPhone app for hearing the few bars of sheet music you can't sight-read",
+  "angle": "r/choir, r/musictheory, r/iphone 류 독자에게. 스토어 페이지가 아직 한국어라는 점을 솔직히 밝히고 의견을 묻는다.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "If you sing in a choir or take lessons, you probably know this: a new piece always has a couple of bars you can't hear in your head, usually dotted rhythms mixed with triplets. Opening a piano app and hunting for keys one at a time doesn't help with the rhythm.\n\nSo I made a small app. You copy just the tricky bars onto a staff and it plays them back at the right pitch and rhythm with a metronome count-in, highlighting each note as it sounds.\n\nInput is by long-pressing the staff or tapping a two-octave keyboard. It handles whole to sixteenth notes, dots, triplets, rests, chords, multiple voices, key signatures, and treble, alto and bass clefs. You can also take a photo of the score and keep it on screen while you copy.\n\nIt's free with no in-app purchases. Heads up: the App Store page is only in Korean for now, and the name shows as 초견 (it means sight-reading).\n\nI'd really like to know what notation you'd need that's missing.\nhttps://apps.apple.com/kr/app/id6779262832",
+  "theme": 3
+ },
+ {
+  "id": "9393c1b8-9a79-5107-ad1c-442be832003d",
+  "project": "com.devkoan.StampCamera",
+  "kind": "cardNews",
+  "channel": "인스타그램",
+  "title": "꾹 눌러 뜯으면 움직이는 스티커",
+  "angle": "다꾸, 폴꾸 하는 사람과 메시지에 스티커를 즐겨 보내는 사람에게. 촬영하고 편집 앱 오가며 누끼 따던 수고를 떠올리게 하고, 셔터 대신 꾹 누르는 손맛을 느끼게 한다.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [
+   {
+    "id": "52cb10f2-f3b0-5024-a636-3591bbc0b4dd",
+    "headline": "우리 강아지, 스티커로?",
+    "text": "찍고, 누끼 따고, 저장하고, 보내고.\n앱을 몇 개나 오가야 했죠."
+   },
+   {
+    "id": "1541a5a4-8cc8-596b-ac2f-b3a936efc4e0",
+    "headline": "펀칭기로 꾹",
+    "text": "화면 가운데 펀칭기 창에 맞추고\n꾹 누르면 그대로 뜯겨 나와요."
+   },
+   {
+    "id": "99f4be9a-4161-5957-93e4-c622b2cc3b72",
+    "headline": "움직임까지 담겨요",
+    "text": "누르기 전후의 짧은 움직임이\n스티커에 같이 담깁니다."
+   },
+   {
+    "id": "396b22b3-c224-5da1-863b-d87f7c222be1",
+    "headline": "대상만, 또는 우표로",
+    "text": "사람, 반려동물, 물건은 그 모습만 오리고\n풍경은 톱니 테두리 우표로 뜯어요."
+   },
+   {
+    "id": "c5f09e60-04c8-5df8-937a-4a4a2f0cffba",
+    "headline": "메시지에서 바로",
+    "text": "메시지 스티커 서랍과 펀칭 키보드에서\n움직이는 그대로 보낼 수 있어요."
+   },
+   {
+    "id": "ec952e8c-2979-5c4b-ba89-e649b0150f00",
+    "headline": "수집함에 모아 두기",
+    "text": "주제별 수집함을 만들고\n예전 사진도 스티커로 담아요."
+   },
+   {
+    "id": "ec6cf993-b35d-5ed5-863c-4f7ea9e9ea1d",
+    "headline": "펀칭",
+    "text": "꾹 눌러 뜯은 순간을\n움직이는 스티커로 남기는 카메라."
+   }
+  ],
+  "script": "",
+  "body": "사진을 스티커로 만들려고 앱 서너 개 오가던 분들께.\n\n펀칭은 펀칭기 창에 맞추고 꾹 누르면 그 순간이 스티커로 뜯겨 나오는 카메라예요. 대상이 있으면 그 모습만 오려 내고, 풍경은 톱니 우표 모양으로 뜯어요. 메시지와 키보드에서 움직이는 그대로 보낼 수 있고, 모든 스티커는 기기 안에만 저장돼요. 무료예요.\n\n#펀칭 #스티커만들기 #움직이는스티커 #누끼 #다꾸 #폴꾸 #사진꾸미기 #반려동물스티커 #아이폰앱 #1인개발",
+  "theme": 0
+ },
+ {
+  "id": "48c0f6d4-2a41-59ca-9e75-a3f93582f771",
+  "project": "com.devkoan.StampCamera",
+  "kind": "video",
+  "channel": "유튜브 쇼츠",
+  "title": "고양이를 꾹 눌러 뜯었더니 움직이는 스티커",
+  "angle": "꾹 누르는 동작과 뜯겨 나온 스티커가 움직이는 장면을 첫 2초에 보여 주고, 메시지로 보내는 데까지 한 번에 이어 간다.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "[0-2초] 화면: 펀칭기 창에 고양이를 맞추고 꾹 누르는 손가락, 고양이 모양 스티커가 움직이며 뜯겨 나옴 / 자막: 꾹 누르면 움직이는 스티커 / 내레이션: 꾹.\n[2-7초] 화면: 뜯겨 나온 스티커가 짧게 움직이는 모습 확대 / 자막: 누르기 전후의 움직임까지 / 내레이션: 누르기 전후의 짧은 움직임까지 같이 담겨요.\n[7-12초] 화면: 창밖 풍경을 같은 방식으로 뜯자 톱니 테두리 우표 모양으로 나옴 / 자막: 풍경은 우표 모양으로 / 내레이션: 오려낼 대상이 없는 풍경은 우표 모양으로 뜯겨요.\n[12-18초] 화면: 메시지 앱에서 스티커 서랍을 열고 방금 뜯은 고양이 스티커를 대화에 붙임 / 자막: 메시지에서 바로 / 내레이션: 메시지 스티커 서랍에 바로 나타나서 움직이는 그대로 보낼 수 있어요.\n[18-24초] 화면: 다른 앱에서 펀칭 키보드로 스티커 고르기, 스티커를 꾹 눌러 복사 / 자막: 키보드와 복사로 어디든 / 내레이션: 펀칭 키보드를 켜면 다른 앱에서도 고를 수 있고, 꾹 눌러 복사해도 돼요.\n[24-30초] 화면: 수집함에 모인 스티커들, 앱 아이콘과 이름 / 자막: 펀칭, 무료 / 내레이션: 꾹 눌러 뜯는 스티커 카메라, 펀칭이에요.",
+  "body": "고양이를 꾹 눌러 뜯었더니 움직이는 스티커가 됐다\n\n찍는 순간 대상만 오려 내거나 우표 모양으로 뜯어 주는 카메라 펀칭. 메시지와 키보드에서 움직이는 그대로 보내요. 무료예요.\n#펀칭 #스티커만들기 #움직이는스티커 #고양이",
+  "theme": 0
+ },
+ {
+  "id": "055d3d23-a9e6-59d0-b807-9c1f90ca8e6c",
+  "project": "com.devkoan.StampCamera",
+  "kind": "post",
+  "channel": "스레드",
+  "title": "스티커 하나에 앱 세 개",
+  "angle": "사진으로 스티커를 만들어 본 사람이 겪는 귀찮은 단계에 공감한다.",
+  "plannedAt": "2026-11-11T01:00:00Z",
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "반려동물 사진으로 스티커 하나 만들려면 찍고, 누끼 따는 앱 열고, 저장하고, 다시 메시지로 가고.\n한두 번 하다 보면 귀찮아서 안 하게 되더라고요.\n\n펀칭은 카메라 화면에서 꾹 누르면 그 순간이 바로 스티커로 뜯겨 나와요. 대상만 오려 내고, 누르기 전후의 짧은 움직임까지 담겨서 메시지에 움직이는 그대로 보낼 수 있어요.\n무료예요.\nhttps://apps.apple.com/kr/app/id6779659029",
+  "theme": 0
+ },
+ {
+  "id": "4c688f47-bfbb-5c59-84d8-243d4879441f",
+  "project": "com.devkoan.StampCamera",
+  "kind": "post",
+  "channel": "X",
+  "title": "펀칭으로 할 수 있는 것",
+  "angle": "기능을 짧게 나열해 스티커를 즐겨 쓰는 사람이 바로 써 보고 싶게 한다.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "꾹 눌러 뜯는 스티커 카메라, 펀칭이에요.\n\n펀칭기 창에 맞추고 꾹 누르면 스티커 완성\n누르기 전후의 짧은 움직임까지 담긴 움직이는 스티커\n대상은 오려 내고, 풍경은 톱니 우표 모양으로\n메시지 스티커 서랍과 펀칭 키보드에서 바로 보내기\n사진 앱의 예전 사진도 스티커로\n\n스티커와 사진은 기기 안에만 저장돼요. 무료입니다.\nhttps://apps.apple.com/kr/app/id6779659029",
+  "theme": 0
+ },
+ {
+  "id": "50c3fbd3-fee4-52db-8566-1ec936bf4b1d",
+  "project": "com.devkoan.StampCamera",
+  "kind": "post",
+  "channel": "디스콰이엇",
+  "title": "찍는 순간 스티커로 뜯기는 카메라, 펀칭",
+  "angle": "만든 이유, 하는 일, 스티커를 어디에 쓰는지 피드백을 부탁한다.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "안녕하세요, 1인 개발자입니다.\n\n사진을 스티커로 만들 때마다 촬영하고, 배경 지우는 앱으로 옮기고, 저장해서 다시 메시지로 가져가는 과정이 번거로웠습니다. 그래서 찍는 순간 스티커가 되는 카메라를 만들었습니다.\n\n펀칭은 화면 가운데 펀칭기 창에 장면을 맞추고 꾹 누르면 스티커가 뜯겨 나오는 카메라 앱입니다. 누르기 전후의 짧은 움직임까지 담기고, 사람이나 반려동물처럼 오려낼 대상이 있으면 그 모습만, 풍경처럼 대상이 없으면 톱니 테두리 우표 모양으로 뜯습니다. 뜯은 스티커는 메시지 앱의 스티커 서랍에 바로 나타나고, 펀칭 키보드를 켜면 다른 앱에서도 골라 붙일 수 있습니다. 사진 앱의 예전 사진도 스티커로 만들어 수집함에 담을 수 있고, 모든 스티커와 사진은 기기 안에만 저장됩니다.\n\n무료로 올려 두었습니다. 써 보시고 스티커를 주로 어디에 쓰시는지, 뜯을 때 아쉬운 점이 있는지 알려 주시면 큰 도움이 됩니다.\nhttps://apps.apple.com/kr/app/id6779659029",
+  "theme": 0
+ },
+ {
+  "id": "337dd90b-1fe5-5a38-8cff-9420fed77c9a",
+  "project": "com.devkoan.StampCamera",
+  "kind": "post",
+  "channel": "네이버 블로그",
+  "title": "사진으로 움직이는 스티커 만들기, 카메라 앱 하나로 끝내는 법 (펀칭)",
+  "angle": "움직이는 스티커나 누끼 스티커 만드는 법을 검색해 들어온 사람에게 순서대로 보여 준다.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "스티커 하나에 앱 여러 개\n\n반려동물이나 친구 사진으로 스티커를 만들려면 보통 촬영, 배경 지우기, 저장, 메시지로 옮기기까지 여러 앱을 오가야 합니다. 움직이는 스티커라면 더 복잡해지고요. 몇 번 하다 보면 귀찮아서 그만두게 됩니다.\n\n펀칭은 어떤 앱인가요\n\n펀칭은 카메라로 본 장면을 바로 스티커로 뜯어내는 무료 카메라 앱입니다. 셔터 대신 꾹 누르는 방식이라 이름도 펀칭입니다.\n\n꾹 눌러 뜯기\n\n화면 가운데 펀칭기 창으로 장면을 맞추고 꾹 누르면, 누르기 전후의 짧은 움직임까지 담긴 스티커가 나옵니다. 사람이나 반려동물, 물건처럼 오려낼 대상이 있으면 그 모습만 오려 내고, 풍경처럼 대상이 없으면 톱니 테두리 우표 모양으로 뜯습니다.\n\n메시지와 키보드에서 바로 보내기\n\n뜯은 스티커는 메시지 앱의 스티커 서랍에 나타납니다. 펀칭 키보드를 켜 두면 다른 앱에서도 골라 붙일 수 있고, 움직이는 스티커는 움직이는 그대로 보내집니다. 스티커를 꾹 눌러 복사해서 어디에나 붙여 넣을 수도 있습니다.\n\n수집함과 예전 사진\n\n주제별로 수집함을 만들어 스티커를 모아 둘 수 있습니다. 예전에 찍은 사진도 사진 앱에서 가져와 스티커로 만들 수 있습니다.\n\n기록은 기기 안에만\n\n모든 스티커와 사진은 기기 안에만 저장됩니다. 원본 사진도 그대로 보관됩니다.\n\n오늘 찍고 싶은 장면이 있다면 셔터 대신 꾹 눌러 보세요.\nhttps://apps.apple.com/kr/app/id6779659029",
+  "theme": 0
+ },
+ {
+  "id": "512d4585-71b1-534c-af95-365d86ed89bf",
+  "project": "com.devkoan.StampCamera",
+  "kind": "post",
+  "channel": "레딧",
+  "title": "Made a camera app where you press and hold to punch out a moving sticker",
+  "angle": "r/iphone, r/apps 류 독자에게. 앱과 스토어가 아직 한국어 위주라는 점을 먼저 밝히고 담백하게 소개한다.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "Turning a photo into a sticker usually means a camera app, a background remover, and then back to Messages. I wanted it to be one press.\n\nPunching is a camera where you line up the scene in a small punch window and press and hold. It captures the short moment around your press and turns it into a moving sticker. If there's a clear subject like a person, pet or object, it cuts out just that. If not, it punches out a stamp with perforated edges.\n\nStickers show up in the Messages sticker drawer, and there's a keyboard so you can use them in other apps too. Moving stickers stay moving when you send them. You can also turn older photos from your library into stickers. Everything stays on the device.\n\nIt's free with no in-app purchases. Fair warning: the app is Korean-first and the store page is in Korean for now, but the flow is mostly press and send.\n\nHappy to hear what you'd want from it.\nhttps://apps.apple.com/kr/app/id6779659029",
+  "theme": 0
+ },
+ {
+  "id": "e671007c-74c5-5e84-8fbb-7bc6209d9675",
+  "project": "com.leeo.StickyPresenter",
+  "kind": "cardNews",
+  "channel": "인스타그램",
+  "title": "키노트 전체 화면 위에 대본과 타이머를 띄워 두기",
+  "angle": "맥으로 발표하거나 강의하는 사람에게. 발표 시즌이 오기 전에 미리 깔아 두면 좋은 도구라는 점을, 슬라이드에서 눈을 떼지 않아도 된다는 안도감으로 전한다.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [
+   {
+    "id": "452a16e5-7f00-541c-9b7a-03be6f4dbcbc",
+    "headline": "발표 중에 시계 보셨죠?",
+    "text": "대본 한 번, 시계 한 번.\n그 사이에 말이 끊깁니다."
+   },
+   {
+    "id": "3263370e-4e20-5b50-b20a-d5c6000c6750",
+    "headline": "전체 화면이 문제",
+    "text": "키노트를 전체 화면으로 띄우면\n대본도 남은 시간도 가려집니다."
+   },
+   {
+    "id": "794d3cde-59c3-5b93-9e06-48a297aed241",
+    "headline": "그 위에 붙여 두세요",
+    "text": "StickyPresenter는 노트와 타이머를\n키노트 전체 화면 위에도 띄워 둡니다."
+   },
+   {
+    "id": "e82add61-dd8d-546f-b6d9-d830326b18bb",
+    "headline": "대본은 스티키 노트로",
+    "text": "여섯 가지 색, 투명도, 글자 크기.\n잠가 두면 발표 중에 글이 바뀌지 않아요."
+   },
+   {
+    "id": "9c5b02bd-6d9f-5262-9d83-cb23a3684326",
+    "headline": "끝이 다가오면 붉게",
+    "text": "카운트다운이 끝날 즈음 색이 바뀌고\n끝나면 소리와 깜빡이는 테두리로 알려 줘요."
+   },
+   {
+    "id": "0d81ffdf-9010-5cf1-8007-f06af2004892",
+    "headline": "리모컨은 iPhone으로",
+    "text": "별도 무료 리모컨 앱으로\n타이머를 멈추고 30초씩 더하거나 뺄 수 있어요."
+   },
+   {
+    "id": "a4092c7a-6da4-5337-9ed8-bb791741faf6",
+    "headline": "StickyPresenter",
+    "text": "슬라이드를 벗어나지 않고\n대본과 남은 시간을 한눈에. 맥용 무료 앱."
+   }
+  ],
+  "script": "",
+  "body": "발표하면서 가장 자주 보는 건 대본과 남은 시간인데, 키노트를 전체 화면으로 띄우면 둘 다 가려지더라고요.\n\nStickyPresenter는 메뉴 막대에 조용히 있다가 노트와 카운트다운 타이머를 전체 화면 발표 위에도 띄워 줍니다. 텔레프롬프터와 뽀모도로도 들어 있어요. 맥용 무료 앱이에요.\n\n#StickyPresenter #발표 #키노트 #프레젠테이션 #발표준비 #발표타이머 #텔레프롬프터 #맥앱 #macOS #1인개발",
+  "theme": 1
+ },
+ {
+  "id": "b0e2c01d-37f7-5be8-a124-f060e3ebb043",
+  "project": "com.leeo.StickyPresenter",
+  "kind": "video",
+  "channel": "유튜브 쇼츠",
+  "title": "키노트 전체 화면인데 대본이 보인다",
+  "angle": "화면 녹화 한 번으로 '전체 화면 위에 떠 있다'는 한 가지를 보여 준다. 발표를 앞둔 사람이 바로 따라 해 볼 수 있게.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "[0-2초] 화면: 키노트 전체 화면 슬라이드 위에 노란 스티키 노트와 타이머가 떠 있는 상태 / 자막: 키노트 전체 화면인데 대본이 보여요 / 내레이션: 이거 전체 화면 맞습니다.\n[2-6초] 화면: 메뉴 막대 아이콘 클릭, 새 노트 열기 / 자막: 메뉴 막대에서 노트 하나 / 내레이션: 메뉴 막대에서 노트를 하나 엽니다.\n[6-11초] 화면: 복사해 둔 대본으로 새 노트 만들기, 색과 글자 크기 조절, 잠금 버튼 누르기 / 자막: 복사한 대본 그대로, 잠가 두면 안 바뀌어요 / 내레이션: 복사해 둔 대본으로 바로 만들고, 잠가 두면 발표 중에 실수로 바뀌지 않아요.\n[11-17초] 화면: 타이머에 5:30 입력, 카운트다운 시작, 위젯 크기 키우기 / 자막: 5:30 이라고 적으면 끝 / 내레이션: 타이머는 5분 30초, 이렇게 적으면 됩니다. 뒤에서도 보이게 크게 키울 수 있어요.\n[17-22초] 화면: 시간이 거의 끝나 타이머가 붉게 바뀌고 테두리가 깜빡임 / 자막: 끝나 가면 붉게 / 내레이션: 끝이 다가오면 붉게 바뀌고, 끝나면 알려 줘요.\n[22-27초] 화면: 텔레프롬프터 창에서 대본이 일정한 속도로 올라감 / 자막: 텔레프롬프터도 있어요 / 내레이션: 대본을 일정하게 올려 주는 텔레프롬프터도 있습니다.\n[27-30초] 화면: 앱 아이콘과 이름 / 자막: StickyPresenter, 맥용 무료 / 내레이션: 맥용 무료 앱, StickyPresenter예요.",
+  "body": "키노트 전체 화면 위에 대본 띄우는 법\n\n발표 중에 대본과 남은 시간을 슬라이드 위에 그대로 띄워 두는 맥 앱 StickyPresenter. 스티키 노트, 카운트다운 타이머, 텔레프롬프터가 들어 있어요. 무료입니다.\n#발표 #키노트 #맥앱 #StickyPresenter",
+  "theme": 1
+ },
+ {
+  "id": "41d51886-dde9-58d6-a536-d9d6bc44361d",
+  "project": "com.leeo.StickyPresenter",
+  "kind": "post",
+  "channel": "스레드",
+  "title": "발표 중 시계 힐끔거리기",
+  "angle": "발표 시간을 넘겨 본 적 있는 사람에게. 시계를 보려고 흐름이 끊기는 순간을 떠올리게 한다.",
+  "plannedAt": "2026-11-12T01:00:00Z",
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "키노트 발표 중에 남은 시간 보려고 손목시계나 노트북 구석을 힐끔거린 적 있으세요?\n전체 화면으로 띄우면 대본도 시계도 다 가려져서, 결국 감으로 말하게 되더라고요.\n\nStickyPresenter는 대본 노트와 카운트다운 타이머를 키노트 전체 화면 위에도 띄워 두는 맥 앱이에요. 끝이 다가오면 타이머가 붉게 바뀌고요.\n맥용 무료 앱입니다.\nhttps://apps.apple.com/kr/app/id6778457299",
+  "theme": 1
+ },
+ {
+  "id": "74942a05-ab3b-5674-b5b6-6481fb620e93",
+  "project": "com.leeo.StickyPresenter",
+  "kind": "post",
+  "channel": "X",
+  "title": "발표자용 맥 앱 하나에 든 것들",
+  "angle": "발표 도구를 찾는 사람에게 무엇이 들었는지 짧게 나열한다.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "맥으로 발표하는 분들께 StickyPresenter를 소개해요.\n\n키노트 전체 화면 위에도 떠 있는 스티키 노트\n크게 키울 수 있는 카운트다운 타이머, 25/5로 적으면 뽀모도로\n속도 조절과 좌우 반전이 되는 텔레프롬프터\n다른 앱을 쓰는 중에도 여는 단축키\niPhone 리모컨(별도 무료 앱)\n\n메뉴 막대에 있고 Dock 아이콘은 없어요. 무료입니다.\nhttps://apps.apple.com/kr/app/id6778457299",
+  "theme": 1
+ },
+ {
+  "id": "52fbc615-b0d0-5d4d-9af8-68aa280a9e1a",
+  "project": "com.leeo.StickyPresenter",
+  "kind": "post",
+  "channel": "디스콰이엇",
+  "title": "발표할 때 쓰려고 만든 맥 앱, StickyPresenter",
+  "angle": "1인 개발자가 직접 겪은 불편에서 시작했다는 이야기와, 발표 환경에 대한 피드백을 부탁한다.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "안녕하세요, 1인 개발자입니다.\n\n발표나 강의를 할 때마다 대본과 남은 시간을 보기가 어려웠어요. 키노트를 전체 화면으로 띄우면 둘 다 가려지니까 결국 시간을 넘기거나, 대본을 놓치곤 했습니다.\n\n그래서 StickyPresenter를 만들었습니다. 메뉴 막대에서 동작하는 맥 앱이고, 스티키 노트와 카운트다운 타이머를 키노트 전체 화면 위에도 띄워 둡니다. 노트는 잠가서 발표 중에 실수로 바뀌지 않게 할 수 있고, 타이머는 끝이 다가오면 붉게 바뀌며 끝나면 소리와 깜빡이는 테두리로 알려 줍니다. 텔레프롬프터, 분위기별 배경음악, 어디서나 쓰는 단축키도 있고, 별도 무료 앱으로 iPhone에서 타이머를 조종할 수 있어요. 계정도 광고도 없고 노트와 대본은 Mac 밖으로 나가지 않습니다.\n\n무료로 올려 두었으니 발표나 강의가 잦은 분들이 써 보시고, 실제 발표 현장에서 불편했던 점을 알려 주시면 정말 도움이 됩니다.\nhttps://apps.apple.com/kr/app/id6778457299",
+  "theme": 1
+ },
+ {
+  "id": "3792ec52-fad8-571c-a1ae-95be9e8905a9",
+  "project": "com.leeo.StickyPresenter",
+  "kind": "post",
+  "channel": "네이버 블로그",
+  "title": "키노트 발표할 때 대본과 남은 시간을 화면 위에 띄워 두는 법 (맥 무료 앱 StickyPresenter)",
+  "angle": "발표 준비 방법을 검색해 들어온 사람에게, 따라 할 수 있는 순서로 설명한다.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "발표 중에 제일 자주 확인해야 하는 것\n\n발표를 하다 보면 가장 자주 확인하고 싶은 건 두 가지입니다. 다음에 할 말, 그리고 남은 시간. 그런데 키노트를 전체 화면으로 띄우면 이 둘이 모두 가려집니다. 발표자 화면을 쓰지 않는 환경이라면 더 그렇고요.\n\nStickyPresenter는 어떤 앱인가요\n\nStickyPresenter는 맥의 메뉴 막대에서 조용히 동작하는 앱입니다. Dock 아이콘도 따로 챙길 창도 없습니다. 스티키 노트와 카운트다운 타이머를 키노트 전체 화면 위에도 띄워 두어서, 슬라이드를 벗어나지 않고 대본과 시간을 한눈에 볼 수 있게 해 줍니다. 무료 앱이고 macOS 14 이상에서 쓸 수 있습니다.\n\n대본은 스티키 노트에\n\n복사해 둔 대본으로 바로 새 노트를 만들 수 있습니다. 여섯 가지 색 중에서 고르고 투명도와 글자 크기를 맞춘 뒤, 잠금 버튼을 눌러 두면 발표 중에 실수로 글이 바뀌지 않습니다. 적는 즉시 저장되어 앱을 다시 켜도 같은 자리에 돌아옵니다.\n\n시간은 카운트다운 타이머로\n\n5:30, 1h 20m처럼 편한 형식으로 입력하면 됩니다. 정사각형 위젯은 강의실 뒤에서도 읽히도록 크게 키울 수 있고, 끝이 다가오면 붉게 바뀌었다가 끝나면 알림음과 깜빡이는 테두리로 알려 줍니다. 25/5로 적으면 집중과 휴식을 반복하는 뽀모도로가 됩니다.\n\n그 밖에 들어 있는 것\n\n속도와 글자 크기를 맞춰 대본을 올려 주는 텔레프롬프터, 집중 차분 재즈 활기 네 가지 분위기의 배경음악, 다른 앱을 쓰는 중에도 노트와 타이머를 여는 단축키가 있습니다. 발표 중 Mac에 손이 닿지 않을 때는 별도 무료 앱으로 iPhone에서 타이머를 시작하고 멈추거나 30초씩 더하고 뺄 수 있습니다.\n\n발표 전에 한 번 띄워서 리허설해 보시면 감이 바로 옵니다.\nhttps://apps.apple.com/kr/app/id6778457299",
+  "theme": 1
+ },
+ {
+  "id": "5e1c5192-3e00-514e-bb08-efc68d3c7313",
+  "project": "com.leeo.StickyPresenter",
+  "kind": "post",
+  "channel": "레딧",
+  "title": "I kept losing track of time during Keynote talks, so I made a menu bar app that floats notes and a timer over full-screen slides",
+  "angle": "r/macapps 류 독자에게. 만든 이유와 동작 방식을 담백하게 적고 의견을 묻는다.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "When I present in full-screen Keynote, my notes and the clock both disappear behind the slides. I either ran over time or lost my place.\n\nSo I built StickyPresenter, a small menu bar app (no Dock icon) that keeps sticky notes and a countdown timer floating on top of everything, including full-screen Keynote.\n\nWhat it does:\nSticky notes in six colors, adjustable opacity and font size, with a lock so you don't edit them mid-talk\nA countdown you can scale up so it's readable from the back of the room. It turns red near the end and flashes when time is up. Type 25/5 for Pomodoro\nA teleprompter with speed control and mirror mode for beam-splitter rigs\nGlobal shortcuts, no Accessibility permission needed\nAn optional free iPhone remote for the timer\n\nNo account, no ads, no analytics. Notes stay on your Mac. It's free and needs macOS 14 or later.\n\nIf you present a lot, I'd love to hear what's missing.\nhttps://apps.apple.com/kr/app/id6778457299",
+  "theme": 1
+ },
+ {
+  "id": "e12ab24a-5d2b-56e6-86a1-ae76786ee668",
+  "project": "com.leeo.bookmarkshot",
+  "kind": "cardNews",
+  "channel": "인스타그램",
+  "title": "밑줄 그은 문장, 다시 찾을 수 있나요",
+  "angle": "종이책을 읽으며 밑줄을 긋거나 문장을 사진으로 찍어 두는 사람에게. 사진첩에 묻힌 문장을 떠올리게 하고, 손가락으로 한 번 그으면 그 문장만 글자로 남는다는 걸 보여 준다.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [
+   {
+    "id": "23a7ef3e-643a-5909-b1cc-e545b8d99e2b",
+    "headline": "그 문장, 어디 있더라",
+    "text": "분명 밑줄 그었는데\n무슨 책 몇 쪽이었는지 기억이 안 날 때"
+   },
+   {
+    "id": "80e55cd8-bbb6-5d38-98dc-e11a796560df",
+    "headline": "사진첩에 묻힌 페이지",
+    "text": "찍어 둔 책 사진은 수백 장\n정작 필요한 문장은 못 찾아요"
+   },
+   {
+    "id": "1957009d-f900-5983-9d64-7d1f518c37d6",
+    "headline": "찍고, 손가락으로 슥",
+    "text": "페이지를 찍고 문장 위를 문지르면\n그 단어들만 글자로 옮겨 담아요"
+   },
+   {
+    "id": "ec853d1f-42af-5dbc-9946-66de71c31a5b",
+    "headline": "몇 쪽인지도 알아서",
+    "text": "페이지 번호를 사진에서 찾아 적어 두고\n책 표지 한 장이면 제목과 저자도 채워져요"
+   },
+   {
+    "id": "191a4507-1b80-5ba5-ac19-741ed5d2da98",
+    "headline": "매일 한 문장씩 다시",
+    "text": "오늘의 문장이 스크랩 하나를 꺼내 보여 줘요\n홈 화면과 잠금화면 위젯으로도"
+   },
+   {
+    "id": "45cf71c6-c3c9-5d17-88ae-ef005b540037",
+    "headline": "사진은 밖으로 안 나가요",
+    "text": "글자 인식은 모두 기기 안에서\n인터넷이 없어도 쓸 수 있어요"
+   },
+   {
+    "id": "0d28b1b2-a42d-587e-ad61-4bb5e153b4b3",
+    "headline": "밑줄",
+    "text": "책 속 문장을 사진 한 장으로 모으는 독서 기록\n무료로 써 보세요"
+   }
+  ],
+  "script": "",
+  "body": "책 읽다가 마음에 닿은 문장, 사진으로 찍어 두고 다시 본 적 있나요.\n\n밑줄은 페이지를 찍고 그 문장 위를 손가락으로 슥 그으면 그 문장만 글자로 담아 줘요. 무슨 책 몇 쪽인지도 같이 정리되고, 매일 한 문장씩 다시 꺼내 보여 줍니다.\n\n글자 인식은 기기 안에서만 이뤄져서 사진이 밖으로 나가지 않아요. App Store 에서 밑줄 을 검색해 보세요.\n\n#독서기록 #책속문장 #문장수집 #독서노트 #밑줄긋기 #필사 #책스타그램 #북스타그램 #좋은글귀",
+  "theme": 2
+ },
+ {
+  "id": "9d30cab3-e239-5579-bb98-f9e30d5746e0",
+  "project": "com.leeo.bookmarkshot",
+  "kind": "video",
+  "channel": "유튜브 쇼츠",
+  "title": "책 문장을 손가락으로 긋기만 하면",
+  "angle": "형광펜 긋듯 손가락으로 문지르면 문장이 글자로 뽑혀 나오는 순간 하나로 멈춰 세운다. 화면 녹화와 손 촬영만으로 찍을 수 있게.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "[0-2초] 화면: 책 페이지 위를 손가락으로 문지르자 문장이 형광색으로 칠해짐 / 자막: 책 문장, 이렇게 긋기만 하면 / 내레이션: 이 문장 갖고 싶을 때, 그냥 그으세요.\n[2-6초] 화면: 사진첩에 쌓인 책 사진들을 빠르게 넘김 / 자막: 찍어 두고 못 찾던 그 페이지들 / 내레이션: 사진첩에 책 사진만 수백 장이죠.\n[6-11초] 화면: 앱에서 페이지 촬영, 네 모서리를 페이지에 맞추자 반듯하게 펴짐 / 자막: 비스듬히 찍어도 반듯하게 / 내레이션: 페이지를 찍고 모서리만 맞추면 종이처럼 펴 줘요.\n[11-17초] 화면: 두 손가락으로 확대, 문장 위를 문지름, 지우개로 한 단어 덜어냄 / 자막: 확대해서 정확하게, 지우개로 덜어내기 / 내레이션: 확대해서 긋고, 넘친 건 지우개로 빼요.\n[17-22초] 화면: 저장된 문장 카드에 책 제목과 쪽수가 붙어 있음 / 자막: 몇 쪽인지까지 자동으로 / 내레이션: 페이지 번호도 알아서 적어 둡니다.\n[22-27초] 화면: 잠금화면 위젯에 오늘의 문장, 이어서 종이 느낌 카드 이미지 공유 / 자막: 매일 한 문장, 카드로 공유 / 내레이션: 매일 한 문장씩 다시 보여 주고, 카드로 만들어 나눌 수도 있어요.\n[27-30초] 화면: 앱 아이콘과 이름 밑줄 / 자막: App Store 에서 밑줄 / 내레이션: 밑줄, 무료예요.",
+  "body": "제목: 책 문장, 손가락으로 긋기만 하면 저장돼요\n설명: 페이지를 찍고 문장 위를 슥 그으면 그 문장만 글자로 담기는 독서 기록 앱 밑줄. 쪽수 자동 인식, 오늘의 문장 위젯, 카드 공유까지. 글자 인식은 기기 안에서만. #독서기록 #책스타그램 #shorts",
+  "theme": 2
+ },
+ {
+  "id": "42cec174-c68f-5135-b9bc-45aecbf90eae",
+  "project": "com.leeo.bookmarkshot",
+  "kind": "post",
+  "channel": "스레드",
+  "title": "책 사진 수백 장, 다시 본 적 있나요",
+  "angle": "책 문장을 사진으로 찍어만 두는 습관에 공감하게 하고, 다시 꺼내 보게 만드는 방법으로 앱을 소개한다.",
+  "plannedAt": "2026-11-13T01:00:00Z",
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "책 읽다가 좋은 문장 나오면 일단 사진 찍어 두잖아요.\n근데 그 사진, 다시 본 적 있나요. 저는 사진첩에 책 페이지만 수백 장이었어요. 무슨 책이었는지도 모르고요.\n\n그래서 요즘은 밑줄이라는 앱에 담아요. 페이지 찍고 그 문장 위를 손가락으로 슥 그으면 그 문장만 글자로 남고, 몇 쪽인지도 알아서 적혀요. 매일 한 문장씩 다시 보여 주는 게 은근히 좋아요.\n\nhttps://apps.apple.com/kr/app/id6792787106",
+  "theme": 2
+ },
+ {
+  "id": "6e82f93e-d2aa-5cad-a2f7-839e4cf3af9a",
+  "project": "com.leeo.bookmarkshot",
+  "kind": "post",
+  "channel": "X",
+  "title": "형광펜 긋듯 문장 스크랩",
+  "angle": "짧게 핵심 기능만. 긋기, 쪽수 자동, 기기 안 인식.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "종이책 문장 모으는 앱 밑줄\n\n페이지 찍고 문장 위를 손가락으로 그으면 그 문장만 글자로\n표지 한 장으로 제목, 저자 등록 (바코드 보이면 ISBN까지)\n쪽수 자동 인식\n오늘의 문장 위젯, 카드 이미지 공유, iCloud 동기화\n글자 인식은 기기 안에서만, 오프라인도 됨\n\nhttps://apps.apple.com/kr/app/id6792787106",
+  "theme": 2
+ },
+ {
+  "id": "7bb8264c-a62c-532b-9277-d412df773992",
+  "project": "com.leeo.bookmarkshot",
+  "kind": "post",
+  "channel": "디스콰이엇",
+  "title": "종이책 밑줄을 사진 한 장으로 모으는 앱을 만들었습니다",
+  "angle": "1인 개발자로서 만든 이유, 하는 일, 듣고 싶은 피드백을 담백하게.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "안녕하세요, 혼자 iOS 앱을 만드는 개발자입니다.\n\n만든 이유\n종이책을 읽다 좋은 문장이 나오면 사진을 찍어 두는데, 나중에 다시 찾는 일은 거의 없었습니다. 사진첩에는 책 페이지만 쌓이고, 어느 책 몇 쪽인지도 남지 않았어요. 필사 앱도 써 봤지만 문장을 손으로 옮겨 치는 게 번거로웠습니다.\n\n하는 일\n밑줄은 페이지를 찍고 원하는 문장 위를 손가락으로 문지르면 그 단어들만 글자로 옮겨 담습니다. 네 모서리를 맞추면 비스듬한 사진도 반듯하게 펴 주고, 페이지 번호도 사진 가장자리에서 찾아 적어 둡니다. 책은 표지 한 장으로 제목과 저자를 읽어 와 서재에 모이고, 문장은 검색과 즐겨찾기가 됩니다. 오늘의 문장 위젯, 카드 이미지 공유, iCloud 동기화도 있습니다. 글자 인식은 모두 기기 안에서 처리합니다.\n\n부탁드려요\n긋는 손맛이 자연스러운지, 인식이 잘 안 되는 책 종류가 있는지 알려 주시면 큰 도움이 됩니다. 무료입니다.\n\nhttps://apps.apple.com/kr/app/id6792787106",
+  "theme": 2
+ },
+ {
+  "id": "dcd41aa6-d3e2-5d33-8e79-f6a36076c031",
+  "project": "com.leeo.bookmarkshot",
+  "kind": "post",
+  "channel": "네이버 블로그",
+  "title": "책 속 좋은 문장, 사진첩에 묵히지 않고 모으는 법 (밑줄 앱 후기)",
+  "angle": "독서 기록을 하고 싶지만 필사는 귀찮은 사람에게, 실제 쓰는 순서대로 보여 준다.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "책 사진은 왜 다시 안 보게 될까\n\n종이책을 읽다가 마음에 남는 문장이 나오면 휴대폰으로 페이지를 찍어 두곤 했습니다. 그런데 몇 달 지나 사진첩을 보면 책 페이지 사진만 잔뜩이고, 그 안에서 내가 좋아했던 한 줄을 찾기는 쉽지 않았어요. 무슨 책 몇 쪽이었는지도 남아 있지 않았고요.\n\n밑줄은 이렇게 씁니다\n\n먼저 책 표지를 찍으면 제목과 저자를 읽어 옵니다. 뒤표지 바코드가 보이면 ISBN도 함께 채워 주고, 틀린 부분은 저장 전에 고칠 수 있어요.\n\n그다음 마음에 드는 페이지를 찍습니다. 네 모서리를 페이지에 맞추면 비스듬하게 찍힌 사진도 종이처럼 반듯하게 펴 줍니다. 이제 원하는 문장 위를 손가락으로 문지르면 형광펜을 긋듯 그 단어들만 골라져요. 두 손가락으로 확대하면 더 정확하게 그을 수 있고, 넘친 부분은 지우개로 덜어내면 됩니다. 페이지 번호는 사진 가장자리에서 찾아 자동으로 적어 줍니다.\n\n모은 문장은 이렇게 다시 만납니다\n\n책은 표지 서재에, 문장은 한곳에 모입니다. 문장, 메모, 책 제목으로 검색할 수 있고 즐겨찾기도 됩니다. 제가 가장 좋아하는 건 오늘의 문장이에요. 매일 스크랩 하나를 그때 남긴 메모와 함께 다시 보여 주고, 홈 화면과 잠금화면 위젯으로도 띄울 수 있습니다. 문장을 종이 느낌의 카드 이미지로 만들어 바로 공유할 수도 있어요.\n\n개인정보가 신경 쓰인다면\n\n글자 인식은 모두 기기 안에서 처리되어 사진이 밖으로 나가지 않고, 인터넷이 없어도 씁니다. 아이폰끼리는 iCloud로 서재와 문장이 맞춰집니다.\n\n필사는 부담스럽고 사진은 쌓이기만 했다면 한 번 써 보세요. App Store 에서 밑줄 을 검색하면 무료로 받을 수 있습니다.\n\nhttps://apps.apple.com/kr/app/id6792787106",
+  "theme": 2
+ },
+ {
+  "id": "c676f044-3677-5482-90d7-3e6e073eb097",
+  "project": "com.leeo.bookmarkshot",
+  "kind": "post",
+  "channel": "레딧",
+  "title": "I kept photographing book pages and never looking at them again, so I made a highlighter for paper books",
+  "angle": "r/books, r/iphone 류에 맞게 경험담 위주로 담백하게. 앱 화면이 한국어뿐이라는 점은 밝혀 둔다.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "I read mostly paper books, and whenever a line hit me I'd snap a photo of the page. Months later my camera roll was full of page photos and I couldn't find a single quote, or remember which book or page it came from.\n\nSo I built a small iPhone app called 밑줄 (it means \"underline\"). You photograph a page, line up the four corners so it flattens out, then rub your finger over the sentence you want, like a highlighter. Only those words get saved as text, and it picks up the page number too. A photo of the cover fills in title and author (and ISBN if the barcode is visible).\n\nSaved lines are searchable, there is a daily quote widget for the home and lock screen, and you can export a line as a paper style card image. Text recognition runs entirely on device and works offline. It syncs over iCloud.\n\nHonest caveat: the interface is mostly in Korean right now. It's free, and I'd love to hear whether the finger highlighting feels natural.\n\nhttps://apps.apple.com/kr/app/id6792787106",
+  "theme": 2
+ },
+ {
+  "id": "48f4f487-a4f7-5bb6-8190-3b63083bc9e7",
+  "project": "com.devkoan.CalendarSnap",
+  "kind": "cardNews",
+  "channel": "인스타그램",
+  "title": "어린이집 월간 일정표, 냉장고에 붙여 두셨죠",
+  "angle": "어린이집 알림장과 월간 일정을 종이로 받는 부모에게. 매달 손으로 캘린더에 옮겨 적는 수고와 준비물을 깜빡하는 아침을 떠올리게 하고, 사진 한 장으로 끝난다는 안도감을 준다.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [
+   {
+    "id": "2c8c2475-059b-5082-8cd1-b42392aeef33",
+    "headline": "내일 준비물 뭐였지",
+    "text": "냉장고에 붙인 일정표를\n밤 11시에 다시 보러 가 본 적 있다면"
+   },
+   {
+    "id": "5f7f2590-66bd-5d67-ae1c-9849faf5479e",
+    "headline": "매달 옮겨 적는 일정",
+    "text": "종이로 온 한 달 일정을\n캘린더에 하나씩 손으로 넣고 계셨죠"
+   },
+   {
+    "id": "ceb57cb8-fcfd-5649-a48e-0eb9e150ce32",
+    "headline": "사진 한 장이면 끝",
+    "text": "알림장이나 달력을 찍으면\n날짜와 시간, 제목을 알아서 뽑아 줘요"
+   },
+   {
+    "id": "3b842e32-fc34-57b5-89a1-272f9665b9e4",
+    "headline": "전날 저녁에 알려 줘요",
+    "text": "전날 저녁 8시, 당일 아침 7시 30분 중 골라\n도시락 지참 같은 준비물 메모도 함께"
+   },
+   {
+    "id": "4cbfc52e-98e3-5aa0-956b-ac48e5786258",
+    "headline": "배우자와 같이 보기",
+    "text": "초대 링크 하나로 배우자, 조부모님,\n돌봄 선생님과 같은 일정을 함께 고쳐요"
+   },
+   {
+    "id": "c0798eca-3cb9-5b15-a17b-83e69f0ddbb3",
+    "headline": "캘린더와 위젯까지",
+    "text": "애플 캘린더에 한 번에 등록하고\n홈 화면 위젯으로 다가오는 일정 확인"
+   },
+   {
+    "id": "1727a9c4-ea7c-5882-b26a-238a9f128659",
+    "headline": "아이일정",
+    "text": "종이로 온 아이 일정, 이제 찍어서 관리하세요\n무료예요"
+   }
+  ],
+  "script": "",
+  "body": "어린이집에서 한 달 일정표가 종이로 오면, 그걸 캘린더에 옮기는 것도 일이죠.\n\n아이일정은 알림장이나 달력을 찍으면 일정을 뽑아서 애플 캘린더에 한 번에 넣어 주고, 전날 저녁이나 당일 아침에 준비물 메모와 함께 알려 줘요. 초대 링크로 배우자나 조부모님과 같은 일정을 함께 볼 수도 있어요.\n\nApp Store 에서 아이일정 을 검색해 보세요.\n\n#어린이집 #어린이집일정 #육아템 #육아앱 #워킹맘 #워킹대디 #준비물 #육아스타그램 #엄마표 #아빠육아",
+  "theme": 3
+ },
+ {
+  "id": "e43ea5fd-e610-53f5-9d4d-2712b5c182cb",
+  "project": "com.devkoan.CalendarSnap",
+  "kind": "video",
+  "channel": "유튜브 쇼츠",
+  "title": "어린이집 한 달 일정, 사진 한 장으로 캘린더에",
+  "angle": "종이 일정표를 찍자마자 일정 목록이 쫙 뜨는 순간으로 멈춰 세운다. 화면 녹화와 종이 일정표 촬영만으로 찍을 수 있게.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "[0-2초] 화면: 냉장고에 붙은 어린이집 월간 일정표를 폰으로 찍는 손 / 자막: 이거 아직 손으로 옮겨 적으세요? / 내레이션: 어린이집 일정표, 아직 손으로 옮기세요?\n[2-7초] 화면: 앱에서 촬영 직후 일정 목록이 한 번에 뜸 / 자막: 찍으면 한 달 일정이 한 번에 / 내레이션: 찍기만 하면 날짜랑 시간, 제목을 알아서 뽑아 줘요.\n[7-12초] 화면: 소풍 일정이 종일로 표시, 도시락 지참 메모 입력 / 자막: 소풍은 종일 일정, 준비물은 메모로 / 내레이션: 시간 없는 일정은 종일로, 준비물은 메모로 적어 두고요.\n[12-17초] 화면: 일정 추가하고 알림 받기 버튼, 애플 캘린더에 어린이집 달력이 생김 / 자막: 애플 캘린더에 한 번에 등록 / 내레이션: 버튼 하나면 캘린더에 다 들어갑니다. 중복은 알아서 빼고요.\n[17-22초] 화면: 전날 저녁 8시 알림 배너, 본문에 도시락 지참 / 자막: 전날 저녁에 준비물 알림 / 내레이션: 전날 저녁에 준비물까지 알려 줘요.\n[22-27초] 화면: 설정에서 초대 링크를 카카오톡으로 보내는 장면 / 자막: 배우자, 조부모님과 함께 보기 / 내레이션: 링크로 초대하면 가족도 같은 일정을 보고 고칠 수 있어요.\n[27-30초] 화면: 홈 화면 위젯과 앱 이름 / 자막: App Store 에서 아이일정 / 내레이션: 아이일정, 무료예요.",
+  "body": "제목: 어린이집 일정표, 찍기만 하면 캘린더에 들어가요\n설명: 종이로 온 한 달 일정을 사진 한 장으로 애플 캘린더에 등록하고, 전날 저녁 준비물 알림까지. 배우자와 초대 링크로 함께 보기. 아이일정 #어린이집 #육아앱 #shorts",
+  "theme": 3
+ },
+ {
+  "id": "024d89a0-a91b-5031-9d14-637fe065bd5c",
+  "project": "com.devkoan.CalendarSnap",
+  "kind": "post",
+  "channel": "스레드",
+  "title": "종이 일정표 옮겨 적기 지친 부모님께",
+  "angle": "매달 종이 일정표를 옮겨 적고, 준비물을 깜빡하는 경험에 공감하게 한 뒤 앱을 소개한다.",
+  "plannedAt": "2026-11-16T01:00:00Z",
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "어린이집 월간 일정표, 매달 종이로 오잖아요.\n냉장고에 붙여 두고, 캘린더에 하나씩 옮겨 적고, 그래도 아침에 \"오늘 도시락 날이었어?\" 하고 놀라는 거.\n\n아이일정은 그 종이를 찍기만 하면 일정을 뽑아서 애플 캘린더에 한 번에 넣어 주고, 전날 저녁에 준비물까지 알려 줘요. 초대 링크로 배우자랑 같은 일정을 같이 보고 고칠 수 있는 것도 편하고요.\n\nhttps://apps.apple.com/kr/app/id6789881830",
+  "theme": 3
+ },
+ {
+  "id": "ff041af0-7f61-5498-b376-b4245c9daee9",
+  "project": "com.devkoan.CalendarSnap",
+  "kind": "post",
+  "channel": "X",
+  "title": "알림장 사진 한 장으로 한 달 일정",
+  "angle": "기능을 짧게 나열해 무엇을 하는 앱인지 바로 보이게.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "어린이집 알림장, 달력 사진 한 장으로 한 달 일정 등록하는 앱 아이일정\n\n찍으면 날짜, 시간, 제목 자동 추출\n애플 캘린더에 전용 달력으로 일괄 등록, 중복 제외\n전날 저녁 8시, 당일 아침 7시 30분 등 준비물 알림\n초대 링크로 배우자, 조부모님과 함께 보기\n홈 화면 위젯\n\nhttps://apps.apple.com/kr/app/id6789881830",
+  "theme": 3
+ },
+ {
+  "id": "729b75d1-4e98-5cf4-8ddf-8b9562d1dae4",
+  "project": "com.devkoan.CalendarSnap",
+  "kind": "post",
+  "channel": "디스콰이엇",
+  "title": "어린이집 종이 일정표를 찍으면 캘린더에 넣어 주는 앱을 만들었어요",
+  "angle": "1인 개발자로서 만든 이유, 하는 일, 듣고 싶은 피드백을 담백하게.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "안녕하세요, 혼자 iOS 앱을 만들고 있는 개발자입니다.\n\n만든 이유\n어린이집에서는 한 달 일정과 준비물 안내가 여전히 종이로 옵니다. 매달 그걸 캘린더에 손으로 옮기고, 그래도 준비물을 깜빡하는 일이 반복됐어요. 집에서 일정을 아는 사람이 한 명뿐인 것도 문제였고요.\n\n하는 일\n아이일정은 알림장이나 달력 사진에서 글자를 읽어 날짜, 시간, 제목을 뽑아 냅니다. 시간이 없는 소풍 같은 일정은 종일 일정으로 잡고, 일정마다 준비물 메모를 달 수 있습니다. 확인한 일정은 애플 캘린더의 전용 달력에 한 번에 등록되고 중복은 빠집니다. 알림은 전날 저녁 8시, 당일 아침 7시 30분, 1시간 전, 정시 중에 고를 수 있고 준비물 메모가 알림에 함께 뜹니다. 초대 링크를 보내면 배우자나 조부모님, 돌봄 선생님이 같은 일정을 보고 고칠 수 있어요. 서버 없이 iCloud 로 동기화합니다. 홈 화면 위젯도 있습니다.\n\n부탁드려요\n어린이집마다 일정표 양식이 달라서, 인식이 잘 안 되는 양식이 있으면 알려 주시면 큰 도움이 됩니다. 손글씨는 아직 인식률이 낮습니다. 무료입니다.\n\nhttps://apps.apple.com/kr/app/id6789881830",
+  "theme": 3
+ },
+ {
+  "id": "281f35b0-116e-56de-a0be-1037c39727ad",
+  "project": "com.devkoan.CalendarSnap",
+  "kind": "post",
+  "channel": "네이버 블로그",
+  "title": "어린이집 월간 일정표 캘린더에 옮기기, 사진 한 장으로 끝내는 방법 (아이일정 앱)",
+  "angle": "종이 일정표를 받는 부모가 검색해서 들어왔을 때 실제 쓰는 순서대로 보여 준다.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "매달 오는 종이 일정표\n\n어린이집에서 한 달 일정과 준비물 안내를 종이로 받는 집이 아직 많습니다. 냉장고에 붙여 두고 캘린더에 하나씩 옮겨 적다 보면 꽤 시간이 들고, 그렇게 해도 아침에 도시락 날인 걸 뒤늦게 알아차리곤 합니다.\n\n아이일정으로 바꾼 순서\n\n먼저 일정표를 카메라로 찍거나 앨범에서 고릅니다. 앱이 사진 속 글자를 읽어서 날짜, 시간, 제목을 나눠 목록으로 보여 줍니다. 7월 12일 치과 같은 형식은 물론이고 오후 3시 같은 표현도 알아듣고, 시간이 없는 소풍이나 현장학습은 종일 일정으로 잡아 줍니다.\n\n목록에서 제목이나 시간을 고치고, 필요 없는 일정은 밀어서 지웁니다. 일정마다 도시락 지참 같은 준비물 메모를 적어 둘 수 있어요.\n\n마지막으로 일정 추가하고 알림 받기를 누르면 애플 캘린더에 아이 이름이 붙은 전용 달력이 생기고 한 달 일정이 한 번에 들어갑니다. 이미 있는 일정은 중복으로 넣지 않습니다.\n\n준비물 알림\n\n알림은 전날 저녁 8시, 당일 아침 7시 30분, 1시간 전, 정시 중에서 고를 수 있고, 적어 둔 준비물 메모가 알림 본문에 함께 나옵니다.\n\n가족과 함께 보기\n\n설정에서 초대 링크를 메시지나 카카오톡으로 보내면, 배우자나 조부모님, 돌봄 선생님이 같은 일정을 보고 고칠 수 있습니다. 애플 가족 공유에 등록돼 있지 않아도 됩니다. 날짜를 골라 그날 일정만 텍스트로 보내는 것도 됩니다.\n\n그 밖에\n\n홈 화면 위젯으로 다가오는 일정을 볼 수 있고, 아이가 한 명일 때도 다른 반 전용 일정은 걸러 줍니다. 다만 손글씨 일정표는 인식률이 낮을 수 있어요.\n\n무료 앱이라 이번 달 일정표로 한 번 시험해 보세요. App Store 에서 아이일정 을 검색하면 됩니다.\n\nhttps://apps.apple.com/kr/app/id6789881830",
+  "theme": 3
+ },
+ {
+  "id": "5fb4ef2b-3501-5053-a51d-21d30eda9ee5",
+  "project": "com.devkoan.CalendarSnap",
+  "kind": "post",
+  "channel": "레딧",
+  "title": "My kid's daycare still sends the monthly schedule on paper, so I made an app that turns a photo of it into calendar events",
+  "angle": "r/daddit, r/Parenting, r/iphone 류에 맞게 경험담 위주로. 한국 어린이집 양식에 맞춰져 있고 화면이 한국어라는 점은 밝힌다.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "Our daycare hands out the whole month's schedule on a sheet of paper, plus notes about what to pack. Every month I was retyping it into the calendar, and we still forgot the lunchbox day.\n\nSo I made a small iPhone app. You take a photo of the schedule, it reads the dates, times and titles on device, and lets you fix anything before adding them all at once to a dedicated calendar in Apple Calendar (duplicates are skipped). Events without a time become all day events. You can attach a packing note to each event and get a reminder the evening before or that morning with the note in it.\n\nYou can also invite your partner or grandparents with a link so everyone sees and edits the same schedule. It uses iCloud sharing, no account or server. There is a home screen widget too.\n\nCaveat: it's tuned for Korean daycare schedules and the interface is Korean, and handwriting is still hit or miss. It's free if anyone wants to try it.\n\nhttps://apps.apple.com/kr/app/id6789881830",
+  "theme": 3
+ },
+ {
+  "id": "3fcbe3a9-b27b-5100-ab94-87d797fe483f",
+  "project": "com.leeo.LullabyRecipe",
+  "kind": "cardNews",
+  "channel": "인스타그램",
+  "title": "잠들 소리 찾다가 한 시간",
+  "angle": "잠들기 전 유튜브에서 백색소음을 고르다 오히려 잠이 깨는 사람에게. 한 번 만들어 두면 다음 날부터는 달 한 번 누르면 된다는 편안함을 전한다.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [
+   {
+    "id": "baf2d630-8977-5701-b4cc-9a05602d0833",
+    "headline": "잠들 소리 찾다 한 시간",
+    "text": "유튜브에서 이것저것 틀어 보다가\n오히려 잠이 다 깼던 밤."
+   },
+   {
+    "id": "804214f2-55c2-59ee-b937-0a01b723a7b9",
+    "headline": "딱 맞는 소리가 없어요",
+    "text": "빗소리는 좋은데 조금 작았으면,\n새소리는 가끔만 들렸으면."
+   },
+   {
+    "id": "4ff001cb-6a09-5473-9934-b1db334f5ea4",
+    "headline": "직접 겹쳐 만들어요",
+    "text": "빗소리 위에 물방울, 그 위에 피아노.\n소리마다 볼륨과 간격, 들리는 자리까지."
+   },
+   {
+    "id": "5f3f3a12-cc51-50b7-898f-fc4e7fe83d57",
+    "headline": "다음 밤엔 달 한 번",
+    "text": "만든 소리는 이름 붙여 저장.\n달을 누르면 재생, 옆으로 밀면 다음 소리."
+   },
+   {
+    "id": "ddd2f3ad-0857-508c-a486-0875c541bbb5",
+    "headline": "잠든 뒤를 위해",
+    "text": "타이머는 소리를 서서히 줄여요.\n화면이 꺼져도 소리는 계속됩니다."
+   },
+   {
+    "id": "4a4deec4-d481-58c5-a3d7-18cdca908fa7",
+    "headline": "달빛",
+    "text": "내 손으로 만드는 잠 소리.\n모든 소리 무료로 듣기."
+   }
+  ],
+  "script": "",
+  "body": "잠들 때 틀어 둘 소리 찾다가 한 시간 보낸 적 있죠. 달빛은 빗소리, 물방울, 새소리, 싱잉볼 같은 소리를 겹쳐 나만의 잠 소리를 만들고 저장해 두는 앱이에요. 다음 날 밤부터는 달을 한 번 누르면 끝. 수면 타이머는 소리를 뚝 끊지 않고 서서히 줄여 줘서 끝나는 순간에 깨지 않아요. 모든 소리는 무료로 들을 수 있어요.\n\n#달빛 #수면앱 #백색소음 #빗소리 #자연의소리 #숙면 #불면증 #수면타이머 #ASMR #꿀잠",
+  "theme": 0
+ },
+ {
+  "id": "27758cef-12ae-5e94-ac7c-aa839667f570",
+  "project": "com.leeo.LullabyRecipe",
+  "kind": "video",
+  "channel": "유튜브 쇼츠",
+  "title": "잠 소리, 찾지 말고 만들자",
+  "angle": "어두운 밤하늘 화면과 달이 그 자체로 차분해서 멈춰 서게 만든다. 소리 겹치기와 달 제스처를 화면 녹화로 보여 주고, 소리가 서서히 줄어드는 타이머로 끝낸다.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "[0-2초] 화면: 새벽 1시 시계, 유튜브 검색 결과를 끝없이 스크롤 / 자막: 잠들 소리 찾다가 새벽 1시 / 내레이션: 잘 소리 고르다가 잠 다 깬 적 있죠?\n[2-6초] 화면: 달빛 실행, 어두운 밤하늘과 달 / 자막: 이제 달 하나면 돼요 / 내레이션: 달빛은 달 하나로 다 합니다.\n[6-12초] 화면: 소리 만들기, 빗소리 추가 후 물방울과 피아노를 겹침 / 자막: 빗소리 위에 물방울, 그 위에 피아노 / 내레이션: 마음에 드는 소리를 겹쳐서\n[12-17초] 화면: 레이어별 볼륨과 들리는 간격, 들리는 자리 조절 / 자막: 소리마다 볼륨과 간격까지 / 내레이션: 볼륨이랑 들리는 간격까지 맞추고 이름 붙여 저장해요.\n[17-22초] 화면: 달을 누르고, 옆으로 밀어 다른 소리로, 아래로 밀어 보관함 / 자막: 누르면 재생, 밀면 다음 소리 / 내레이션: 다음 날부턴 달만 누르면 돼요.\n[22-27초] 화면: 위로 밀어 수면 타이머 설정, 소리가 서서히 작아지는 표시 / 자막: 타이머는 서서히 줄어들게 / 내레이션: 타이머는 뚝 끊지 않고 서서히 줄어들어서 안 깨요.\n[27-30초] 화면: 그림자가 스며드는 달, 앱 이름 / 자막: 달빛 / 내레이션: 오늘 밤은 달빛으로.",
+  "body": "잠들 소리, 이제 찾지 말고 만드세요\n\n빗소리, 물방울, 새소리, 싱잉볼을 겹쳐 나만의 수면 소리를 만드는 앱 달빛. 한 번 저장하면 다음 밤부터는 달 한 번 누르면 됩니다.\nhttps://apps.apple.com/kr/app/id1626715109\n\n#달빛 #수면앱 #백색소음 #쇼츠",
+  "theme": 0
+ },
+ {
+  "id": "d7576441-c06b-5719-b386-ef07031d1e88",
+  "project": "com.leeo.LullabyRecipe",
+  "kind": "post",
+  "channel": "스레드",
+  "title": "잠들 소리 찾다가 잠이 깨는 밤",
+  "angle": "수면 소리를 매일 밤 새로 찾는 사람에게, 한 번 만들고 계속 쓰는 방식으로 고민을 끝내 준다.",
+  "plannedAt": "2026-11-17T01:00:00Z",
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "잠들려고 유튜브에서 빗소리 찾다가 오히려 잠이 깬 적 있으시죠. 겨우 고른 영상은 중간에 광고가 나오거나, 빗소리가 조금만 작았으면 좋겠는데 방법이 없고요.\n\n달빛은 잠 소리를 내 취향대로 겹쳐 만들고 저장해 두는 앱이에요. 한 번 만들어 두면 다음 날 밤부터는 달을 한 번 누르면 끝. 타이머는 소리를 서서히 줄여서 끝나는 순간에 깨지 않아요.\nhttps://apps.apple.com/kr/app/id1626715109",
+  "theme": 0
+ },
+ {
+  "id": "931cb677-7622-51c3-b980-0ab19cb0dd0d",
+  "project": "com.leeo.LullabyRecipe",
+  "kind": "post",
+  "channel": "X",
+  "title": "달빛이 하는 일",
+  "angle": "수면 앱을 비교 중인 사람에게 조작 방식과 잠든 뒤를 배려한 기능을 짧게 보여 준다.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "수면 소리 앱 달빛\n\n달을 누르면 재생, 옆으로 밀면 다른 소리\n위로 밀면 수면 타이머, 아래로 밀면 내 소리 보관함\n빗소리, 물방울, 새소리, 싱잉볼을 여러 겹으로\n소리마다 볼륨, 들리는 간격, 들리는 자리 조절\n타이머는 소리를 서서히 줄여 끝날 때 안 깨게\n아침엔 싱잉볼, 새소리 같은 부드러운 알람\n\n모든 소리는 무료로 들을 수 있어요.\nhttps://apps.apple.com/kr/app/id1626715109",
+  "theme": 0
+ },
+ {
+  "id": "392d59ae-631c-596b-abee-7a303efbfa27",
+  "project": "com.leeo.LullabyRecipe",
+  "kind": "post",
+  "channel": "디스콰이엇",
+  "title": "잠 소리를 찾지 말고 만들자, 달빛",
+  "angle": "오래 다듬어 온 앱을 이름까지 바꾸며 새로 정리한 이야기를 하고, 실제 잠자리에서 쓰는 사람들의 불편을 듣고 싶다.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "안녕하세요, 1인 개발자입니다.\n\n잠들 때 틀어 둘 소리를 유튜브에서 찾다가 한 시간을 보낸 적이 있어요. 겨우 고른 소리는 기대와 다르고, 조금만 바꾸고 싶어도 방법이 없더라고요. 사람마다 편안한 소리가 다르니 직접 만들 수 있어야겠다 싶었고, 그렇게 시작한 앱을 최근 달빛이라는 이름으로 새로 다듬었습니다.\n\n달빛은 빗소리, 물방울, 새소리, 싱잉볼 같은 소리를 여러 겹으로 쌓아 나만의 잠 소리를 만드는 앱입니다. 소리마다 볼륨과 들리는 간격, 들리는 자리를 맞추고 배경 음악을 더할 수 있어요. 만든 소리는 이름을 붙여 저장해 두고, 다음 날 밤부터는 달을 한 번 누르면 됩니다. 수면 타이머는 소리를 뚝 끊지 않고 서서히 줄이고, 화면이 꺼져도 소리는 계속돼요. 아침에는 부드러운 알람으로 깨울 수도 있습니다.\n\n모든 소리는 무료로 들을 수 있고, 직접 만든 소리는 3개까지 무료로 저장됩니다. 어떤 소리가 더 있었으면 좋겠는지, 잠자리에서 쓰다가 불편했던 점이 있으면 편하게 알려 주세요.\nhttps://apps.apple.com/kr/app/id1626715109",
+  "theme": 0
+ },
+ {
+  "id": "a4e59fdd-d548-5e94-ba17-38c6c9c69d91",
+  "project": "com.leeo.LullabyRecipe",
+  "kind": "post",
+  "channel": "네이버 블로그",
+  "title": "수면 백색소음 앱 추천, 빗소리를 겹쳐 내 잠 소리를 만드는 달빛",
+  "angle": "백색소음, 빗소리, 수면 앱을 검색한 사람에게. 찾는 대신 만드는 방식과 잠든 뒤를 배려한 기능을 차근차근 소개한다.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "잠들 소리를 찾는 데 쓰는 시간\n잠들기 전에 백색소음이나 빗소리를 틀어 두는 분이 많습니다. 그런데 막상 유튜브에서 찾다 보면 이 영상 저 영상 넘기느라 시간이 훌쩍 가고, 고른 소리가 기대와 다르거나 조금만 조절하고 싶어도 방법이 없을 때가 많아요. 달빛은 바로 그 시간을 없애려고 만든 앱입니다.\n\n달 하나로 다 합니다\n달빛의 화면은 어두운 밤하늘에 달이 하나 떠 있는 모습입니다. 달을 누르면 재생하고 멈추고, 옆으로 밀면 다른 소리로 넘어갑니다. 위로 밀면 수면 타이머, 아래로 밀면 내 소리 보관함이 열려요. 마음에 드는 소리가 나오면 달을 지그시 눌러 즐겨찾기에 담을 수 있습니다. 어두운 방에서 눈을 반쯤 감고도 쓸 수 있는 조작이라 좋았어요.\n\n내 손으로 만드는 소리\n빗소리, 물방울, 새소리, 싱잉볼 같은 소리를 여러 겹으로 쌓을 수 있습니다. 소리마다 볼륨과 들리는 간격, 들리는 자리를 맞추고 배경 음악을 더할 수 있어요. 빗소리 위에 물방울, 그 위에 피아노처럼 조합해서 이름을 붙여 저장해 두면 다음 날 밤부터는 달을 한 번 누르면 됩니다.\n\n잠든 뒤를 위해 만든 기능\n수면 타이머는 소리를 뚝 끊지 않고 서서히 줄여서, 끝나는 순간에 깨지 않게 해 줍니다. 화면이 꺼져도 소리는 계속되고, 가만히 두면 화면이 저절로 어두워져요. 아침에는 싱잉볼이나 새소리 같은 부드러운 알람으로 깨울 수도 있습니다.\n\n무료로 어디까지\n모든 소리는 무료로 들을 수 있고, 직접 만든 소리는 3개까지 저장할 수 있습니다. 더 많이 만들고 싶다면 프리미엄 구독이 있고 처음 1주는 무료로 써 볼 수 있어요. iPhone과 iPad에서 쓸 수 있습니다.\n\n정리하며\n잠 소리를 매일 밤 새로 찾고 있다면, 한 번 내 취향대로 만들어 두는 쪽이 훨씬 편합니다.\n\nhttps://apps.apple.com/kr/app/id1626715109",
+  "theme": 0
+ },
+ {
+  "id": "69dc1258-0471-56d7-9c02-0e062a759897",
+  "project": "com.leeo.LullabyRecipe",
+  "kind": "post",
+  "channel": "레딧",
+  "title": "A sleep sounds app where you layer your own mix and control it with one moon",
+  "angle": "For r/iphone or r/sleep. Plain description of the layering and the gentle fade timer, with the free tier stated honestly.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "I used to lose a lot of time every night looking for something to fall asleep to, and the right video never quite existed. So I worked on an app where you build the sound yourself.\n\nDalbit lets you stack sounds like rain, water drops, birdsong and singing bowls, and set each layer's volume, how often it plays and where you hear it. Save the mix with a name and from then on it is one tap on the moon. Swipe sideways for another sound, up for the sleep timer, down for your library. The timer fades out instead of cutting off, audio keeps going with the screen off, and there are gentle alarm sounds for the morning.\n\nEvery sound is free to listen to, and you can save up to three of your own mixes for free (there is an optional subscription for unlimited mixes). Works on iPhone and iPad. Feedback on sounds you would want added is very welcome.\nhttps://apps.apple.com/kr/app/id1626715109",
+  "theme": 0
+ },
+ {
+  "id": "c12187fa-5df1-5fe3-abb1-d8bcc26a608f",
+  "project": "com.leeo.FootprintDiary",
+  "kind": "cardNews",
+  "channel": "인스타그램",
+  "title": "내가 걸은 곳만 그려지는 지도",
+  "angle": "산책과 동네 걷기를 좋아하는 사람에게. 남이 그려 둔 지도 말고 내 발로 채워 가는 백지도라는 낯선 재미와, 새 길로 가고 싶어지는 마음을 느끼게 한다.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [
+   {
+    "id": "9ad2f817-4a19-559b-8122-7bf1a676984e",
+    "headline": "내 지도는 몇 칸일까",
+    "text": "매일 걷는데\n정작 내가 가 본 길은 얼마나 될까요?"
+   },
+   {
+    "id": "7a229c09-5049-5a67-bb38-795e5bc99199",
+    "headline": "백지에서 시작해요",
+    "text": "아무것도 없는 종이 한 장.\n두 발로 걸은 자리만 한 점씩 채워져요."
+   },
+   {
+    "id": "88e82536-c2f6-5ee2-acd8-bffdb9730d47",
+    "headline": "새 길만 넓어져요",
+    "text": "차나 지하철은 안 그려지고\n같은 길을 백 번 걸어도 그대로예요."
+   },
+   {
+    "id": "58f0408f-d0e2-53db-b55d-948bc28bf5a6",
+    "headline": "오늘과 지난 걸음",
+    "text": "오늘은 붉은 먹, 지난 걸음은 남빛.\n석 달 안 간 자리는 잿빛으로 바래요."
+   },
+   {
+    "id": "c761aa2e-2948-52be-bb34-d2ef4227406f",
+    "headline": "가볼 곳에 도장",
+    "text": "가 보고 싶은 자리에 도장을 찍어 두면\n실제로 닿았을 때 가본 곳으로 바뀌어요."
+   },
+   {
+    "id": "099ac178-c864-5a72-a7e2-a7641b579566",
+    "headline": "벅뚜벅뚜",
+    "text": "걸어서 그리는 지도.\n오늘은 안 가 본 길로."
+   }
+  ],
+  "script": "",
+  "body": "아무것도 그려지지 않은 종이 한 장에서 시작하는 지도예요. 벅뚜벅뚜는 내가 두 발로 걸은 자리만 한 점씩 채워 줍니다. 차나 지하철로 지난 길은 안 그려지고, 같은 길을 백 번 걸어도 지도는 넓어지지 않아요. 넓히려면 새 길로 가야 하죠. 오늘 걸은 자리는 붉은 먹, 지난 걸음은 남빛으로 찍히고, 가본 곳과 가볼 곳엔 도장을 찍을 수 있어요. 무료예요.\n\n#벅뚜벅뚜 #산책 #걷기 #산책기록 #동네산책 #걷기앱 #지도일기 #발자취 #아이폰앱 #1인개발자",
+  "theme": 1
+ },
+ {
+  "id": "757ba0b2-e3ca-5b31-a556-ca707788e905",
+  "project": "com.leeo.FootprintDiary",
+  "kind": "video",
+  "channel": "유튜브 쇼츠",
+  "title": "한 달 걸었더니 지도가 이렇게",
+  "angle": "필름 기능으로 내 지도가 그려지는 과정을 첫 2초에 빠르게 보여 줘서 멈춰 서게 하고, 도장과 개척 나침반으로 다음 산책을 권한다. 화면 녹화로 찍을 수 있다.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "[0-2초] 화면: 필름 기능으로 빈 종이 위에 걸음 점이 빠르게 번지는 영상 / 자막: 한 달 동안 걸은 곳만 그렸더니 / 내레이션: 한 달 동안 내가 걸은 곳만 그리면 이렇게 돼요.\n[2-7초] 화면: 내 지도 첫 화면, 백지 위 점들 확대 / 자막: 걸은 자리만 채워지는 백지도 / 내레이션: 벅뚜벅뚜는 두 발로 걸은 자리만 채워지는 지도예요.\n[7-12초] 화면: 붉은 먹 오늘 걸음과 남빛 지난 걸음, 잿빛으로 바랜 자리 / 자막: 오늘은 붉게, 지난 걸음은 남빛 / 내레이션: 오늘 걸은 데는 붉게, 지난 걸음은 남빛으로 찍혀요.\n[12-17초] 화면: 지도를 길게 눌러 스탬프 고르고 도장 찍기 / 자막: 가볼 곳엔 도장 / 내레이션: 가 보고 싶은 데는 도장을 찍어 두고요.\n[17-22초] 화면: 카메라로 가게 간판을 찍어 스티커로 지도에 세움 / 자막: 간판이 그대로 스티커로 / 내레이션: 간판을 찍으면 그 자리에 스티커로 서요.\n[22-27초] 화면: 개척 나침반, 덜 걸은 방위를 가리키는 바늘 / 자막: 다음엔 어느 쪽으로 걸을까 / 내레이션: 나침반이 덜 걸은 쪽을 알려 줘요.\n[27-30초] 화면: 앱 아이콘과 이름 / 자막: 벅뚜벅뚜. 오늘은 새 길로 / 내레이션: 오늘은 안 가 본 길로 걸어 보세요.",
+  "body": "한 달 동안 걸은 자리만 그렸더니\n\n두 발로 걸은 곳만 채워지는 백지도 벅뚜벅뚜. 같은 길은 지도를 넓히지 못해요. 새 길로 가야 넓어집니다.\nhttps://apps.apple.com/kr/app/id6789952970\n\n#벅뚜벅뚜 #산책 #쇼츠",
+  "theme": 1
+ },
+ {
+  "id": "3b164022-e3e5-5fa3-bf7d-71bf6c3fd6d8",
+  "project": "com.leeo.FootprintDiary",
+  "kind": "post",
+  "channel": "스레드",
+  "title": "매일 같은 길만 걷고 있었다",
+  "angle": "출퇴근길과 산책길이 늘 똑같은 사람에게, 내 생활 반경이 생각보다 좁다는 걸 깨닫게 하고 새 길로 걷고 싶게 만든다.",
+  "plannedAt": "2026-11-18T01:00:00Z",
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "동네 산책을 매일 하는데, 돌아보면 늘 같은 길만 걷고 있더라고요. 지도 앱엔 세상이 다 그려져 있으니 내가 어디를 안 가 봤는지는 오히려 안 보이고요.\n\n벅뚜벅뚜는 백지에서 시작해서 내가 걸은 자리만 채워지는 지도예요. 같은 길을 백 번 걸어도 지도는 안 넓어지고, 새 길로 가야 넓어져요. 자주 지난 자리일수록 짙어져서 내 생활 반경이 그대로 보입니다.\nhttps://apps.apple.com/kr/app/id6789952970",
+  "theme": 1
+ },
+ {
+  "id": "efc14c3d-e3a9-56e8-ae4f-43f99c04e5f7",
+  "project": "com.leeo.FootprintDiary",
+  "kind": "post",
+  "channel": "X",
+  "title": "벅뚜벅뚜로 할 수 있는 것",
+  "angle": "걷기 기록 앱을 찾는 사람에게, 걸음 수 앱과 다른 지점들을 짧게 정리한다.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "걸어서 그리는 지도, 벅뚜벅뚜\n\n두 발로 걸은 자리만 채워지는 백지도 (차, 지하철은 안 그려짐)\n오늘은 붉은 먹, 지난 걸음은 남빛, 석 달 안 간 곳은 잿빛\n가본 곳과 가볼 곳에 도장, 스탬프 212가지\n간판을 찍으면 그 자리만의 스티커로\n덜 걸은 방위를 알려 주는 개척 나침반\n내 지도가 그려지는 과정을 영상으로\n\n무료, 기록은 내 iCloud에.\nhttps://apps.apple.com/kr/app/id6789952970",
+  "theme": 1
+ },
+ {
+  "id": "4f1c86db-e181-59f9-83d4-f7bbea8b7ffc",
+  "project": "com.leeo.FootprintDiary",
+  "kind": "post",
+  "channel": "디스콰이엇",
+  "title": "남이 다 그려 둔 지도 말고, 내가 걸어서 그리는 지도",
+  "angle": "지도 앱이 넘치는 세상에 백지도를 만든 이유를 솔직하게 말하고, 걷는 사람들에게 어떤 기록이 의미 있는지 묻는다.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "안녕하세요, 1인 개발자입니다.\n\n세상은 이미 지도 앱들이 다 그려 두었으니, 그 위에 하나 더 그릴 이유는 없다고 생각했어요. 대신 아무것도 그려지지 않은 종이에서 시작해서 내가 걸어야만 채워지는 지도를 만들었습니다. 벅뚜벅뚜입니다.\n\n두 발로 걸은 자리만 한 점씩 찍히고, 차나 지하철로 지난 길은 그려지지 않아요. 같은 길을 백 번 걸어도 지도는 넓어지지 않아서, 넓히려면 새 길로 가야 합니다. 오늘 걸은 자리는 붉은 먹, 지난 걸음은 남빛이고, 석 달 넘게 다시 밟지 않은 자리는 지워지지 않고 잿빛으로 바랩니다. 가본 곳과 가볼 곳에 도장을 찍을 수 있고, 가게 간판을 찍으면 그 자리만의 스티커가 됩니다. 덜 걸은 방위를 알려 주는 개척 나침반, 지도가 그려지는 과정을 영상으로 보는 필름, 그날 걸은 모양을 그리는 달력도 있어요.\n\n걸음과 도장, 일기는 내 개인 iCloud에 담기고, 익명 통계에는 위치 좌표를 보내지 않습니다. 무료예요. 산책을 즐기시는 분들이 이 지도에서 무엇을 다시 보고 싶어 하시는지 알려 주시면 큰 도움이 됩니다.\nhttps://apps.apple.com/kr/app/id6789952970",
+  "theme": 1
+ },
+ {
+  "id": "2ae18722-bfdd-5955-8f37-65c7d4727849",
+  "project": "com.leeo.FootprintDiary",
+  "kind": "post",
+  "channel": "네이버 블로그",
+  "title": "산책 기록 앱 벅뚜벅뚜, 걸은 자리만 채워지는 백지도를 써 보니",
+  "angle": "산책 기록, 걷기 앱을 검색한 사람에게. 걸음 수 대신 새로 그은 길이를 재는 방식이 왜 재미있는지 풀어 쓴다.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "같은 길만 걷고 있었다\n매일 산책을 하는데, 어느 날 돌아보니 늘 같은 코스만 돌고 있었습니다. 걸음 수는 매일 비슷하게 쌓이는데 정작 동네에서 안 가 본 골목이 어디인지는 잘 몰랐어요. 지도 앱에는 모든 길이 다 그려져 있으니 오히려 내가 어디를 가 봤는지가 안 보이더라고요.\n\n백지에서 시작하는 지도\n벅뚜벅뚜는 아무것도 그려지지 않은 종이 한 장에서 시작하는 지도입니다. 내가 두 발로 걸은 자리만 한 점씩 채워집니다. 차나 지하철로 지난 길은 그려지지 않고, 같은 길을 백 번 걸어도 지도는 넓어지지 않아요. 넓히려면 새 길로 가야 합니다. 이 규칙 하나 때문에 산책 코스를 일부러 바꾸게 되더라고요.\n\n색으로 갈리는 오늘과 지난 걸음\n오늘 걸은 자리는 붉은 먹, 지난 걸음은 남빛으로 찍힙니다. 자주 지난 자리일수록 짙어져서 내 생활 반경이 그대로 드러나요. 석 달 넘게 다시 밟지 않은 자리는 지워지지 않고 잿빛으로 빛이 바랩니다.\n\n가본 곳과 가볼 곳에 도장\n지금 선 자리나 지도를 길게 눌러 원하는 자리에 도장을 찍을 수 있습니다. 갈래별로 고르는 스탬프가 212가지예요. 걸어 본 적 없는 자리에 찍은 도장은 가볼 곳으로 남았다가, 그 근처에 실제로 닿으면 가본 곳으로 바뀝니다. 카메라로 가게 간판을 찍으면 배경을 오려 내 그 자리만의 스티커로 세워 줍니다.\n\n다음 산책은 어디로\n개척 나침반은 지금 선 자리 둘레를 여덟 방위로 나눠 어느 쪽을 덜 걸었는지 가리킵니다. 오늘의 발자취 화면에서는 들른 곳이 시간 순서대로 서고 자리 사이를 얼마나 걸었는지 적혀요.\n\n필름과 달력\n기간을 정해 내 지도가 그려지는 과정을 영상으로 보고 내보낼 수 있습니다. 달력은 날짜마다 숫자 대신 그날 걸은 모양을 그려 주고, 날마다 글과 사진으로 일기도 남길 수 있어요.\n\n기록은 내 iCloud에\n걸음과 도장, 일기와 사진은 개인 iCloud에 담겨 기기를 바꿔도 따라옵니다. 기록 방식은 정확한 기록 우선과 배터리 우선 중에 고를 수 있어요. 무료로 쓸 수 있습니다.\n\nhttps://apps.apple.com/kr/app/id6789952970",
+  "theme": 1
+ },
+ {
+  "id": "77efe11d-39a0-5ae2-9b6e-a3ad27f4ed66",
+  "project": "com.leeo.FootprintDiary",
+  "kind": "post",
+  "channel": "레딧",
+  "title": "I made a map that starts blank and only fills in where you have walked",
+  "angle": "For r/iphone or r/walking. Lead with the blank-map idea and the rule that only new streets grow it; keep it short and honest about being Korean-first.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "Map apps already show every street, which means they never show where I have not been. So I made the opposite: a map that starts as a blank sheet and only fills in, dot by dot, where you have actually walked.\n\nRides in cars or the subway are not drawn, and walking the same street a hundred times does not grow the map, so the only way to expand it is a new route. Today's steps show in red ink, older ones in indigo, and spots you have not revisited for three months fade to grey instead of disappearing. You can drop stamps on places you have been or want to go (a want-to-go stamp turns into visited when you actually get near it), and photograph a shop sign to turn it into a cut-out sticker on the map. There is also a compass that points to the direction you have explored least, a time-lapse film of your map being drawn, and widgets.\n\nIt is free, and your walks, stamps and diary live in your own iCloud. The app is Korean-first, so I would love to hear how it feels to others.\nhttps://apps.apple.com/kr/app/id6789952970",
+  "theme": 1
+ },
+ {
+  "id": "e9143042-bc0a-5516-b8a3-fae023d331fc",
+  "project": "com.leeo.geusaie",
+  "kind": "cardNews",
+  "channel": "인스타그램",
+  "title": "파스타가 어려운 건 손이 느려서가 아니에요",
+  "angle": "집에서 파스타를 해 보다가 면은 불고 소스는 덜 된 경험이 있는 사람에게. 요리가 꼬이는 이유가 실력이 아니라 시간이 두 줄이라서라는 걸 짚어 주고, 지금 할 일 하나만 따라가면 된다는 편안함을 준다.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [
+   {
+    "id": "3cbe2404-4ba1-5ddf-8358-6a6aa199cdc4",
+    "headline": "면은 불고 소스는 덜 되고",
+    "text": "파스타 한 번 해 보면\n꼭 한쪽이 먼저 끝나 버리죠"
+   },
+   {
+    "id": "8fdaa629-a56a-534e-b4e6-a7d5a4ed80f5",
+    "headline": "손이 느려서가 아니에요",
+    "text": "시간이 한 줄이 아니라서예요\n면은 기다려 주지 않고, 마늘은 언제 썰어도 되니까"
+   },
+   {
+    "id": "646cbadf-03c2-5cbf-b081-875121464d2f",
+    "headline": "지금 할 일 하나만",
+    "text": "화면 맨 위에 지금 내 손이 할 일 하나만 크게\n급한 정도는 색으로 바로 보여요"
+   },
+   {
+    "id": "eb2d1905-2c22-5d8d-93a2-6c7b6e353348",
+    "headline": "냄비마다 따로 세는 시간",
+    "text": "면 냄비와 소스 팬이\n각자 남은 시간을 보여 줘요"
+   },
+   {
+    "id": "89aa70de-2763-57ad-b150-61296619321f",
+    "headline": "늦어도 괜찮아요",
+    "text": "불을 조금 늦게 켜면 뒤 순서가 함께 밀리고\n소스는 면 나오는 시각에 맞춰 잡혀요"
+   },
+   {
+    "id": "c39d0f4f-ac99-5805-9256-d955f24e6444",
+    "headline": "손이 젖었으면 말로",
+    "text": "다음 이라고 말하면 다음 단계로\n조리대에 세워 두고 보도록 글자도 크게"
+   },
+   {
+    "id": "44e11f8b-5501-5cfa-a427-610f38f535e5",
+    "headline": "그사이에",
+    "text": "면 삶는 그사이에 소스까지 끝내는 요리 타이머\n알리오 올리오, 토마토 크림 파스타"
+   }
+  ],
+  "script": "",
+  "body": "파스타 할 때마다 면은 불고 소스는 덜 된 적 있다면, 손이 느려서가 아니라 냄비 두 개의 시간이 따로 가서 그래요.\n\n그사이에는 지금 할 일 하나만 크게 보여 주고, 냄비마다 남은 시간을 따로 세어 줘요. 손이 젖어 있으면 다음 이라고 말해서 넘기면 되고요. 지금은 알리오 올리오와 토마토 크림 파스타가 들어 있어요.\n\nApp Store 에서 그사이에 를 검색해 보세요.\n\n#파스타 #알리오올리오 #토마토크림파스타 #집밥 #자취요리 #요리초보 #키친타이머 #요리앱 #홈쿡",
+  "theme": 2
+ },
+ {
+  "id": "bb8c6a57-f536-5fd4-ba20-59bbb505e4d4",
+  "project": "com.leeo.geusaie",
+  "kind": "video",
+  "channel": "유튜브 쇼츠",
+  "title": "냄비 두 개 동시에 돌려도 안 꼬이는 법",
+  "angle": "끓는 면 냄비와 소스 팬 사이에서 허둥대는 장면으로 멈춰 세우고, 앱 화면 녹화와 조리대 촬영으로 따라가게 한다.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "[0-2초] 화면: 끓어 넘치는 면 냄비 옆에서 마늘 써는 손 / 자막: 면 삶는 동안 소스, 늘 꼬이죠 / 내레이션: 파스타, 꼭 한쪽이 먼저 끝나죠.\n[2-6초] 화면: 앱 홈에서 알리오 올리오 선택, 약 몇 분과 냄비 몇 개 표시 / 자막: 레시피 고르고 / 내레이션: 레시피를 고르고 요리 시작을 누르면,\n[6-12초] 화면: 조리 화면 맨 위 지금 할 일 카드, 색이 초록에서 머스터드로 바뀜 / 자막: 지금 할 일 하나만, 급하면 색이 바뀌어요 / 내레이션: 지금 내 손이 할 일 하나만 크게 보여 줘요. 급한 일은 색으로 알려 주고요.\n[12-17초] 화면: 면 냄비 칸과 소스 팬 칸의 남은 시간이 각각 줄어듦 / 자막: 냄비마다 따로 세는 시간 / 내레이션: 냄비마다 남은 시간은 따로 셉니다.\n[17-22초] 화면: 젖은 손으로 다음 이라고 말하자 단계가 넘어감, 마이크 표시 / 자막: 손이 젖었으면 다음 한 마디 / 내레이션: 손이 젖어 있으면 다음 이라고 말하면 돼요.\n[22-27초] 화면: 타임라인 화면, 점선 일과 겹치는 구간 / 자막: 늦어지면 뒤가 함께 밀려요 / 내레이션: 조금 늦어도 뒤 순서가 같이 밀려서, 소스는 면 나오는 시각에 맞춰져요.\n[27-30초] 화면: 접시에 담긴 알리오 올리오와 앱 이름 / 자막: App Store 에서 그사이에 / 내레이션: 그사이에, 무료예요.",
+  "body": "제목: 면 삶는 그사이에 소스까지, 냄비 두 개 안 꼬이는 타이머\n설명: 지금 할 일 하나만 크게, 냄비마다 남은 시간은 따로. 손이 젖으면 다음 이라고 말해서 넘기는 요리 타이머 그사이에. #파스타 #알리오올리오 #shorts",
+  "theme": 2
+ },
+ {
+  "id": "78445571-6011-5c59-91f7-2836c6a16c04",
+  "project": "com.leeo.geusaie",
+  "kind": "post",
+  "channel": "스레드",
+  "title": "파스타 할 때마다 한쪽이 먼저 끝나는 이유",
+  "angle": "집에서 파스타를 해 본 사람의 허둥대는 경험에 공감하게 하고, 원인을 짚은 뒤 앱을 소개한다.",
+  "plannedAt": "2026-11-19T01:00:00Z",
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "집에서 파스타 하면 꼭 이래요.\n소스 볶다 보면 면이 퍼져 있고, 면 건지고 나면 소스가 아직이고.\n\n생각해 보면 손이 느려서가 아니라 냄비 두 개의 시간이 따로 가서 그런 거더라고요. 면은 기다려 주지 않는데 마늘 써는 건 언제 해도 되고.\n\n그사이에는 그 순서를 대신 짜 주는 타이머예요. 지금 할 일 하나만 크게 보여 주고, 냄비마다 남은 시간을 따로 세어 줘요. 손이 젖어 있으면 다음 이라고 말하면 넘어가요.\n\nhttps://apps.apple.com/kr/app/id6793473149",
+  "theme": 2
+ },
+ {
+  "id": "4b3ea05c-61b8-5b58-9b3d-1d6353a93aa3",
+  "project": "com.leeo.geusaie",
+  "kind": "post",
+  "channel": "X",
+  "title": "냄비 두 개용 요리 타이머",
+  "angle": "기능을 짧게 나열.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "면 삶는 그사이에 소스까지 끝내는 요리 타이머 그사이에\n\n지금 할 일 하나만 크게, 급한 정도는 색으로\n면 냄비, 소스 팬 남은 시간 따로\n늦어지면 뒤 순서가 함께 밀림\n다음 이라고 말하면 다음 단계로\n글자 크기 4단계, 냄비 시간 끝나면 알림\n알리오 올리오, 토마토 크림 파스타\n\nhttps://apps.apple.com/kr/app/id6793473149",
+  "theme": 2
+ },
+ {
+  "id": "41770b3e-e241-52c7-9878-91430ca5314d",
+  "project": "com.leeo.geusaie",
+  "kind": "post",
+  "channel": "디스콰이엇",
+  "title": "냄비 두 개를 혼자 돌리기 위한 요리 타이머를 만들었습니다",
+  "angle": "1인 개발자로서 만든 이유, 하는 일, 듣고 싶은 피드백을 담백하게.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "안녕하세요, 혼자 iOS 앱을 만드는 개발자입니다.\n\n만든 이유\n파스타를 할 때마다 면과 소스 중 하나가 먼저 끝나 버렸습니다. 레시피는 순서대로 적혀 있지만 실제로는 면 냄비와 소스 팬이 동시에 돌고, 면은 기다려 주지 않는데 마늘 써는 일은 언제 해도 됩니다. 요리가 어려운 건 손이 느려서가 아니라 시간이 한 줄이 아니라서라고 생각했어요.\n\n하는 일\n그사이에는 화면 맨 위에 지금 내 손이 할 일 하나만 크게 보여 주고, 천천히 해도 되는지 미룰 수 없는지를 색으로 알려 줍니다. 면 냄비와 소스 팬은 각자 남은 시간을 따로 셉니다. 정해진 시각표를 강요하지 않아서, 불을 늦게 켜면 뒤 순서가 함께 밀리고 소스는 면이 나오는 시각에 맞춰 시작하도록 잡힙니다. 손이 젖어 있으면 다음 이라고 말해 넘길 수 있고, 조리대에 세워 두고 볼 수 있게 글자를 네 단계로 키울 수 있습니다. 지금은 알리오 올리오와 토마토 크림 파스타가 들어 있습니다.\n\n부탁드려요\n다음에 넣었으면 하는 레시피, 실제 부엌에서 써 보니 불편했던 순간을 알려 주시면 큰 도움이 됩니다. 무료이고 계정 없이 바로 시작합니다.\n\nhttps://apps.apple.com/kr/app/id6793473149",
+  "theme": 2
+ },
+ {
+  "id": "8e9bc160-845f-5e4b-920d-35ca0f3a8577",
+  "project": "com.leeo.geusaie",
+  "kind": "post",
+  "channel": "네이버 블로그",
+  "title": "알리오 올리오 할 때 면 퍼지지 않게, 냄비 두 개 동시에 돌리는 요리 타이머 그사이에",
+  "angle": "집에서 파스타를 하다 타이밍을 놓치는 사람이 검색해서 들어왔을 때, 왜 꼬이는지와 앱으로 어떻게 풀리는지 보여 준다.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "파스타가 늘 꼬이는 이유\n\n알리오 올리오는 재료가 단순한데도 집에서 하면 은근히 어렵습니다. 소스를 볶다 보면 면이 이미 퍼져 있고, 면을 건지고 나면 마늘이 아직 덜 익어 있곤 하죠. 레시피는 한 줄로 적혀 있지만 실제 부엌에서는 면 냄비와 소스 팬이 동시에 돌아가기 때문입니다. 면은 사람을 기다려 주지 않고, 마늘 써는 일은 언제 해도 됩니다.\n\n그사이에는 이렇게 도와줍니다\n\n레시피를 고르고 요리 시작을 누르면 그때부터 냄비 시계가 돕니다. 화면 맨 위에는 지금 내 손이 할 일 하나만 크게 나오고, 천천히 해도 되는 일인지 미룰 수 없는 일인지 색으로 구분됩니다. 어떻게 하는지, 다 됐는지 어떻게 아는지도 함께 적혀 있어요.\n\n그 아래에는 면 냄비와 소스 팬이 각자 남은 시간을 보여 줍니다. 물이 끓는 중인지, 면이 삶아지는 중인지 한눈에 보여요.\n\n늦어져도 괜찮습니다\n\n정해진 시각표를 강요하지 않습니다. 불을 조금 늦게 켜면 뒤의 순서가 함께 밀리고, 소스는 면이 나오는 시각에 맞춰 시작하도록 잡힙니다. 타임라인 화면에서는 내 손, 면 냄비, 소스 팬이 언제 겹치는지 볼 수 있고, 점선으로 표시된 일은 손이 빌 때 해도 되는 일입니다.\n\n부엌에서 쓰기 좋게\n\n손이 젖어 있으면 마이크를 켜고 다음 이라고 말하면 다음 단계로 넘어갑니다. 마이크는 조리 화면을 벗어나면 꺼집니다. 조리대에 세워 두고 한두 걸음 떨어져 볼 수 있도록 글자 크기를 네 단계로 키울 수 있고, 냄비 시간이 끝나면 다음에 할 일과 함께 알림이 옵니다.\n\n지금은 알리오 올리오와 토마토 크림 파스타가 들어 있습니다. 아이폰과 아이패드에서 계정 없이 바로 쓸 수 있으니, 이번 주말 파스타에 한 번 써 보세요. App Store 에서 그사이에 를 검색하면 됩니다.\n\nhttps://apps.apple.com/kr/app/id6793473149",
+  "theme": 2
+ },
+ {
+  "id": "e5a11d6e-859a-5e37-bb11-86e03120e7fa",
+  "project": "com.leeo.geusaie",
+  "kind": "post",
+  "channel": "레딧",
+  "title": "I kept overcooking pasta while the sauce wasn't ready, so I built a timer that tracks each pot separately",
+  "angle": "r/cooking, r/iphone 류에 맞게 경험담 위주로. 레시피가 두 개뿐이고 화면이 한국어라는 점은 밝힌다.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "Every time I made pasta at home, one side finished first. The noodles were mushy by the time the sauce was done, or the sauce sat waiting. I realized the problem wasn't speed, it was that the timing runs on two tracks: pasta water doesn't wait for you, but slicing garlic can happen whenever your hands are free.\n\nSo I built a small iPhone and iPad timer. It shows only the one thing your hands should be doing right now, in big type, color coded by how urgent it is. Each pot keeps its own countdown. If you start the burner late, everything after it shifts, and the sauce is scheduled backwards from when the pasta comes out. If your hands are wet you can say \"다음\" (Korean for next) to move on, since voice works in Korean, and the text scales up so you can read it from a step back.\n\nHonest caveats: it only has two recipes so far (aglio e olio and tomato cream pasta), and the interface is mostly in Korean. It's free and needs no account. I'd love to hear which recipe people would want next.\n\nhttps://apps.apple.com/kr/app/id6793473149",
+  "theme": 2
+ },
+ {
+  "id": "b7f98671-f26c-575d-a296-02d6a7346fce",
+  "project": "com.kora.leeo",
+  "kind": "cardNews",
+  "channel": "인스타그램",
+  "title": "한국 온 외국인 친구, 지하철에서 헤매고 있다면",
+  "angle": "한국에 놀러 오는 외국인 친구나 가족이 있는 사람, 그리고 처음 가 보는 도시 지하철이 낯선 사람에게. 어느 방향을 타야 하는지가 제일 어렵다는 점을 짚고, 열차 표시 그대로 알려 준다는 안심을 준다. 친구에게 공유하고 싶게.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [
+   {
+    "id": "92b66497-6aaa-53da-82b6-5178567496bf",
+    "headline": "이쪽이야, 저쪽이야?",
+    "text": "승강장에서 제일 어려운 건\n어느 방향 열차를 타야 하는지"
+   },
+   {
+    "id": "22c4c124-8d22-54f9-b96e-141dbfe1a715",
+    "headline": "외국인 친구는 더 막막해요",
+    "text": "역 이름도 낯선데\n내릴 역까지 세면서 가야 하니까"
+   },
+   {
+    "id": "d2ad14d4-6af1-55c8-a706-f462991bf3eb",
+    "headline": "○○행, 열차 표시 그대로",
+    "text": "출발역과 도착역만 고르면\n타야 할 열차를 열차에 뜨는 ○○행 그대로 알려 줘요"
+   },
+   {
+    "id": "8703522d-b599-5825-931b-6733b1b20b36",
+    "headline": "카메라로 비추면 확인",
+    "text": "승강장 표지판이나 행선지 표시를 비추면\n지금 타려는 방향이 맞는지 바로 알려 줘요"
+   },
+   {
+    "id": "d10403a6-b697-573c-b511-4f3402c5b9e8",
+    "headline": "내릴 때 되면 진동으로",
+    "text": "곧 내릴 준비하세요, 지금 내리세요\n잠금 화면과 Dynamic Island 로도 확인"
+   },
+   {
+    "id": "4b24a480-144f-5e52-accd-fc5a122e05cb",
+    "headline": "23개 언어, 약 930개 역",
+    "text": "수도권, 부산, 대구, 광주, 대전\n경로 검색은 인터넷 없이도 돼요"
+   },
+   {
+    "id": "19c07953-0e02-5b73-ae67-6d5b6fd9da9c",
+    "headline": "KORA",
+    "text": "한국 지하철, 타는 방향부터 내릴 역까지\n한국 오는 친구에게 알려 주세요"
+   }
+  ],
+  "script": "",
+  "body": "한국 놀러 오는 외국인 친구가 지하철 타는 걸 걱정한다면 이 앱 하나 알려 주세요.\n\nKORA는 출발역과 도착역만 고르면 어느 방향 열차를 타야 하는지 열차에 뜨는 ○○행 그대로 알려 주고, 내릴 역이 가까워지면 진동으로 알려 줘요. 앱 화면은 23개 언어로 쓸 수 있고, 회원가입이나 광고도 없어요.\n\nApp Store 에서 KORA 를 검색해 보세요.\n\n#한국여행 #서울지하철 #부산지하철 #외국인친구 #지하철앱 #여행앱 #서울여행 #부산여행 #환승 #하차알림",
+  "theme": 3
+ },
+ {
+  "id": "67f8400e-6845-515e-89d6-afdb414084ba",
+  "project": "com.kora.leeo",
+  "kind": "video",
+  "channel": "유튜브 쇼츠",
+  "title": "지하철 반대 방향 탄 적 있다면",
+  "angle": "승강장에서 양쪽 열차를 번갈아 보며 헷갈리는 장면으로 멈춰 세우고, 카메라 확인과 하차 진동으로 끝낸다. 화면 녹화와 승강장 촬영만으로 찍을 수 있게.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "[0-2초] 화면: 승강장 양쪽 행선지 표시를 번갈아 보는 시선 / 자막: 이쪽이야, 저쪽이야? / 내레이션: 지하철, 반대로 타 본 적 있죠.\n[2-7초] 화면: 앱에서 GPS로 가까운 역이 잡히고 도착역 선택 / 자막: 출발역은 알아서, 도착역만 고르면 / 내레이션: 출발역은 가까운 역으로 잡아 주고, 도착역만 고르면,\n[7-12초] 화면: 경로 화면에 환승, 정거장 수, 예상 시간, ○○행 표시 / 자막: 열차에 뜨는 ○○행 그대로 / 내레이션: 타야 할 열차를 열차에 뜨는 그대로 알려 줘요.\n[12-17초] 화면: 승강장 표지판을 카메라로 비추자 맞는 방향이라고 뜸 / 자막: 카메라로 비추면 방향 확인 / 내레이션: 헷갈리면 표지판을 비춰 보세요.\n[17-23초] 화면: 탑승 중 노선 진행도와 잠금 화면 라이브 액티비티 / 자막: 지금 어느 역인지 따라가요 / 내레이션: 타고 나면 지금 어느 역인지 따라가고,\n[23-27초] 화면: 지금 내리세요 알림과 진동 / 자막: 내릴 때 되면 진동으로 / 내레이션: 내릴 때가 되면 진동으로 알려 줘요.\n[27-30초] 화면: 언어 선택 화면을 넘기다 앱 이름 / 자막: 23개 언어, App Store 에서 KORA / 내레이션: 23개 언어로 쓸 수 있는 KORA 예요.",
+  "body": "제목: 지하철 반대 방향 탄 적 있다면, 이 앱\n설명: 출발역과 도착역만 고르면 타야 할 열차를 ○○행 그대로, 내릴 역은 진동으로. 카메라로 방향 확인, 23개 언어, 수도권과 부산 대구 광주 대전. KORA #한국여행 #지하철 #shorts",
+  "theme": 3
+ },
+ {
+  "id": "5e5d9d31-be21-58b5-9d91-627a993fe55d",
+  "project": "com.kora.leeo",
+  "kind": "post",
+  "channel": "스레드",
+  "title": "외국인 친구가 한국 지하철에서 제일 헷갈려 하는 것",
+  "angle": "외국인 친구를 안내해 본 경험에 공감하게 하고, 대신 알려 줄 앱으로 소개한다.",
+  "plannedAt": "2026-11-20T01:00:00Z",
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "외국인 친구가 한국 놀러 오면 제일 많이 받는 연락이 \"나 지금 어느 쪽 타야 돼?\" 더라고요.\n노선도는 봐도 승강장에서 방향 고르는 게 제일 어렵대요.\n\nKORA는 출발역과 도착역만 고르면 열차에 뜨는 ○○행 그대로 타는 방향을 알려 주고, 표지판을 카메라로 비추면 맞는 방향인지도 확인해 줘요. 내릴 역 가까워지면 진동으로 알려 주고요. 23개 언어라 친구 폰 언어 그대로 쓸 수 있어요.\n\nhttps://apps.apple.com/kr/app/id6775176578",
+  "theme": 3
+ },
+ {
+  "id": "b7732434-bbb1-5d74-8c53-3daae64a35bf",
+  "project": "com.kora.leeo",
+  "kind": "post",
+  "channel": "X",
+  "title": "타는 방향부터 내릴 역까지",
+  "angle": "기능을 짧게 나열.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "한국 지하철 안내 앱 KORA\n\n타야 할 열차를 ○○행 표시 그대로\n승강장 표지판을 카메라로 비추면 방향 확인 (기기 안에서 인식)\n탑승 중 현재 역 추적, 내릴 역 진동 알림\n잠금 화면, Dynamic Island 라이브 액티비티\n수도권, 부산, 대구, 광주, 대전 약 930개 역\n23개 언어, 경로 검색은 오프라인도 됨\n회원가입, 광고 없음\n\nhttps://apps.apple.com/kr/app/id6775176578",
+  "theme": 3
+ },
+ {
+  "id": "3d0dd785-98b8-5169-80d6-2911d1a3c9b3",
+  "project": "com.kora.leeo",
+  "kind": "post",
+  "channel": "디스콰이엇",
+  "title": "한국을 여행하는 외국인을 위한 지하철 안내 앱을 만들었습니다",
+  "angle": "1인 개발자로서 만든 이유, 하는 일, 듣고 싶은 피드백을 담백하게. 외국인 사용자에게 닿을 방법에 대한 조언도 구한다.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "안녕하세요, 혼자 iOS 앱을 만드는 개발자입니다.\n\n만든 이유\n한국 지하철은 잘 되어 있지만 처음 온 사람에게는 어느 방향 열차를 타야 하는지, 지금 어느 역인지, 언제 내려야 하는지가 어렵습니다. 기존 지도 앱은 한국어나 영어 위주라 다른 언어를 쓰는 여행자는 더 막막하고요.\n\n하는 일\nKORA는 출발역과 도착역만 고르면 환승, 정거장 수, 예상 시간과 함께 타야 할 열차를 열차에 표시되는 ○○행 그대로 알려 줍니다. 승강장 표지판이나 행선지 표시를 카메라로 비추면 방향이 맞는지 확인해 주고, 탑승 중에는 실시간 도착 정보, GPS, 가속도계, 차내 안내방송 인식을 함께 써서 현재 역을 따라가다 내릴 때가 되면 진동으로 알립니다. 잠금 화면과 Dynamic Island 에서도 볼 수 있습니다. 수도권, 부산, 대구, 광주, 대전의 약 930개 역을 지원하고, 앱 화면은 23개 언어, 경로 검색은 오프라인에서도 됩니다. 회원가입과 광고가 없고 위치, 카메라, 음성 인식은 모두 기기 안에서 처리합니다. 경로 검색, 타는 방향, 실시간 도착, 카메라 확인은 무료입니다.\n\n부탁드려요\n실제 승강장에서 써 보고 방향 안내나 하차 알림이 어긋난 역이 있으면 알려 주세요. 외국인 여행자에게 앱을 알릴 좋은 경로를 아시는 분의 조언도 환영합니다.\n\nhttps://apps.apple.com/kr/app/id6775176578",
+  "theme": 3
+ },
+ {
+  "id": "3458015a-a363-52fe-83e9-8613b42c1c50",
+  "project": "com.kora.leeo",
+  "kind": "post",
+  "channel": "네이버 블로그",
+  "title": "외국인 친구 한국 여행, 지하철 안내는 이 앱 하나로 (KORA 한국 지하철 길찾기)",
+  "angle": "외국인 친구나 가족의 한국 방문을 앞둔 사람이 검색해서 들어왔을 때, 친구에게 그대로 추천할 수 있게 쓰는 순서대로 소개한다.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "외국인 친구가 제일 걱정하는 건 지하철\n\n한국에 놀러 오는 친구에게 무엇이 제일 걱정이냐고 물으면 의외로 지하철이라는 답이 많습니다. 노선도는 찾아볼 수 있어도, 승강장에서 어느 방향 열차를 타야 하는지, 지금 어느 역인지, 언제 내려야 하는지는 막막하다고요.\n\nKORA로 길 찾는 순서\n\n앱을 열면 GPS로 가장 가까운 역을 출발역으로 잡아 줍니다. 직접 고를 수도 있고, 고른 역은 다음에도 기억합니다. 도착역을 고르면 환승, 정거장 수, 예상 소요 시간과 함께 타야 할 열차를 열차에 표시되는 ○○행 그대로 알려 줍니다.\n\n승강장에서 헷갈리면 표지판이나 열차 행선지 표시를 카메라로 비춰 보면 됩니다. 지금 타려는 방향이 맞는지 바로 알려 주고, 글자 인식은 기기 안에서만 이뤄집니다.\n\n타고 나서는\n\n탑승 중에는 실시간 도착 정보, GPS, 가속도계로 감지한 출발과 정차, 차내 안내방송 인식을 함께 써서 지금 어느 역인지 따라갑니다. 내릴 역이 가까워지면 곧 내릴 준비하세요, 도착하면 지금 내리세요를 진동과 함께 알려 주고, 안내방송에서 내리는 문 방향도 알려 줍니다. 잠금 화면과 Dynamic Island 에서도 진행 상황을 볼 수 있어요.\n\n친구에게 추천하기 좋은 이유\n\n앱 화면을 23개 언어로 쓸 수 있고 처음에는 휴대폰 언어를 따릅니다. 역 이름은 한글과 함께 가타카나, 한자, 또는 역 표지판의 영문 표기로 보여 줘서 승강장에서 바로 맞춰 볼 수 있어요. 수도권뿐 아니라 부산, 대구, 광주, 대전까지 약 930개 역을 지원하고, 경로 검색은 인터넷 없이도 됩니다. 회원가입과 광고가 없고, 경로 검색과 타는 방향, 실시간 도착 정보, 카메라 확인은 무료입니다.\n\n한국 방문을 앞둔 친구가 있다면 App Store 에서 KORA 를 검색해 알려 주세요.\n\nhttps://apps.apple.com/kr/app/id6775176578",
+  "theme": 3
+ },
+ {
+  "id": "3cfa3d86-ef03-56ee-b5c7-90fda45ff1cc",
+  "project": "com.kora.leeo",
+  "kind": "post",
+  "channel": "레딧",
+  "title": "I made a Korea subway app that tells you which direction to board, exactly as the train sign reads",
+  "angle": "r/koreatravel, r/seoul 류에 맞게 담백하게. 여행자가 실제로 막히는 지점(방향, 하차)에 집중하고, 무료 범위를 정직하게 밝힌다.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "The part of the Seoul (and Busan) subway that trips up most visitors isn't the map, it's standing on the platform trying to figure out which side to board, then counting stops so you don't miss yours.\n\nI'm a solo developer in Korea and built KORA for that. Pick your start and destination and it shows transfers, number of stops, estimated time, and the direction to board written the way the train's destination sign shows it. If you're unsure on the platform, point the camera at the sign and it tells you whether you're on the right side. While you ride it follows your current station and buzzes when it's time to get off, with a Live Activity on the Lock Screen and Dynamic Island.\n\nIt covers about 930 stations in the Seoul area (including AREX, GTX-A and Shinbundang), Busan, Daegu, Gwangju and Daejeon. The interface comes in 23 languages, and station names can be shown with the English spelling from the signs. Route search works offline. No sign up, no ads, and recognition runs on device.\n\nRoute search, boarding direction, real time arrivals and the camera check are free. Some extras like the get off alerts are free for your first three trips and then part of a one time KORA Pro purchase, no subscription.\n\nFeedback from anyone riding here would really help, especially stations where the direction or alerts felt off.\n\nhttps://apps.apple.com/kr/app/id6775176578",
+  "theme": 3
+ },
+ {
+  "id": "505add07-7055-5476-b1a5-daa21805ef99",
+  "project": "com.lectureq.LectureQ",
+  "kind": "cardNews",
+  "channel": "인스타그램",
+  "title": "강의 듣다 떠오른 질문, 끝나면 사라지죠",
+  "angle": "인강, 세미나, 대학원 수업을 노트북으로 듣는 사람에게. 강의 중 떠오른 질문을 흘려보내는 아쉬움을 짚고, 단축키 한 번으로 남겨 두었다가 배운 점으로 정리하는 흐름을 보여 준다.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [
+   {
+    "id": "4c477230-2f25-54bb-bf00-ab2e970b1fac",
+    "headline": "그때 뭐 물어보려 했지",
+    "text": "강의 중엔 분명 궁금했는데\n끝나고 나면 기억이 안 나죠"
+   },
+   {
+    "id": "85dca81c-5583-5bde-988a-4caa75a0e301",
+    "headline": "질문은 흐름을 끊어요",
+    "text": "적으려고 메모 앱을 열면\n그 사이 강의는 저만치 가 있고"
+   },
+   {
+    "id": "aae1f3bb-e3f9-5660-ac35-182e80cd83d5",
+    "headline": "단축키 한 번이면",
+    "text": "Command Shift N 으로 바로 입력\n시점은 지금 시각으로 자동으로 채워져요"
+   },
+   {
+    "id": "5ae26910-5798-54ef-bc7d-2dc4025a065d",
+    "headline": "그 시점 메모 옆에",
+    "text": "강의를 시간 블록으로 나눠 메모하고\n질문은 그 시점 블록 옆에 표시돼요"
+   },
+   {
+    "id": "f4e0df3b-522d-5c39-b7e7-8a04127031ec",
+    "headline": "꼬리질문과 AI 프롬프트",
+    "text": "원질문 아래 꼬리질문이 쌓이고\n강의 이름과 메모를 채운 프롬프트를 복사해요"
+   },
+   {
+    "id": "6a3a4801-519e-56f6-b632-a26373fab003",
+    "headline": "배운 점으로 정리",
+    "text": "내 말로 정리한 답이 배운 점이 되고\n요약 화면에서 복습 노트처럼 읽어요"
+   },
+   {
+    "id": "572c01f8-03ee-5c11-a4d9-4fdba0ff7d14",
+    "headline": "질문노트",
+    "text": "강의 중 궁금증을 배운 점으로\nMac 에서 무료로 써 보세요"
+   }
+  ],
+  "script": "",
+  "body": "강의 듣다 떠오른 질문, 끝나고 나면 기억 안 나는 거 저만 그런가요.\n\n질문노트는 Command Shift N 한 번으로 질문을 남기면 그 시점의 메모 옆에 쌓아 두고, 나중에 꼬리질문과 AI 프롬프트로 답을 찾아 배운 점으로 정리하게 해 주는 Mac 앱이에요. 계정 없이, 기록은 내 Mac 에만 저장돼요.\n\nMac App Store 에서 질문노트 를 검색해 보세요.\n\n#공부기록 #인강 #공부노트 #대학원생 #자격증공부 #복습 #맥북 #스터디 #강의필기 #공스타그램",
+  "theme": 0
+ },
+ {
+  "id": "e3aa1f26-2fe1-5486-ad72-064c8d1696d7",
+  "project": "com.lectureq.LectureQ",
+  "kind": "video",
+  "channel": "유튜브 쇼츠",
+  "title": "강의 중 질문, 단축키 한 번으로",
+  "angle": "강의 영상을 틀어 둔 채 단축키로 질문을 남기는 순간으로 멈춰 세운다. Mac 화면 녹화만으로 찍을 수 있게.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "[0-2초] 화면: 강의 영상 재생 중 Command Shift N 을 누르자 입력 창이 뜸 / 자막: 강의 중 궁금하면 이 키 / 내레이션: 강의 듣다 궁금하면, 이 키 하나.\n[2-7초] 화면: 질문을 적자 시점이 지금 시각으로 채워지고 Return 으로 저장 / 자막: 시점은 자동으로 / 내레이션: 시점은 알아서 채워지고, 바로 강의로 돌아가요.\n[7-12초] 화면: 타임블록 메모 옆에 물음표 표시가 생김, 누르면 그 질문으로 이동 / 자막: 그 시점 메모 옆에 / 내레이션: 질문은 그때 적던 메모 옆에 남아요.\n[12-18초] 화면: 질문 상세에서 답 찾기 프롬프트 복사, 쓰던 AI 채팅에 붙여 넣기 / 자막: 강의 맥락 채운 프롬프트 복사 / 내레이션: 답 찾기 프롬프트에는 강의 이름과 그 시점 메모가 채워져 있어요.\n[18-23초] 화면: 꼬리질문이 들여쓰기로 쌓이고 그래프 화면으로 전환 / 자막: 꼬리질문은 그래프로 / 내레이션: 꼬리질문이 어떻게 뻗어 갔는지 그래프로 보고,\n[23-27초] 화면: 강의 요약 화면, 던질 질문과 배운 점 / 자막: 복습 노트처럼 / 내레이션: 요약 화면에서 배운 점만 모아 복습해요.\n[27-30초] 화면: 앱 아이콘과 이름 / 자막: Mac App Store 에서 질문노트 / 내레이션: 질문노트, 무료예요.",
+  "body": "제목: 강의 중 떠오른 질문, 단축키 한 번으로 남기기\n설명: Command Shift N 으로 질문을 남기면 그 시점 메모 옆에 쌓이고, 꼬리질문과 AI 프롬프트로 답을 찾아 배운 점으로 정리하는 Mac 앱 질문노트. #공부 #인강 #shorts",
+  "theme": 0
+ },
+ {
+  "id": "a55e7eb6-13bf-5bd7-9bcd-9e913a315f84",
+  "project": "com.lectureq.LectureQ",
+  "kind": "post",
+  "channel": "스레드",
+  "title": "강의 끝나고 질문이 기억 안 날 때",
+  "angle": "강의 중 질문을 놓치는 경험에 공감하게 하고, 앱을 소개한다.",
+  "plannedAt": "2026-11-23T01:00:00Z",
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "인강이든 세미나든, 듣다 보면 궁금한 게 생기는데\n적으려고 하면 흐름이 끊기고, 안 적으면 끝나고 나서 기억이 안 나요.\n\n요즘은 질문노트라는 Mac 앱에 Command Shift N 으로 바로 남겨요. 시점이 자동으로 찍혀서 그때 적던 메모 옆에 붙어 있고, 나중에 답 찾기 프롬프트를 복사해서 쓰던 AI 에 물어본 다음 내 말로 정리하면 배운 점이 돼요.\n\nhttps://apps.apple.com/kr/app/id6794597095",
+  "theme": 0
+ },
+ {
+  "id": "df66b4cd-77e5-525d-9368-c553061e78a3",
+  "project": "com.lectureq.LectureQ",
+  "kind": "post",
+  "channel": "X",
+  "title": "강의 질문을 배운 점으로",
+  "angle": "기능을 짧게 나열.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "Mac 학습 노트 질문노트\n\nCommand Shift N 으로 빠른 질문, 시점 자동 기록\n타임블록 메모 옆에 질문 표시\n원질문 아래 꼬리질문, 미해결만 모아 보기\nAI 프롬프트 5단계 복사 (앱은 외부로 보내지 않음)\n요약, 그래프, 타임블록 모아보기\n계정 없음, 기록은 내 Mac 에만\n\nhttps://apps.apple.com/kr/app/id6794597095",
+  "theme": 0
+ },
+ {
+  "id": "4d7ea0a0-5f92-58f5-b413-a2c1d39f3834",
+  "project": "com.lectureq.LectureQ",
+  "kind": "post",
+  "channel": "디스콰이엇",
+  "title": "강의 중 떠오른 질문을 배운 점으로 바꾸는 Mac 앱을 만들었습니다",
+  "angle": "1인 개발자로서 만든 이유, 하는 일, 듣고 싶은 피드백을 담백하게.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "안녕하세요, 혼자 앱을 만드는 개발자입니다.\n\n만든 이유\n강의를 들을 때 제일 많이 놓치는 게 질문이었습니다. 듣는 중에는 흐름이 끊길까 봐 안 적고, 끝나고 나면 무엇이 궁금했는지 기억이 안 났어요. 질문을 적어 두더라도 어느 대목에서 나온 질문인지가 남지 않아 다시 보기 어려웠습니다.\n\n하는 일\n질문노트는 Command Shift N 으로 입력 창을 띄워 질문을 바로 남기고, 시점은 지금 시각으로 자동으로 채웁니다. 강의를 시간 블록으로 나눠 메모하면 질문이 그 시점 블록 옆에 표시됩니다. 원질문 아래로 꼬리질문이 쌓이고, 해결과 미해결이 색으로 구분됩니다. 답을 찾을 때는 질문 다듬기, 답 찾기, 답 되묻기, 꼬리질문 뽑기, 내 답 채점받기 다섯 단계 프롬프트를 강의 이름과 그 시점 메모를 채워 클립보드에 복사해 줍니다. 앱이 직접 외부로 보내는 것은 없습니다. 강의 요약, 질문 그래프, 타임블록 모아보기, 학습 상태 비교, 대화 마크다운 가져오기도 있습니다. 계정 없이 기록은 Mac 안에만 저장됩니다.\n\n부탁드려요\n실제 강의를 들으며 써 보고, 질문을 남기는 흐름이 강의를 방해하지 않는지 알려 주시면 큰 도움이 됩니다. 무료입니다.\n\nhttps://apps.apple.com/kr/app/id6794597095",
+  "theme": 0
+ },
+ {
+  "id": "730bbc3a-f431-57f5-a6fc-ff62a381f381",
+  "project": "com.lectureq.LectureQ",
+  "kind": "post",
+  "channel": "네이버 블로그",
+  "title": "인강 들으면서 생긴 질문 정리하는 법, Mac 앱 질문노트 사용기",
+  "angle": "강의를 들으며 공부하는 사람이 검색해서 들어왔을 때, 강의 전부터 복습까지 쓰는 순서대로 보여 준다.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "강의 중 질문은 왜 사라질까\n\n인강이나 세미나를 들을 때 궁금한 게 생겨도, 적으려고 다른 창을 여는 순간 흐름이 끊깁니다. 그래서 일단 넘기면 강의가 끝났을 때는 무엇이 궁금했는지 기억이 나지 않죠. 적어 두었더라도 어느 대목에서 나온 질문인지 남아 있지 않으면 다시 보기 어렵습니다.\n\n듣는 중에는 단축키 한 번\n\n질문노트에서는 Command Shift N 을 누르면 질문 입력 창이 뜹니다. 시점은 지금 시각으로 자동으로 채워지고, Return 으로 저장하거나 Command Return 으로 저장하고 바로 다음 질문을 적을 수 있어요. 강의는 여러 시간 블록으로 나눠 블록마다 메모하는데, 질문은 그 시점에 맞춰 블록 옆에 표시되고 누르면 바로 그 질문으로 이동합니다. 블록 밖 시각에 질문을 남기면 블록이 알아서 추가됩니다.\n\n듣고 나서는 답 찾기\n\n질문 목록에는 원질문 아래로 꼬리질문이 들여쓰기로 쌓이고, 아직 풀지 못한 질문과 해결한 질문이 색으로 구분됩니다. 미해결만 모아 볼 수도 있어요. 답을 찾을 때는 질문 다듬기, 답 찾기, 답 되묻기, 꼬리질문 뽑기, 내 답 채점받기 다섯 단계 프롬프트를 복사해 쓰던 AI 서비스에 붙여 넣으면 됩니다. 프롬프트에는 강의 이름과 그 시점의 메모가 채워져 있어서 맥락을 다시 설명할 필요가 없습니다. 앱이 직접 외부로 보내는 것은 없어요.\n\n복습은 한눈에\n\n강의 요약에서는 던질 질문과 배운 점, 메모만 모아 복습 노트처럼 읽습니다. 그래프에서는 원질문에서 꼬리질문으로 생각이 어떻게 뻗어 갔는지 보고, 타임블록 모아보기에서는 언제 무엇을 배웠는지 시간순으로 훑어봅니다. 강의 전의 나와 강의 후 되고 싶은 나를 적어 두고 비교하는 학습 상태 화면도 있습니다.\n\n계정이 없고 모든 기록은 내 Mac 안에만 저장됩니다. macOS 14 이상에서 무료로 쓸 수 있으니, 다음 강의에서 한 번 써 보세요.\n\nhttps://apps.apple.com/kr/app/id6794597095",
+  "theme": 0
+ },
+ {
+  "id": "acd1833b-ab8b-5ff2-891d-8d952e077c96",
+  "project": "com.lectureq.LectureQ",
+  "kind": "post",
+  "channel": "레딧",
+  "title": "I kept forgetting the questions I had during lectures, so I built a small Mac app to capture them with one shortcut",
+  "angle": "r/macapps, r/GetStudying 류에 맞게 경험담 위주로. 화면이 한국어 위주라는 점은 밝힌다.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "When I watch lectures or seminars I always get questions halfway through, but writing them down breaks the flow, and by the end I can't remember what I wanted to ask or which part it came from.\n\nSo I made a small Mac app. Press Command Shift N and a capture box pops up with the current time already filled in. You take notes in time blocks, and each question shows up next to the block it belongs to. Follow up questions nest under the original, and unresolved ones are marked so you can filter them.\n\nWhen you're ready to dig in, it copies a prompt to your clipboard (refine the question, find an answer, push back on the answer, generate follow ups, grade my answer) with the lecture name and the notes from that moment already filled in, so you can paste it into whatever AI chat you use. The app itself doesn't send anything anywhere. There is also a summary view, a question graph, and a timeline view for review. No account, everything stays on your Mac.\n\nCaveat: the interface is mostly in Korean for now. It's free on the Mac App Store, macOS 14 or later.\n\nhttps://apps.apple.com/kr/app/id6794597095",
+  "theme": 0
+ },
+ {
+  "id": "57ea2702-d837-541c-af1c-7bb304e3160e",
+  "project": "com.ysoup.RoutineCamera",
+  "kind": "cardNews",
+  "channel": "인스타그램",
+  "title": "식단 기록, 사흘 넘겨 본 적 있어요?",
+  "angle": "식단 앱을 깔았다가 사흘 만에 지운 사람에게. 칼로리를 적는 대신 먹기 전에 사진 한 장만 찍으면 되고, 한 끼만 남겨도 기록이 끊기지 않는다는 걸 보여 준다. 이번엔 해볼 만하겠다는 느낌을 남긴다.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [
+   {
+    "id": "96079edf-80b3-5a03-88a3-c0e3039eb427",
+    "headline": "식단 기록, 또 사흘?",
+    "text": "음식 이름 검색하고 양 고르다가\n어느 날부터 앱을 안 열게 되죠."
+   },
+   {
+    "id": "969d0de3-3e9f-5bcd-a79c-dfd75754a127",
+    "headline": "적지 말고 찍기만",
+    "text": "먹기 전에 사진 한 장.\n찍은 시각을 보고 아침, 점심, 저녁, 간식으로\n알아서 나눠 담아요."
+   },
+   {
+    "id": "fb803aed-cee8-54a8-9294-31858203f042",
+    "headline": "다 먹으면 톡 한 번",
+    "text": "식전 사진을 찍어 두면 알림이 와요.\n앱을 열지 않고도 다 먹었다고 남길 수 있어요."
+   },
+   {
+    "id": "ad5c271f-8b6a-51f3-a914-1f7b8cb0d420",
+    "headline": "한 끼만 남겨도 이어져요",
+    "text": "하루에 한 끼만 기록해도 연속 기록이 이어지고\n누적 기록일은 절대 줄지 않아요."
+   },
+   {
+    "id": "5a6e4cb9-0d0b-5b5c-9b4b-e1e1451d2f23",
+    "headline": "친구랑 서로 응원",
+    "text": "친구 코드로 추가하면 서로의 식사와 운동을 보고\n이모지와 댓글로 응원할 수 있어요."
+   },
+   {
+    "id": "931085fb-ce21-53f2-b1b5-9082a5c4efaf",
+    "headline": "세끼",
+    "text": "완벽하지 않아도 이어 가는 사진 식사 일기.\n먹기 전에 한 장이면 충분해요."
+   }
+  ],
+  "script": "",
+  "body": "식단 기록이 늘 사흘을 못 넘겼다면, 적는 게 힘들어서일지도 몰라요.\n\n세끼는 먹기 전에 사진 한 장만 찍으면 끝이에요. 찍은 시각을 보고 아침, 점심, 저녁, 간식으로 알아서 나눠 주고, 다 먹으면 알림에서 톡 한 번이면 식후까지 남아요. 하루에 한 끼만 남겨도 연속 기록이 이어지고 누적 기록일은 줄지 않아요.\n\n앱스토어에서 세끼 검색\n\n#식단기록 #식단일기 #다이어트기록 #식사일기 #오운완 #습관만들기 #집밥 #다이어트 #앱추천 #아이폰앱",
+  "theme": 1
+ },
+ {
+  "id": "203fb018-90e1-56d5-a6d9-9620fcdc52d5",
+  "project": "com.ysoup.RoutineCamera",
+  "kind": "video",
+  "channel": "유튜브 쇼츠",
+  "title": "식단 기록이 3초에 끝나는 법",
+  "angle": "식단 기록을 귀찮아하는 사람에게 실제로 걸리는 시간을 그대로 보여 준다. 찍고, 알림에서 톡, 끝. 화면 녹화만으로 찍을 수 있게 구성.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "[0-2초] 화면: 점심 식판을 위에서 찍는 손 / 자막: 식단 기록, 이게 끝이에요 / 내레이션: 식단 기록, 이게 다예요.\n[2-7초] 화면: 세끼 카메라로 촬영, 점심 칸에 사진이 들어가는 모습 / 자막: 찍은 시각 보고 점심으로 알아서 / 내레이션: 먹기 전에 한 장 찍으면 찍은 시각을 보고 점심으로 알아서 넣어 줘요.\n[7-13초] 화면: 잠금화면에 뜬 알림, 앱을 열지 않고 다 먹었어요를 누르는 장면 / 자막: 다 먹으면 알림에서 톡 / 내레이션: 다 먹고 나면 알림이 와요. 앱 안 열고 여기서 톡.\n[13-19초] 화면: 시간순으로 쌓인 기록 화면 스크롤 / 자막: 빈칸 없이 쌓이는 식사 일기 / 내레이션: 그러면 하루가 빈칸 없이 시간순으로 쌓여요.\n[19-25초] 화면: 연속 기록과 누적 기록일 화면 / 자막: 한 끼만 남겨도 이어져요 / 내레이션: 바쁜 날 한 끼만 남겨도 연속 기록은 이어지고, 누적 기록일은 절대 안 줄어요.\n[25-30초] 화면: 친구 피드에 달린 이모지와 댓글, 마지막에 앱 아이콘 / 자막: 세끼, 먹기 전에 한 장 / 내레이션: 친구랑 서로 응원도 하고요. 세끼였어요.",
+  "body": "식단 기록이 3초에 끝나는 법 | 먹기 전에 사진 한 장, 다 먹으면 알림에서 톡. 한 끼만 남겨도 이어지는 사진 식사 일기 세끼. 앱스토어에서 세끼 검색 #식단기록 #다이어트 #shorts",
+  "theme": 1
+ },
+ {
+  "id": "affb8362-cc7e-5395-9801-24d05c4f4e1c",
+  "project": "com.ysoup.RoutineCamera",
+  "kind": "post",
+  "channel": "스레드",
+  "title": "식단 기록이 늘 끊기는 이유",
+  "angle": "식단 기록에 몇 번 실패한 사람의 공감을 끌어낸다. 실패의 원인이 의지가 아니라 기록 방식이라는 쪽으로 시선을 돌린다.",
+  "plannedAt": "2026-11-24T01:00:00Z",
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "식단 기록이 늘 끊기는 건 의지 문제가 아니었던 것 같아요.\n\n음식 이름 찾고, 양 고르고, 하루 빠지면 연속 기록이 0으로 돌아가고. 그 순간 그냥 그만두게 되더라고요.\n\n그래서 기록을 사진 한 장으로 줄였어요. 먹기 전에 찍으면 시각을 보고 끼니를 알아서 나누고, 다 먹으면 알림에서 한 번 누르면 끝. 하루에 한 끼만 남겨도 이어지고, 쌓인 날짜는 줄지 않아요.\n\n완벽하게 말고 꾸준히 해 보고 싶은 분들께.\n세끼 https://apps.apple.com/kr/app/id6755164924",
+  "theme": 1
+ },
+ {
+  "id": "bc2f8c95-0526-5e73-adbf-55b6964e14a7",
+  "project": "com.ysoup.RoutineCamera",
+  "kind": "post",
+  "channel": "X",
+  "title": "앱을 안 열어도 끝나는 식사 기록",
+  "angle": "기능 하나하나를 짧게. 앱을 열지 않고도 기록이 되는 경로(알림, 액션 버튼, Siri, 단축어, 위젯)를 중심으로.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "사진 식사 일기 세끼에서 제일 많이 쓰는 기능\n\n먹기 전 사진 한 장, 끼니는 시각 보고 자동 분류\n다 먹으면 알림에서 바로 식후 기록\n액션 버튼, Siri, 단축어로도 기록\n홈 화면 위젯에서 오늘 기록 확인\n사진 속 음식은 기기 안에서 분석, 사진이 밖으로 안 나가요\n\nhttps://apps.apple.com/kr/app/id6755164924",
+  "theme": 1
+ },
+ {
+  "id": "a58b456b-b19b-52d6-a2be-667d9a9c4201",
+  "project": "com.ysoup.RoutineCamera",
+  "kind": "post",
+  "channel": "디스콰이엇",
+  "title": "식단 기록을 사흘 넘기지 못해서 만든 사진 식사 일기, 세끼",
+  "angle": "1인 개발자로서 만든 이유를 솔직하게. 무엇을 일부러 빼고 넣었는지(달성률 대신 기록한 날 수, 끊기지 않는 연속 기록)를 설명하고 피드백을 구한다.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "안녕하세요, 혼자 iOS 앱을 만드는 개발자입니다.\n\n만든 이유\n식단 앱을 몇 번 깔았는데 늘 사흘을 못 갔어요. 음식 이름을 찾아 적는 게 귀찮았고, 하루 빠지면 연속 기록이 0이 되는 순간 그만두게 되더라고요. 그래서 기록을 최대한 줄이고, 놓쳐도 덜 아프게 만들어 보자는 생각으로 세끼를 만들었습니다.\n\n하는 일\n먹기 전에 사진 한 장을 찍으면 찍은 시각을 보고 아침, 점심, 저녁, 간식으로 나눠 담습니다. 식전 사진을 찍어 두면 알림이 와서 앱을 열지 않고 식후를 남길 수 있고, 액션 버튼과 Siri, 단축어, 위젯도 됩니다. 하루에 한 끼만 남겨도 연속 기록이 이어지고 누적 기록일은 줄지 않습니다. 통계도 달성률 대신 며칠, 몇 끼 기록했는지를 보여 줍니다. 친구 코드로 서로의 식사와 운동을 보며 이모지와 댓글로 응원할 수 있고, 사진 속 음식 분석은 기기 안에서 합니다.\n\n피드백 부탁드려요\n기록이 끊기지 않게 하려고 넣은 장치들이 실제로 도움이 되는지, 처음 쓸 때 막히는 곳은 없는지 궁금합니다. 써 보시고 편하게 말씀해 주세요.\n\nhttps://apps.apple.com/kr/app/id6755164924",
+  "theme": 1
+ },
+ {
+  "id": "0f4b608f-9970-5b3d-abcb-a46a66202531",
+  "project": "com.ysoup.RoutineCamera",
+  "kind": "post",
+  "channel": "네이버 블로그",
+  "title": "식단 기록 사흘 만에 포기하던 내가 매일 남기게 된 방법, 사진 식사 일기 세끼",
+  "angle": "식단 기록에 실패해 본 사람이 검색으로 들어왔을 때 읽는 글. 실패 이유 공감에서 시작해 쓰는 하루를 따라가며 기능을 자연스럽게 보여 준다.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "식단 기록이 늘 사흘이었던 이유\n\n다이어트를 시작할 때마다 식단 앱부터 깔았어요. 그런데 매번 사흘을 못 넘겼습니다. 먹은 음식을 하나하나 찾아 적는 게 생각보다 귀찮았고, 바쁜 날 하루를 빼먹으면 연속 기록이 사라지면서 의욕도 같이 사라졌어요.\n\n적는 대신 찍기만\n\n세끼는 기록을 사진 한 장으로 줄인 식사 일기예요. 먹기 전에 사진을 찍으면 찍은 시각을 보고 아침, 점심, 저녁, 간식으로 알아서 나눠 담아 줍니다. 사진 없이 남기는 기록이나 메모도 가능하고, 기록은 시간순으로 쌓여서 하루가 한눈에 보여요.\n\n앱을 열지 않아도 되는 순간들\n\n식전 사진을 찍어 두면 식사가 끝날 즈음 알림이 와요. 알림에서 바로 다 먹었다고 남길 수 있어서 앱을 다시 열 필요가 없습니다. 액션 버튼이나 Siri, 단축어로도 기록할 수 있고, 홈 화면 위젯으로 오늘 기록을 확인할 수 있어요.\n\n놓쳐도 줄지 않는 기록\n\n제일 마음에 드는 부분은 이거예요. 하루에 한 끼만 남겨도 연속 기록이 이어지고, 누적 기록일은 절대 줄어들지 않아요. 주간과 월간 통계도 달성률 대신 며칠, 몇 끼를 기록했는지 보여 줘서 못 한 날보다 한 날이 먼저 보입니다.\n\n친구와 함께, 운동도 함께\n\n친구 코드로 친구를 추가하면 서로의 식사와 운동 기록을 보고 이모지와 댓글로 응원할 수 있어요. 운동 기록은 식단과 따로 모이고, 운동 앨범에서 이번 달 운동 횟수까지 볼 수 있습니다. 사진 속 음식 분석은 기기 안에서 이뤄져서 사진이 휴대폰 밖으로 나가지 않아요.\n\n마무리\n\n완벽한 식단 관리보다 꾸준한 기록이 먼저라고 생각하는 분께 추천해요. 앱스토어에서 세끼를 검색하거나 아래 링크로 받아 보세요.\n\nhttps://apps.apple.com/kr/app/id6755164924",
+  "theme": 1
+ },
+ {
+  "id": "922834f8-4939-55d3-9a6e-63dc18cf117f",
+  "project": "com.ysoup.RoutineCamera",
+  "kind": "post",
+  "channel": "레딧",
+  "title": "I kept quitting food logging apps, so I built one where a photo is the whole entry",
+  "angle": "r/iphone, r/apps 대상. 만든 사람의 경험담으로 담담하게, 기능은 짧게. 스토어 페이지가 한국어라는 점을 미리 밝힌다.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "Every food logging app I tried died on day three. Searching for each dish and picking portions was the chore, and one missed day reset my streak to zero.\n\nSo I made Three Meals (세끼) for myself. You take one photo before you eat and it files it as breakfast, lunch, dinner or a snack based on the time. If you took a before photo, a notification lets you mark the meal as finished without opening the app. You can also log from the Action button, Siri, Shortcuts, and check today on a widget.\n\nThe part I cared about most: logging just one meal a day keeps the streak going, and the total days logged never goes down. Stats show how many days and meals you logged, not a completion percentage. Food recognition runs on device, so photos stay on the phone. There is also a friend code feature to cheer each other on.\n\nHeads up, the App Store page is in Korean for now. Happy to hear what feels off.\n\nhttps://apps.apple.com/us/app/id6755164924",
+  "theme": 1
+ },
+ {
+  "id": "00d1a69d-c56a-598f-80bb-c9bc9bd8aec4",
+  "project": "com.leeo.SkyDex",
+  "kind": "cardNews",
+  "channel": "인스타그램",
+  "title": "오늘 하늘, 무슨 색이었어요?",
+  "angle": "하늘 사진을 자주 찍지만 사진첩에 묻어 두는 사람에게. 하늘을 색으로 모으는 판이 있다는 것, 흐린 날 회색도 그날의 하늘색으로 인정된다는 것을 보여 준다. 오늘 한 번 올려다보고 싶게 만든다.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [
+   {
+    "id": "6e78a275-2f01-5af0-bb58-e17e025400d8",
+    "headline": "오늘 하늘, 무슨 색?",
+    "text": "분명 봤는데 말로 하려면\n잘 안 떠오르죠."
+   },
+   {
+    "id": "934713c3-c0d5-5298-8462-7f49853118c5",
+    "headline": "하늘을 색으로 모아요",
+    "text": "마흔여덟 칸의 판이 있고\n찍은 하늘의 색으로 한 칸씩 채워져요."
+   },
+   {
+    "id": "f78171db-560d-5a66-960a-e91c627be93d",
+    "headline": "흐린 날도 정답",
+    "text": "통과도 실패도 없어요.\n흐린 날의 회색도 그날의 하늘색이에요."
+   },
+   {
+    "id": "f133e572-3f55-5e58-8300-0bf1f3ce46e2",
+    "headline": "색에 이름이 붙어요",
+    "text": "물에 젖은 청바지색 같은 비유가 먼저,\n한국 전통색 같은 출처 있는 이름이 그 밑에."
+   },
+   {
+    "id": "3a556651-e407-5065-8769-b17d7fe1e85b",
+    "headline": "칸은 천천히 옅어져요",
+    "text": "일주일은 제 색 그대로, 그 뒤 천천히 흐려져요.\n다시 찍으면 바로 제 색으로 돌아와요."
+   },
+   {
+    "id": "66bf678c-1760-5db5-b37a-ac94ed2296b9",
+    "headline": "하늘색",
+    "text": "하루의 하늘을 색으로 모으는 앱.\n오늘 한 번 올려다보세요."
+   }
+  ],
+  "script": "",
+  "body": "하늘 사진은 많이 찍는데 다시 볼 일은 별로 없더라고요.\n\n하늘색은 찍은 하늘을 색으로 모아 마흔여덟 칸 판을 채우는 앱이에요. 흐린 날 회색도 그대로 들어가고, 찍은 색에는 물에 젖은 청바지색 같은 이름이 붙어요. 채운 칸은 시간이 지나면 천천히 옅어지는데, 다시 찍으면 금방 제 색으로 돌아와요.\n\n앱스토어에서 하늘색 검색\n\n#하늘 #하늘사진 #오늘의하늘 #하늘스타그램 #색감 #하늘색 #일상기록 #감성앱 #앱추천 #아이폰앱",
+  "theme": 2
+ },
+ {
+  "id": "d92a5d02-ecc3-5f73-b586-59c9dcf6e348",
+  "project": "com.leeo.SkyDex",
+  "kind": "video",
+  "channel": "유튜브 쇼츠",
+  "title": "하늘 사진 한 장이 색 이름이 되는 순간",
+  "angle": "하늘을 찍으면 판의 칸이 채워지고 색 이름이 뜨는 장면 하나로 멈춰 세운다. 화면 녹화와 하늘 촬영만으로 찍을 수 있다.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "[0-2초] 화면: 하늘을 향해 든 폰, 정사각 뷰파인더 / 자막: 이 하늘, 무슨 색일까 / 내레이션: 지금 이 하늘, 무슨 색일까요.\n[2-7초] 화면: 셔터를 누르고 카드가 올라오며 색 이름이 보이는 장면 / 자막: 찍으면 색 이름이 붙어요 / 내레이션: 찍으면 이렇게 색에 이름이 붙어요. 보이는 비유가 먼저, 출처 있는 이름이 아래에.\n[7-13초] 화면: 카드 아래 빈 자리에 한 줄을 쓰는 손 / 자막: 하늘 아래서 한 마디 / 내레이션: 아직 그 하늘 아래 있을 때 한 마디 남기고요.\n[13-20초] 화면: 마흔여덟 칸 판, 방금 찍은 칸이 채워져 있음 / 자막: 마흔여덟 칸을 하늘로 채워요 / 내레이션: 판에는 마흔여덟 가지 하늘색이 있고, 찍은 하늘이 한 칸씩 채워요. 흐린 날 회색도 그대로 들어가요.\n[20-26초] 화면: 오래된 칸이 옅어진 모습, 칸을 눌러 같은 시간대 예전 사진들 / 자막: 오래된 칸은 천천히 옅어져요 / 내레이션: 오래된 칸은 천천히 옅어지고, 누르면 그 시간대에 찍었던 하늘들이 나와요.\n[26-30초] 화면: 잠금화면 위젯, 앱 아이콘 / 자막: 하늘색 / 내레이션: 하루의 하늘을 색으로 모으는 앱, 하늘색이었어요.",
+  "body": "하늘 사진 한 장이 색 이름이 되는 순간 | 찍은 하늘로 마흔여덟 칸 판을 채우는 앱 하늘색. 흐린 날도 그날의 색이에요. 앱스토어에서 하늘색 검색 #하늘 #하늘사진 #shorts",
+  "theme": 2
+ },
+ {
+  "id": "b474b77d-93dc-50b3-b87f-43bf4689a304",
+  "project": "com.leeo.SkyDex",
+  "kind": "post",
+  "channel": "스레드",
+  "title": "하늘 사진, 찍고 나서 다시 본 적 있나요",
+  "angle": "사진첩에 쌓이기만 하는 하늘 사진 이야기로 공감을 얻고, 모으는 방식을 바꿔 보자고 권한다.",
+  "plannedAt": "2026-11-25T01:00:00Z",
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "하늘 사진은 하루에도 몇 번씩 찍는데, 사진첩에서 다시 꺼내 본 적은 거의 없더라고요. 영수증이랑 캡처 사이 어딘가에 묻혀 있어요.\n\n그래서 하늘을 사진이 아니라 색으로 모으는 앱을 만들었어요. 찍으면 그 색으로 판의 한 칸이 채워지고, 색에는 이름이 붙어요. 흐린 날 회색도 실패가 아니라 그날의 하늘색이에요.\n\n오늘 한 번 올려다볼 이유가 하나 생기는 정도의 앱이에요.\n하늘색 https://apps.apple.com/kr/app/id6802295390",
+  "theme": 2
+ },
+ {
+  "id": "4546ef7d-7922-5538-8a2e-5e6dda34fe66",
+  "project": "com.leeo.SkyDex",
+  "kind": "post",
+  "channel": "X",
+  "title": "하늘색에서 할 수 있는 것",
+  "angle": "짧은 기능 목록. 판, 색 이름, 옅어지는 칸, 위젯, 계정 없음.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "하늘을 색으로 모으는 앱 하늘색\n\n정사각 카메라로 찍으면 하늘색이 뽑혀 마흔여덟 칸 판을 채움\n판정 없음, 흐린 날 회색도 그대로\n색 이름은 일상 비유 + 전통색·和色 같은 출처 있는 이름\n채운 칸은 일주일 뒤 천천히 옅어지고 다시 찍으면 돌아옴\n위젯으로 오늘의 판, 잠금화면에 오늘의 하늘\n계정 없음, 광고·추적 없음\n\nhttps://apps.apple.com/kr/app/id6802295390",
+  "theme": 2
+ },
+ {
+  "id": "f8df7fc1-ce60-5aab-a448-f9fc0209e64b",
+  "project": "com.leeo.SkyDex",
+  "kind": "post",
+  "channel": "디스콰이엇",
+  "title": "하늘 사진을 색으로 모으는 앱, 하늘색을 만들었습니다",
+  "angle": "수집형 앱인데 벌이나 연속 기록이 없는 이유, 판정이 없는 이유를 만든 사람의 고민으로 풀어 낸다. 첫인상과 판의 재미에 대한 피드백을 구한다.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "안녕하세요, 혼자 iOS 앱을 만들고 있습니다.\n\n만든 이유\n하늘 사진을 자주 찍는데 사진첩에 쌓이기만 하고 다시 보지 않더라고요. 하늘을 사진 묶음이 아니라 색의 모음으로 남기면 다르게 보일까 싶어서 하늘색을 만들었습니다.\n\n하는 일\n정사각 카메라로 하늘을 찍으면 사진에서 하늘색을 뽑아 마흔여덟 칸 판의 한 칸을 채웁니다. 판정이나 허용 오차가 없어서 흐린 날 회색도 그대로 들어갑니다. 색에는 물에 젖은 청바지색 같은 일상 비유와 한국 전통색, 和色 같은 출처 있는 이름이 함께 붙습니다. 채운 칸은 일주일 동안 제 색이다가 이후 천천히 옅어지고, 같은 시각 하늘을 다시 찍으면 돌아옵니다. 지워지거나 끊기는 연속 기록은 없습니다. 찍은 직후에는 그 하늘에 대한 한 마디를 남기는 카드가 먼저 뜨고, 위젯으로 오늘의 판을 볼 수 있습니다. 계정은 없습니다.\n\n피드백 부탁드려요\n판을 채우는 게 재미있게 느껴지는지, 처음 열었을 때 무엇을 해야 할지 바로 보이는지 궁금합니다.\n\nhttps://apps.apple.com/kr/app/id6802295390",
+  "theme": 2
+ },
+ {
+  "id": "529abe04-11c4-559a-bd67-9e8d0a9349db",
+  "project": "com.leeo.SkyDex",
+  "kind": "post",
+  "channel": "네이버 블로그",
+  "title": "하늘 사진을 색으로 모으는 앱, 하늘색 사용기",
+  "angle": "하늘 사진을 좋아하는 사람이 검색으로 들어와 읽는 글. 찍는 순간부터 판이 채워지고 칸이 옅어지는 흐름을 따라간다.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "하늘 사진, 찍고 끝이었던 사람\n\n퇴근길에 하늘이 예쁘면 꼭 한 장씩 찍어요. 그런데 그 사진들을 다시 열어 본 적은 거의 없습니다. 사진첩 어딘가에 캡처와 영수증 사이로 묻혀 버리죠. 하늘색은 그런 사진을 색으로 바꿔서 모아 두는 앱이에요.\n\n마흔여덟 칸의 판\n\n앱을 열면 마흔여덟 개의 구슬이 놓인 판이 있어요. 구슬 하나가 하늘색 하나예요. 정사각 카메라로 하늘을 찍으면 사진에서 하늘색을 뽑아 가장 가까운 칸을 채웁니다. 꽉 찬 원은 찍은 하늘, 가운데가 빈 고리는 아직 못 만난 하늘이에요.\n\n판정이 없어요\n\n통과도 실패도 없습니다. 생각과 다른 색이 나와도 그대로 들어가요. 흐린 날의 회색도 그날의 하늘색이니까요. 그래서 날씨가 나쁜 날에도 찍을 이유가 있어요.\n\n색에 붙는 두 가지 이름\n\n찍은 색에는 먼저 눈에 그려지는 비유가 붙어요. 물에 젖은 청바지색, 쌀뜨물색 같은 식이에요. 그 밑에는 한국 전통색, 和色, 안료 이름처럼 출처가 있는 이름이 따라옵니다. 너무 멀면 가장 가까운 이름이라고 솔직하게 말해 줘요.\n\n천천히 옅어지는 칸\n\n채운 칸은 일주일 동안 제 색으로 있다가 그 뒤 여덟 주에 걸쳐 천천히 옅어져요. 지워지지는 않고, 그 시각 하늘을 다시 찍으면 곧바로 제 색으로 돌아옵니다. 끊기는 숫자나 되찾아야 할 연속 기록이 없어서 부담 없이 쓸 수 있어요.\n\n한 마디와 위젯\n\n찍고 나면 사진과 함께 한 마디를 남기는 카드가 먼저 올라와요. 아직 그 하늘 아래 있을 때 쓰는 한 줄이 제일 좋더라고요. 홈 화면 위젯으로 오늘의 판을, 잠금화면에는 오늘의 하늘을 둘 수 있어요. 계정도 로그인도 없습니다.\n\n하늘 보는 걸 좋아한다면 앱스토어에서 하늘색을 검색해 보세요.\n\nhttps://apps.apple.com/kr/app/id6802295390",
+  "theme": 2
+ },
+ {
+  "id": "800ec322-df85-5039-9d15-39f1a6e0ff85",
+  "project": "com.leeo.SkyDex",
+  "kind": "post",
+  "channel": "레딧",
+  "title": "I made a small app that turns sky photos into a 48-color board",
+  "angle": "r/iphone, r/apps 대상. 만든 사람의 작은 프로젝트 소개 톤. 스토어 페이지가 한국어라는 점을 밝힌다.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "I take a lot of sky photos and never look at them again, so I tried collecting the sky as colors instead.\n\nThe app (하늘색, roughly \"Sky Color\") has a board of 48 sky colors. Take a square photo of the sky, it pulls the sky color out of the photo, and the closest spot on the board fills in. There is no pass or fail, so an overcast gray counts too. Each color gets an everyday comparison plus the nearest named color from sources like traditional Korean and Japanese color lists.\n\nFilled spots stay true for a week, then slowly fade over eight weeks. Shoot that time of day again and it comes right back. No streaks, no account, no ads or tracking. There are widgets for today's board and the Lock Screen.\n\nThe App Store page is Korean only right now. Curious whether the idea lands for anyone else.\n\nhttps://apps.apple.com/us/app/id6802295390",
+  "theme": 2
+ },
+ {
+  "id": "10bd553f-0c40-5b9a-b154-3d27bd9c3c90",
+  "project": "com.leeo.slidesnap",
+  "kind": "cardNews",
+  "channel": "인스타그램",
+  "title": "뒷자리에서 찍은 강의 장표, 아직 사진첩에 있죠?",
+  "angle": "강의나 세미나에서 장표를 폰으로 찍는 대학생, 직장인에게. 비스듬하고 흩어진 장표 사진이 반듯하게 펴지고 발표별로 묶이는 장면을 보여 준다. 다음 강의 때 써 보고 싶게 만든다.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [
+   {
+    "id": "8d4beffe-a658-5a26-967d-2ba41439e750",
+    "headline": "장표 사진, 다시 봐요?",
+    "text": "뒷자리에서 비스듬히 찍은 장표,\n셀카랑 영수증 사이에 흩어져 있죠."
+   },
+   {
+    "id": "aeb129ca-6608-5085-b556-35a2777ebbf8",
+    "headline": "찍으면 반듯하게",
+    "text": "네 모서리를 알아서 찾아\n정면에서 본 것처럼 펴고 배경은 잘라요."
+   },
+   {
+    "id": "6f002f52-2c1d-535e-81ad-68556fcd5bdb",
+    "headline": "셔터 소리 없이",
+    "text": "강의 중에도 조용히 찍어요.\n흔들린 컷은 알아서 건너뛰어요."
+   },
+   {
+    "id": "d563a7ff-c882-51ca-8232-80f24a6511eb",
+    "headline": "발표별로 알아서",
+    "text": "이어서 찍은 장표는 발표 하나로 묶여요.\n이미 찍어 둔 사진도 공유하면 정리돼요."
+   },
+   {
+    "id": "bfbe723b-dc0f-52a1-8634-9bb44bc34710",
+    "headline": "단어 하나로 찾기",
+    "text": "장표 속 글자를 인식해 둬서\n기억나는 단어로 몇 주 전 장표를 찾아요."
+   },
+   {
+    "id": "a2014e48-fc97-59ac-8b0f-024bd32668c7",
+    "headline": "장표스냅",
+    "text": "장표만 찍고, 펴고, 모아 두는 카메라.\n복습용 PDF까지 바로 만들어요."
+   }
+  ],
+  "script": "",
+  "body": "강의 장표를 폰으로 찍어 두는데 막상 복습할 땐 못 찾겠더라고요.\n\n장표스냅은 장표 전용 카메라예요. 뒷자리에서 비스듬히 찍어도 반듯하게 펴 주고, 셔터 소리도 안 나요. 이어서 찍은 장표는 발표 하나로 묶이고, 장표 속 글자로 검색도 돼요. 한 장, 두 장, 네 장씩 배치한 복습용 PDF로도 내보낼 수 있어요.\n\n앱스토어에서 장표스냅 검색\n\n#대학생 #강의필기 #공부앱 #세미나 #컨퍼런스 #스터디 #복습 #PDF #앱추천 #아이폰앱",
+  "theme": 3
+ },
+ {
+  "id": "5550b9a2-05e1-5d1f-9722-0a0e176ff511",
+  "project": "com.leeo.slidesnap",
+  "kind": "video",
+  "channel": "유튜브 쇼츠",
+  "title": "비스듬한 강의 장표가 반듯해지는 1초",
+  "angle": "비스듬한 장표가 펴지는 전후 대비로 첫 2초에 멈춰 세운다. 강의실이나 모니터 화면을 찍는 화면 녹화로 구성.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "[0-2초] 화면: 비스듬하게 찍힌 장표 사진이 반듯하게 펴지는 전후 / 자막: 뒷자리에서 찍어도 이렇게 / 내레이션: 뒷자리에서 찍어도 이렇게 돼요.\n[2-8초] 화면: 장표스냅 카메라로 화면을 비추자 초록 테두리가 잡히고 자동 촬영 / 자막: 네 모서리를 알아서 찾아요 / 내레이션: 카메라가 장표 네 모서리를 찾아서 초록색으로 알려 주고, 자동 촬영을 켜 두면 알아서 찍어요.\n[8-12초] 화면: 연속 촬영, 소리 표시 없음 / 자막: 셔터 소리 없이 / 내레이션: 셔터 소리도 없어서 강의 중에도 괜찮아요.\n[12-18초] 화면: 사진 앱에서 여러 장 선택 후 공유, 발표 하나로 정리되는 목록 / 자막: 찍어 둔 사진도 한 번에 / 내레이션: 이미 찍어 둔 사진은 여러 장 골라 공유하면 찍은 순서대로 펴서 발표 하나로 묶어 줘요.\n[18-24초] 화면: 검색창에 단어 입력, 해당 장표가 바로 뜸 / 자막: 단어 하나로 그 장표 / 내레이션: 장표 속 글자로 검색되니까 몇 주 지나도 바로 찾고요.\n[24-30초] 화면: 네 장씩 배치한 PDF 미리보기, 앱 아이콘 / 자막: 장표스냅 / 내레이션: 복습용 PDF까지. 장표스냅이었어요.",
+  "body": "비스듬한 강의 장표가 반듯해지는 1초 | 찍으면 펴지고, 발표별로 묶이고, 글자로 검색되는 장표 전용 카메라 장표스냅. 앱스토어에서 장표스냅 검색 #대학생 #공부 #shorts",
+  "theme": 3
+ },
+ {
+  "id": "cd5d7014-c9de-5aca-85e4-16cba3fd4396",
+  "project": "com.leeo.slidesnap",
+  "kind": "post",
+  "channel": "스레드",
+  "title": "강의 장표 사진이 쓸모없어지는 순간",
+  "angle": "장표를 찍어 놓고 복습 때 못 쓰는 경험에 공감하게 하고, 찍는 순간부터 정리되게 하자는 해법을 건넨다.",
+  "plannedAt": "2026-11-26T01:00:00Z",
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "강의 장표를 열심히 찍어 놓고 시험 전에 찾으려면 꼭 이래요.\n\n비스듬해서 글자가 안 읽히고, 셀카랑 영수증 사이에 흩어져 있고, 어느 강의 장표인지도 모르겠고.\n\n그래서 찍는 순간 정리되는 카메라를 만들었어요. 모서리를 찾아 반듯하게 펴고, 이어 찍은 건 발표 하나로 묶고, 장표 속 글자로 검색까지 돼요. 셔터 소리도 없어요.\n\n장표스냅 https://apps.apple.com/kr/app/id6790835318",
+  "theme": 3
+ },
+ {
+  "id": "a822d4c3-e2eb-5a9f-abad-f02ca2f96c7f",
+  "project": "com.leeo.slidesnap",
+  "kind": "post",
+  "channel": "X",
+  "title": "장표스냅 기능 정리",
+  "angle": "짧은 기능 목록으로 한눈에.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "강의 장표 전용 카메라 장표스냅\n\n네 모서리 실시간 감지, 비스듬해도 반듯하게\n셔터 소리 없음, 흔들린 컷 자동 건너뛰기\n이어 찍은 장표는 발표 하나로 자동 묶음\n사진 앱에서 여러 장 공유하면 찍은 순서대로 정리\n장표 속 글자 검색\n한 장, 두 장, 네 장 배치 복습용 PDF\n위젯 탭하면 바로 카메라\n계정 없이 기기 안에 저장\n\nhttps://apps.apple.com/kr/app/id6790835318",
+  "theme": 3
+ },
+ {
+  "id": "25d3d861-d19f-5075-a09b-87eb4bea4b92",
+  "project": "com.leeo.slidesnap",
+  "kind": "post",
+  "channel": "디스콰이엇",
+  "title": "강의 장표만 찍고 펴고 모으는 카메라, 장표스냅",
+  "angle": "만든 이유와 범위를 일부러 좁힌 이유(문서 스캐너가 아니라 장표 전용)를 설명하고, 가격과 함께 피드백을 구한다.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "안녕하세요, 혼자 iOS 앱을 만드는 개발자입니다.\n\n만든 이유\n세미나와 강의에서 장표를 폰으로 찍으면 늘 비스듬하고, 사진첩에 흩어져서 나중에 쓸 수가 없었어요. 문서 스캐너 앱도 써 봤지만 발표 중에 연달아 찍고 발표 단위로 모아 두는 데는 맞지 않았습니다. 그래서 발표 장표 하나에만 집중한 카메라를 만들었습니다.\n\n하는 일\n카메라가 장표의 네 모서리를 실시간으로 찾아 정면에서 본 것처럼 펴고 배경을 잘라 냅니다. 셔터 소리가 없고 흔들린 컷은 건너뜁니다. 이어서 찍은 장표는 발표 하나로 묶이고, 제목을 붙이거나 순서를 바꾸고 합칠 수 있습니다. 이미 찍어 둔 사진은 사진 앱에서 공유하면 찍은 순서대로 정리됩니다. 장표 속 글자를 인식해 검색할 수 있고, 한 장, 두 장, 네 장씩 배치한 복습용 PDF로 내보냅니다. 계정 없이 기기 안에 저장되고, 가격은 1,100원입니다.\n\n피드백 부탁드려요\n실제 강의실에서 모서리 감지가 잘 맞는지, 발표 묶음 기준이 자연스러운지 궁금합니다.\n\nhttps://apps.apple.com/kr/app/id6790835318",
+  "theme": 3
+ },
+ {
+  "id": "1426550f-f21a-5f6c-a0e2-c60529ab6cef",
+  "project": "com.leeo.slidesnap",
+  "kind": "post",
+  "channel": "네이버 블로그",
+  "title": "강의 장표 정리 앱 장표스냅, 비스듬한 슬라이드 사진을 반듯하게",
+  "angle": "강의 슬라이드 정리 방법을 찾는 대학생, 세미나에 자주 가는 직장인이 검색으로 들어와 읽는 글. 강의 하루를 따라가며 기능을 보여 준다.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "장표 사진이 복습에 쓸모없던 이유\n\n강의 시간에 장표를 폰으로 찍어 두는 분 많죠. 저도 그랬는데 시험 기간에 찾으려고 하면 늘 문제가 있었어요. 뒷자리에서 찍어서 비스듬하고, 사진첩에는 셀카와 영수증 사이에 흩어져 있고, 어느 강의의 어느 장표인지 기억도 안 났어요.\n\n찍으면 반듯하게\n\n장표스냅은 발표 장표만 찍고, 펴고, 모아 두는 카메라예요. 카메라를 장표에 대면 네 모서리를 실시간으로 찾아서 초록색으로 알려 줘요. 옆자리에서 비스듬히 찍어도 정면에서 본 것처럼 펴서 저장하고 배경은 잘라 냅니다. 자동 촬영을 켜 두면 잡히는 순간 알아서 찍어요.\n\n강의 중에도 조용히\n\n셔터 소리가 나지 않아서 수업이나 발표 중에도 주변을 방해하지 않아요. 흔들린 컷은 알아서 건너뜁니다.\n\n발표별로 자동 정리\n\n이어서 찍은 장표는 발표 하나로 묶여요. 발표마다 제목을 붙이고, 순서를 바꾸고, 여러 발표를 하나로 합칠 수도 있어요. 이미 찍어 둔 강의 사진이 있다면 사진 앱에서 여러 장 골라 장표스냅으로 공유하면 됩니다. 찍은 순서대로 반듯하게 펴서 발표 하나로 정리해 줘요.\n\n단어 하나로 찾고, PDF로 복습\n\n찍은 장표의 글자를 인식해 두기 때문에 기억나는 단어 하나로 몇 주 전 장표를 찾을 수 있어요. 그림자와 흐린 대비를 걷어 내 글자를 또렷하게 보정하는 기능도 있고, 모은 장표는 한 장씩, 두 장씩, 네 장씩 배치한 복습용 PDF로 내보낼 수 있어요.\n\n마무리\n\n홈 화면 위젯을 누르면 바로 카메라가 열리고, 잠금화면에서도 쓸 수 있어요. 장표는 기기 안에 저장되고 계정이나 로그인이 필요 없습니다. 앱스토어에서 장표스냅을 검색해 보세요.\n\nhttps://apps.apple.com/kr/app/id6790835318",
+  "theme": 3
+ },
+ {
+  "id": "f19c49c6-8d9e-5149-906a-4101ccc291fc",
+  "project": "com.leeo.slidesnap",
+  "kind": "post",
+  "channel": "레딧",
+  "title": "I built a camera app just for lecture slides: straightens, groups by talk, searchable",
+  "angle": "r/iphone, r/apps, r/college 류. 만든 이유 위주로 담백하게. 영어 스토어 이름 CatchSlide 와 미국 가격을 밝힌다.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "Slides I shot from the back row were always crooked and ended up buried between selfies and receipts, so I made CatchSlide.\n\nIt finds the four corners of the slide as you aim and flattens it as if you were facing it head on, cropping out the room. There is no shutter sound, and blurry shots get skipped. Slides you take in a row are grouped into one presentation. If you already have lecture photos, select several in Photos and share them to the app, and they get straightened and filed in the order you took them.\n\nIt also reads the text on each slide, so you can search by a word you remember, and exports study PDFs with one, two, or four slides per page. Everything stays on the device, no account. It is $0.99.\n\nWould love to hear where corner detection fails for you.\n\nhttps://apps.apple.com/us/app/id6790835318",
+  "theme": 3
+ },
+ {
+  "id": "3bcddab0-ec7b-5226-8149-2389d8c89cd5",
+  "project": "com.leeo.TetraTint",
+  "kind": "cardNews",
+  "channel": "인스타그램",
+  "title": "브랜드 컬러는 다크 모드를 모른다",
+  "angle": "iOS, Mac 앱을 만드는 개발자와 디자이너에게. 시스템 컬러는 다크 모드와 고대비에 알아서 맞춰지지만 직접 정한 색은 그렇지 않다는 빈틈을 짚고, 색 하나로 네 가지 모드 변형을 만드는 장면을 보여 준다.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [
+   {
+    "id": "9f034ee1-e1eb-5841-b32a-b624d15f0d08",
+    "headline": "내 색만 다크 모드 X",
+    "text": "시스템 컬러는 다크 모드와 고대비에 맞춰 바뀌는데\n직접 정한 브랜드 컬러는 그대로죠."
+   },
+   {
+    "id": "441e03f2-c52f-5689-ba16-b8f415d684ca",
+    "headline": "색 하나 넣으면 네 개",
+    "text": "라이트 색 하나로\n라이트, 라이트 고대비, 다크, 다크 고대비를 만들어요."
+   },
+   {
+    "id": "62f239ee-2b8a-5aa9-a763-bfc5229a013d",
+    "headline": "어떤 색이 문제일까",
+    "text": "앱에서 쓰는 hex를 통째로 붙여 넣으면\n그대로 써도 되는지, 고대비가 필요한지 알려 줘요."
+   },
+   {
+    "id": "71b33fe7-be8d-5ab9-b720-bf6430e658bf",
+    "headline": "색각이상으로 보면",
+    "text": "적색맹, 녹색맹, 청색맹, 흑백으로 보여 주고\n구분이 어려운 색 쌍을 짚어 줘요."
+   },
+   {
+    "id": "30a10dd1-39a9-53b9-a2ab-f150c57cdf71",
+    "headline": "커스텀 폰트도 커지게",
+    "text": "Dynamic Type 대응 코드를\nUIKit, SwiftUI, @ScaledMetric으로 만들어 줘요."
+   },
+   {
+    "id": "6a0ec3c6-892f-54c6-bb3f-755f9d0d5c8a",
+    "headline": "TetraTint",
+    "text": "시스템이 안 해 주는 접근성 작업을 대신하는\nMac용 개발자 도구."
+   }
+  ],
+  "script": "",
+  "body": "다크 모드를 켰더니 내 앱의 브랜드 컬러만 어색하게 떠 있던 적 있나요.\n\nTetraTint는 라이트 색 하나로 다크, 고대비까지 네 가지 변형을 만들고 colorset이나 SwiftUI 코드로 바로 내보내는 Mac 앱이에요. 팔레트 전체 대비 검사, 색각이상 시뮬레이션, 커스텀 폰트의 Dynamic Type 코드까지 한 곳에서 해요.\n\nMac App Store에서 TetraTint 검색\n\n#iOS개발 #스위프트 #SwiftUI #앱개발 #접근성 #다크모드 #UI디자인 #WCAG #개발자도구 #맥앱",
+  "theme": 0
+ },
+ {
+  "id": "eb79214f-f0ea-55e6-8d26-658f5421cc91",
+  "project": "com.leeo.TetraTint",
+  "kind": "video",
+  "channel": "유튜브 쇼츠",
+  "title": "브랜드 컬러 하나로 다크 모드 색 네 개 만들기",
+  "angle": "색 하나를 넣자 네 모드 미리보기가 동시에 뜨는 장면으로 첫 2초를 잡는다. Mac 화면 녹화로 찍는다.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "[0-2초] 화면: 다크 모드에서 어색하게 보이는 브랜드 버튼 / 자막: 내 색만 다크 모드를 몰라요 / 내레이션: 다크 모드 켜면 내 브랜드 색만 따로 놀죠.\n[2-9초] 화면: TetraTint 생성기에 hex 하나 입력, 네 모드 미리보기가 나란히 / 자막: 색 하나 넣으면 네 개 / 내레이션: TetraTint에 라이트 색 하나만 넣으면 라이트, 라이트 고대비, 다크, 다크 고대비 네 개가 바로 나와요.\n[9-14초] 화면: 컬러 피커로 다크 변형을 살짝 조정, 내보내기 메뉴에서 colorset 선택 / 자막: 다듬고 바로 내보내기 / 내레이션: 마음에 안 드는 건 다듬고, colorset이나 SwiftUI 코드로 내보내면 끝.\n[14-20초] 화면: 대비 검사에 hex 목록 붙여 넣기, 색마다 판정과 WCAG 배지 / 자막: 팔레트 전체를 한 번에 검사 / 내레이션: 앱에서 쓰는 색을 통째로 붙여 넣으면 어떤 색이 고대비가 필요한지 알려 줘요.\n[20-25초] 화면: 색각이상 시뮬레이션 전환, 구분 어려운 쌍 경고 / 자막: 색각이상으로도 확인 / 내레이션: 색각이상으로 보면 어떤지, 헷갈리는 색 쌍도 짚어 주고요.\n[25-30초] 화면: Dynamic Type 슬라이더를 끌어 글자 크기 변화, 앱 아이콘 / 자막: TetraTint / 내레이션: 커스텀 폰트 Dynamic Type 코드까지. TetraTint였어요.",
+  "body": "브랜드 컬러 하나로 다크 모드 색 네 개 만들기 | 라이트, 다크, 고대비 변형을 한 번에 만들고 colorset으로 내보내는 Mac 개발자 도구 TetraTint. #iOS개발 #SwiftUI #shorts",
+  "theme": 0
+ },
+ {
+  "id": "9b107705-c428-5d11-84ec-cf77e15f2f96",
+  "project": "com.leeo.TetraTint",
+  "kind": "post",
+  "channel": "스레드",
+  "title": "시스템 컬러는 알아서 바뀌는데 내 색은 왜",
+  "angle": "앱 개발자가 다크 모드, 고대비 대응에서 겪는 빈틈에 공감하게 하고 해법을 건넨다.",
+  "plannedAt": "2026-11-27T01:00:00Z",
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "앱 만들면서 매번 걸리는 부분.\n\n시스템 컬러는 다크 모드, 고대비에 알아서 맞춰지는데 직접 정한 브랜드 컬러는 아무것도 안 해 줘요. 다크 버전을 감으로 고르고, 고대비는 그냥 넘어가고.\n\n그래서 라이트 색 하나를 넣으면 네 가지 모드 변형을 시스템 컬러가 바뀌는 방식대로 만들어 주는 Mac 앱을 만들었어요. 고대비는 흰 배경에 4.5:1, 검은 배경에 7:1을 맞추고, colorset으로 바로 내보내요.\n\nTetraTint https://apps.apple.com/kr/app/id6789206198",
+  "theme": 0
+ },
+ {
+  "id": "89636097-e8a8-581c-9627-2f58fb5d8a1f",
+  "project": "com.leeo.TetraTint",
+  "kind": "post",
+  "channel": "X",
+  "title": "TetraTint 기능 정리",
+  "angle": "짧은 기능 목록. 개발자가 바로 알아듣게.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "Mac용 접근성 개발 도구 TetraTint\n\n라이트 색 1개로 Light, Light HC, Dark, Dark HC 4종 생성\nContents.json, .colorset, UIKit, SwiftUI 코드로 내보내기\nhex 목록 붙여 넣으면 색마다 고대비 필요 여부 판정, 모드별 WCAG 배지\n색각이상 시뮬레이션 + 구분 어려운 쌍 경고, Okabe-Ito, IBM, Paul Tol 팔레트\n커스텀 폰트 Dynamic Type 코드 생성\nHIG 시스템 컬러 4모드 값 클릭 복사\n저장한 브랜드 컬러를 .xcassets 하나로\n\nhttps://apps.apple.com/kr/app/id6789206198",
+  "theme": 0
+ },
+ {
+  "id": "5b4c2f29-b43b-534e-82ca-9efa5d07f575",
+  "project": "com.leeo.TetraTint",
+  "kind": "post",
+  "channel": "디스콰이엇",
+  "title": "시스템이 안 해 주는 접근성 작업을 대신하는 Mac 앱, TetraTint",
+  "angle": "앱을 만들며 직접 겪은 빈틈에서 출발한 도구라는 점, App Store 접근성 표기 준비에 쓸 수 있다는 점을 설명하고 개발자들의 피드백을 구한다.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "안녕하세요, 혼자 iOS, Mac 앱을 만드는 개발자입니다.\n\n만든 이유\n앱을 여러 개 만들다 보니 다크 모드와 고대비 대응에서 늘 같은 곳에 걸렸어요. 시스템 컬러와 시스템 폰트는 알아서 적응하는데, 직접 정한 브랜드 컬러와 커스텀 폰트는 하나하나 손으로 맞춰야 했습니다. App Store 접근성 표기의 충분한 대비 항목을 채우려니 더 필요해져서 도구로 만들었습니다.\n\n하는 일\n라이트 색 하나를 넣으면 라이트, 라이트 고대비, 다크, 다크 고대비 네 가지 변형을 만들고 네 모드를 나란히 보여 줍니다. 다크에서는 조금 더 밝고 선명하게, 라이트 고대비는 흰 배경에 4.5:1, 다크 고대비는 검은 배경에 7:1을 맞춥니다. Contents.json, .colorset, UIKit, SwiftUI 코드로 내보낼 수 있습니다. 앱에서 쓰는 hex 목록을 붙여 넣으면 색마다 고대비가 필요한지 판정하고, 색각이상 시뮬레이션과 구분 어려운 색 쌍 경고, 커스텀 폰트의 Dynamic Type 코드 생성도 합니다. 무료입니다.\n\n피드백 부탁드려요\n자동으로 만든 변형이 실제 브랜드 색에서 쓸 만한지, 내보내기 형식 중 더 필요한 것이 있는지 알려 주세요.\n\nhttps://apps.apple.com/kr/app/id6789206198",
+  "theme": 0
+ },
+ {
+  "id": "f9750396-5bbe-5867-91ff-a02a7a2feec3",
+  "project": "com.leeo.TetraTint",
+  "kind": "post",
+  "channel": "네이버 블로그",
+  "title": "iOS 앱 다크 모드, 고대비 색상 만들기: Mac 앱 TetraTint 사용기",
+  "angle": "다크 모드 색상, 고대비, WCAG 대비를 검색한 iOS 개발자가 읽는 글. 빈틈 설명에서 시작해 실제 작업 순서대로 기능을 보여 준다.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "시스템이 해 주는 것과 안 해 주는 것\n\niOS 앱에서 시스템 컬러를 쓰면 다크 모드와 고대비 설정에 맞춰 색이 알아서 바뀌어요. 시스템 폰트도 사용자가 글자 크기를 키우면 따라 커지죠. 문제는 직접 정한 브랜드 컬러와 커스텀 폰트예요. 이것들은 아무것도 해 주지 않아서 다크 버전을 감으로 고르거나, 고대비는 아예 건너뛰게 됩니다. TetraTint는 이 빈자리를 채워 주는 Mac용 개발자 도구예요.\n\n색 하나로 네 가지 변형\n\n생성기에 라이트 모드 색 하나를 넣으면 라이트, 라이트 고대비, 다크, 다크 고대비 네 가지 변형이 만들어지고 나란히 미리 볼 수 있어요. 다크 모드에서는 조금 더 밝고 선명하게, 라이트 고대비는 흰 배경에 4.5:1, 다크 고대비는 검은 배경에 7:1을 맞추는 식으로 시스템 컬러가 바뀌는 패턴을 따릅니다. 브랜드와 안 맞는 변형은 컬러 피커로 다듬고, Contents.json, .colorset, UIKit, SwiftUI 코드로 내보내면 됩니다.\n\n팔레트 전체 대비 검사\n\n이미 만든 앱이라면 대비 검사부터 해 보세요. 앱에서 쓰는 hex 목록을 통째로 붙여 넣으면 색마다 그대로 써도 되는지, 고대비 변형이 필요한지, 장식용으로만 써야 하는지 알려 줘요. 문제가 있는 색은 클릭 한 번으로 네 가지 변형을 만들 수 있고, 팔레트 전체의 모드별 WCAG 배지도 볼 수 있습니다.\n\n색각이상과 글자 크기\n\n적색맹, 녹색맹, 청색맹, 흑백으로 팔레트가 어떻게 보이는지 확인하고, 구분하기 어려운 색 쌍을 짚어 줍니다. Okabe-Ito, IBM, Paul Tol 같은 색맹 안전 팔레트도 바로 가져올 수 있어요. Dynamic Type 화면에서는 11개 텍스트 스타일을 7개 크기에서 표로 보고, 커스텀 폰트가 글자 크기 설정을 따르게 하는 UIKit, SwiftUI, @ScaledMetric 코드를 만들어 줍니다.\n\n그 밖에\n\nHIG 시스템 컬러의 네 가지 모드 값을 한 화면에서 보고 클릭해서 복사할 수 있고, 저장한 브랜드 컬러는 .xcassets 하나로 한 번에 내보낼 수 있어요. App Store 접근성 표기의 충분한 대비 항목을 준비할 때 특히 쓸모 있습니다. Mac App Store에서 무료로 받을 수 있어요.\n\nhttps://apps.apple.com/kr/app/id6789206198",
+  "theme": 0
+ },
+ {
+  "id": "9fdf2044-902b-52af-8f40-0f9c44d4fec7",
+  "project": "com.leeo.TetraTint",
+  "kind": "post",
+  "channel": "레딧",
+  "title": "I made a free Mac tool that generates Dark and Increased Contrast variants for your custom colors",
+  "angle": "r/iOSProgramming, r/SwiftUI, r/macapps 류에 맞게. 개발자끼리 이야기하듯 담백하게. 영어 스토어 페이지가 있다.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "System colors adapt to Dark Mode and Increased Contrast for free. The brand colors you define don't, and custom fonts need extra work to follow Dynamic Type. I kept hand-picking dark variants and skipping high contrast, so I built TetraTint for the Mac.\n\nYou give it one Light Mode color and it generates Light, Light High Contrast, Dark and Dark High Contrast, following the same patterns system colors use (high contrast targets 4.5:1 on white and 7:1 on black). Tweak any variant, then export as Contents.json, a .colorset, UIKit or SwiftUI code.\n\nIt also audits a pasted list of hex colors (fine as is, needs a high contrast variant, or decoration only), simulates color blindness and flags hard to tell apart pairs, and generates Dynamic Type code for custom fonts. Handy for the Sufficient Contrast item in the App Store accessibility labels. It's free.\n\nFeedback on the generated variants is very welcome.\n\nhttps://apps.apple.com/us/app/id6789206198",
+  "theme": 0
+ },
+ {
+  "id": "db0fc376-70a3-5149-81df-a968f7d4c2df",
+  "project": "com.leeo.wifisnap",
+  "kind": "cardNews",
+  "channel": "인스타그램",
+  "title": "와이파이 비번, 아직도 불러 주세요?",
+  "angle": "카페나 숙소, 집에 온 손님에게 와이파이 비밀번호를 불러 주거나 받아 적는 사람에게. 안내판을 찍으면 연결되고 내 와이파이는 QR로 나눌 수 있다는 걸 보여 준다. 매장 사장님에게는 안내판 인쇄까지.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [
+   {
+    "id": "db452ead-3c6f-5de3-927c-acb79cdbfc38",
+    "headline": "비번 뭐였더라?",
+    "text": "대문자였나, 0이었나 O였나.\n와이파이 비밀번호 받아 적다 지치죠."
+   },
+   {
+    "id": "1e30cdbd-d60b-5f0c-83f3-53ea26df95e9",
+    "headline": "찍으면 연결",
+    "text": "벽에 붙은 안내판이나 영수증을 찍으면\n아이디와 비밀번호를 읽어 바로 연결해요."
+   },
+   {
+    "id": "6a16be89-3c46-5995-bea4-7f91873a128c",
+    "headline": "내 와이파이는 QR로",
+    "text": "지금 연결된 와이파이로 QR을 만들어요.\n친구는 카메라로 비추기만 하면 끝."
+   },
+   {
+    "id": "fce122a7-3a8b-5ee5-aaf3-b2a10c98fd0d",
+    "headline": "손님용 안내판도",
+    "text": "7가지 테마에 매장 이름과 로고를 넣고\n카드형이나 A4 포스터로 바로 인쇄해요."
+   },
+   {
+    "id": "388f4b07-85d5-5ce1-b3aa-3f9e94d2cd6f",
+    "headline": "위젯에 QR 하나",
+    "text": "자주 나누는 와이파이 QR을 위젯에 두면\n탭 한 번에 큰 QR이 열려요."
+   },
+   {
+    "id": "dd0a1c2b-4b92-5897-b360-d985e4e65081",
+    "headline": "마이파이",
+    "text": "찍으면 연결, QR 한 장으로 공유.\n비밀번호는 이제 안 불러도 돼요."
+   }
+  ],
+  "script": "",
+  "body": "와이파이 비밀번호를 불러 주고 받아 적는 일, 생각보다 자주 하죠.\n\n마이파이는 안내판을 찍으면 아이디와 비밀번호를 읽어 바로 연결해 주고, 내 와이파이는 QR 한 장으로 나눠 줘요. 카페나 숙소라면 손님용 안내판을 꾸며서 AirPrint로 바로 인쇄할 수도 있어요. 저장한 와이파이 정보는 기기 안에만 있어요.\n\n앱스토어에서 마이파이 검색\n\n#와이파이 #와이파이비밀번호 #QR코드 #카페창업 #카페사장님 #게스트하우스 #펜션 #생활꿀팁 #앱추천 #아이폰앱",
+  "theme": 1
+ },
+ {
+  "id": "95fcdf8e-65fb-5f93-abab-70a6e4025c9e",
+  "project": "com.leeo.wifisnap",
+  "kind": "video",
+  "channel": "유튜브 쇼츠",
+  "title": "와이파이 안내판, 찍기만 하면 연결",
+  "angle": "카페 벽의 와이파이 안내판을 찍자마자 연결되는 장면으로 첫 2초를 잡는다. 화면 녹화와 안내판 촬영만으로 구성.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "[0-2초] 화면: 카페 벽의 와이파이 안내판에 폰을 대는 손 / 자막: 비번 안 쳐도 돼요 / 내레이션: 와이파이 비번, 이제 안 쳐도 돼요.\n[2-8초] 화면: 마이파이로 촬영, 아이디와 비밀번호가 읽혀 칸에 채워지고 연결 / 자막: 찍으면 읽고 바로 연결 / 내레이션: 안내판을 찍으면 아이디랑 비밀번호를 읽어서 바로 연결해 줘요.\n[8-13초] 화면: 애매한 글자 조각을 끌어다 비밀번호 칸에 넣는 장면 / 자막: 애매하면 끌어다 놓기 / 내레이션: 글자가 애매하면 사진에서 뽑은 조각을 끌어다 넣으면 되고요.\n[13-19초] 화면: 집에서 내 와이파이 QR을 띄우고 친구 폰 카메라로 비추는 장면 / 자막: 내 와이파이는 QR 한 장 / 내레이션: 우리 집 와이파이는 QR로. 친구는 카메라로 비추기만 하면 돼요.\n[19-26초] 화면: 테마 고르고 매장 이름 넣어 A4 포스터 미리보기, 인쇄 버튼 / 자막: 손님용 안내판도 바로 인쇄 / 내레이션: 가게라면 손님용 안내판도 꾸며서 바로 인쇄할 수 있어요.\n[26-30초] 화면: 잠금화면 위젯의 QR, 앱 아이콘 / 자막: 마이파이 / 내레이션: 와이파이는 마이파이로.",
+  "body": "와이파이 안내판, 찍기만 하면 연결 | 찍으면 연결, 내 와이파이는 QR 한 장, 손님용 안내판 인쇄까지. 앱스토어에서 마이파이 검색 #와이파이 #꿀팁 #shorts",
+  "theme": 1
+ },
+ {
+  "id": "b59005c3-793d-5a53-93ae-472fd1615240",
+  "project": "com.leeo.wifisnap",
+  "kind": "post",
+  "channel": "스레드",
+  "title": "와이파이 비밀번호 불러 주는 시간",
+  "angle": "손님이나 친구에게 비밀번호를 불러 주며 겪는 작은 불편에 공감하게 하고 해법을 건넨다.",
+  "plannedAt": "2026-11-30T01:00:00Z",
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "집에 친구 오면 꼭 하는 대화.\n\"와이파이 비번 뭐야?\" \"대문자 K에, 숫자 0 아니고 영어 O...\"\n\n카페에서도 마찬가지예요. 안내판 보고 한 글자씩 치다가 틀리고.\n\n그래서 안내판을 찍으면 읽어서 바로 연결하고, 내 와이파이는 QR 한 장으로 나눠 주는 앱을 만들었어요. 가게 하시는 분이면 손님용 안내판도 만들어서 바로 인쇄할 수 있어요.\n\n마이파이 https://apps.apple.com/kr/app/id6793472383",
+  "theme": 1
+ },
+ {
+  "id": "011f8fe2-1fe2-52d1-b768-a299843df52c",
+  "project": "com.leeo.wifisnap",
+  "kind": "post",
+  "channel": "X",
+  "title": "마이파이로 할 수 있는 것",
+  "angle": "짧은 기능 목록.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "와이파이 앱 마이파이\n\n안내판, 영수증을 찍거나 앨범에서 골라 바로 연결\n지금 연결된 와이파이로 QR 만들기, 핫스팟도 QR로\n연결 안 해도 이름과 비밀번호로 QR 만들기\n손님용 안내판 7가지 테마, 카드형 또는 A4 포스터, AirPrint 인쇄\n홈 화면, 잠금화면 위젯에 QR\n연결했던 곳을 지도에, 근처에 오면 그곳 와이파이 먼저\n\nhttps://apps.apple.com/kr/app/id6793472383",
+  "theme": 1
+ },
+ {
+  "id": "bb8d0751-3187-533b-90fb-57fd6c731b43",
+  "project": "com.leeo.wifisnap",
+  "kind": "post",
+  "channel": "디스콰이엇",
+  "title": "와이파이 비밀번호를 불러 주지 않아도 되게, 마이파이",
+  "angle": "만든 이유, iOS 기본 QR 공유로는 안 되던 것(매장 비치용 안내판), 피드백 요청.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "안녕하세요, 혼자 iOS 앱을 만드는 개발자입니다.\n\n만든 이유\n카페에서 안내판 보며 비밀번호를 한 글자씩 치다 틀리고, 집에 손님이 오면 비밀번호를 불러 주는 일이 반복됐어요. 아이폰끼리는 공유가 되지만 매장에 붙여 둘 안내판을 만드는 건 따로 해야 했습니다. 그 두 가지를 한 앱에서 끝내고 싶어서 마이파이를 만들었습니다.\n\n하는 일\n와이파이 안내판이나 영수증을 찍으면 아이디와 비밀번호를 읽어 바로 연결합니다. 읽은 글자가 애매하면 사진에서 뽑은 조각을 끌어다 칸에 넣을 수 있습니다. 지금 연결된 와이파이나 내 핫스팟을 QR로 만들어 나눌 수 있고, 카페나 숙소용 안내판을 7가지 테마에 매장 이름과 로고를 넣어 카드형이나 A4 포스터로 만들어 AirPrint로 인쇄합니다. 위젯에 QR을 띄워 둘 수 있고, 연결했던 곳은 지도에 남습니다. 저장한 와이파이 정보는 기기 안에만 보관합니다.\n\n피드백 부탁드려요\n안내판 인식이 잘 안 되는 글꼴이나 배치가 있으면 알려 주세요. 매장 하시는 분들께는 안내판에 꼭 들어가야 할 문구가 무엇인지도 궁금합니다.\n\nhttps://apps.apple.com/kr/app/id6793472383",
+  "theme": 1
+ },
+ {
+  "id": "04a5612e-b20d-5d14-b3ab-cbc7ba2f0c0d",
+  "project": "com.leeo.wifisnap",
+  "kind": "post",
+  "channel": "네이버 블로그",
+  "title": "와이파이 비밀번호 공유 앱 마이파이, 찍으면 연결되고 QR로 나누고 안내판까지",
+  "angle": "와이파이 QR 만들기, 와이파이 안내판 만들기를 검색한 사람이 읽는 글. 손님 입장과 사장님 입장 둘 다 다룬다.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "비밀번호 받아 적기, 이제 그만\n\n카페에 앉으면 제일 먼저 하는 일이 와이파이 안내판 찾기예요. 그리고 대문자와 소문자, 숫자 0과 영어 O 사이에서 몇 번씩 틀리죠. 마이파이는 이 과정을 사진 한 장으로 줄여 주는 앱이에요.\n\n찍어서 연결\n\n벽에 붙은 와이파이 안내판이나 영수증을 카메라로 찍거나 앨범에서 고르면, 아이디와 비밀번호를 읽어서 바로 이 폰을 연결해요. 읽은 글자가 애매할 때는 사진에서 뽑아낸 글자 조각을 아이디와 비밀번호 칸으로 끌어다 넣으면 됩니다. 직접 입력해서 연결하는 것도 가능해요.\n\nQR 한 장으로 공유\n\n집에 손님이 왔을 때는 반대로 내 와이파이를 나눠야 하죠. 마이파이는 지금 연결된 와이파이를 알아보고, 친구가 카메라로 비추기만 하면 연결되는 QR을 만들어 줘요. QR 이미지를 메시지로 보낼 수도 있고, 내 핫스팟을 QR로 나눠 줄 수도 있어요.\n\n사장님이라면 손님용 안내판\n\n카페, 숙소, 매장을 운영한다면 이 기능이 제일 쓸모 있을 거예요. 7가지 테마 중 하나를 고르고 매장 이름과 로고, 영업시간 같은 문구를 넣어 꾸밉니다. 카드형과 A4 세로 포스터 중에 고를 수 있고, 이미지로 저장하거나 AirPrint로 바로 인쇄해요. 매장마다, 자리마다 다른 안내판을 여러 장 만들어 두고 고쳐 쓸 수 있습니다.\n\n위젯과 지도\n\n자주 나누는 와이파이는 홈 화면이나 잠금화면 위젯에 QR로 띄워 두세요. 탭하면 큰 QR이 열려요. 연결했던 곳은 지도에 남아서 근처에 오면 그곳의 와이파이를 먼저 보여 줍니다.\n\n개인정보\n\n저장한 와이파이 정보는 기기 안에만 보관하고 따로 서버로 보내지 않아요. 앱스토어에서 마이파이를 검색해 보세요.\n\nhttps://apps.apple.com/kr/app/id6793472383",
+  "theme": 1
+ },
+ {
+  "id": "1b79df49-5fc4-5a29-a166-ab259f30d606",
+  "project": "com.leeo.wifisnap",
+  "kind": "post",
+  "channel": "레딧",
+  "title": "Made a Wi-Fi app that reads the password sign so you don't have to type it",
+  "angle": "r/iphone, r/apps 대상. 담백하게. 앱과 스토어가 한국어 전용이라는 점을 먼저 밝힌다.",
+  "plannedAt": null,
+  "stage": "ready",
+  "slides": [],
+  "script": "",
+  "body": "Small side project. I got tired of typing Wi-Fi passwords off cafe signs letter by letter, so I made an app where you take a photo of the sign (or a receipt) and it reads the network name and password and joins it. If the text is ambiguous, you drag the recognized pieces into the name and password fields.\n\nIt also goes the other way: it makes a standard Wi-Fi QR from the network you are on, or from your hotspot, so friends just point their camera. For cafes and guesthouses there is a printable guest sign with 7 themes, your logo and name, card or A4 poster, printed via AirPrint. Widgets can hold a QR, and saved networks stay on the device.\n\nFair warning, the app and store page are Korean only for now. If people outside Korea would use the sign maker, I would like to know.\n\nhttps://apps.apple.com/us/app/id6793472383",
+  "theme": 1
+ }
+]

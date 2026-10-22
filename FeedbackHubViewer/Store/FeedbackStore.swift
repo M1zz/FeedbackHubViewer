@@ -72,6 +72,9 @@ final class FeedbackStore: ObservableObject {
         /// 왜 이렇게 만들었나 - 앱 리포의 설계 문서(HTML)를 지켜보다가 연다
         /// (`DesignDocsStore`). 맥의 디스크를 읽는 유일한 칸.
         case design = "설계"
+        /// 내가 할 마케팅 — 기획 · 자료(카드뉴스 · 영상 · 글) · 올렸는지 확인(`MarketingStore`).
+        /// 다른 칸은 일어난 일을 읽지만 이 칸은 내가 쓴다.
+        case marketing = "마케팅"
         var id: String { rawValue }
         /// 할 일은 처음부터 모든 앱을 앱별로 묶어 보여 주는 칸이라 앱 목록을 거치지 않는다.
         var usesAppList: Bool { self != .inbox && self != .news }
@@ -83,6 +86,7 @@ final class FeedbackStore: ObservableObject {
             case .crashes, .release: .quality
             case .stats, .acquisition, .keywords, .charts, .storeAnalytics: .growth
             case .purchases: .revenue
+            case .marketing: .marketing
             case .design: .build
             }
         }
@@ -94,6 +98,7 @@ final class FeedbackStore: ObservableObject {
             case quality = "품질"
             case growth = "성장"
             case revenue = "수익"
+            case marketing = "마케팅"
             case build = "만들기"
             var id: String { rawValue }
             var sections: [ProjectSection] { ProjectSection.allCases.filter { $0.group == self } }
@@ -123,6 +128,7 @@ final class FeedbackStore: ObservableObject {
                 case .quality: "checkmark.shield"
                 case .growth: "chart.line.uptrend.xyaxis"
                 case .revenue: "creditcard"
+                case .marketing: "megaphone"
                 case .build: "pencil.and.ruler"
                 }
             }
@@ -144,6 +150,7 @@ final class FeedbackStore: ObservableObject {
             case .purchases: return "creditcard"
             case .reviews: return "star.bubble"
             case .design: return "pencil.and.ruler"
+            case .marketing: return "megaphone"
             }
         }
     }

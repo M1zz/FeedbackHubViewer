@@ -35,6 +35,10 @@ struct ProjectSectionView: View {
     var body: some View {
         content
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+            // 뱃지를 눌러 들어왔으면 무엇이 바뀌었는지가 맨 위에.
+            .safeAreaInset(edge: .top, spacing: 0) {
+                SectionChangesBanner(section: section, project: project)
+            }
             // Everything downstream reads the scope off the store, so the pushed
             // screen and the store can never disagree about which project this is.
             // 다시 보일 때마다(아이폰 탭을 오갈 때도) 맞춘다 — 다른 탭이 가게를 바꿔 놓았을 수 있다.
@@ -118,6 +122,8 @@ struct ProjectSectionView: View {
             DesignDocsView(project: project)
         case .storeAnalytics:
             StoreAnalyticsView(project: project)
+        case .marketing:
+            MarketingView(project: project)
         }
     }
 }

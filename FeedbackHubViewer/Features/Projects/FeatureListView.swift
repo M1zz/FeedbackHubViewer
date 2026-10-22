@@ -25,6 +25,8 @@ struct FeatureListView: View {
     @EnvironmentObject private var news: NewsStore
     /// 본 뒤 바뀐 칸의 뱃지(`SectionChanges`).
     @ObservedObject private var changes = SectionChanges.shared
+    /// 마케팅 칸의 "올렸나요?" 뱃지.
+    @ObservedObject private var marketing = MarketingStore.shared
 
     var body: some View {
         let metrics = SectionMetrics(store: store, keywords: keywords, purchases: purchases, design: design, charts: charts, news: news)
@@ -107,7 +109,7 @@ private struct FeatureRow: View {
             Spacer(minLength: 4)
             if let badge {
                 CountBadge(count: badge.count, systemImage: badge.systemImage,
-                           tint: badge.tint, name: badge.name, text: badge.text)
+                           tint: badge.tint, name: badge.name)
             }
         }
         .padding(.vertical, 3)

@@ -27,8 +27,6 @@ struct SectionMetrics {
         let systemImage: String
         let tint: Color
         let name: String
-        /// 수 대신 쓸 글자 — 앱 한 줄의 "새로 바뀜" 처럼 셀 것이 하나뿐일 때.
-        var text: String? = nil
     }
 
     // MARK: - Badge
@@ -39,14 +37,12 @@ struct SectionMetrics {
         itemBadge(section, project: project) ?? changedBadge(section, project: project)
     }
 
-    /// 마지막으로 이 칸을 본 뒤 말이 달라진 앱(`SectionChanges`). 전체면 그런 앱 수,
-    /// 한 앱이면 "새".
+    /// 마지막으로 이 칸을 본 뒤 바뀐 것의 수(`SectionChanges`). 무엇이 바뀌었는지는 칸을
+    /// 열면 맨 위 띠가 말한다.
     private func changedBadge(_ section: FeedbackStore.ProjectSection, project: String?) -> Badge? {
-        let changed = SectionChanges.shared.changedApps(section, project: project, metrics: self)
-        guard !changed.isEmpty else { return nil }
-        return Badge(count: changed.count, systemImage: "sparkles", tint: .blue,
-                     name: project == nil ? "본 뒤 바뀐 앱" : "본 뒤 바뀜",
-                     text: project == nil ? nil : "새")
+        let count = SectionChanges.shared.changedCount(section, project: project, metrics: self)
+        guard count > 0 else { return nil }
+        return Badge(count: count, systemImage: "sparkles", tint: .red, name: "본 뒤 바뀐 것")
     }
 
     private func itemBadge(_ section: FeedbackStore.ProjectSection, project: String?) -> Badge? {
@@ -57,6 +53,10 @@ struct SectionMetrics {
         case .news:
             let count = news.unreadCount(for: project)
             return count > 0 ? Badge(count: count, systemImage: "newspaper.fill", tint: .purple, name: "새 소식") : nil
+        case .marketing:
+            // 올렸는지 답해야 하는 것 — 날짜가 지났는데 말이 없는 활동.
+            let count = MarketingStore.shared.awaitingConfirmation(for: project).count
+            return count > 0 ? Badge(count: count, systemImage: "megaphone.fill", tint: .red, name: "올렸는지 답할 마케팅") : nil
         case .feedback:
             guard store.showsBadge(.feedback) else { return nil }
             let unread = store.unreadCount(for: project)
@@ -109,6 +109,7 @@ struct SectionMetrics {
         case .purchases: return project.flatMap { purchases.products(for: $0)?.count } ?? 0
         case .reviews: return reviewCount(project)
         case .design: return design.docs(for: project).count
+        case .marketing: return MarketingStore.shared.items(for: project).filter { $0.stage.isOpen }.count
         case .storeAnalytics:
             guard let project else { return purchases.analyticsCoverage?.value?.missing.count ?? 0 }
             guard case .ready(let analytics)? = purchases.storeAnalytics[project]?.value else { return 0 }
@@ -174,6 +175,10 @@ struct SectionMetrics {
                 ?? "설계도 \(DesignBlueprints.webURLs.count)개"
             guard DesignDocsStore.isSupported, design.workspace != nil, count > 0 else { return blueprint }
             return "\(blueprint) · 문서 \(count)장"
+        case .marketing:
+            let awaiting = MarketingStore.shared.awaitingConfirmation(for: project).count
+            if awaiting > 0 { return "올렸는지 답할 것 \(awaiting)개" }
+            return count > 0 ? "진행 중 \(count)개" : "계획 없음"
         }
     }
 
@@ -281,6 +286,8 @@ struct SectionMetrics {
             return text
         case .design:
             return "화면 설계도 · 문제 정의부터 솔루션까지 · 리포의 \(DesignDocsStore.folder)"
+        case .marketing:
+            return "기획 · 카드뉴스 · 영상 · 글 · 올렸는지 확인"
         case .storeAnalytics:
             guard purchases.isConfigured else { return "App Store Connect 키를 넣으면 Apple 이 모은 분석 리포트가 나옵니다" }
             guard let project else {

@@ -12,6 +12,10 @@
 //
 //  처음 보는 칸 · 앱은 조용히 기준선으로 잡는다 — 켜자마자 모든 칸에 뱃지가 서지 않게.
 //
+//  뱃지만으로는 열어 봐도 무엇이 바뀌었는지 모른다. 그래서 칸을 열어 본 것으로 칠 때 그 전
+//  말과 지금 말을 따로 남겨 두고(`recent`), 화면 맨 위 띠(`SectionChangesBanner`)가
+//  "설치 120대 → 125대" 처럼 그대로 보여 준다. 띠는 "확인" 을 누를 때까지 남는다.
+//
 
 import SwiftUI
 
@@ -26,12 +30,27 @@ final class SectionChanges: ObservableObject {
     ]
 
     private static let defaultsKey = "section-seen-signatures"
+    private static let recentKey = "section-recent-changes"
+
+    /// 열어 본 순간 달라져 있던 것 — 그 전 말과 지금 말.
+    struct Change: Codable, Equatable {
+        let section: String
+        let project: String
+        let before: String
+        let after: String
+        let at: Date
+    }
+
+    /// "칸|앱" → 확인 안 한 바뀜. 화면 맨 위 띠가 읽는다.
+    @Published private(set) var recent: [String: Change]
 
     /// "칸|앱" → 마지막으로 본 말.
     @Published private var seen: [String: String]
 
     private init() {
         seen = UserDefaults.standard.dictionary(forKey: Self.defaultsKey) as? [String: String] ?? [:]
+        recent = (UserDefaults.standard.data(forKey: Self.recentKey))
+            .flatMap { try? JSONDecoder().decode([String: Change].self, from: $0) } ?? [:]
     }
 
     private static func key(_ section: FeedbackStore.ProjectSection, _ project: String) -> String {
@@ -52,17 +71,44 @@ final class SectionChanges: ObservableObject {
         persist()
     }
 
-    /// 열어 봤다 — 지금 말을 본 것으로.
+    /// 열어 봤다 — 지금 말을 본 것으로. 달라져 있던 것은 띠에 남긴다.
     func markSeen(_ section: FeedbackStore.ProjectSection, signatures: [String: String]) {
         var next = seen
-        for (project, signature) in signatures { next[Self.key(section, project)] = signature }
-        guard next != seen else { return }
+        var nextRecent = recent
+        for (project, signature) in signatures {
+            let key = Self.key(section, project)
+            if let old = seen[key], old != signature {
+                // 확인 안 한 바뀜이 또 바뀌면 처음 말부터 지금 말까지 한 줄로.
+                let before = nextRecent[key]?.before ?? old
+                nextRecent[key] = before == signature ? nil
+                    : Change(section: section.rawValue, project: project, before: before, after: signature, at: Date())
+            }
+            next[key] = signature
+        }
+        guard next != seen || nextRecent != recent else { return }
         seen = next
+        recent = nextRecent
+        persist()
+    }
+
+    /// 이 칸(한 앱이면 그 앱)의 확인 안 한 바뀜. 최근 것이 위.
+    func recentChanges(_ section: FeedbackStore.ProjectSection, project: String?) -> [Change] {
+        recent.values
+            .filter { $0.section == section.rawValue && (project == nil || $0.project == project) }
+            .sorted { $0.at > $1.at }
+    }
+
+    /// 띠의 "확인".
+    func dismiss(_ section: FeedbackStore.ProjectSection, project: String?) {
+        let keys = recentChanges(section, project: project).map { Self.key(section, $0.project) }
+        guard !keys.isEmpty else { return }
+        for key in keys { recent[key] = nil }
         persist()
     }
 
     private func persist() {
         UserDefaults.standard.set(seen, forKey: Self.defaultsKey)
+        UserDefaults.standard.set(try? JSONEncoder().encode(recent), forKey: Self.recentKey)
     }
 
     // MARK: - 말
@@ -113,14 +159,50 @@ final class SectionChanges: ObservableObject {
         store.projectCounts.map(\.key).filter { $0 != Feedback.unclassifiedProject }
     }
 
-    /// 본 뒤 바뀐 앱들.
-    func changedApps(_ section: FeedbackStore.ProjectSection, project: String?,
-                     metrics: SectionMetrics) -> [String] {
-        guard Self.tracked.contains(section) else { return [] }
-        return Self.signatures(section, project: project, metrics: metrics)
-            .filter { isChanged(section, project: $0.key, signature: $0.value) }
-            .map(\.key)
+    /// 본 뒤 바뀐 것의 수. 키워드는 순위가 움직인 키워드마다, 나머지 칸은 앱마다 하나.
+    func changedCount(_ section: FeedbackStore.ProjectSection, project: String?,
+                      metrics: SectionMetrics) -> Int {
+        guard Self.tracked.contains(section) else { return 0 }
+        return Self.signatures(section, project: project, metrics: metrics).reduce(0) { total, entry in
+            guard let old = seen[Self.key(section, entry.key)], old != entry.value else { return total }
+            return total + max(1, Self.lines(section, before: old, after: entry.value).count)
+        }
     }
+
+    // MARK: - 무엇이 바뀌었나
+
+    /// 바뀜을 사람 말로 — "설치 120대 → 125대", "🇰🇷 메모 12위 → 5위".
+    static func lines(_ section: FeedbackStore.ProjectSection, before: String, after: String) -> [String] {
+        switch section {
+        case .keywords:
+            let old = ranks(before), new = ranks(after)
+            return new.keys.sorted().compactMap { id in
+                let now = new[id] ?? "-"
+                guard let was = old[id] else { return nil }
+                guard was != now else { return nil }
+                let parts = id.split(separator: "/", maxSplits: 1).map(String.init)
+                let name = parts.count == 2 ? "\(ChartStorefronts.flag(parts[0])) \(parts[1])" : id
+                return "\(name) \(rankText(was)) → \(rankText(now))"
+            }
+        case .release, .purchases:
+            let old = before.components(separatedBy: "|"), new = after.components(separatedBy: "|")
+            let labels = section == .purchases ? ["", "판매 중 "] : ["", ""]
+            return zip(old, new).enumerated().compactMap { index, pair in
+                pair.0 == pair.1 ? nil : "\(labels[min(index, 1)])\(pair.0) → \(pair.1)"
+            }
+        default:
+            return ["\(before) → \(after)"]
+        }
+    }
+
+    private static func ranks(_ signature: String) -> [String: String] {
+        Dictionary(signature.split(separator: ",").compactMap { item -> (String, String)? in
+            guard let eq = item.lastIndex(of: "=") else { return nil }
+            return (String(item[..<eq]), String(item[item.index(after: eq)...]))
+        }, uniquingKeysWith: { a, _ in a })
+    }
+
+    private static func rankText(_ rank: String) -> String { rank == "-" ? "순위 밖" : "\(rank)위" }
 }
 
 /// 처음 보는 칸 · 앱의 기준선을 잡는다. 저장된 허브를 다 들인 뒤에만 — 들이는 도중의 빈
@@ -139,5 +221,92 @@ struct SectionChangesBaseline: ViewModifier {
             .onChange(of: isRestored ? SectionChanges.allSignatures(metrics: metrics) : [:], initial: true) { _, signatures in
                 SectionChanges.shared.adoptBaselines(signatures)
             }
+    }
+}
+
+/// 칸 맨 위의 띠 — 지난번 본 뒤 무엇이 바뀌었나. 사이드바 뱃지를 눌러 들어온 사람이 무엇을
+/// 봐야 하는지 여기서 안다. 전체 앱이면 줄을 눌러 그 앱으로 간다.
+struct SectionChangesBanner: View {
+    @EnvironmentObject private var store: FeedbackStore
+    @ObservedObject private var changes = SectionChanges.shared
+    let section: FeedbackStore.ProjectSection
+    let project: String?
+
+    private static let shownLimit = 6
+    /// 띠는 화면 위에 붙어 있어 그만큼 스크롤할 자리를 먹는다. 처음엔 한 줄만, 펼치면 전부.
+    @State private var isExpanded = false
+
+    var body: some View {
+        let items = changes.recentChanges(section, project: project)
+        if !items.isEmpty {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(alignment: .firstTextBaseline) {
+                    Label("지난번 본 뒤 바뀐 것" + (items.count > 1 ? " \(items.count)개" : ""), systemImage: "sparkles")
+                        .font(.headline)
+                        .foregroundStyle(.red)
+                    Spacer(minLength: 8)
+                    if items.count > 1 || lineCount(items[0]) > 1 {
+                        Button(isExpanded ? "접기" : "펼치기") { isExpanded.toggle() }
+                            .buttonStyle(.borderless)
+                            .font(.body)
+                    }
+                    Button("확인") { changes.dismiss(section, project: project) }
+                        .buttonStyle(.borderless)
+                        .font(.body)
+                }
+                ForEach(items.prefix(isExpanded ? Self.shownLimit : 1), id: \.project) { item in
+                    row(item)
+                }
+                if isExpanded, items.count > Self.shownLimit {
+                    Text("외 \(items.count - Self.shownLimit)개 앱")
+                        .font(.body)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .padding(12)
+            .background(Color.red.opacity(0.08), in: RoundedRectangle(cornerRadius: 10))
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+        }
+    }
+
+    private func lineCount(_ item: SectionChanges.Change) -> Int {
+        SectionChanges.lines(section, before: item.before, after: item.after).count
+    }
+
+    @ViewBuilder
+    private func row(_ item: SectionChanges.Change) -> some View {
+        let all = SectionChanges.lines(section, before: item.before, after: item.after)
+        let lines = isExpanded ? all : Array(all.prefix(1))
+        let text = VStack(alignment: .leading, spacing: 2) {
+            if project == nil {
+                Text(store.displayName(for: item.project))
+                    .font(.body.weight(.semibold))
+            }
+            ForEach(Array(lines.prefix(5).enumerated()), id: \.offset) { _, line in
+                Text(line)
+                    .font(.body.monospacedDigit())
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            if lines.count > 5 {
+                Text("외 \(lines.count - 5)개")
+                    .font(.body)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+
+        if project == nil {
+            Button { store.open(project: item.project, section: section) } label: {
+                HStack {
+                    text
+                    Image(systemName: "chevron.right").foregroundStyle(.secondary)
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+        } else {
+            text
+        }
     }
 }

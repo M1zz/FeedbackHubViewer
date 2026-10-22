@@ -50,6 +50,7 @@ struct SectionRefresh {
         case .charts: "차트 순위 새로고침"
         case .purchases: "앱 내 구입 새로고침"
         case .design: "설계 문서 다시 읽기"
+        case .marketing: "마케팅 기록 맞추기"
         }
     }
 
@@ -70,6 +71,7 @@ struct SectionRefresh {
         case .charts: "나라마다 인기 차트 순위"
         case .purchases: project == nil ? "판매 · 모든 앱의 상품" : "판매 · 상품 · 노출 · 전환"
         case .design: "리포의 설계 문서 목록"
+        case .marketing: "다른 기기에서 고친 마케팅 활동(iCloud)"
         }
     }
 
@@ -100,7 +102,7 @@ struct SectionRefresh {
             return charts.isScanning
         case .purchases:
             return connect.isLoadingSales || project.map(connect.isCatalogLoading) == true
-        case .design:
+        case .design, .marketing:
             return false
         }
     }
@@ -174,6 +176,8 @@ struct SectionRefresh {
             }
         case .design:
             design.rescan()
+        case .marketing:
+            MarketingStore.shared.pullFromCloud()
         }
     }
 }
