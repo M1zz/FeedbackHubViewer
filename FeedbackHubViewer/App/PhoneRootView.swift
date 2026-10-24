@@ -32,7 +32,7 @@ struct PhoneRootView: View {
     var body: some View {
         let metrics = SectionMetrics(store: store, keywords: keywords, purchases: purchases, design: design, charts: charts, news: news)
 
-        TabView(selection: tabSelection) {
+        TabView(selection: tabSelection(metrics)) {
             ForEach(FeedbackStore.ProjectSection.Group.phoneTabs) { tab in
                 PhoneTab(tab: tab)
                     .tabItem { Label(tab.tabTitle, systemImage: tab.systemImage) }
@@ -46,10 +46,18 @@ struct PhoneRootView: View {
     }
 
     /// 지금 열린 탭을 다시 누르면 그 탭의 맨 앞으로 — 아이폰 앱들이 다 그렇게 한다.
-    private var tabSelection: Binding<FeedbackStore.ProjectSection.Group> {
+    /// 다른 탭으로 옮길 때, 지금 고른 기능에는 뱃지가 없고 다른 기능에 있으면 그 기능을 연다 —
+    /// 탭 뱃지를 보고 들어왔는데 뱃지 없는 화면이 열려 길을 잃지 않게.
+    private func tabSelection(_ metrics: SectionMetrics) -> Binding<FeedbackStore.ProjectSection.Group> {
         Binding(get: { store.phoneTab },
                 set: { tab in
-                    if tab == store.phoneTab { store.phonePaths[tab] = NavigationPath() }
+                    if tab == store.phoneTab {
+                        store.phonePaths[tab] = NavigationPath()
+                    } else if metrics.badge(store.phoneSection(for: tab), project: nil) == nil,
+                              let flagged = tab.phoneSections.first(where: { metrics.badge($0, project: nil) != nil }) {
+                        store.phoneSections[tab] = flagged
+                        store.phonePaths[tab] = NavigationPath()
+                    }
                     store.phoneTab = tab
                 })
     }
@@ -63,6 +71,14 @@ struct PhoneRootView: View {
 /// 탭 하나: 제 스택과 그 맨 앞 화면.
 private struct PhoneTab: View {
     @EnvironmentObject private var store: FeedbackStore
+    @EnvironmentObject private var keywords: KeywordStore
+    @EnvironmentObject private var purchases: AppStoreConnectStore
+    @EnvironmentObject private var design: DesignDocsStore
+    @EnvironmentObject private var charts: ChartStore
+    @EnvironmentObject private var news: NewsStore
+    @ObservedObject private var changes = SectionChanges.shared
+    @ObservedObject private var marketing = MarketingStore.shared
+    @ObservedObject private var leadStore = LeadStore.shared
     let tab: FeedbackStore.ProjectSection.Group
 
     var body: some View {
@@ -117,8 +133,13 @@ private struct PhoneTab: View {
                 if sections.count > 1 {
                     Picker("기능", selection: Binding(get: { current },
                                                      set: { store.phoneSections[tab] = $0 })) {
+                        // 탭 뱃지가 어느 기능 것인지 — 세그먼트에 수를 붙인다.
+                        let metrics = SectionMetrics(store: store, keywords: keywords, purchases: purchases,
+                                                     design: design, charts: charts, news: news)
                         ForEach(sections) { section in
-                            Text(section.rawValue).tag(section)
+                            let count = metrics.badge(section, project: nil)?.count ?? 0
+                            Text(count > 0 ? "\(section.rawValue) ● \(count > 99 ? "99+" : "\(count)")" : section.rawValue)
+                                .tag(section)
                         }
                     }
                     .pickerStyle(.segmented)
