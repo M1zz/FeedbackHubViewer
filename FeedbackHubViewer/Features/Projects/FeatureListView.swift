@@ -51,7 +51,7 @@ struct FeatureListView: View {
                 }
             }
 
-            // 읽어서 사라지는 뱃지를 한 번에(`BadgeReset`). 할 일 · 올렸나요 · 릴리즈 빨강은 남는다.
+            // 읽어서 사라지는 뱃지를 한 번에(`BadgeReset`). 할 일 · 올렸나요는 남는다.
             let readable = BadgeReset.readableCount(metrics)
             if readable > 0 {
                 Section {
@@ -62,21 +62,36 @@ struct FeatureListView: View {
                             .font(.body)
                     }
                     .buttonStyle(.borderless)
-                    .help("안 읽은 피드백 · 새 리뷰 · 새 진단 · 새 소식 · 본 뒤 바뀐 것을 모두 읽음으로. 할 일 · 올렸나요 · 릴리즈 빨강은 남습니다")
+                    .help("안 읽은 피드백 · 새 리뷰 · 새 진단 · 새 소식 · 릴리즈 빨강 · 본 뒤 바뀐 것을 모두 읽음으로. 할 일 · 올렸나요는 남습니다")
+                }
+            }
+
+            // 뱃지가 달린 칸은 맨 위 "확인할 것" 으로 올린다. 뱃지가 사라지면 제 무리의 제자리로.
+            // 할 일은 이미 맨 위 한 줄이라 그대로 둔다.
+            let flagged = Self.flagged(metrics)
+            if !flagged.isEmpty {
+                Section("확인할 것") {
+                    ForEach(flagged) { section in
+                        row(section, metrics: metrics)
+                    }
                 }
             }
 
             ForEach(FeedbackStore.ProjectSection.Group.allCases) { group in
-                Section {
-                    ForEach(group.sections) { section in
-                        row(section, metrics: metrics)
+                let sections = group.sections.filter { !flagged.contains($0) }
+                if !sections.isEmpty {
+                    Section {
+                        ForEach(sections) { section in
+                            row(section, metrics: metrics)
+                        }
+                    } header: {
+                        // 할 일은 맨 위 한 줄이라 무리 이름이 없어도 읽힌다.
+                        if group != .today { Text(group.rawValue) }
                     }
-                } header: {
-                    // 할 일은 맨 위 한 줄이라 무리 이름이 없어도 읽힌다.
-                    if group != .today { Text(group.rawValue) }
                 }
             }
         }
+        .animation(.default, value: Self.flagged(metrics))
         .hubSidebarListStyle()
         .modifier(SectionChangesBaseline(metrics: metrics))
         .navigationTitle("FeedbackHub")
@@ -86,6 +101,14 @@ struct FeatureListView: View {
             ToolbarItem(placement: .topBarLeading) { EnvironmentBadge() }
         }
         #endif
+    }
+
+    /// 뱃지가 달린 칸 — 무리 차례 그대로.
+    private static func flagged(_ metrics: SectionMetrics) -> [FeedbackStore.ProjectSection] {
+        FeedbackStore.ProjectSection.Group.allCases
+            .filter { $0 != .today }
+            .flatMap(\.sections)
+            .filter { metrics.badge($0, project: nil) != nil }
     }
 
     private func row(_ section: FeedbackStore.ProjectSection, metrics: SectionMetrics) -> some View {
