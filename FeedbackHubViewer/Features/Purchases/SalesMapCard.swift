@@ -182,7 +182,7 @@ struct SalesMapCard: View {
 ///
 /// 원의 자리는 스냅샷이 말해 주는 대로 놓는다(`Snapshot.point(for:)`). 맥에서는 그 점이
 /// 그림의 **왼쪽 아래**를 원점으로 하므로(AppKit 좌표) 위아래를 뒤집는다.
-private struct WorldSnapshot<Overlay: View>: View {
+struct WorldSnapshot<Overlay: View>: View {
     /// 좌표 → 판 위의 점. 판 크기에 맞춰 부른다.
     @ViewBuilder let overlay: (_ project: @escaping (CLLocationCoordinate2D) -> CGPoint?) -> Overlay
 

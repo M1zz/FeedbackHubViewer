@@ -36,8 +36,12 @@ struct MarketingItem: Codable, Identifiable, Hashable {
     var theme: Int?
     /// 영상 대본 · 장면.
     var script = ""
+    /// 영어판 영상 대본. 마케팅은 늘 영어판이 있어야 한다(해외 채널 · X).
+    var scriptEn = ""
     /// 글 본문, 또는 카드뉴스 · 영상에 붙일 캡션.
     var body = ""
+    /// 영어판 글 · 캡션.
+    var bodyEn = ""
     /// 올린 글의 주소.
     var postURL = ""
     var postedAt: Date?
@@ -103,11 +107,16 @@ struct MarketingItem: Codable, Identifiable, Hashable {
         var id = UUID()
         var headline: String
         var text: String
+        /// 영어판. 비어 있으면 영어 카드는 한국어를 그대로 쓴다.
+        var headlineEn = ""
+        var textEn = ""
 
-        init(id: UUID = UUID(), headline: String, text: String) {
+        init(id: UUID = UUID(), headline: String, text: String, headlineEn: String = "", textEn: String = "") {
             self.id = id
             self.headline = headline
             self.text = text
+            self.headlineEn = headlineEn
+            self.textEn = textEn
         }
 
         init(from decoder: Decoder) throws {
@@ -115,6 +124,14 @@ struct MarketingItem: Codable, Identifiable, Hashable {
             id = try c.decodeIfPresent(UUID.self, forKey: .id) ?? UUID()
             headline = try c.decodeIfPresent(String.self, forKey: .headline) ?? ""
             text = try c.decodeIfPresent(String.self, forKey: .text) ?? ""
+            headlineEn = try c.decodeIfPresent(String.self, forKey: .headlineEn) ?? ""
+            textEn = try c.decodeIfPresent(String.self, forKey: .textEn) ?? ""
+        }
+
+        /// 그 언어로 보일 장. 영어가 비었으면 한국어.
+        func localized(english: Bool) -> Slide {
+            guard english, !(headlineEn.isEmpty && textEn.isEmpty) else { return self }
+            return Slide(id: id, headline: headlineEn, text: textEn)
         }
     }
 
@@ -131,14 +148,24 @@ struct MarketingItem: Codable, Identifiable, Hashable {
     var hasMaterial: Bool {
         switch kind {
         case .cardNews: !slides.isEmpty
-        case .video: !script.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        case .post: !body.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        case .video: !(script + scriptEn).trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        case .post: !(body + bodyEn).trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        }
+    }
+
+    /// 영어판이 비었나 — 마케팅 자료는 영어판이 있어야 한다.
+    var lacksEnglish: Bool {
+        switch kind {
+        case .cardNews: slides.isEmpty || slides.contains { $0.headlineEn.isEmpty } || bodyEn.isEmpty
+        case .video: scriptEn.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        case .post: bodyEn.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         }
     }
 
     /// 이 활동에 지금 할 일 한 줄 — 목록이 판정 대신 보여 준다.
     func nextStep(now: Date = Date()) -> String {
         if needsConfirmation(now: now) { return "올렸나요? 답해 주세요" }
+        if stage.isOpen, hasMaterial, lacksEnglish { return "영어판 채우기 — 마케팅 자료는 영어판이 있어야 해요" }
         switch stage {
         case .planned: return hasMaterial ? "자료를 다듬어 완성으로" : "자료 만들기 — Claude 에게 초안 맡기기"
         case .preparing: return hasMaterial ? "자료를 다듬어 완성으로" : "자료 채우기"
@@ -167,7 +194,9 @@ extension MarketingItem {
         slides = try c.decodeIfPresent([Slide].self, forKey: .slides) ?? []
         theme = try c.decodeIfPresent(Int.self, forKey: .theme)
         script = try c.decodeIfPresent(String.self, forKey: .script) ?? ""
+        scriptEn = try c.decodeIfPresent(String.self, forKey: .scriptEn) ?? ""
         body = try c.decodeIfPresent(String.self, forKey: .body) ?? ""
+        bodyEn = try c.decodeIfPresent(String.self, forKey: .bodyEn) ?? ""
         postURL = try c.decodeIfPresent(String.self, forKey: .postURL) ?? ""
         postedAt = try c.decodeIfPresent(Date.self, forKey: .postedAt)
         snoozedUntil = try c.decodeIfPresent(Date.self, forKey: .snoozedUntil)
@@ -185,8 +214,14 @@ extension MarketingItem {
 /// 두어서, 어느 기기에서 고친 것이든 시드보다 늦다 — 두 번째 기기가 시드를 들일 때 첫 기기에서
 /// "올렸어요" 한 것을 덮지 않는다.
 enum MarketingSeed {
-    static let version = "2026-10-22"
+    /// 시드를 바꿀 때마다 올린다. 2026-10-24: 모든 활동에 영어판. 2026-10-24b: 세끼 영어 이름 Sekki.
+    static let version = "2026-10-24b"
     static let fileName = "marketing-seed"
+    /// 처음 시드를 만든 날. 시드에서 온 활동의 만든 시각 · 고친 시각이 이것이다.
+    static let firstStamp = ISO8601DateFormatter().date(from: "2026-10-22T00:00:00Z") ?? .distantPast
+    /// 시드를 새 판으로 바꿀 때 쓰는 고친 시각 — 첫 시드보다 1초 늦다. 사람이 고친 것은 무엇이든
+    /// 이보다 늦으므로, 다른 기기와 합칠 때 시드의 새 판이 사람의 손을 덮지 않는다.
+    static let refreshStamp = firstStamp.addingTimeInterval(1)
 
     private struct Entry: Decodable {
         let id: UUID
@@ -200,6 +235,8 @@ enum MarketingSeed {
         let slides: [MarketingItem.Slide]?
         let script: String?
         let body: String?
+        let scriptEn: String?
+        let bodyEn: String?
         let theme: Int?
     }
 
@@ -208,7 +245,7 @@ enum MarketingSeed {
               let data = try? Data(contentsOf: url),
               let entries = try? JSONDecoder().decode([Entry].self, from: data) else { return [] }
         let iso = ISO8601DateFormatter()
-        let stamp = iso.date(from: version + "T00:00:00Z") ?? .distantPast
+        let stamp = firstStamp
         return entries.map { entry in
             var item = MarketingItem(project: entry.project,
                                      kind: MarketingItem.Kind(rawValue: entry.kind) ?? .post,
@@ -220,6 +257,13 @@ enum MarketingSeed {
             item.slides = entry.slides ?? []
             item.script = entry.script ?? ""
             item.body = entry.body ?? ""
+            item.scriptEn = entry.scriptEn ?? ""
+            item.bodyEn = entry.bodyEn ?? ""
+            // 영어로만 쓴 시드(레딧 글)는 영어 칸으로 옮긴다 — 한국어 칸에 영어가 있으면 영어판이 빈 것으로 보인다.
+            if item.bodyEn.isEmpty, !item.body.isEmpty, item.body.range(of: "[가-힣]", options: .regularExpression) == nil {
+                item.bodyEn = item.body
+                item.body = ""
+            }
             item.theme = entry.theme
             item.createdAt = stamp
             item.updatedAt = stamp
@@ -298,6 +342,8 @@ enum MarketingPrompt {
         기획: \(item.angle.isEmpty ? "(없음 — 주제에 맞게)" : item.angle)
 
         말투는 광고 같지 않게, 써 본 사람이 친구에게 알려 주듯. 과장 · 이모지 남발 금지.
+        한국어판과 영어판을 둘 다 만들어 줘. 영어판은 번역투가 아니라 영어권 사람이 쓴 것처럼 다시 쓰고,
+        영어권 채널 관습(짧은 문장, 해시태그 적게)에 맞춰.
         """
         switch item.kind {
         case .cardNews:
@@ -307,7 +353,7 @@ enum MarketingPrompt {
             카드뉴스는 5~7장. 첫 장은 멈춰 서게 하는 한 줄, 마지막 장은 앱 이름과 "App Store 에서 검색" 안내.
             장마다 headline 은 15자 안팎, text 는 두세 줄. 게시글 캡션과 해시태그 5개도.
             답은 설명 없이 아래 JSON 하나만:
-            {"slides":[{"headline":"...","text":"..."}],"caption":"캡션 본문\\n\\n#해시태그"}
+            {"slides":[{"headline":"...","text":"...","headlineEn":"...","textEn":"..."}],"caption":"캡션 본문\\n\\n#해시태그","captionEn":"English caption\\n\\n#hashtag"}
             """
         case .video:
             return head + """
@@ -316,7 +362,7 @@ enum MarketingPrompt {
             30초 안팎의 세로 영상. 처음 2초 안에 멈춰 서게 하고, 화면 녹화 위주로 찍을 수 있게.
             장면마다 [시간] 화면에 보이는 것 / 자막 / 내레이션 으로. 올릴 때 쓸 캡션도.
             답은 설명 없이 아래 JSON 하나만:
-            {"script":"[0-2초] 화면: ... / 자막: ... / 내레이션: ...\\n[2-6초] ...","caption":"..."}
+            {"script":"[0-2초] 화면: ... / 자막: ... / 내레이션: ...\\n[2-6초] ...","scriptEn":"[0-2s] Screen: ... / Caption: ... / VO: ...","caption":"...","captionEn":"..."}
             """
         case .post:
             return head + """
@@ -324,9 +370,37 @@ enum MarketingPrompt {
 
             \(item.channel)에 맞는 길이와 형식으로. 첫 줄에서 읽을 이유를 주고, 끝에 앱 링크 자리를 [링크]로.
             답은 설명 없이 아래 JSON 하나만:
-            {"body":"..."}
+            {"body":"한국어 글","bodyEn":"English post"}
             """
         }
+    }
+
+    /// 레딧 질문에 다는 답글 초안. 도움이 먼저, 앱은 그다음 — 그리고 만든 사람이라고 밝힌다.
+    static func redditReply(_ lead: RedditLead, context: MarketingContext) -> String {
+        """
+        레딧 \(lead.subreddit) 에 올라온 질문에 답글을 달려고 해. 나는 아래 앱을 혼자 만든 개발자야.
+
+        질문 제목: \(lead.title)
+        질문 본문(앞부분): \(lead.snippet.isEmpty ? "(본문 없음)" : lead.snippet)
+        글 주소: \(lead.url.absoluteString)
+
+        \(context.brief)
+
+        답글 규칙:
+        - 질문에 먼저 진짜로 답한다. 내 앱이 맞지 않는 질문이면 "이 질문에는 내 앱이 맞지 않다"고 말해 줘 — 억지로 끼워 넣지 않는다
+        - 내 앱을 말할 때는 반드시 "I made this" 처럼 만든 사람이라고 밝힌다
+        - 광고 말투 · 과장 · 이모지 금지. 레딧 사람이 쓰는 말투로, 120단어 안
+        - 앱이 실제로 하는 일만. 질문한 사람의 상황에 어떻게 맞는지 한두 문장으로
+        - 링크는 맨 끝에 한 번만, 서브레딧이 링크를 싫어할 것 같으면 "App Store에서 앱 이름 검색" 으로
+        - 다른 좋은 방법(내장 기능 · 다른 앱)이 있으면 같이 알려 준다 — 그래야 믿는다
+
+        답은 두 판으로:
+        영어 답글:
+        (그대로 붙여 넣을 영어 답글)
+
+        한국어 뜻:
+        (위 답글을 한국어로)
+        """
     }
 
     static func day(_ date: Date) -> String {
@@ -349,11 +423,14 @@ enum MarketingImport {
     }
 
     struct Material: Decodable {
-        struct Slide: Decodable { let headline: String?; let text: String? }
+        struct Slide: Decodable { let headline: String?; let text: String?; let headlineEn: String?; let textEn: String? }
         let slides: [Slide]?
         let caption: String?
+        let captionEn: String?
         let script: String?
+        let scriptEn: String?
         let body: String?
+        let bodyEn: String?
     }
 
     /// 계획 JSON → 활동들. 앞뒤 말이나 코드 울타리가 붙어 있어도 배열만 골라 읽는다.
@@ -382,10 +459,13 @@ enum MarketingImport {
         if let json = slice(trimmed, open: "{", close: "}"),
            let material = try? JSONDecoder().decode(Material.self, from: Data(json.utf8)) {
             if let slides = material.slides, !slides.isEmpty {
-                item.slides = slides.map { .init(headline: $0.headline ?? "", text: $0.text ?? "") }
+                item.slides = slides.map { .init(headline: $0.headline ?? "", text: $0.text ?? "",
+                                                 headlineEn: $0.headlineEn ?? "", textEn: $0.textEn ?? "") }
             }
             if let script = material.script, !script.isEmpty { item.script = script }
+            if let script = material.scriptEn, !script.isEmpty { item.scriptEn = script }
             if let body = material.body ?? material.caption, !body.isEmpty { item.body = body }
+            if let body = material.bodyEn ?? material.captionEn, !body.isEmpty { item.bodyEn = body }
         } else if item.kind == .video {
             item.script = trimmed
         } else {
@@ -398,5 +478,53 @@ enum MarketingImport {
     private static func slice(_ text: String, open: Character, close: Character) -> String? {
         guard let start = text.firstIndex(of: open), let end = text.lastIndex(of: close), start < end else { return nil }
         return String(text[start...end])
+    }
+}
+
+// MARK: - 캠페인
+
+/// Apple 캠페인 링크 — 스토어 링크에 제공자 토큰(`pt`)과 캠페인 토큰(`ct`)을 붙이면 App Store
+/// Connect 분석 리포트의 `Campaign` 칸에 그 이름으로 다운로드 · 조회가 남는다. 마케팅 활동마다
+/// 토큰을 달아 두면 "어느 글이 사람을 데려왔나" 를 셀 수 있다.
+///
+/// `pt` 는 계정마다 하나다. App Store Connect → 앱 → 분석 → 획득 → 캠페인 → "캠페인 링크 생성"
+/// 에서 만든 링크의 `pt=` 뒤 숫자. 없으면 `ct` 만 붙여서는 아무것도 세지 않는다.
+enum MarketingCampaign {
+    /// "인스타그램" → "ig". 토큰은 영문 · 숫자 · 하이픈만, 40자 안.
+    static func channelSlug(_ channel: String) -> String {
+        let known: [(String, String)] = [
+            ("인스타", "ig"), ("instagram", "ig"), ("스레드", "threads"), ("threads", "threads"),
+            ("레딧", "reddit"), ("reddit", "reddit"), ("디스콰이엇", "disquiet"), ("블로그", "blog"),
+            ("브런치", "brunch"), ("긱뉴스", "geeknews"), ("쇼츠", "shorts"), ("유튜브", "youtube"),
+            ("릴스", "reels"), ("틱톡", "tiktok"), ("링크드인", "linkedin"), ("페이스북", "facebook"),
+            ("카카오", "kakao"), ("오픈채팅", "kakao"), ("product hunt", "producthunt"),
+        ]
+        let lower = channel.lowercased()
+        if lower == "x" || lower.hasPrefix("x ") || lower.contains("트위터") || lower.contains("twitter") { return "x" }
+        if lower.hasPrefix("r/") { return "reddit" }
+        if let hit = known.first(where: { lower.contains($0.0) }) { return hit.1 }
+        let ascii = lower.filter { $0.isASCII && ($0.isLetter || $0.isNumber) }
+        return ascii.isEmpty ? "etc" : String(ascii.prefix(12))
+    }
+
+    static func link(trackId: Int, providerToken: String, campaignToken: String) -> String {
+        "https://apps.apple.com/app/id\(trackId)?pt=\(providerToken)&ct=\(campaignToken)&mt=8"
+    }
+
+    /// 글 속의 스토어 링크를 캠페인 링크로. 같은 앱 링크만 바꾼다(id 가 같은 것) — 다른 앱을
+    /// 소개한 링크까지 내 캠페인으로 세면 안 된다.
+    static func replacingStoreLinks(in text: String, trackId: Int, with link: String) -> String {
+        let pattern = #"https?://apps\.apple\.com/[^\s)\]"'<>]*id\#(trackId)[^\s)\]"'<>]*"#
+        guard let regex = try? NSRegularExpression(pattern: pattern) else { return text }
+        let range = NSRange(text.startIndex..., in: text)
+        return regex.stringByReplacingMatches(in: text, range: range,
+                                              withTemplate: NSRegularExpression.escapedTemplate(for: link))
+    }
+}
+
+extension MarketingItem {
+    /// 이 활동의 캠페인 토큰 — "ig-1a2b3c". 활동 id 에서 뽑아 늘 같다.
+    var campaignToken: String {
+        "\(MarketingCampaign.channelSlug(channel))-\(id.uuidString.prefix(6).lowercased())"
     }
 }

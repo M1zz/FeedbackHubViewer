@@ -200,6 +200,12 @@ struct ChartRanksView: View {
             Section {
                 Text("이 앱을 App Store 에서 찾지 못했습니다. 아직 출시 전이거나 번들 ID 가 다릅니다.")
                     .foregroundStyle(.secondary)
+                StoreLinkField(project: project) {
+                    // 이어졌으면 바로 순위를 본다.
+                    if let id = keywords.trackId(for: project) {
+                        Task { await charts.scan(trackIds: trackIds.union([id])) }
+                    }
+                }
             }
         }
     }
@@ -296,18 +302,16 @@ private struct MoveLabel: View {
 
     var body: some View {
         switch move {
+        // 시세판처럼 오름 빨강 · 내림 파랑(`RankTrend`).
         case .entered:
-            Text("새로 듦").foregroundStyle(.green)
-                .font(.caption.weight(.semibold))
+            Text("새로 듦").foregroundStyle(RankTrend.up)
+                .font(.body.weight(.semibold))
         case .up(let n):
-            Text("▲\(n)").foregroundStyle(.green)
-                .font(.caption.monospacedDigit().weight(.semibold))
+            RankMoveLabel(climbed: n)
         case .down(let n):
-            Text("▼\(n)").foregroundStyle(.red)
-                .font(.caption.monospacedDigit().weight(.semibold))
+            RankMoveLabel(climbed: -n)
         case .same:
-            Text("–").foregroundStyle(.secondary)
-                .font(.caption)
+            RankMoveLabel(climbed: 0)
         case .unknown:
             EmptyView()
         }

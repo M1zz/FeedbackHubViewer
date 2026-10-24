@@ -17,6 +17,7 @@ import SwiftUI
 struct InAppPurchasesView: View {
     @EnvironmentObject private var store: FeedbackStore
     @EnvironmentObject private var purchases: AppStoreConnectStore
+    @EnvironmentObject private var design: DesignDocsStore
     /// nil == 전체 프로젝트.
     let project: String?
 
@@ -32,6 +33,14 @@ struct InAppPurchasesView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
+                // 판정이 먼저 — 비즈니스 모델 신호등과 페이월은 app-portfolio 를 읽어
+                // App Store Connect 키가 없어도 보인다(키가 있으면 최근 30일 판매로 판정한다).
+                if let project {
+                    BusinessModelCard(project: project)
+                    PaywallCard(project: project)
+                } else {
+                    BusinessOverviewCard()
+                }
                 if !purchases.isConfigured {
                     Card(title: "App Store Connect 연결 안 됨", systemImage: "key") {
                         Text("설정에서 App Store Connect API 키(Issuer ID · Key ID · .p8)를 넣으면 상품과 판매가 여기 나옵니다. 키는 iCloud 키체인에 저장되어 다른 기기에도 들어갑니다.")
@@ -52,6 +61,9 @@ struct InAppPurchasesView: View {
                 }
             }
             .padding(contentPadding)
+        }
+        .task(id: design.workspace) {
+            await PortfolioStore.shared.load(workspace: design.workspace)
         }
         .task(id: project) {
             guard purchases.isConfigured else { return }

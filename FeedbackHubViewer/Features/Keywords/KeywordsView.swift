@@ -508,17 +508,15 @@ private struct KeywordRow: View {
         .frame(width: 56, alignment: .trailing)
     }
 
-    /// Down is up. A rank that fell from 30 to 12 is −18 and green, which takes
-    /// one glance to learn and then reads faster than any arrow would.
+    /// 시세판처럼 — 30위에서 12위로 오르면 빨강 ▲18, 내리면 파랑 ▼(`RankMoveLabel`).
+    /// `delta` 는 순위 숫자의 차이라 오르면 음수다.
     @ViewBuilder
     private var deltaLabel: some View {
         if let delta = standing.delta, delta != 0 {
-            Text(AppFormat.signed(delta))
-                .font(.caption.weight(.semibold).monospacedDigit())
-                .foregroundStyle(DeltaPolarity.lowerIsBetter.tint(for: delta))
-                .frame(width: 36, alignment: .trailing)
+            RankMoveLabel(climbed: -delta)
+                .frame(width: 44, alignment: .trailing)
         } else {
-            Color.clear.frame(width: 36, height: 1)
+            Color.clear.frame(width: 44, height: 1)
         }
     }
 

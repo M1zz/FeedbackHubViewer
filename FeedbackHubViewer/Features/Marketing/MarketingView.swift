@@ -15,6 +15,7 @@ struct MarketingView: View {
     @EnvironmentObject private var connect: AppStoreConnectStore
     @EnvironmentObject private var keywords: KeywordStore
     @EnvironmentObject private var news: NewsStore
+    @EnvironmentObject private var design: DesignDocsStore
     @ObservedObject private var marketing = MarketingStore.shared
 
     /// nil == 전체 앱.
@@ -33,6 +34,14 @@ struct MarketingView: View {
             VStack(alignment: .leading, spacing: 16) {
                 verdict(items, awaiting: awaiting)
                 if !awaiting.isEmpty { confirmCard(awaiting) }
+                // 채비(숙성도) · 배포 · 캠페인 — 한 앱이면 세 카드, 전체면 앱마다 한 줄.
+                if let project {
+                    MarketingReadinessCard(project: project)
+                    MarketingDistributionCard(project: project)
+                    MarketingCampaignCard(project: project)
+                } else {
+                    MarketingOverviewCard()
+                }
                 planCard
                 boardCard(items.filter { $0.stage.isOpen && !$0.needsConfirmation() })
                 pastCard(items.filter { !$0.stage.isOpen })
@@ -47,6 +56,12 @@ struct MarketingView: View {
                 .environmentObject(connect)
                 .environmentObject(keywords)
                 .environmentObject(news)
+        }
+        .task(id: design.workspace) {
+            await PortfolioStore.shared.load(workspace: design.workspace)
+        }
+        .task(id: Set(items.map(\.project))) {
+            await StoreIcons.shared.resolve(items.map(\.project), keywords: keywords)
         }
         .task(id: project) {
             // 지시문에 스토어 문구 · 리뷰를 붙이려면 받아 둔 게 있어야 한다.
@@ -220,16 +235,28 @@ struct MarketingView: View {
 /// 활동 한 줄 — 종류 · 주제 · 채널과 날짜 · 지금 할 일.
 struct MarketingRow: View {
     @EnvironmentObject private var store: FeedbackStore
+    @EnvironmentObject private var keywords: KeywordStore
+    @ObservedObject private var icons = StoreIcons.shared
     let item: MarketingItem
     var showsApp = false
 
     var body: some View {
         HStack(alignment: .top, spacing: 10) {
-            Image(systemName: item.kind.systemImage)
-                .font(.body)
-                .foregroundStyle(.tint)
-                .frame(width: 24)
+            // 앱 아이콘이 먼저 — 여러 앱이 섞인 목록은 이름보다 아이콘으로 빨리 갈린다.
+            // 종류(카드뉴스 · 영상 · 글)는 아이콘 귀퉁이에 작게.
+            AppIcon(url: icons.url(for: item.project, keywords: keywords),
+                    symbol: item.kind.systemImage, size: 36)
+                .overlay(alignment: .bottomTrailing) {
+                    Image(systemName: item.kind.systemImage)
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundStyle(.white)
+                        .padding(3)
+                        .background(Color.accentColor, in: Circle())
+                        .offset(x: 5, y: 5)
+                        .accessibilityHidden(true)
+                }
                 .padding(.top, 2)
+                .padding(.trailing, 4)
             VStack(alignment: .leading, spacing: 2) {
                 Text(item.title.isEmpty ? "(주제 없음)" : item.title)
                     .font(.body.weight(.semibold))

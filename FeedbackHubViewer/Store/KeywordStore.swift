@@ -367,7 +367,7 @@ final class KeywordStore: ObservableObject {
             askedLinks.formUnion(unlinked)
             for app in apps {
                 guard let bundleId = app.bundleId else { continue }
-                history.links[bundleId] = app.id
+                history.links[Self.hubKey(for: bundleId, among: unlinked)] = app.id
                 history.apps[String(app.id)] = app
             }
         } catch {
@@ -386,13 +386,42 @@ final class KeywordStore: ObservableObject {
                 self.askedLinks.formUnion(bundleIds)
                 for app in apps {
                     guard let bundleId = app.bundleId else { continue }
-                    self.history.links[bundleId] = app.id
+                    self.history.links[Self.hubKey(for: bundleId, among: bundleIds)] = app.id
                     self.history.apps[String(app.id)] = app
                 }
                 self.persist()
             } catch {
                 self.errorMessage = error.localizedDescription
             }
+        }
+    }
+
+    /// 스토어가 돌려준 번들 ID 를 허브의 키로. 스토어는 대소문자를 가리지 않고 찾아 주지만
+    /// 돌려줄 때는 제 표기로 준다(`com.ysoup.…` 로 물으면 `com.Ysoup.…`). 그대로 키로 쓰면
+    /// 허브의 앱과 이어지지 않아 "스토어에 없음" 이 된다.
+    private static func hubKey(for bundleId: String, among asked: [String]) -> String {
+        asked.first { $0.caseInsensitiveCompare(bundleId) == .orderedSame } ?? bundleId
+    }
+
+    /// 스토어 링크(또는 id 숫자)로 손수 잇는다 — 번들 ID 가 스토어의 것과 달라 저절로는
+    /// 못 찾는 앱. 리포의 번들 ID 를 바꿨는데 스토어에는 옛 ID 로 나가 있는 경우가 그렇다
+    /// (팔랑북: 허브 com.devkoan.RotoscopeiPad · 스토어 com.leeo.RotoscopeiPad).
+    /// 실패하면 까닭을 돌려준다.
+    func link(project: String, storeLink: String) async -> String? {
+        let digits = storeLink.range(of: #"id(\d+)"#, options: .regularExpression)
+            .map { String(storeLink[$0].dropFirst(2)) } ?? storeLink.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let id = Int(digits) else { return "링크에서 App Store id(id 뒤의 숫자)를 찾지 못했습니다." }
+        do {
+            let apps = try await directory.lookup(ids: [id], country: countries.first ?? "kr")
+            guard let app = apps.first(where: { $0.id == id }) ?? apps.first else {
+                return "App Store 가 이 id 의 앱을 모른다고 합니다."
+            }
+            history.links[project] = app.id
+            history.apps[String(app.id)] = app
+            persist()
+            return nil
+        } catch {
+            return error.localizedDescription
         }
     }
 

@@ -29,6 +29,10 @@ struct MarketingItemEditor: View {
     @State private var exported: [URL] = []
     @State private var isExporting = false
     @State private var confirmsDelete = false
+    /// 미리보기 · 그림에 넣을 앱 아이콘.
+    @State private var icon: CGImage?
+    /// 고치고 보는 언어. 마케팅 자료는 한국어 · 영어 두 판을 든다.
+    @State private var english = false
 
     init(item: MarketingItem, close: @escaping () -> Void) {
         _draft = State(initialValue: item)
@@ -44,12 +48,14 @@ struct MarketingItemEditor: View {
                 VStack(alignment: .leading, spacing: 16) {
                     planSection
                     materialSection
+                    languagePicker
                     switch draft.kind {
                     case .cardNews: cardNewsSection
                     case .video: videoSection
                     case .post: EmptyView()
                     }
                     captionSection
+                    campaignSection
                     postedSection
                 }
                 .padding(Platform.cardPadding)
@@ -71,6 +77,9 @@ struct MarketingItemEditor: View {
         #if os(macOS)
         .frame(minWidth: 620, idealWidth: 720, minHeight: 640, idealHeight: 820)
         #endif
+        .task(id: draft.project) {
+            icon = await StoreIcons.shared.image(for: draft.project, keywords: keywords)
+        }
     }
 
     // MARK: - 기획
@@ -162,6 +171,28 @@ struct MarketingItemEditor: View {
         }
     }
 
+    // MARK: - 언어
+
+    private var languagePicker: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Picker("언어", selection: $english) {
+                Text("한국어").tag(false)
+                Text("English").tag(true)
+            }
+            .pickerStyle(.segmented)
+            .labelsHidden()
+            .onChange(of: english) { exported = [] }
+            if draft.lacksEnglish {
+                Label("영어판이 비어 있어요 — 위의 \"초안 맡길 글\" 은 두 판을 함께 받아요", systemImage: "globe")
+                    .font(.body)
+                    .foregroundStyle(.orange)
+            }
+        }
+    }
+
+    private var scriptBinding: Binding<String> { english ? $draft.scriptEn : $draft.script }
+    private var bodyBinding: Binding<String> { english ? $draft.bodyEn : $draft.body }
+
     // MARK: - 카드뉴스
 
     private var cardNewsSection: some View {
@@ -176,8 +207,8 @@ struct MarketingItemEditor: View {
                 ScrollView(.horizontal) {
                     HStack(spacing: 10) {
                         ForEach(Array(draft.slides.enumerated()), id: \.element.id) { index, slide in
-                            CardNewsSlideView(slide: slide, index: index, total: draft.slides.count,
-                                              appName: appName, theme: CardNewsTheme.of(draft))
+                            CardNewsSlideView(slide: slide.localized(english: english), index: index, total: draft.slides.count,
+                                              appName: appName, theme: CardNewsTheme.of(draft), icon: icon, english: english)
                                 .scaleEffect(0.2, anchor: .topLeading)
                                 .frame(width: CardNewsSlideView.size.width * 0.2,
                                        height: CardNewsSlideView.size.height * 0.2, alignment: .topLeading)
@@ -200,10 +231,10 @@ struct MarketingItemEditor: View {
                         .buttonStyle(.borderless)
                         .font(.body)
                     }
-                    TextField("큰 글씨", text: $slide.headline)
+                    TextField(english ? "Headline" : "큰 글씨", text: english ? $slide.headlineEn : $slide.headline)
                         .textFieldStyle(.roundedBorder)
                         .font(.body)
-                    GrowingTextField("작은 글씨", text: $slide.text, minLines: 2)
+                    GrowingTextField(english ? "Body" : "작은 글씨", text: english ? $slide.textEn : $slide.text, minLines: 2)
                 }
                 .onChange(of: slide) { exported = [] }
             }
@@ -219,8 +250,7 @@ struct MarketingItemEditor: View {
                     Button {
                         Task {
                             isExporting = true
-                            exported = await CardNewsExport.render(draft, appName: appName,
-                                                                   iconURL: keywords.storeApp(for: draft.project)?.iconURL)
+                            exported = await CardNewsExport.render(draft, appName: appName, icon: icon, english: english)
                             isExporting = false
                         }
                     } label: { Label("그림 만들기", systemImage: "photo.on.rectangle") }
@@ -266,10 +296,11 @@ struct MarketingItemEditor: View {
             Text("장면마다 [시간] 화면 / 자막 / 내레이션. 화면 녹화로 찍을 수 있게.")
                 .font(.body)
                 .foregroundStyle(.secondary)
-            GrowingTextField("[0-2초] 화면: … / 자막: … / 내레이션: …", text: $draft.script, minLines: 8)
+            GrowingTextField(english ? "[0-2s] Screen: … / Caption: … / VO: …" : "[0-2초] 화면: … / 자막: … / 내레이션: …",
+                             text: scriptBinding, minLines: 8)
             HStack {
                 Spacer()
-                CopyButton(text: draft.script, title: "대본 복사").font(.body)
+                CopyButton(text: scriptBinding.wrappedValue, title: english ? "영어 대본 복사" : "대본 복사").font(.body)
             }
         }
     }
@@ -278,19 +309,55 @@ struct MarketingItemEditor: View {
 
     private var captionSection: some View {
         Card(title: draft.kind == .post ? "글" : "캡션", systemImage: "text.alignleft") {
-            GrowingTextField(draft.kind == .post ? "본문" : "캡션 · 해시태그", text: $draft.body,
+            GrowingTextField(draft.kind == .post ? (english ? "Post" : "본문") : (english ? "Caption · hashtags" : "캡션 · 해시태그"),
+                             text: bodyBinding,
                              minLines: draft.kind == .post ? 10 : 4)
             HStack {
-                Text("\(draft.body.count)자")
+                Text("\(bodyBinding.wrappedValue.count)자")
                     .font(.body.monospacedDigit())
                     .foregroundStyle(.secondary)
                 Spacer()
-                CopyButton(text: draft.body, title: draft.kind == .post ? "글 복사" : "캡션 복사").font(.body)
+                CopyButton(text: bodyBinding.wrappedValue,
+                           title: (english ? "영어 " : "") + (draft.kind == .post ? "글 복사" : "캡션 복사")).font(.body)
             }
             if draft.hasMaterial, draft.stage == .preparing || draft.stage == .planned {
                 Button("자료 완성으로") { draft.stage = .ready }
                     .buttonStyle(.bordered)
                     .font(.body)
+            }
+        }
+    }
+
+    // MARK: - 캠페인
+
+    private var campaignSection: some View {
+        Card(title: "캠페인 링크", systemImage: "scope") {
+            if marketing.providerToken.isEmpty {
+                ProviderTokenField()
+            } else if let trackId = keywords.trackId(for: draft.project) {
+                let link = MarketingCampaign.link(trackId: trackId, providerToken: marketing.providerToken,
+                                                  campaignToken: draft.campaignToken)
+                Text("이 링크로 들어온 다운로드는 마케팅 칸의 \"캠페인 추적\" 에 \(draft.campaignToken) 로 잡혀요.")
+                    .font(.body).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                Text(link)
+                    .font(.body.monospaced())
+                    .textSelection(.enabled)
+                    .fixedSize(horizontal: false, vertical: true)
+                HStack {
+                    CopyButton(text: link, title: "링크 복사").font(.body)
+                    Spacer()
+                    let replaced = MarketingCampaign.replacingStoreLinks(in: draft.body, trackId: trackId, with: link)
+                    let replacedEn = MarketingCampaign.replacingStoreLinks(in: draft.bodyEn, trackId: trackId, with: link)
+                    Button("글 속 스토어 링크를 이걸로 바꾸기(두 판 모두)") {
+                        draft.body = replaced
+                        draft.bodyEn = replacedEn
+                    }
+                    .font(.body)
+                    .disabled(replaced == draft.body && replacedEn == draft.bodyEn)
+                }
+            } else {
+                Text("이 앱이 App Store 와 이어지지 않아 캠페인 링크를 만들 수 없어요.")
+                    .font(.body).foregroundStyle(.secondary)
             }
         }
     }

@@ -17,6 +17,11 @@ import SwiftUI
 /// window toolbar, folded into one item.
 struct HubOverflowMenu: View {
     @EnvironmentObject private var store: FeedbackStore
+    @EnvironmentObject private var keywords: KeywordStore
+    @EnvironmentObject private var purchases: AppStoreConnectStore
+    @EnvironmentObject private var design: DesignDocsStore
+    @EnvironmentObject private var charts: ChartStore
+    @EnvironmentObject private var news: NewsStore
     /// 데이터 상태 시트. 메뉴 안에는 시트를 못 붙여서 바깥(`HubToolbar`)이 쥔다.
     @Binding var showsDataSources: Bool
 
@@ -26,6 +31,16 @@ struct HubOverflowMenu: View {
             Section {
                 RefreshButton()
                 RefreshAllButton()
+            }
+            let metrics = SectionMetrics(store: store, keywords: keywords, purchases: purchases,
+                                         design: design, charts: charts, news: news)
+            let readable = BadgeReset.readableCount(metrics)
+            if readable > 0 {
+                Button {
+                    BadgeReset.markAllRead(metrics: metrics)
+                } label: {
+                    Label("뱃지 모두 읽음 · \(AppFormat.count(readable))", systemImage: "checkmark.circle")
+                }
             }
             Button {
                 showsDataSources = true

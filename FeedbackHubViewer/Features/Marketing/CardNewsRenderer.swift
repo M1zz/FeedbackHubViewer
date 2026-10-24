@@ -43,6 +43,8 @@ struct CardNewsSlideView: View {
     let appName: String
     let theme: CardNewsTheme
     var icon: CGImage? = nil
+    /// 영어 카드 — 마지막 장의 검색 안내도 영어로.
+    var english = false
 
     static let size = CGSize(width: 1080, height: 1350)
 
@@ -93,7 +95,7 @@ struct CardNewsSlideView: View {
             }
             Spacer(minLength: 40)
             if index == total - 1 {
-                Text("App Store 에서 \"\(appName)\" 검색")
+                Text(english ? "Search \"\(appName)\" on the App Store" : "App Store 에서 \"\(appName)\" 검색")
                     .font(.system(size: 36, weight: .bold))
                     .padding(.horizontal, 30)
                     .padding(.vertical, 18)
@@ -111,21 +113,21 @@ struct CardNewsSlideView: View {
 /// 장들을 PNG 파일로. 임시 폴더에 쓰고 그 주소들을 돌려준다 — 공유 · 폴더 저장이 그걸 쓴다.
 @MainActor
 enum CardNewsExport {
-    static func render(_ item: MarketingItem, appName: String, iconURL: URL?) async -> [URL] {
-        let icon = await loadIcon(iconURL)
+    static func render(_ item: MarketingItem, appName: String, icon: CGImage?, english: Bool = false) async -> [URL] {
         let folder = FileManager.default.temporaryDirectory
-            .appendingPathComponent("cardnews-\(item.id.uuidString)", isDirectory: true)
+            .appendingPathComponent("cardnews-\(item.id.uuidString)-\(english ? "en" : "ko")", isDirectory: true)
         try? FileManager.default.removeItem(at: folder)
         try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
 
         let theme = CardNewsTheme.of(item)
         var urls: [URL] = []
         for (index, slide) in item.slides.enumerated() {
-            let renderer = ImageRenderer(content: CardNewsSlideView(slide: slide, index: index, total: item.slides.count,
-                                                                    appName: appName, theme: theme, icon: icon))
+            let renderer = ImageRenderer(content: CardNewsSlideView(slide: slide.localized(english: english), index: index,
+                                                                    total: item.slides.count, appName: appName,
+                                                                    theme: theme, icon: icon, english: english))
             renderer.scale = 1
             guard let image = renderer.cgImage else { continue }
-            let url = folder.appendingPathComponent(String(format: "%02d.png", index + 1))
+            let url = folder.appendingPathComponent(String(format: "%@-%02d.png", english ? "en" : "ko", index + 1))
             if write(image, to: url) { urls.append(url) }
         }
         return urls
@@ -138,9 +140,59 @@ enum CardNewsExport {
         return CGImageDestinationFinalize(destination)
     }
 
-    private static func loadIcon(_ url: URL?) async -> CGImage? {
-        guard let url, let (data, _) = try? await URLSession.shared.data(from: url),
-              let source = CGImageSourceCreateWithData(data as CFData, nil) else { return nil }
-        return CGImageSourceCreateImageAtIndex(source, 0, nil)
+}
+
+/// 앱 아이콘 주소. 키워드 칸이 이어 둔 스토어 앱이 있으면 그 아이콘, 없으면
+/// 번들 ID 로 App Store 에 한 번 물어 본다 — 맥 전용 앱은 키워드 칸의 검색(iOS 앱만)에 안
+/// 잡혀서 아이콘이 비었다.
+@MainActor
+final class StoreIcons: ObservableObject {
+    static let shared = StoreIcons()
+
+    @Published private var found: [String: URL] = [:]
+    private var asked: Set<String> = []
+    private var images: [URL: CGImage] = [:]
+
+    func url(for project: String, keywords: KeywordStore) -> URL? {
+        keywords.storeApp(for: project)?.iconURL ?? found[project]
+    }
+
+    /// 모르는 앱의 아이콘 주소를 묻는다. 한 번 물은 앱은 이번 실행에서 다시 묻지 않는다.
+    func resolve(_ projects: [String], keywords: KeywordStore) async {
+        let missing = Set(projects).filter { url(for: $0, keywords: keywords) == nil && !asked.contains($0) }
+        guard !missing.isEmpty else { return }
+        asked.formUnion(missing)
+        for country in ["kr", "us"] {
+            let left = missing.filter { found[$0] == nil }
+            guard !left.isEmpty else { break }
+            var components = URLComponents(string: "https://itunes.apple.com/lookup")!
+            components.queryItems = [URLQueryItem(name: "bundleId", value: left.sorted().joined(separator: ",")),
+                                     URLQueryItem(name: "country", value: country)]
+            guard let url = components.url,
+                  let (data, _) = try? await URLSession.shared.data(from: url),
+                  let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  let results = object["results"] as? [[String: Any]] else { continue }
+            for result in results {
+                guard let bundleId = result["bundleId"] as? String,
+                      let icon = (result["artworkUrl512"] ?? result["artworkUrl100"]) as? String,
+                      let iconURL = URL(string: icon) else { continue }
+                // 허브의 키와 대소문자가 다를 수 있다(com.ysoup.… / com.Ysoup.…).
+                if let key = left.first(where: { $0.caseInsensitiveCompare(bundleId) == .orderedSame }) {
+                    found[key] = iconURL
+                }
+            }
+        }
+    }
+
+    /// 카드뉴스에 넣을 아이콘 그림.
+    func image(for project: String, keywords: KeywordStore) async -> CGImage? {
+        await resolve([project], keywords: keywords)
+        guard let url = url(for: project, keywords: keywords) else { return nil }
+        if let cached = images[url] { return cached }
+        guard let (data, _) = try? await URLSession.shared.data(from: url),
+              let source = CGImageSourceCreateWithData(data as CFData, nil),
+              let image = CGImageSourceCreateImageAtIndex(source, 0, nil) else { return nil }
+        images[url] = image
+        return image
     }
 }

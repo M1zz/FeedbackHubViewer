@@ -124,6 +124,10 @@ struct ProjectSectionView: View {
             StoreAnalyticsView(project: project)
         case .marketing:
             MarketingView(project: project)
+        case .experience:
+            ExperienceView(project: project)
+        case .leads:
+            LeadsView(project: project)
         }
     }
 }

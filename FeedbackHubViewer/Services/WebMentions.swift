@@ -102,7 +102,7 @@ enum WebMentions {
         text.range(of: term, options: [.caseInsensitive, .diacriticInsensitive, .widthInsensitive]) != nil
     }
 
-    private static func fetch(_ url: URL) async -> Data? {
+    static func fetch(_ url: URL) async -> Data? {
         var request = URLRequest(url: url, timeoutInterval: 20)
         // 레딧은 이름 없는 요청을 막는다.
         request.setValue("macos:com.Ysoup.FeedbackHubViewer:1.0 (app news)", forHTTPHeaderField: "User-Agent")
@@ -119,7 +119,7 @@ enum WebMentions {
 
 /// RSS 2.0 의 `<item>` 과 Atom 의 `<entry>` 만 읽는 작은 파서. Atom 은 링크를 `href` 속성에,
 /// 레딧은 게시판 이름을 `<category label="r/…">` 에 둔다.
-private final class RSSItems: NSObject, XMLParserDelegate {
+final class RSSItems: NSObject, XMLParserDelegate {
     struct Item {
         var title = ""
         var link = ""
@@ -180,6 +180,8 @@ private final class RSSItems: NSObject, XMLParserDelegate {
         case "source": current?.source = value.isEmpty ? nil : value
         case "pubDate": current?.date = Self.dateFormatter.date(from: value)
         case "published": current?.date = Self.isoFormatter.date(from: value)
+        // 레딧 Atom 은 published 가 없고 updated 만 있을 때가 있다.
+        case "updated": if current?.date == nil { current?.date = Self.isoFormatter.date(from: value) }
         default: break
         }
         text = ""

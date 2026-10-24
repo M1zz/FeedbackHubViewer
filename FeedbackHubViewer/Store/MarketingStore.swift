@@ -22,12 +22,26 @@ final class MarketingStore: ObservableObject {
     /// 지운 것까지 전부. 화면은 `items` 를 읽는다.
     @Published private var all: [UUID: MarketingItem] = [:]
 
+    /// Apple 캠페인 링크의 제공자 토큰(`pt`). 계정에 하나라 기기 사이에서 같이 쓴다.
+    @Published var providerToken: String {
+        didSet {
+            // 숫자만 남긴다(붙여 넣은 링크 조각의 "pt=" 같은 것). didSet 안의 대입은 didSet 을 다시 부르지 않는다.
+            let trimmed = providerToken.filter(\.isNumber)
+            if trimmed != providerToken { providerToken = trimmed }
+            UserDefaults.standard.set(trimmed, forKey: Self.providerKey)
+            cloud.set(trimmed, forKey: Self.providerKey)
+        }
+    }
+
     private let cloud = NSUbiquitousKeyValueStore.default
+    private static let providerKey = "marketing-provider-token"
     private static let cloudKey = "marketing-items-v1"
     private static let fileName = "marketing-items"
     private var observer: NSObjectProtocol?
 
     private init() {
+        providerToken = NSUbiquitousKeyValueStore.default.string(forKey: Self.providerKey)
+            ?? UserDefaults.standard.string(forKey: Self.providerKey) ?? ""
         let saved = CacheFile.read([MarketingItem].self, at: CacheFile.url(Self.fileName)) ?? []
         all = Dictionary(saved.map { ($0.id, $0) }, uniquingKeysWith: Self.newer)
         startSync()
@@ -118,14 +132,35 @@ final class MarketingStore: ObservableObject {
 
     private static let seedKey = "marketing-seed-imported"
 
-    /// 번들에 채워 둔 활동을 한 번 들인다. 이미 있는 것(지운 것 포함)은 건드리지 않는다.
+    /// 번들에 채워 둔 활동을 시드 판마다 한 번 들인다.
+    ///
+    /// 없는 것은 더하고, 있는 것은 **한 번도 손대지 않은 것만**(고친 시각 = 만든 시각 = 첫 시드)
+    /// 새 판의 글로 바꾼다. 고쳤거나 올렸거나 미뤘거나 지운 것은 그대로 둔다.
     private func importSeedIfNeeded() {
         guard UserDefaults.standard.string(forKey: Self.seedKey) != MarketingSeed.version else { return }
-        let fresh = MarketingSeed.load().filter { all[$0.id] == nil }
         UserDefaults.standard.set(MarketingSeed.version, forKey: Self.seedKey)
-        guard !fresh.isEmpty else { return }
-        for item in fresh { all[item.id] = item }
-        commit()
+        var changed = false
+        for seed in MarketingSeed.load() {
+            guard let existing = all[seed.id] else {
+                all[seed.id] = seed
+                changed = true
+                continue
+            }
+            // 시드가 넣었거나 시드가 바꾼 그대로인 것 — 사람이 고친 것은 무엇이든 이보다 늦다.
+            let untouched = existing.createdAt <= MarketingSeed.firstStamp
+                && existing.updatedAt <= MarketingSeed.refreshStamp && !existing.isDeleted
+            guard untouched else { continue }
+            var next = existing
+            next.slides = seed.slides
+            next.script = seed.script
+            next.scriptEn = seed.scriptEn
+            next.body = seed.body
+            next.bodyEn = seed.bodyEn
+            next.updatedAt = MarketingSeed.refreshStamp
+            all[seed.id] = next
+            changed = true
+        }
+        if changed { commit() }
     }
 
     // MARK: - 맞추기

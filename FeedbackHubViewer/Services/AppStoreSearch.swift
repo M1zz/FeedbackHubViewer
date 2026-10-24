@@ -99,6 +99,15 @@ actor AppStoreDirectory {
         return results
     }
 
+    /// App Store id 로 바로. 번들 ID 가 어긋난 앱을 스토어 링크로 이을 때 쓴다.
+    func lookup(ids: [Int], country: String) async throws -> [StoreApp] {
+        guard !ids.isEmpty else { return [] }
+        return try await get(path: "lookup", query: [
+            "id": ids.map(String.init).joined(separator: ","),
+            "country": country,
+        ])
+    }
+
     /// The store's search results for a term, in the order the store returns
     /// them. Position in this list is what "순위" means everywhere else.
     func search(term: String, country: String) async throws -> [StoreApp] {

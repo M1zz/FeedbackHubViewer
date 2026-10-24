@@ -144,9 +144,15 @@ struct RankTrendCard: View {
                 + (names.count > 3 ? " 외 \(names.count - 3)개" : "")
             icon = "person.2.badge.gearshape"
         }
+        // 순위가 오르고 내린 알림은 시세판 색(오름 빨강 · 내림 파랑), 나머지는 좋고 나쁨 색.
+        let tint: Color = switch alert.kind {
+        case .climbed, .entered: RankTrend.up
+        case .dropped, .lost: RankTrend.down
+        case .overtaken: .orange
+        }
         return HStack(alignment: .firstTextBaseline, spacing: 8) {
             Image(systemName: icon)
-                .foregroundStyle(alert.kind.isBad ? .orange : .green)
+                .foregroundStyle(tint)
             VStack(alignment: .leading, spacing: 2) {
                 Text("\(alert.keyword.term) (\(alert.keyword.country.uppercased()))")
                     .font(.headline)

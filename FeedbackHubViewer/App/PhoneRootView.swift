@@ -26,6 +26,8 @@ struct PhoneRootView: View {
     @ObservedObject private var changes = SectionChanges.shared
     /// 마케팅 칸의 "올렸나요?" 뱃지.
     @ObservedObject private var marketing = MarketingStore.shared
+    /// 질문 찾기 칸의 새 질문 뱃지.
+    @ObservedObject private var leadStore = LeadStore.shared
 
     var body: some View {
         let metrics = SectionMetrics(store: store, keywords: keywords, purchases: purchases, design: design, charts: charts, news: news)

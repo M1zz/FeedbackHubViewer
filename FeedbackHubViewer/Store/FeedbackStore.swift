@@ -75,6 +75,11 @@ final class FeedbackStore: ObservableObject {
         /// 내가 할 마케팅 — 기획 · 자료(카드뉴스 · 영상 · 글) · 올렸는지 확인(`MarketingStore`).
         /// 다른 칸은 일어난 일을 읽지만 이 칸은 내가 쓴다.
         case marketing = "마케팅"
+        /// 레딧에서 "이런 앱 없나요?" 를 묻는 질문(`LeadsView`, `RedditLead`). 답은 사람이 직접.
+        case leads = "질문 찾기"
+        /// 앱이 사용자에게 줘야 하는 경험과 사용자가 꿈꿀 수 있는 모습(`ExperienceView`).
+        /// 숫자를 보다가 이 앱이 원래 무엇을 하려던 것인지 다시 붙잡는 자리.
+        case experience = "경험"
         var id: String { rawValue }
         /// 할 일은 처음부터 모든 앱을 앱별로 묶어 보여 주는 칸이라 앱 목록을 거치지 않는다.
         var usesAppList: Bool { self != .inbox && self != .news }
@@ -86,8 +91,8 @@ final class FeedbackStore: ObservableObject {
             case .crashes, .release: .quality
             case .stats, .acquisition, .keywords, .charts, .storeAnalytics: .growth
             case .purchases: .revenue
-            case .marketing: .marketing
-            case .design: .build
+            case .marketing, .leads: .marketing
+            case .design, .experience: .build
             }
         }
         /// 기능 목록의 무리. 열한 칸을 한 줄로 늘어놓으면 무엇이 어디 있는지 읽히지 않는다 —
@@ -151,6 +156,8 @@ final class FeedbackStore: ObservableObject {
             case .reviews: return "star.bubble"
             case .design: return "pencil.and.ruler"
             case .marketing: return "megaphone"
+            case .leads: return "questionmark.bubble"
+            case .experience: return "sparkles"
             }
         }
     }

@@ -51,6 +51,8 @@ struct SectionRefresh {
         case .purchases: "앱 내 구입 새로고침"
         case .design: "설계 문서 다시 읽기"
         case .marketing: "마케팅 기록 맞추기"
+        case .experience: "앱 소개 다시 읽기"
+        case .leads: "레딧 질문 다시 찾기"
         }
     }
 
@@ -71,7 +73,9 @@ struct SectionRefresh {
         case .charts: "나라마다 인기 차트 순위"
         case .purchases: project == nil ? "판매 · 모든 앱의 상품" : "판매 · 상품 · 노출 · 전환"
         case .design: "리포의 설계 문서 목록"
-        case .marketing: "다른 기기에서 고친 마케팅 활동(iCloud)"
+        case .marketing: "마케팅 활동(iCloud) · 서비스 숙성도(app-portfolio)" + (project == nil ? "" : " · 캠페인 성과")
+        case .experience: "app-portfolio 의 앱 소개 · vision"
+        case .leads: project == nil ? "모든 앱의 레딧 질문(앱마다 몇십 초)" : "레딧 질문"
         }
     }
 
@@ -102,8 +106,10 @@ struct SectionRefresh {
             return charts.isScanning
         case .purchases:
             return connect.isLoadingSales || project.map(connect.isCatalogLoading) == true
-        case .design, .marketing:
-            return false
+        case .leads:
+            return !LeadStore.shared.searching.isEmpty
+        case .design, .marketing, .experience:
+            return PortfolioStore.shared.isLoading && section == .experience
         }
     }
 
@@ -176,8 +182,15 @@ struct SectionRefresh {
             }
         case .design:
             design.rescan()
+        case .experience:
+            await PortfolioStore.shared.load(workspace: design.workspace, force: true)
+        case .leads:
+            let keys = project.map { [$0] } ?? appKeys.filter { LeadStore.shared.queries(for: $0) != nil }
+            await LeadStore.shared.searchIfStale(keys, force: true)
         case .marketing:
             MarketingStore.shared.pullFromCloud()
+            await PortfolioStore.shared.load(workspace: design.workspace, force: true)
+            if let project { await connect.loadReferrals(bundleID: project, force: true) }
         }
     }
 }

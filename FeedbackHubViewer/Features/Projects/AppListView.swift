@@ -25,6 +25,12 @@ struct AppListView: View {
     @ObservedObject private var changes = SectionChanges.shared
     /// 마케팅 칸의 "올렸나요?" 뱃지.
     @ObservedObject private var marketing = MarketingStore.shared
+    /// 질문 찾기 칸의 새 질문 뱃지.
+    @ObservedObject private var leadStore = LeadStore.shared
+    /// 맥 전용 앱처럼 키워드 칸이 못 찾은 앱의 아이콘.
+    @ObservedObject private var icons = StoreIcons.shared
+    /// App Store 와 손수 이을 앱(오른쪽 클릭 메뉴).
+    @State private var linking: String?
     let section: FeedbackStore.ProjectSection
     /// 아이폰은 고르면 민다. 맥 · 아이패드는 `store.selectedProject` 만 바꾼다.
     var pushes = false
@@ -66,6 +72,12 @@ struct AppListView: View {
         }
         .hubSidebarListStyle()
         .modifier(PushedTitle(title: section.rawValue, isPushed: pushes))
+        .task(id: entries.count) { await icons.resolve(entries.map(\.key), keywords: keywords) }
+        .sheet(item: Binding(get: { linking.map(LinkTarget.init) }, set: { linking = $0?.id })) { target in
+            StoreLinkSheet(project: target.id) { linking = nil }
+                .environmentObject(store)
+                .environmentObject(keywords)
+        }
     }
 
     // MARK: - Rows
@@ -75,7 +87,7 @@ struct AppListView: View {
         let isSelected = !pushes && store.selectedProject == project
         let content = AppRow(
             name: project.map(store.displayName(for:)) ?? "전체 앱",
-            iconURL: project.flatMap { keywords.storeApp(for: $0)?.iconURL },
+            iconURL: project.flatMap { icons.url(for: $0, keywords: keywords) },
             systemImage: project == nil ? "square.grid.2x2"
                 : project == Feedback.unclassifiedProject ? "questionmark.folder" : "app.dashed",
             tint: project == nil ? .purple
@@ -104,6 +116,12 @@ struct AppListView: View {
             } label: {
                 Label("모두 읽음으로 표시", systemImage: "envelope.open")
             }
+        }
+        Button {
+            linking = project
+        } label: {
+            Label(keywords.trackId(for: project) == nil ? "App Store 링크로 잇기…" : "App Store 링크 바꾸기…",
+                  systemImage: "link")
         }
         Button {
             store.hideProject(project)
@@ -234,4 +252,9 @@ private struct AppRow: View {
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(isSelected ? [.isSelected] : [])
     }
+}
+
+/// 시트에 넘길 앱 키.
+private struct LinkTarget: Identifiable {
+    let id: String
 }

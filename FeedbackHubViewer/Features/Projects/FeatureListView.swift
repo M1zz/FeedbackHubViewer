@@ -27,6 +27,8 @@ struct FeatureListView: View {
     @ObservedObject private var changes = SectionChanges.shared
     /// 마케팅 칸의 "올렸나요?" 뱃지.
     @ObservedObject private var marketing = MarketingStore.shared
+    /// 질문 찾기 칸의 새 질문 뱃지.
+    @ObservedObject private var leadStore = LeadStore.shared
 
     var body: some View {
         let metrics = SectionMetrics(store: store, keywords: keywords, purchases: purchases, design: design, charts: charts, news: news)
@@ -46,6 +48,21 @@ struct FeatureListView: View {
                     Label(error, systemImage: "exclamationmark.triangle")
                         .font(.callout)
                         .foregroundStyle(.red)
+                }
+            }
+
+            // 읽어서 사라지는 뱃지를 한 번에(`BadgeReset`). 할 일 · 올렸나요 · 릴리즈 빨강은 남는다.
+            let readable = BadgeReset.readableCount(metrics)
+            if readable > 0 {
+                Section {
+                    Button {
+                        BadgeReset.markAllRead(metrics: metrics)
+                    } label: {
+                        Label("뱃지 모두 읽음 · \(AppFormat.count(readable))", systemImage: "checkmark.circle")
+                            .font(.body)
+                    }
+                    .buttonStyle(.borderless)
+                    .help("안 읽은 피드백 · 새 리뷰 · 새 진단 · 새 소식 · 본 뒤 바뀐 것을 모두 읽음으로. 할 일 · 올렸나요 · 릴리즈 빨강은 남습니다")
                 }
             }
 
@@ -80,6 +97,15 @@ struct FeatureListView: View {
                        isSelected: isSelected)
         }
         .buttonStyle(.plain)
+        .contextMenu {
+            if BadgeReset.readableCount(section, metrics: metrics) > 0 {
+                Button {
+                    BadgeReset.markRead(section, metrics: metrics)
+                } label: {
+                    Label("\(section.rawValue) 읽음으로 표시", systemImage: "checkmark.circle")
+                }
+            }
+        }
         .listRowBackground(Rectangle().fill(isSelected ? AnyShapeStyle(.tint.opacity(0.14)) : AnyShapeStyle(.clear)))
     }
 }

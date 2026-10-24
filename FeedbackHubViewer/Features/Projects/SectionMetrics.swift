@@ -53,6 +53,9 @@ struct SectionMetrics {
         case .news:
             let count = news.unreadCount(for: project)
             return count > 0 ? Badge(count: count, systemImage: "newspaper.fill", tint: .purple, name: "새 소식") : nil
+        case .leads:
+            let count = LeadStore.shared.unseenCount(for: project)
+            return count > 0 ? Badge(count: count, systemImage: "questionmark.bubble.fill", tint: .red, name: "새 레딧 질문") : nil
         case .marketing:
             // 올렸는지 답해야 하는 것 — 날짜가 지났는데 말이 없는 활동.
             let count = MarketingStore.shared.awaitingConfirmation(for: project).count
@@ -110,6 +113,12 @@ struct SectionMetrics {
         case .reviews: return reviewCount(project)
         case .design: return design.docs(for: project).count
         case .marketing: return MarketingStore.shared.items(for: project).filter { $0.stage.isOpen }.count
+        case .leads: return LeadStore.shared.open(for: project).count
+        case .experience:
+            guard let project else {
+                return store.projectCounts.filter { AppExperience.of($0.key) != nil }.count
+            }
+            return AppExperience.of(project)?.promises.count ?? 0
         case .storeAnalytics:
             guard let project else { return purchases.analyticsCoverage?.value?.missing.count ?? 0 }
             guard case .ready(let analytics)? = purchases.storeAnalytics[project]?.value else { return 0 }
@@ -179,6 +188,12 @@ struct SectionMetrics {
             let awaiting = MarketingStore.shared.awaitingConfirmation(for: project).count
             if awaiting > 0 { return "올렸는지 답할 것 \(awaiting)개" }
             return count > 0 ? "진행 중 \(count)개" : "계획 없음"
+        case .leads:
+            if let project, LeadStore.shared.queries(for: project) == nil { return "검색어 없음" }
+            return count > 0 ? "답할 질문 \(count)개" : "질문 없음"
+        case .experience:
+            guard let project else { return "그려 둔 앱 \(count)개" }
+            return AppExperience.of(project) == nil ? "아직 안 그림" : "경험 \(count)가지"
         }
     }
 
@@ -288,6 +303,11 @@ struct SectionMetrics {
             return "화면 설계도 · 문제 정의부터 솔루션까지 · 리포의 \(DesignDocsStore.folder)"
         case .marketing:
             return "기획 · 카드뉴스 · 영상 · 글 · 올렸는지 확인"
+        case .leads:
+            return "레딧에서 이런 앱을 찾는 질문 — 답은 직접"
+        case .experience:
+            guard let project else { return "앱마다 사용자가 꿈꿀 수 있는 모습" }
+            return AppExperience.of(project)?.dream ?? "사용자가 꿈꿀 수 있는 모습 · 줘야 하는 경험"
         case .storeAnalytics:
             guard purchases.isConfigured else { return "App Store Connect 키를 넣으면 Apple 이 모은 분석 리포트가 나옵니다" }
             guard let project else {

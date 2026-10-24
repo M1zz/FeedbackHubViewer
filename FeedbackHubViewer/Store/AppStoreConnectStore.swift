@@ -483,6 +483,8 @@ final class AppStoreConnectStore: ObservableObject {
             var proceeds: [String: Double] = [:]
             /// 나라(ISO 두 글자) → 그 나라 사람이 낸 것. 수익 지도의 재료.
             var countries: [String: CountryTotals] = [:]
+            /// 나라 → 첫 다운로드. 설치 지도의 재료(`InstallMapCard`).
+            var firstDownloadCountries: [String: Int] = [:]
 
             /// 한 나라의 합계.
             struct CountryTotals {
@@ -523,6 +525,7 @@ final class AppStoreConnectStore: ObservableObject {
                 for (code, count) in other.codes { codes[code, default: 0] += count }
                 for (currency, amount) in other.proceeds { proceeds[currency, default: 0] += amount }
                 for (country, totals) in other.countries { countries[country, default: CountryTotals()].add(totals) }
+                for (country, count) in other.firstDownloadCountries { firstDownloadCountries[country, default: 0] += count }
             }
         }
 
@@ -541,7 +544,10 @@ final class AppStoreConnectStore: ObservableObject {
             for line in daily.flatMap(\.lines) {
                 var totals = byItem[line.appleID] ?? Totals()
                 totals.units += line.units
-                if line.isFirstDownload { totals.firstDownloads += line.units }
+                if line.isFirstDownload {
+                    totals.firstDownloads += line.units
+                    totals.firstDownloadCountries[line.countryCode.isEmpty ? "??" : line.countryCode, default: 0] += line.units
+                }
                 if line.isPurchase { totals.purchases += line.units }
                 if line.isFreeRedemption {
                     totals.freeRedemptions += line.units

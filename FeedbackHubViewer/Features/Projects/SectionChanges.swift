@@ -95,6 +95,8 @@ final class SectionChanges: ObservableObject {
     func recentChanges(_ section: FeedbackStore.ProjectSection, project: String?) -> [Change] {
         recent.values
             .filter { $0.section == section.rawValue && (project == nil || $0.project == project) }
+            // 키워드는 10위 안팎을 넘나든 것만 말한다 — 그 안에서만 움직였으면 띠에 올리지 않는다.
+            .filter { !Self.lines(section, before: $0.before, after: $0.after).isEmpty }
             .sorted { $0.at > $1.at }
     }
 
@@ -159,13 +161,15 @@ final class SectionChanges: ObservableObject {
         store.projectCounts.map(\.key).filter { $0 != Feedback.unclassifiedProject }
     }
 
-    /// 본 뒤 바뀐 것의 수. 키워드는 순위가 움직인 키워드마다, 나머지 칸은 앱마다 하나.
+    /// 본 뒤 바뀐 것의 수. 키워드는 10위 선을 넘나든 키워드마다, 나머지 칸은 앱마다 하나.
     func changedCount(_ section: FeedbackStore.ProjectSection, project: String?,
                       metrics: SectionMetrics) -> Int {
         guard Self.tracked.contains(section) else { return 0 }
         return Self.signatures(section, project: project, metrics: metrics).reduce(0) { total, entry in
             guard let old = seen[Self.key(section, entry.key)], old != entry.value else { return total }
-            return total + max(1, Self.lines(section, before: old, after: entry.value).count)
+            let lines = Self.lines(section, before: old, after: entry.value).count
+            // 키워드는 10위 안으로 들어오거나 밖으로 밀려난 것만 센다. 나머지 칸은 말이 바뀌면 하나.
+            return total + (section == .keywords ? lines : max(1, lines))
         }
     }
 
@@ -179,12 +183,18 @@ final class SectionChanges: ObservableObject {
             return new.keys.sorted().compactMap { id in
                 let now = new[id] ?? "-"
                 guard let was = old[id] else { return nil }
-                guard was != now else { return nil }
+                // 순위가 매일 몇 칸씩 흔들려 다 세면 뱃지가 늘 가득했다 — 10위 선을 넘을 때만.
+                guard isTopTen(was) != isTopTen(now) else { return nil }
                 let parts = id.split(separator: "/", maxSplits: 1).map(String.init)
                 let name = parts.count == 2 ? "\(ChartStorefronts.flag(parts[0])) \(parts[1])" : id
                 return "\(name) \(rankText(was)) → \(rankText(now))"
             }
-        case .release, .purchases:
+        case .release:
+            // "판정|부제" — 부제가 판정까지 담고 있어(… · 초록) 부제가 바뀌었으면 부제 한 줄만.
+            let old = before.components(separatedBy: "|"), new = after.components(separatedBy: "|")
+            if old.count == 2, new.count == 2, old[1] != new[1] { return ["\(old[1]) → \(new[1])"] }
+            return old.first != new.first ? ["\(old.first ?? "") → \(new.first ?? "")"] : []
+        case .purchases:
             let old = before.components(separatedBy: "|"), new = after.components(separatedBy: "|")
             let labels = section == .purchases ? ["", "판매 중 "] : ["", ""]
             return zip(old, new).enumerated().compactMap { index, pair in
@@ -200,6 +210,13 @@ final class SectionChanges: ObservableObject {
             guard let eq = item.lastIndex(of: "=") else { return nil }
             return (String(item[..<eq]), String(item[item.index(after: eq)...]))
         }, uniquingKeysWith: { a, _ in a })
+    }
+
+    /// 뱃지를 다는 선. 이 안에 들어야 검색 첫 화면 두 장 안쪽이다.
+    static let topRankLine = 10
+
+    private static func isTopTen(_ rank: String) -> Bool {
+        Int(rank).map { $0 <= topRankLine } ?? false
     }
 
     private static func rankText(_ rank: String) -> String { rank == "-" ? "순위 밖" : "\(rank)위" }
@@ -235,6 +252,10 @@ struct SectionChangesBanner: View {
     private static let shownLimit = 6
     /// 띠는 화면 위에 붙어 있어 그만큼 스크롤할 자리를 먹는다. 처음엔 한 줄만, 펼치면 전부.
     @State private var isExpanded = false
+    /// 펼친 줄들의 실제 높이. 이보다 크면 띠 안에서 스크롤한다 — 릴리즈처럼 줄이 긴 칸에서
+    /// 펼친 띠가 창 높이를 넘어 아래 화면을 0까지 눌러 버렸다.
+    @State private var rowsHeight: CGFloat = 0
+    private static let maxExpandedHeight: CGFloat = 280
 
     var body: some View {
         let items = changes.recentChanges(section, project: project)
@@ -254,8 +275,18 @@ struct SectionChangesBanner: View {
                         .buttonStyle(.borderless)
                         .font(.body)
                 }
-                ForEach(items.prefix(isExpanded ? Self.shownLimit : 1), id: \.project) { item in
-                    row(item)
+                if isExpanded {
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 8) {
+                            ForEach(items.prefix(Self.shownLimit), id: \.project) { item in
+                                row(item)
+                            }
+                        }
+                        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { rowsHeight = $0 }
+                    }
+                    .frame(height: min(max(rowsHeight, 1), Self.maxExpandedHeight))
+                } else if let first = items.first {
+                    row(first)
                 }
                 if isExpanded, items.count > Self.shownLimit {
                     Text("외 \(items.count - Self.shownLimit)개 앱")
