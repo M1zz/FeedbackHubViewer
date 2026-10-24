@@ -61,7 +61,7 @@ struct SectionRefresh {
         let scope = project == nil ? "모든 앱의 " : ""
         return switch section {
         case .inbox: "피드백 · 진단 · 모든 앱의 리뷰"
-        case .news: "바깥 뉴스(Google 뉴스 · 레딧)와 소식 다시 모으기"
+        case .news: "받아 둔 데이터에서 소식 다시 모으기"
         case .feedback: "피드백"
         case .reviews: "\(scope)App Store 리뷰"
         case .stats: "사용 현황 · 이벤트"
@@ -89,7 +89,7 @@ struct SectionRefresh {
         case .release:
             return store.isRefreshing || project.map { connect.reviewFeeds[$0]?.isLoading == true } == true
         case .news:
-            return news.isSearchingWeb
+            return false
         case .reviews:
             return (project.map { [$0] } ?? appKeys).contains { connect.reviewFeeds[$0]?.isLoading == true }
         case .acquisition:
@@ -124,7 +124,6 @@ struct SectionRefresh {
             Task { await connect.loadReviews(bundleIDs: appKeys, force: true) }
             await store.load([.feedback, .crashes])
         case .news:
-            await news.refreshWebIfDue(force: true)
             news.collect()
         case .feedback:
             await store.load(.feedback)

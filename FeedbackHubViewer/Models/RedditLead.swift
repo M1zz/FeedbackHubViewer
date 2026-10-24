@@ -118,7 +118,7 @@ enum RedditLeadSearch {
                 try? await Task.sleep(for: .seconds(1))
             } else {
                 guard let url = searchURL(trimmed, subreddits: inSubs) else { continue }
-                if let data = await WebMentions.fetch(url) {
+                if let data = await RSSItems.fetch(url) {
                     for item in RSSItems.parse(data) {
                         guard let link = URL(string: item.link), let postID = postID(link) else { continue }
                         add(id: postID, title: item.title, body: plainText(item.description),

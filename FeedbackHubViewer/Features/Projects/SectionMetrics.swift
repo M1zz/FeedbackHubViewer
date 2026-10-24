@@ -77,9 +77,11 @@ struct SectionMetrics {
             let unanswered = unansweredReviews(project)
             return unanswered > 0 ? Badge(count: unanswered, systemImage: "bubble.left.fill", tint: .orange, name: "답 안 한 리뷰") : nil
         case .release:
-            let red = releaseRedCount(project)
             // 한 앱이면 빨강이라는 사실은 점이 말한다. 뱃지는 전체에서 "몇 개가 빨강" 일 때만.
-            guard project == nil, red > 0 else { return nil }
+            // 읽음으로 넘긴 빨강(같은 버전)은 세지 않는다.
+            guard project == nil else { return nil }
+            let red = SectionChanges.shared.unacknowledgedRed(store.projectCounts.map(\.key), store: store).count
+            guard red > 0 else { return nil }
             return Badge(count: red, systemImage: "stethoscope", tint: .red, name: "빨강인 앱")
         default:
             return nil
@@ -217,7 +219,7 @@ struct SectionMetrics {
             return count > 0 ? "모든 앱에서 남은 일 \(AppFormat.count(count))건" : "남은 일 없음"
         case .news:
             let fresh = news.unreadCount
-            return fresh > 0 ? "새 소식 \(AppFormat.count(fresh))건" : "차트 · 링크 · 기사 · 출시 · 이정표"
+            return fresh > 0 ? "새 소식 \(AppFormat.count(fresh))건" : "차트 · 링크 · 출시 · 이정표"
         case .feedback:
             let shown = store.filteredFeedback.count
             let total = store.scopedFeedback.count

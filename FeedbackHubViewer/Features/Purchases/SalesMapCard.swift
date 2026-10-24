@@ -89,26 +89,14 @@ struct SalesMapCard: View {
 
     private func map(_ places: [Place]) -> some View {
         let plotted = places.filter { $0.usd > 0 && CountryCentroids.coordinate($0.code) != nil }
-        let peak = plotted.map(\.usd).max() ?? 1
         return WorldSnapshot { project in
-            ForEach(plotted) { place in
-                if let coordinate = CountryCentroids.coordinate(place.code), let point = project(coordinate) {
-                    bubble(place, peak: peak)
-                        .position(point)
-                }
-            }
+            MapBubbles(items: plotted, value: \.usd,
+                       point: { CountryCentroids.coordinate($0.code).flatMap(project) },
+                       label: { "\(ChartStorefronts.flag($0.code)) \(MoneyFormat.usd($0.usd))" },
+                       help: { "\(ChartStorefronts.flag($0.code)) \(ChartStorefronts.name($0.code)) · \($0.money?.label ?? $0.rawLabel)" },
+                       tint: .orange)
         }
         .accessibilityLabel("수익 지도. 나라별 금액은 아래 목록에 있습니다.")
-    }
-
-    /// 넓이가 금액에 비례하는 원. 가장 작아도 눈에 보이게 10pt.
-    private func bubble(_ place: Place, peak: Double) -> some View {
-        let diameter = max(10, 56 * sqrt(place.usd / peak))
-        return Circle()
-            .fill(Color.orange.opacity(0.45))
-            .overlay(Circle().stroke(Color.orange, lineWidth: 1.5))
-            .frame(width: diameter, height: diameter)
-            .help("\(ChartStorefronts.flag(place.code)) \(ChartStorefronts.name(place.code)) · \(place.money?.label ?? place.rawLabel)")
     }
 
     private func list(_ places: [Place]) -> some View {

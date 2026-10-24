@@ -41,7 +41,7 @@ final class FeedbackStore: ObservableObject {
         /// 전체 프로젝트에만 있는 칸 — 모든 앱의 답 안 한 리뷰 · 처리 안 한 버그 리포트 ·
         /// 피드백(`InboxView`). 전체 프로젝트를 고르면 이 칸으로 연다.
         case inbox = "할 일"
-        /// 전체 프로젝트의 소식 — 차트 진입 · 링크 · 기사 · 출시 · 이정표처럼 한 번 일어난 일
+        /// 전체 프로젝트의 소식 — 차트 진입 · 링크 · 출시 · 이정표처럼 한 번 일어난 일
         /// (`NewsView`, `AppNews.swift`). 할 일처럼 처음부터 모든 앱을 한 목록에 둔다.
         case news = "소식"
         case feedback = "피드백"

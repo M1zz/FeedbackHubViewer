@@ -4,7 +4,9 @@
 //
 //  설치가 세계 어디에 있나 — 지도 위의 원과 많은 나라 순 목록.
 //
-//  두 가지를 고를 수 있다.
+//  세 가지를 고를 수 있다.
+//   · 활성 사용자(30일) — 최근 30일 안에 앱을 연 설치를 기기 지역으로. 깔아 두고 안 쓰는 나라와
+//     실제로 쓰는 나라가 다를 수 있어서 따로 본다. 통계 칸의 MAU 와 같은 창이다.
 //   · 허브 설치(누적) — 앱이 보낸 사용 스냅샷의 기기 지역(locale). 통계 칸의 "설치 N대" 와 같은
 //     설치들이다. 지역 없는 locale("en")은 나라를 모르니 따로 센다.
 //   · App Store 첫 다운로드(30일) — 판매 리포트의 나라 코드. 정확하지만 최근 30일뿐이다.
@@ -21,6 +23,7 @@ struct InstallMapCard: View {
 
     enum Source: String, CaseIterable, Identifiable {
         case hub = "허브 설치(누적)"
+        case active = "활성 사용자(30일)"
         case store = "App Store 첫 다운로드(30일)"
         var id: String { rawValue }
     }
@@ -39,16 +42,14 @@ struct InstallMapCard: View {
         let places = counts.places
         let total = places.reduce(0) { $0 + $1.count } + counts.unknown
 
-        Card(title: "설치 지도", systemImage: "globe.asia.australia") {
-            if connect.sales != nil {
-                Picker("자료", selection: $source) {
-                    ForEach(Source.allCases) { Text($0.rawValue).tag($0) }
-                }
-                .pickerStyle(.segmented)
-                .labelsHidden()
+        Card(title: source == .active ? "사용자 지도" : "설치 지도", systemImage: "globe.asia.australia") {
+            Picker("자료", selection: $source) {
+                ForEach(Source.allCases.filter { $0 != .store || connect.sales != nil }) { Text($0.rawValue).tag($0) }
             }
+            .pickerStyle(.segmented)
+            .labelsHidden()
             if places.isEmpty {
-                Text(source == .hub ? "나라를 알 수 있는 설치가 아직 없어요." : "최근 30일 첫 다운로드가 없어요.")
+                Text(emptyText)
                     .font(.body)
                     .foregroundStyle(.secondary)
             } else {
@@ -56,9 +57,9 @@ struct InstallMapCard: View {
                 map(places)
                 list(places)
                 if counts.unknown > 0 {
-                    Text(source == .hub
-                         ? "나라를 모르는 설치 \(AppFormat.count(counts.unknown))대 — 기기 지역 없이 언어만 보낸 설치(\"en\" 같은)예요."
-                         : "나라 코드가 없는 다운로드 \(AppFormat.count(counts.unknown))회")
+                    Text(source == .store
+                         ? "나라 코드가 없는 다운로드 \(AppFormat.count(counts.unknown))회"
+                         : "나라를 모르는 \(source == .active ? "사용자" : "설치") \(AppFormat.count(counts.unknown))\(unit) — 기기 지역 없이 언어만 보낸 설치(\"en\" 같은)예요.")
                         .font(.body)
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
@@ -80,6 +81,11 @@ struct InstallMapCard: View {
             let installs = store.audienceInstalls(for: project)
             for (code, ids) in installs.regions { byCountry[code] = ids.count }
             unknown = installs.regionUnknown.count
+        case .active:
+            let installs = store.audienceInstalls(for: project)
+            let active = activeInstallIDs
+            for (code, ids) in installs.regions { byCountry[code] = ids.intersection(active).count }
+            unknown = installs.regionUnknown.intersection(active).count
         case .store:
             guard let sales = connect.sales else { break }
             let raw: [String: Int]
@@ -99,6 +105,27 @@ struct InstallMapCard: View {
         return (places, unknown)
     }
 
+    /// 최근 30일(MAU 와 같은 창) 안에 앱을 연 설치.
+    private var activeInstallIDs: Set<String> {
+        let days = store.days(for: project, audience: .all)
+        let span = FeedbackStore.ActiveUsers.Span.month
+        var ids: Set<String> = []
+        for key in UsageRollups.windowKeys(days: span.days, endingDaysAgo: span.endingDaysAgo) {
+            if let bucket = days[key] { ids.formUnion(bucket.installs) }
+        }
+        return ids
+    }
+
+    private var emptyText: String {
+        switch source {
+        case .hub: "나라를 알 수 있는 설치가 아직 없어요."
+        case .active: "최근 30일 안에 앱을 연 사용자가 없어요."
+        case .store: "최근 30일 첫 다운로드가 없어요."
+        }
+    }
+
+    private var unit: String { source == .store ? "회" : (source == .active ? "명" : "대") }
+
     // MARK: - 그리기
 
     /// "설치 1,234대 · 42개 나라 · 한국 61% · 다음 미국 9%" — 지도보다 먼저 읽히는 한 줄.
@@ -112,7 +139,7 @@ struct InstallMapCard: View {
             detail += " · 다음 \(ChartStorefronts.name(places[1].code)) \(Self.percent(places[1].count, of: known))"
         }
         return VStack(alignment: .leading, spacing: 2) {
-            Text(source == .hub ? "설치 \(AppFormat.count(total))대" : "첫 다운로드 \(AppFormat.count(total))회")
+            Text(title(total))
                 .font(.title2.weight(.bold).monospacedDigit())
             Text(detail)
                 .font(.body.monospacedDigit())
@@ -120,24 +147,25 @@ struct InstallMapCard: View {
         }
     }
 
+    private func title(_ total: Int) -> String {
+        switch source {
+        case .hub: "설치 \(AppFormat.count(total))대"
+        case .active: "활성 사용자 \(AppFormat.count(total))명"
+        case .store: "첫 다운로드 \(AppFormat.count(total))회"
+        }
+    }
+
     private func map(_ places: [Place]) -> some View {
         let plotted = places.filter { CountryCentroids.coordinate($0.code) != nil }
-        let peak = Double(plotted.map(\.count).max() ?? 1)
+        let tint: Color = source == .active ? .green : .accentColor
         return WorldSnapshot { project in
-            ForEach(plotted) { place in
-                if let coordinate = CountryCentroids.coordinate(place.code), let point = project(coordinate) {
-                    // 넓이가 수에 비례. 가장 작아도 보이게 8pt.
-                    let diameter = max(8, 56 * sqrt(Double(place.count) / peak))
-                    Circle()
-                        .fill(Color.accentColor.opacity(0.4))
-                        .overlay(Circle().stroke(Color.accentColor, lineWidth: 1.5))
-                        .frame(width: diameter, height: diameter)
-                        .help("\(ChartStorefronts.flag(place.code)) \(ChartStorefronts.name(place.code)) · \(AppFormat.count(place.count))")
-                        .position(point)
-                }
-            }
+            MapBubbles(items: plotted, value: { Double($0.count) },
+                       point: { CountryCentroids.coordinate($0.code).flatMap(project) },
+                       label: { "\(ChartStorefronts.flag($0.code)) \(AppFormat.count($0.count))" },
+                       help: { "\(ChartStorefronts.flag($0.code)) \(ChartStorefronts.name($0.code)) · \(AppFormat.count($0.count))\(unit)" },
+                       tint: tint)
         }
-        .accessibilityLabel("설치 지도. 나라별 수는 아래 목록에 있습니다.")
+        .accessibilityLabel("\(source == .active ? "활성 사용자" : "설치") 지도. 나라별 수는 아래 목록에 있습니다.")
     }
 
     private func list(_ places: [Place]) -> some View {
@@ -156,7 +184,7 @@ struct InstallMapCard: View {
                         Text("\(AppFormat.count(place.count)) · \(Self.percent(place.count, of: known))")
                             .font(.body.monospacedDigit().weight(.semibold))
                     }
-                    MeterBar(ratio: Double(place.count) / peak, tint: .accentColor)
+                    MeterBar(ratio: Double(place.count) / peak, tint: source == .active ? .green : .accentColor)
                         .frame(height: 6)
                 }
             }

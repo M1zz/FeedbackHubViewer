@@ -39,7 +39,7 @@ struct NewsItem: Codable, Identifiable, Hashable {
     let date: Date
     /// 찾은 때. 아침 묶음 알림은 이것으로 가른다.
     let foundAt: Date
-    /// 바깥 링크(기사 · 레딧 · 링크를 건 사이트).
+    /// 바깥 링크(링크를 건 사이트 등).
     var url: URL?
 }
 
@@ -50,7 +50,7 @@ enum NewsKind: String, Codable, CaseIterable {
     // 스토어
     case versionLive, chartEntered, chartBest, storeSurge, keywordTop10, keywordRefresh, chartDropped, versionInReview
     // 사람들
-    case webMention, referralNew, referralSurge, reviewGlowing, reviewNewTerritory
+    case referralNew, referralSurge, reviewGlowing, reviewNewTerritory
     // 이정표
     case installMilestone, dailyInstallRecord, dauRecord, newCountry
 
@@ -58,7 +58,6 @@ enum NewsKind: String, Codable, CaseIterable {
         switch self {
         case .releaseRed, .newCrash, .versionRejected, .reviewLowCluster: .warning
         case .versionLive, .chartEntered, .chartBest, .storeSurge, .keywordTop10, .keywordRefresh, .chartDropped, .versionInReview: .store
-        case .webMention: .web
         case .referralNew, .referralSurge, .reviewGlowing, .reviewNewTerritory: .people
         case .installMilestone, .dailyInstallRecord, .dauRecord, .newCountry: .milestone
         }
@@ -78,7 +77,6 @@ enum NewsKind: String, Codable, CaseIterable {
         case .storeSurge: "sparkles"
         case .keywordTop10: "magnifyingglass"
         case .keywordRefresh: "arrow.triangle.2.circlepath"
-        case .webMention: "newspaper.fill"
         case .referralNew: "link"
         case .referralSurge: "arrow.up.forward.app"
         case .reviewGlowing: "star.bubble.fill"
@@ -100,7 +98,7 @@ enum NewsKind: String, Codable, CaseIterable {
         case .chartEntered, .chartBest, .chartDropped: .charts
         case .storeSurge: .storeAnalytics
         case .keywordTop10, .keywordRefresh: .keywords
-        case .webMention, .referralNew, .referralSurge: .acquisition
+        case .referralNew, .referralSurge: .acquisition
         case .installMilestone, .dailyInstallRecord, .dauRecord, .newCountry: .stats
         }
     }
@@ -112,7 +110,7 @@ extension NewsKind {
     var briefingRank: Int? {
         let order: [NewsKind] = [
             .releaseRed, .versionRejected, .reviewLowCluster, .newCrash,
-            .webMention, .chartEntered, .storeSurge, .referralNew, .versionLive,
+            .chartEntered, .storeSurge, .referralNew, .versionLive,
             .installMilestone, .chartBest, .keywordTop10, .keywordRefresh, .referralSurge, .reviewGlowing,
             .dailyInstallRecord, .dauRecord, .reviewNewTerritory
         ]
@@ -134,7 +132,6 @@ extension NewsKind {
         case .storeSurge: "어디서 몰려왔는지 스토어 분석에서 보세요"
         case .keywordTop10: "이 말을 부제 · 키워드에서 지키세요"
         case .keywordRefresh: "키워드 칸에서 글을 복사해 Claude 에게 맡기세요"
-        case .webMention: "글을 읽고, 틀린 내용이 있으면 바로잡을 수 있어요"
         case .referralNew: "어떤 곳인지 들어가 보세요"
         case .referralSurge: "그곳에 무슨 글이 올라왔는지 보세요"
         case .reviewGlowing: "답장으로 고마움을 전해 보세요"
@@ -198,7 +195,6 @@ struct Briefing {
         switch kind {
         case .chartEntered: "\(app.이가) 차트 \(count)곳에 새로 들었어요"
         case .chartBest: "\(app.이가) 차트 \(count)곳에서 최고 순위예요"
-        case .webMention: "\(app) 이야기가 바깥에 \(count)건 나왔어요"
         case .referralNew: "\(count)곳에서 \(app) 링크를 새로 걸었어요"
         case .referralSurge: "\(count)곳에서 \(app.으로) 오는 사람이 늘었어요"
         case .reviewGlowing: "\(app)에 정성 들인 5점 리뷰가 \(count)건 왔어요"
@@ -213,7 +209,6 @@ struct Briefing {
 enum NewsCategory: String, CaseIterable, Identifiable {
     case warning = "경고"
     case store = "스토어"
-    case web = "바깥 뉴스"
     case people = "사람들"
     case milestone = "이정표"
     var id: String { rawValue }
@@ -222,7 +217,6 @@ enum NewsCategory: String, CaseIterable, Identifiable {
         switch self {
         case .warning: .red
         case .store: .blue
-        case .web: .purple
         case .people: .orange
         case .milestone: .green
         }
@@ -539,20 +533,6 @@ enum NewsDetector {
 
     /// 기록이라고 부를 최소치. 하루 2대가 최고 기록이면 소식이 아니라 소음이다.
     static let recordMinimum = 5
-
-    // MARK: 바깥 뉴스
-
-    static func web(project: String, name: String, mentions: [WebMention]?, now: Date) -> NewsBatch {
-        let group = "web:\(project)"
-        guard let mentions else { return NewsBatch(group: group, ready: false, items: []) }
-        let items = mentions.map { mention in
-            NewsItem(id: "web:\(mention.url.absoluteString)", project: project, kind: .webMention,
-                     title: mention.title,
-                     body: "\(mention.source)에서 \(name) 이야기 · '\(mention.term)' 로 찾음",
-                     date: mention.date ?? now, foundAt: now, url: mention.url)
-        }
-        return NewsBatch(group: group, ready: true, items: items)
-    }
 
     // MARK: 이름
 

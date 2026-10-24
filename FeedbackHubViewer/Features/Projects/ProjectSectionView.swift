@@ -50,6 +50,10 @@ struct ProjectSectionView: View {
             // 통계 · 차트 같은 칸은 열어 본 지금의 말을 본 것으로 — 보는 동안 바뀐 것도.
             .onChange(of: seenSignatures, initial: true) { _, signatures in
                 SectionChanges.shared.markSeen(section, signatures: signatures)
+                // 릴리즈 칸을 열어 봤으면 빨강인 앱도 알아본 것으로 — 뱃지만 지우고 판정은 남는다.
+                if section == .release {
+                    SectionChanges.shared.acknowledgeRed(project.map { [$0] } ?? store.projectCounts.map(\.key), store: store)
+                }
             }
             .navigationTitle(title)
             .hubNavigationSubtitle(metrics.subtitle(section, project: project))

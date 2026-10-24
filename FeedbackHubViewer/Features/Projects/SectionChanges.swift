@@ -31,6 +31,7 @@ final class SectionChanges: ObservableObject {
 
     private static let defaultsKey = "section-seen-signatures"
     private static let recentKey = "section-recent-changes"
+    private static let releaseAckKey = "release-red-acknowledged"
 
     /// 열어 본 순간 달라져 있던 것 — 그 전 말과 지금 말.
     struct Change: Codable, Equatable {
@@ -47,10 +48,37 @@ final class SectionChanges: ObservableObject {
     /// "칸|앱" → 마지막으로 본 말.
     @Published private var seen: [String: String]
 
+    /// 읽음으로 넘긴 릴리즈 빨강 — "앱|버전". 같은 버전이 빨강인 동안은 뱃지를 다시 달지
+    /// 않고, 새 버전이 빨강이 되면 다시 단다. 빨강 점 · 판정은 그대로다.
+    @Published private var acknowledgedRed: Set<String>
+
     private init() {
         seen = UserDefaults.standard.dictionary(forKey: Self.defaultsKey) as? [String: String] ?? [:]
         recent = (UserDefaults.standard.data(forKey: Self.recentKey))
             .flatMap { try? JSONDecoder().decode([String: Change].self, from: $0) } ?? [:]
+        acknowledgedRed = Set(UserDefaults.standard.stringArray(forKey: Self.releaseAckKey) ?? [])
+    }
+
+    // MARK: - 릴리즈 빨강
+
+    static func redKey(_ project: String, store: FeedbackStore) -> String? {
+        guard let report = store.releaseHealth(for: project), report.verdict.level == .red else { return nil }
+        return "\(project)|\(report.latest.version)"
+    }
+
+    /// 아직 읽음으로 넘기지 않은 빨강인 앱.
+    func unacknowledgedRed(_ projects: [String], store: FeedbackStore) -> [String] {
+        projects.filter { Self.redKey($0, store: store).map { !acknowledgedRed.contains($0) } ?? false }
+    }
+
+    func acknowledgeRed(_ projects: [String], store: FeedbackStore) {
+        let keys = projects.compactMap { Self.redKey($0, store: store) }
+        // 빨강이 아닌 앱의 옛 기록은 지운다 — 다시 빨강이 되면 다시 알리게.
+        let live = Set(Self.appKeys(store).compactMap { Self.redKey($0, store: store) })
+        let next = acknowledgedRed.intersection(live).union(keys)
+        guard next != acknowledgedRed else { return }
+        acknowledgedRed = next
+        UserDefaults.standard.set(Array(next), forKey: Self.releaseAckKey)
     }
 
     private static func key(_ section: FeedbackStore.ProjectSection, _ project: String) -> String {

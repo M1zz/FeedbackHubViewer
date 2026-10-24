@@ -101,7 +101,6 @@ struct FeedbackHubViewerApp: App {
         .backgroundTask(.appRefresh(AlertWatcher.refreshTaskID)) {
             await watcher.backgroundCheck(store: store, purchases: purchases)
             news.start(store: store, keywords: keywords, charts: charts, purchases: purchases)
-            await news.refreshWebIfDue()
             news.collect()
         }
         #endif
