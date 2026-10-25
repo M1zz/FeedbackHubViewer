@@ -73,7 +73,7 @@ struct SectionRefresh {
         case .charts: "나라마다 인기 차트 순위"
         case .purchases: project == nil ? "판매 · 모든 앱의 상품" : "판매 · 상품 · 노출 · 전환"
         case .design: "리포의 설계 문서 목록"
-        case .marketing: "마케팅 활동(iCloud) · 서비스 숙성도(app-portfolio)" + (project == nil ? "" : " · 캠페인 성과")
+        case .marketing: "마케팅 자료(iCloud)"
         case .experience: "app-portfolio 의 앱 소개 · vision"
         case .leads: project == nil ? "모든 앱의 레딧 질문(앱마다 몇십 초)" : "레딧 질문"
         }
@@ -188,8 +188,6 @@ struct SectionRefresh {
             await LeadStore.shared.searchIfStale(keys, force: true)
         case .marketing:
             MarketingStore.shared.pullFromCloud()
-            await PortfolioStore.shared.load(workspace: design.workspace, force: true)
-            if let project { await connect.loadReferrals(bundleID: project, force: true) }
         }
     }
 }

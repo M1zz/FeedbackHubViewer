@@ -153,6 +153,16 @@ struct MarketingItem: Codable, Identifiable, Hashable {
         }
     }
 
+    /// 채널이 "r/SideProject" 처럼 서브레딧이면 그 이름. 레딧 글은 서브마다 다르게 쓴다.
+    var subreddit: String? {
+        channel.hasPrefix("r/") ? String(channel.dropFirst(2)) : nil
+    }
+
+    /// 그 서브레딧의 글쓰기 화면.
+    var redditSubmitURL: URL? {
+        subreddit.flatMap { URL(string: "https://www.reddit.com/r/\($0)/submit") }
+    }
+
     /// 영어판이 비었나 — 마케팅 자료는 영어판이 있어야 한다.
     var lacksEnglish: Bool {
         switch kind {
@@ -215,7 +225,9 @@ extension MarketingItem {
 /// "올렸어요" 한 것을 덮지 않는다.
 enum MarketingSeed {
     /// 시드를 바꿀 때마다 올린다. 2026-10-24: 모든 활동에 영어판. 2026-10-24b: 세끼 영어 이름 Sekki.
-    static let version = "2026-10-24b"
+    /// 2026-10-25: 클립키보드 자료 13개 더함(템플릿 · 클립보드 · 링크드인 카드뉴스, 릴스 · 틱톡 · 쇼츠, PH · HN · 긱뉴스 · 클리앙 · 루리웹 · 스레드 · 레딧).
+    /// 2026-10-25b: 클립키보드 레딧을 서브마다(채널 "r/…"): SideProject · iosapps · apphunt · productivity · freelance · digitalnomad.
+    static let version = "2026-10-25b"
     static let fileName = "marketing-seed"
     /// 처음 시드를 만든 날. 시드에서 온 활동의 만든 시각 · 고친 시각이 이것이다.
     static let firstStamp = ISO8601DateFormatter().date(from: "2026-10-22T00:00:00Z") ?? .distantPast

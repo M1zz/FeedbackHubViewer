@@ -149,16 +149,16 @@
   "id": "0badebe3-e3d9-51d8-af63-24a08025039b",
   "project": "com.Ysoup.TokenMemo",
   "kind": "post",
-  "channel": "레딧",
-  "title": "A keyboard for the stuff I type 20 times a day",
-  "angle": "r/iphone, r/productivity 류. 개인 경험으로 시작해 기능은 짧게, 홍보 티를 덜.",
-  "plannedAt": null,
+  "channel": "r/SideProject",
+  "title": "I almost sent a client my bank account number with one digit wrong, so I built a keyboard that remembers it",
+  "angle": "만든 이야기를 앞에, 기능은 뒤에. 링크 허용. 영상 docs/media/clipkeyboard-demo-en.mp4 (클립키보드 레포) 를 글에 직접 올린다. 올린 날 다른 사람 프로젝트에 진짜 피드백을 몇 개 단다. 같은 글을 24시간 안에 두 곳에 올리지 않는다. 첫 두 시간은 댓글에 답한다. 리뷰 부탁 · 업보트 부탁 · 제목 이모지 금지.",
+  "plannedAt": "2026-10-26T01:00:00Z",
   "stage": "ready",
   "slides": [],
   "script": "",
-  "body": "계좌번호, 주소, 메일 첫인사를 메모 앱에 적어 두고 하루에도 몇 번씩 복사해서 붙여넣고 있었어요. 그게 귀찮아서 작은 키보드를 하나 만들었습니다.\n\n클립키보드는 자주 쓰는 문구를 저장해 두고 어느 앱에서든 탭 한 번으로 넣어 주는 키보드예요. 저장한 문구가 필요할 때만 잠깐 바꿔서 탭하고 다시 돌아오면 됩니다. 평소 키보드를 대신하려는 앱은 아니에요.\n\n이런 것도 됩니다.\n템플릿: 쓸 때 빈칸만 채우기\n스택: 값 여러 개를 순서대로 넣기\n보안 단축어: 여권번호, 카드번호는 Face ID로 잠금\n복사한 이메일, 전화번호, 주소는 알아서 분류\n서류를 찍고 필요한 글자만 훑어서 저장\n\n단축어 100번 넣을 때까지 모든 기능이 무료이고, 그 뒤에는 Pro로 풀 수 있어요. 더 쓸모 있으려면 뭐가 있으면 좋을지 편하게 알려 주세요.\nhttps://apps.apple.com/kr/app/id1543660502",
+  "body": "",
   "scriptEn": "",
-  "bodyEn": "I kept a notes file with my bank account number, address, and a couple of email openers, and I was copy-pasting from it many times a day. I ended up making a small keyboard for it.\n\nClip Keyboard lets you save frequent phrases and insert them with one tap from any app. You switch to it when you need a saved phrase, tap, then switch back. It is not meant to replace your normal keyboard.\n\nA few things it does:\n- Templates with blanks you fill in when you use them\n- Stacks for inserting several values in order\n- Secure snippets locked behind Face ID (passport or card numbers)\n- Copied emails, phone numbers and addresses get sorted automatically\n- Scan a document and swipe over just the text you want to save\n\nEverything is free for your first 100 inserts, then there is a Pro unlock. Happy to hear what would make it more useful.\nhttps://apps.apple.com/us/app/id1543660502",
+  "bodyEn": "A while ago I was sending a client my bank details from my phone and caught a wrong digit right before hitting send.\n\nWhat stuck with me afterwards wasn't the near miss. It was noticing how often I retyped that number, my address and the same few replies by hand, and that I was a little tense every single time.\n\nSo I started building ClipKeyboard, an iOS keyboard that holds the text I keep retyping. It grew from there:\n\n- snippets you insert with one tap, in any app\n- templates with blanks (\"Hi {name}, confirming {date}\") that you fill from values you already saved\n- a copy history inside the keyboard, sorted by type (emails, phone numbers, addresses, IBANs, card numbers)\n- Face ID lock for things like passport numbers\n\nSince the last update it's also a full keyboard in 23 languages, so you don't have to bounce between keyboards. If you'd rather keep yours, it switches back after inserting.\n\nTwo things I didn't expect: keyboard extensions get a tiny memory budget, so most of my time went into keeping it fast rather than adding features. And regex alone happily calls any 16-digit number a card. Checking Luhn and the IBAN checksum is what made the sorting trustworthy.\n\nIt's free for your first 100 inserts, then Pro is a one-time purchase or a yearly subscription. Snippets stay on your device and in your own iCloud, no third-party analytics.\n\nhttps://apps.apple.com/app/id1543660502\n\nI'm curious what you retype the most. Most features came from someone answering that.",
   "theme": 0
  },
  {
@@ -4140,5 +4140,352 @@
   "scriptEn": "",
   "bodyEn": "Small side project. I got tired of typing Wi-Fi passwords off cafe signs letter by letter, so I made an app where you take a photo of the sign (or a receipt) and it reads the network name and password and joins it. If the text is ambiguous, you drag the recognized pieces into the name and password fields.\n\nIt also goes the other way: it makes a standard Wi-Fi QR from the network you are on, or from your hotspot, so friends just point their camera. For cafes and guesthouses there is a printable guest sign with 7 themes, your logo and name, card or A4 poster, printed via AirPrint. Widgets can hold a QR, and saved networks stay on the device.\n\nFair warning, the app and store page are Korean only for now. If people outside Korea would use the sign maker, I would like to know.\n\nhttps://apps.apple.com/us/app/id6793472383",
   "theme": 1
+ },
+ {
+  "id": "14eaa51c-d35c-517c-b204-15453bb65500",
+  "project": "com.Ysoup.TokenMemo",
+  "kind": "cardNews",
+  "channel": "인스타그램",
+  "title": "이름만 바꾸면 되는 답장, 매번 다 치고 있다면",
+  "angle": "고객 문의·예약 확인을 하루에 여러 번 보내는 자영업자·프리랜서에게, 빈칸만 고르면 답장이 끝난다는 걸",
+  "stage": "ready",
+  "theme": 1,
+  "slides": [
+   {
+    "headline": "이름만 바꾸면 되는 답장\n매번 처음부터 치고 있나요?",
+    "text": "예약 확인, 견적 안내, 입금 안내.\n바뀌는 건 이름과 날짜뿐인데.",
+    "headlineEn": "Same reply, new name.\nStill typing it from scratch?",
+    "textEn": "Booking confirmations, quotes, payment notes.\nOnly the name and date change.",
+    "id": "ad7f7dc7-bf68-5bf9-bc7b-f6d789a45823"
+   },
+   {
+    "headline": "하루 열 번이면\n한 달에 삼백 번",
+    "text": "같은 문장을 손으로 치는 시간,\n오타 하나에 다시 보내는 민망함까지.",
+    "headlineEn": "Ten a day is\nthree hundred a month",
+    "textEn": "All that typing, plus the awkward resend\nwhen one digit is wrong.",
+    "id": "17a3f0a7-573e-544b-87b2-67730939faa6"
+   },
+   {
+    "headline": "빈칸을 남겨 두세요",
+    "text": "안녕하세요 {이름}님, {날짜} 예약 확인드려요.\n바뀌는 자리만 빈칸으로 저장합니다.",
+    "headlineEn": "Leave the blanks",
+    "textEn": "Hi {name}, your booking on {date} is confirmed.\nSave it once with blanks where things change.",
+    "id": "b78b1f30-05bb-5712-bd50-c7c5e377c359"
+   },
+   {
+    "headline": "쓸 때는 고르기만",
+    "text": "키보드에서 템플릿을 누르면\n빈칸마다 저장해 둔 값이 뜹니다. 탭, 탭, 끝.",
+    "headlineEn": "Then just pick",
+    "textEn": "Tap the template on the keyboard.\nEach blank offers values you saved. Tap, tap, done.",
+    "id": "f692d282-c55d-507a-b8f5-7c30286c1e23"
+   },
+   {
+    "headline": "카톡이든 메일이든\n어디서나",
+    "text": "글자를 칠 수 있는 곳이면 같은 키보드에서.\n쓰던 키보드로는 알아서 돌아갑니다.",
+    "headlineEn": "Messages, Mail,\nanywhere you type",
+    "textEn": "Same keyboard everywhere.\nIt switches back to your usual keyboard after.",
+    "id": "c6d9be8d-35be-512e-ab62-98ddd9965ae3"
+   },
+   {
+    "headline": "100번까지는\n모든 기능이 무료",
+    "text": "단축어를 100번 넣을 때까지 다 써 보세요.\n그 뒤에도 만든 건 그대로 씁니다.",
+    "headlineEn": "Every feature free\nfor your first 100 inserts",
+    "textEn": "Try everything. What you made keeps working after.",
+    "id": "e359773e-0780-54a5-90b9-422ce101e567"
+   },
+   {
+    "headline": "클립키보드",
+    "text": "같은 말을 다시 치지 마세요.",
+    "headlineEn": "ClipKeyboard",
+    "textEn": "Stop typing the same thing twice.",
+    "id": "7d254d93-7cc1-5c91-a80d-9aeb9b816b08"
+   }
+  ],
+  "body": "이름만 바꾸면 되는 답장, 아직 처음부터 치고 계신가요?\n\n클립키보드 템플릿은 바뀌는 자리만 빈칸으로 남겨 두고, 쓸 때 저장해 둔 값에서 골라 채웁니다. 카톡, 문자, 메일, 인스타 DM 어디서나 같은 키보드에서요.\n\n단축어를 100번 넣을 때까지 모든 기능이 무료예요.\n앱스토어에서 클립키보드 검색\n\n#자영업 #고객응대 #프리랜서 #업무효율 #아이폰꿀팁 #아이폰키보드 #생산성 #클립키보드",
+  "bodyEn": "Same reply, different name. Still typing it from scratch?\n\nClipKeyboard templates keep the parts that change as blanks. When you reply, pick the values you already saved, right from the keyboard, in any app.\n\nEvery feature is free for your first 100 inserts.\nSearch \"Clip Keyboard\" on the App Store\n\n#smallbusiness #customerservice #freelancer #productivity #iphonetips #iosapps"
+ },
+ {
+  "id": "5ff3c18a-f53d-54ee-afa2-9936bf553e69",
+  "project": "com.Ysoup.TokenMemo",
+  "kind": "cardNews",
+  "channel": "인스타그램",
+  "title": "아까 복사한 그 번호, 어디 갔지?",
+  "angle": "복사한 걸 잃어버리는 모든 아이폰 사용자에게, 복사한 것이 종류별로 저절로 모인다는 걸",
+  "stage": "ready",
+  "theme": 2,
+  "slides": [
+   {
+    "headline": "아까 복사한 그 번호\n어디 갔지?",
+    "text": "하나 더 복사하는 순간\n앞에 복사한 건 사라집니다.",
+    "headlineEn": "Where did that number\nI copied go?",
+    "textEn": "Copy one more thing\nand the last one is gone.",
+    "id": "2df7ebe4-7637-5135-9913-ffac579cc6fd"
+   },
+   {
+    "headline": "복사한 건\n다 남겨 둡니다",
+    "text": "클립키보드 키보드의 '최근' 칸에\n복사한 것이 차례로 쌓여요.",
+    "headlineEn": "Everything you copy\nstays",
+    "textEn": "The Recent tab on the keyboard\nkeeps what you copied, in order.",
+    "id": "b83d8628-3d66-5808-a8c7-3c083fa55ed0"
+   },
+   {
+    "headline": "종류별로\n저절로 나뉩니다",
+    "text": "이메일, 전화번호, 주소, 카드번호, 계좌번호, URL.\n스무 가지가 넘는 종류를 알아봅니다.",
+    "headlineEn": "Sorted for you",
+    "textEn": "Emails, phone numbers, addresses, card numbers, IBANs, links.\nIt recognizes more than twenty kinds.",
+    "id": "4f608f13-9167-5a27-b625-2abbe28bf738"
+   },
+   {
+    "headline": "자주 쓸 건\n단축어로",
+    "text": "다시 쓸 것 같으면 한 번 눌러 저장.\n다음부터는 탭 한 번이에요.",
+    "headlineEn": "Keep the useful ones",
+    "textEn": "One tap saves it as a snippet.\nNext time it is one tap away.",
+    "id": "1c368cf1-b18a-5ee4-8ed8-f9683580ce59"
+   },
+   {
+    "headline": "민감한 건\nFace ID로",
+    "text": "여권번호, 카드번호는 잠가 두고\n필요할 때만 엽니다.",
+    "headlineEn": "Lock the sensitive ones",
+    "textEn": "Passport and card numbers stay behind Face ID\nuntil you need them.",
+    "id": "3e0e37fa-09bd-575d-84de-1be54404c6ff"
+   },
+   {
+    "headline": "내 기기에만",
+    "text": "단축어 내용은 수집하지 않고\n서드파티 분석 도구도 쓰지 않아요.",
+    "headlineEn": "Stays on your device",
+    "textEn": "Snippet contents are not collected.\nNo third-party analytics.",
+    "id": "2f4dd211-29ae-5877-9638-062a8dda4c62"
+   },
+   {
+    "headline": "클립키보드",
+    "text": "복사한 것을 다시 찾느라 헤매지 마세요.",
+    "headlineEn": "ClipKeyboard",
+    "textEn": "Never hunt for what you copied again.",
+    "id": "6e0f270a-7583-5c10-b114-480c2315d95f"
+   }
+  ],
+  "body": "방금 복사한 계좌번호, 하나 더 복사하는 순간 사라지죠.\n\n클립키보드는 복사한 것을 키보드의 '최근' 칸에 남기고, 이메일·전화번호·주소·카드번호처럼 종류별로 알아서 나눠 둡니다. 다시 쓸 건 탭 한 번에 단축어로.\n\n앱스토어에서 클립키보드 검색\n\n#아이폰꿀팁 #아이폰앱 #클립보드 #복사붙여넣기 #생산성 #업무효율 #클립키보드",
+  "bodyEn": "Copy one more thing and the last one is gone. Not anymore.\n\nClipKeyboard keeps what you copy in the Recent tab on the keyboard and sorts it by type: emails, phone numbers, addresses, card numbers, IBANs. Save the useful ones as snippets with one tap.\n\nSearch \"Clip Keyboard\" on the App Store\n\n#iphonetips #iosapps #clipboard #productivity #copypaste"
+ },
+ {
+  "id": "707bd2ab-d749-507e-b13a-928b1d9c6acf",
+  "project": "com.Ysoup.TokenMemo",
+  "kind": "cardNews",
+  "channel": "링크드인",
+  "title": "고객 응대 답장, 키보드에서 3초",
+  "angle": "고객 지원·세일즈·리크루터처럼 폰으로 같은 답을 반복하는 직장인에게, 품질은 그대로 시간만 줄인다는 걸",
+  "stage": "ready",
+  "theme": 0,
+  "slides": [
+   {
+    "headline": "같은 답장을\n오늘 몇 번 보냈나요?",
+    "text": "고객 문의, 미팅 일정, 자료 요청.\n폰으로도 일은 계속됩니다.",
+    "headlineEn": "How many times\ndid you send that reply today?",
+    "textEn": "Customer questions, meeting times, follow-ups.\nWork happens on your phone too.",
+    "id": "d3f267df-386a-54f0-a1aa-5549a7a51b37"
+   },
+   {
+    "headline": "잘 쓴 답장 하나를\n단축어로",
+    "text": "가장 잘 쓴 버전을 한 번 저장하면\n모든 답장이 그 품질로 나갑니다.",
+    "headlineEn": "Save your best reply\nonce",
+    "textEn": "Every reply goes out at that quality,\nnot a rushed version typed on a bus.",
+    "id": "a8d6c04c-146c-51d6-a121-262134d99cb9"
+   },
+   {
+    "headline": "바뀌는 건\n빈칸으로",
+    "text": "{name}님, {date} 미팅 확인드립니다.\n이름과 날짜만 고르면 끝.",
+    "headlineEn": "Blanks for\nwhat changes",
+    "textEn": "Hi {name}, confirming our call on {date}.\nPick the name and the date. Done.",
+    "id": "a780005f-6dfa-534b-9b9e-505adabb3f26"
+   },
+   {
+    "headline": "링크, 서명, 계좌는\n스택으로 차례대로",
+    "text": "여러 값을 한 자리에 담아\n순서대로 넣습니다.",
+    "headlineEn": "Links, signature, details\nin sequence",
+    "textEn": "Stacks hold several values\nand insert them in order.",
+    "id": "4d6e818b-de47-58e0-b4f1-c26c3f9bc845"
+   },
+   {
+    "headline": "슬랙, 메일, 링크드인\n어디서나",
+    "text": "앱을 오가지 않고\n입력하던 그 자리에서.",
+    "headlineEn": "Slack, Mail, LinkedIn,\nanywhere",
+    "textEn": "No app switching.\nRight where you are typing.",
+    "id": "634939c4-6e5a-5773-9cb8-bebfb3b02b91"
+   },
+   {
+    "headline": "클립키보드",
+    "text": "단축어 100번까지 모든 기능 무료.\nPro는 한 번 결제 또는 연 구독.",
+    "headlineEn": "ClipKeyboard",
+    "textEn": "Every feature free for your first 100 inserts.\nPro: one-time purchase or yearly.",
+    "id": "72308abb-7249-54e1-bee1-f58136c41ba1"
+   }
+  ],
+  "body": "폰으로 같은 답장을 하루에 몇 번 보내시나요?\n\n저는 혼자 앱을 만드는 개발자인데, 계좌번호 한 자리를 틀리게 보낼 뻔한 뒤로 자주 쓰는 문장을 키보드에 넣어 두는 앱을 만들었습니다. 가장 잘 쓴 답장을 한 번 저장해 두면, 바쁠 때 보내는 답장도 그 품질로 나갑니다.\n\n바뀌는 자리는 빈칸으로 두고 쓸 때 고르기만 하면 됩니다. 슬랙, 메일, 링크드인 어디서나요.\n\n클립키보드 (iPhone, iPad)\nhttps://apps.apple.com/kr/app/id1543660502\n\n#생산성 #업무효율 #고객응대 #1인개발",
+  "bodyEn": "How many times did you send the same reply from your phone today?\n\nI'm a solo developer. After almost sending a client a bank account number with one wrong digit, I built a keyboard that remembers what I retype. Save your best reply once, and even the reply you send between meetings goes out at that quality.\n\nThe parts that change become blanks you fill with one tap. Works in Slack, Mail, LinkedIn, anywhere you type.\n\nClipKeyboard for iPhone and iPad\nhttps://apps.apple.com/app/id1543660502\n\n#productivity #customersuccess #sales #indiedev"
+ },
+ {
+  "id": "2f8bf59d-6a26-5176-828c-0c874f846eb9",
+  "project": "com.Ysoup.TokenMemo",
+  "kind": "video",
+  "channel": "인스타그램 릴스",
+  "title": "이름만 바꿔서 답장 보내기, 4초",
+  "angle": "같은 답장을 반복하는 사람에게, 템플릿으로 이름·날짜만 골라 보내는 장면을 보여 준다",
+  "stage": "ready",
+  "script": "[0-2초] 화면: 카톡 대화창, 손으로 긴 예약 확인 문장을 치는 모습(빨리 감기)\n자막: 이 답장, 오늘만 열 번째\n\n[2-4초] 화면: 키보드를 클립키보드로 바꾸고 '예약 확인' 템플릿 탭\n자막: 바뀌는 건 이름이랑 날짜뿐이라면\n\n[4-7초] 화면: 빈칸 {이름}에서 저장된 이름 고르기, {날짜}에서 날짜 고르기\n자막: 빈칸만 고르면\n\n[7-9초] 화면: 완성된 문장이 입력칸에 들어가고 전송\n자막: 끝. 4초.\n\n[9-11초] 화면: 앱 아이콘과 'App Store 에서 클립키보드 검색'\n자막: 단축어 100번까지 모든 기능 무료\n내레이션: 없음(배경음만)",
+  "scriptEn": "[0-2s] Screen: Messages thread, typing a long booking confirmation by hand (sped up)\nCaption: Tenth time sending this today\n\n[2-4s] Screen: switch to ClipKeyboard, tap the \"Booking\" template\nCaption: Only the name and date change?\n\n[4-7s] Screen: pick a saved name for {name}, a date for {date}\nCaption: Just fill the blanks\n\n[7-9s] Screen: the finished message lands in the field, send\nCaption: Done. Four seconds.\n\n[9-11s] Screen: app icon and 'Search \"Clip Keyboard\" on the App Store'\nCaption: Every feature free for your first 100 inserts\nVO: none (music only)",
+  "body": "이름만 바꾸면 되는 답장은 템플릿으로 4초.\n앱스토어에서 클립키보드 검색\n#아이폰꿀팁 #자영업 #고객응대 #업무효율 #클립키보드",
+  "bodyEn": "Same reply, new name: four seconds with a template.\nSearch \"Clip Keyboard\" on the App Store\n#iphonetips #smallbusiness #productivity #iosapps"
+ },
+ {
+  "id": "696a57ae-4201-505c-98b6-6932c038902d",
+  "project": "com.Ysoup.TokenMemo",
+  "kind": "video",
+  "channel": "틱톡",
+  "title": "카드 찍고 번호만 손가락으로 훑기",
+  "angle": "서류·카드 번호를 옮겨 적는 사람에게, 사진에서 필요한 글자만 훑어 저장하는 신기한 순간을 보여 준다",
+  "stage": "ready",
+  "script": "[0-2초] 화면: 사업자등록증(가린 예시)을 보며 번호를 손으로 옮겨 치는 모습\n자막: 이거 아직 손으로 옮겨 치세요?\n\n[2-4초] 화면: 클립키보드에서 카메라로 서류 촬영\n자막: 찍고\n\n[4-7초] 화면: 손가락으로 번호 부분만 쓱 훑기, 그 부분만 강조됨\n자막: 필요한 데만 훑으면\n\n[7-9초] 화면: 그 글자만 단축어 값으로 저장\n자막: 그 글자만 저장\n\n[9-12초] 화면: 다른 앱 입력칸에서 키보드로 탭 한 번에 입력\n자막: 다음부터는 탭 한 번\n\n[12-14초] 화면: 앱 아이콘, 'App Store 에서 클립키보드 검색'\n내레이션: 없음. 화면 속 번호는 모두 가짜 예시로 찍는다",
+  "scriptEn": "[0-2s] Screen: retyping a number from a document by hand (sample, masked)\nCaption: Still retyping this by hand?\n\n[2-4s] Screen: ClipKeyboard camera, photograph the document\nCaption: Snap it\n\n[4-7s] Screen: swipe a finger over just the number, only that part highlights\nCaption: Swipe over the part you need\n\n[7-9s] Screen: that text alone is saved as a value\nCaption: Only that text is saved\n\n[9-12s] Screen: in another app, one tap on the keyboard inserts it\nCaption: Next time it is one tap\n\n[12-14s] Screen: app icon, 'Search \"Clip Keyboard\" on the App Store'\nVO: none. Use fake sample numbers on screen",
+  "body": "서류 번호, 아직 보고 옮겨 치세요? 찍고 훑으면 그 글자만 저장돼요.\n#아이폰꿀팁 #아이폰앱 #업무꿀팁 #문자인식 #클립키보드",
+  "bodyEn": "Snap a document, swipe over the number, and only that text is saved.\n#iphonetips #iphoneapps #productivityhacks #ocr"
+ },
+ {
+  "id": "30a285b0-f3c0-54b6-8b11-d3f27823eca1",
+  "project": "com.Ysoup.TokenMemo",
+  "kind": "video",
+  "channel": "유튜브 쇼츠",
+  "title": "키보드 하나로 23개 언어 치고 단축어까지",
+  "angle": "여러 언어로 대화하는 사람·해외 거주자에게, 키보드를 바꾸지 않고 치고 붙여넣는 장면을 보여 준다",
+  "stage": "ready",
+  "script": "[0-2초] 화면: 키보드 전환 지구본 버튼을 여러 번 누르며 헤매는 모습\n자막: 키보드 바꾸다 하루 다 감\n\n[2-5초] 화면: 클립키보드 자판으로 한국어 입력, 언어 바꿔 영어 입력\n자막: 이제 클립키보드에서 바로 쳐요. 23개 언어\n\n[5-8초] 화면: 같은 키보드에서 주소 단축어 탭\n자막: 자주 쓰는 건 같은 키보드에서 탭 한 번\n\n[8-10초] 화면: 설정의 '쓰던 키보드로 돌아가기' 켜고 끄기\n자막: 쓰던 키보드가 편하면 알아서 돌아가요\n\n[10-12초] 화면: 앱 아이콘, 'App Store 에서 클립키보드 검색'\n자막: 일본어·중국어 한자 변환은 아직 준비 중\n내레이션: 없음",
+  "scriptEn": "[0-2s] Screen: tapping the globe key over and over, lost between keyboards\nCaption: Keyboard switching all day\n\n[2-5s] Screen: type English on ClipKeyboard, switch language, type Spanish\nCaption: Now you just type on ClipKeyboard. 23 languages\n\n[5-8s] Screen: on the same keyboard, tap the address snippet\nCaption: Your saved text, one tap, same keyboard\n\n[8-10s] Screen: Settings, the 'switch back to my keyboard' toggle\nCaption: Prefer your own keyboard? It switches back for you\n\n[10-12s] Screen: app icon, 'Search \"Clip Keyboard\" on the App Store'\nCaption: Kanji conversion for Japanese and Chinese is not here yet\nVO: none",
+  "body": "키보드 하나로 23개 언어를 치고, 자주 쓰는 문구도 같은 자판에서.\n앱스토어에서 클립키보드 검색\n#아이폰 #아이폰키보드 #외국어 #해외생활 #shorts",
+  "bodyEn": "One keyboard: type in 23 languages and insert your saved text without switching.\nSearch \"Clip Keyboard\" on the App Store\n#iphone #keyboard #multilingual #expatlife #shorts"
+ },
+ {
+  "id": "8b5165a1-fdbf-5c3b-86b7-454e28ad1566",
+  "project": "com.Ysoup.TokenMemo",
+  "kind": "post",
+  "channel": "Product Hunt",
+  "title": "ClipKeyboard: the iOS keyboard that remembers what you always type",
+  "angle": "프로덕트헌트 런칭(2026-11-18 이후 화~목 00:01 PT). 영어판이 실제로 올릴 글, 한국어판은 확인용",
+  "stage": "ready",
+  "body": "[태그라인]\n늘 치는 말을 기억하는 iPhone 키보드\n\n[소개 (260자 이내)]\n계좌번호, 주소, 답장, 빈칸이 있는 템플릿처럼 다시 치는 것을 iPhone 키보드 안에 둡니다. 23개 언어로 치면서 키보드를 바꾸지 않고 단축어를 넣습니다. 무료로 시작, 서드파티 분석 도구 없음.\n\n[메이커 첫 댓글]\n안녕하세요, 한국에서 혼자 앱을 만드는 Leeo입니다. 계좌번호를 한 자리 틀리게 고객에게 보낼 뻔한 날 저녁, 이 키보드를 만들기 시작했습니다.\n\n지금의 클립키보드는\n23개 언어 자판과 단축어가 한 키보드에\n복사한 것을 종류별로 나누는 스마트 클립보드\n빈칸이 있는 템플릿\n여러 값을 차례로 넣는 스택\n단축어는 기기와 본인 iCloud에만\n\n단축어를 100번 넣을 때까지 모든 기능이 무료이고, Pro는 한 번 결제 또는 연 구독입니다. 의견 주시면 하루 종일 답하겠습니다.",
+  "bodyEn": "[Tagline]\nThe iOS keyboard that remembers what you always type\n\n[Description, under 260 chars]\nClipKeyboard keeps what you retype (account numbers, addresses, replies, templates with blanks) inside your iPhone keyboard. Type in 23 languages and drop in a snippet without switching keyboards. Free to start, no third-party analytics.\n\n[Maker's first comment]\nHi Product Hunt! I'm Leeo, a solo developer from Korea.\n\nI built ClipKeyboard because I kept retyping the same things: my bank account number, my address, \"In a meeting, will get back to you soon.\" The day I almost sent a client an account number with one wrong digit, I started building a keyboard that remembers them for me.\n\nToday ClipKeyboard is:\nA full keyboard in 23 languages, with your saved text on the same keyboard. Japanese and Chinese type kana, Pinyin and Zhuyin for now; kanji conversion is on the roadmap.\nA smart clipboard that sorts what you copy: emails, phone numbers, addresses, IBANs, card numbers.\nTemplates with blanks: \"Hi {name}, invoice {number} is due {date}.\"\nStacks that insert several values in order.\nSnippets that stay on your device, and in your own iCloud if you turn on backup. No third-party analytics SDK.\n\nEvery feature is free for your first 100 inserts, and what you made keeps working after that. Pro is a one-time purchase or a yearly subscription.\n\nI'd love feedback, especially from freelancers and anyone who answers customers from their phone. I'll be here all day.\n\nhttps://apps.apple.com/app/id1543660502"
+ },
+ {
+  "id": "88baf7da-b8d6-5926-9b56-b251f82ded8c",
+  "project": "com.Ysoup.TokenMemo",
+  "kind": "post",
+  "channel": "Hacker News",
+  "title": "Show HN: ClipKeyboard – an iOS keyboard for text you retype",
+  "angle": "Show HN. 기술적인 결정(키보드 익스텐션 제약, 기기 저장, 분류)을 담백하게. 마케팅 말투 금지",
+  "stage": "ready",
+  "body": "[제목]\nShow HN: ClipKeyboard – 다시 치는 글을 위한 iOS 키보드\n\n[본문]\n클립키보드는 자주 다시 치는 글(계좌번호, 주소, 답장)을 iOS 키보드 익스텐션 안에 두는 앱입니다. 5.1.13부터는 23개 언어 자판도 있어 키보드를 바꾸지 않아도 됩니다.\n\n만들며 정한 것들\n단축어는 기기와 사용자 본인의 iCloud(CloudKit)에만 둡니다. 서드파티 분석 SDK는 없습니다.\n복사한 글은 정규식과 체크섬(IBAN, 카드번호 Luhn)으로 20가지가 넘는 종류로 나눕니다.\n키보드 익스텐션은 메모리가 빠듯해서, 이미지 단축어는 원본 대신 줄인 그림으로 읽어 그립니다.\n일본어·중국어는 한자 변환 없이 가나·병음·주음까지만 칩니다. 사전을 익스텐션 메모리 안에 넣는 방법을 아직 찾는 중입니다.\n\n단축어 100번까지 모든 기능 무료, Pro는 한 번 결제 또는 연 구독입니다.",
+  "bodyEn": "[Title]\nShow HN: ClipKeyboard – an iOS keyboard for text you retype\n\n[Text]\nClipKeyboard puts the text I kept retyping (account numbers, addresses, stock replies) inside an iOS keyboard extension. Since 5.1.13 it is also a full keyboard in 23 languages, so you don't have to switch keyboards to use it.\n\nSome decisions:\nSnippets live on the device and, if you turn backup on, in your own iCloud via CloudKit. No third-party analytics SDK.\nCopied text is classified into 20+ types with regexes plus checksums (IBAN mod 97, Luhn for cards), so a random 16-digit number isn't called a card.\nKeyboard extensions have a tight memory ceiling, so image snippets are decoded as downsampled thumbnails instead of full images.\nJapanese and Chinese type kana, Pinyin and Zhuyin, but there is no kanji conversion yet. Fitting a usable dictionary inside the extension's memory budget is the open problem; ideas welcome.\n\nFree for the first 100 inserts; Pro is a one-time purchase or a yearly subscription.\n\nhttps://apps.apple.com/app/id1543660502"
+ },
+ {
+  "id": "404fae58-e3f2-573a-8756-4bbfe500add1",
+  "project": "com.Ysoup.TokenMemo",
+  "kind": "post",
+  "channel": "긱뉴스",
+  "title": "Show GN: 클립키보드 – 다시 치는 글을 키보드에 넣어 두는 iOS 앱",
+  "angle": "긱뉴스 Show GN. 개발자 독자에게 왜·어떻게를 짧게",
+  "stage": "ready",
+  "body": "[제목]\nShow GN: 클립키보드 – 다시 치는 글을 키보드에 넣어 두는 iOS 앱\n\n[링크]\nhttps://apps.apple.com/kr/app/id1543660502\n\n[본문]\n계좌번호, 주소, 자주 보내는 답장처럼 매일 다시 치는 글을 iOS 키보드 익스텐션 안에 넣어 두는 앱입니다. 혼자 만들고 있습니다.\n\n템플릿: 바뀌는 자리를 {빈칸}으로 두고 쓸 때 저장된 값에서 고릅니다\n스마트 클립보드: 복사한 글을 정규식과 체크섬으로 20가지 넘는 종류로 나눕니다\n23개 언어 자판: 5.1.13부터 키보드를 바꾸지 않고 치면서 넣습니다(일본어·중국어 한자 변환은 아직 없음)\n보안 단축어: Face ID로 잠금\n단축어는 기기와 본인 iCloud에만, 서드파티 분석 SDK 없음\n\n키보드 익스텐션의 메모리 한도 안에서 이미지 단축어와 자판을 같이 돌리는 게 가장 까다로웠습니다. 단축어 100번까지 모든 기능 무료입니다. 피드백 환영합니다.",
+  "bodyEn": "[Title]\nShow GN: ClipKeyboard – an iOS keyboard that holds the text you retype\n\n[Link]\nhttps://apps.apple.com/app/id1543660502\n\n[Text]\nA solo-built iOS keyboard extension for the text you retype every day: account numbers, addresses, stock replies.\n\nTemplates: leave {blanks} and fill them from saved values\nSmart clipboard: copies sorted into 20+ types with regexes and checksums\n23-language keyboard since 5.1.13 (no kanji conversion yet for Japanese and Chinese)\nSecure snippets behind Face ID\nSnippets stay on device and in your own iCloud; no third-party analytics SDK\n\nThe hardest part was running image snippets and a full keyboard inside the extension's memory limit. Free for the first 100 inserts. Feedback welcome."
+ },
+ {
+  "id": "4c5d40d2-1f1f-5d57-a482-717f5ddd4ffb",
+  "project": "com.Ysoup.TokenMemo",
+  "kind": "post",
+  "channel": "클리앙 아사모",
+  "title": "[사용기] 같은 말을 키보드에 넣어 두고 쓴 지 몇 달 (직접 만든 앱입니다)",
+  "angle": "아사모는 홍보 티가 나면 안 된다. 직접 만든 앱임을 먼저 밝히고, 실제 쓰는 장면 위주의 담백한 사용기",
+  "stage": "ready",
+  "body": "먼저 밝히면 제가 만든 앱입니다. 문제가 되면 지우겠습니다.\n\n하루에 같은 말을 몇 번 치는지 세어 본 적이 있는데, 계좌번호, 집 주소, \"회의 중이라 이따 연락드릴게요\" 같은 게 생각보다 많더라고요. 한 번은 계좌번호를 한 자리 틀리게 보낼 뻔해서, 그 뒤로 이런 걸 키보드에 넣어 두는 앱을 만들어 쓰고 있습니다.\n\n제가 실제로 쓰는 것들\n계좌번호, 주소, 사업자번호: 키보드에서 탭 한 번\n견적 안내: \"{이름}님, 견적 {금액}원입니다\" 처럼 빈칸만 골라서\n여권번호: Face ID로 잠가 두고 필요할 때만\n복사한 것: 키보드 '최근' 칸에 남아 있어서 아까 복사한 걸 다시 찾기 쉬움\n\n요즘은 키보드 자체로 글도 칠 수 있게 돼서(23개 언어) 기본 키보드와 오갈 일이 줄었습니다. 쓰던 키보드가 편하면 단축어만 넣고 원래 키보드로 돌아가게 둘 수도 있어요.\n\n단축어를 100번 넣을 때까지 모든 기능이 무료이고, 그 뒤엔 한 번 결제나 연 구독 중 고르면 됩니다. 단축어 내용은 기기와 본인 iCloud에만 저장돼요.\n\nhttps://apps.apple.com/kr/app/id1543660502\n\n불편한 점이나 있었으면 하는 기능 말씀 주시면 바로 반영해 보겠습니다.",
+  "bodyEn": "Full disclosure: I made this app. Happy to take this down if it breaks the rules.\n\nI once counted how many times a day I type the same things: my account number, my address, \"In a meeting, will call you back.\" It was a lot. After nearly sending an account number with one wrong digit, I built a keyboard that keeps these for me.\n\nWhat I actually use it for\nAccount number, address, business ID: one tap on the keyboard\nQuotes: \"Hi {name}, the quote is {amount}\" with only the blanks to pick\nPassport number: locked behind Face ID\nCopied text: it stays in the keyboard's Recent tab, so I can find what I copied earlier\n\nIt now types too (23 languages), so I switch keyboards less. If you prefer your own keyboard, it can switch back after inserting.\n\nEvery feature is free for your first 100 inserts, then a one-time purchase or yearly subscription. Snippets stay on your device and your own iCloud.\n\nhttps://apps.apple.com/app/id1543660502"
+ },
+ {
+  "id": "3a8f378f-58f5-5894-8d1a-325554e82420",
+  "project": "com.Ysoup.TokenMemo",
+  "kind": "post",
+  "channel": "루리웹 홍보게시판",
+  "title": "[iOS] 클립키보드 – 계좌번호·주소·답장을 키보드에서 탭 한 번",
+  "angle": "루리웹 앱 홍보 게시판은 공식 홍보가 허용된다. 기능을 짧게, 그림 2장 붙여서",
+  "stage": "ready",
+  "body": "안녕하세요, 혼자 iOS 앱을 만드는 개발자입니다.\n\n클립키보드는 자주 치는 글을 키보드에 넣어 두는 앱이에요.\n\n단축어: 계좌번호, 주소, 자기소개를 탭 한 번에\n템플릿: 이름·날짜 같은 바뀌는 자리만 골라서\n스택: 여러 값을 차례로\n스마트 클립보드: 복사한 것이 종류별로 정리\n문자 인식: 카드·서류 찍고 필요한 부분만 손가락으로 훑기\n23개 언어 자판: 키보드를 바꾸지 않고 치면서 바로 넣기\n\n단축어를 100번 넣을 때까지 모든 기능이 무료입니다. Pro는 한 번 결제 또는 연 구독이에요.\n\nhttps://apps.apple.com/kr/app/id1543660502\n\n(그림: 키보드에서 단축어 넣는 장면, 템플릿 빈칸 고르는 장면)",
+  "bodyEn": "Hi, I'm a solo iOS developer.\n\nClipKeyboard keeps the text you type often inside your keyboard.\n\nSnippets: account numbers, addresses, intros in one tap\nTemplates: pick only the parts that change, like names and dates\nStacks: several values in order\nSmart clipboard: what you copy, sorted by type\nText recognition: photograph a card or document and swipe the part you need\n23-language keyboard: type and insert without switching\n\nEvery feature is free for your first 100 inserts. Pro is a one-time purchase or a yearly subscription.\n\nhttps://apps.apple.com/app/id1543660502\n\n(Images: inserting a snippet from the keyboard, picking template blanks)"
+ },
+ {
+  "id": "36e093b6-75cf-5fd9-ab05-dfab1440bc39",
+  "project": "com.Ysoup.TokenMemo",
+  "kind": "post",
+  "channel": "스레드",
+  "title": "같은 말을 다시 칠 때의 작은 긴장",
+  "angle": "2026-10-25 @lee25_ios 에 올림. 앱 미리보기 영상(docs/screenshots/preview/ko/app-preview.mp4)과 스크린샷 01-reply · 03-template-fill 을 함께.",
+  "stage": "posted",
+  "body": "계좌번호를 보내다 한 자리 틀린 걸 전송 직전에 본 적이 있어요.\n\n그때 알았는데, 같은 말을 다시 칠 때마다 저는 아주 조금씩 긴장하고 있었더라고요. 틀리면 어쩌지 하는 그 작은 긴장이요. 시간보다 그게 더 피곤했던 것 같아요.\n\n그 뒤로 자주 치는 말들을 키보드에 넣어 두는 앱을 만들어서 쓰고 있어요. 쓰고 나서 제일 크게 달라진 건, 보내기 전에 숫자를 한 번 더 들여다보는 버릇이 없어졌다는 거예요.\n\n혹시 하루 동안 같은 말을 다시 칠 때마다 한 번씩 세어 보신 적 있으세요? 해 보면 어떤 말이 제일 많이 나올지 궁금해요.",
+  "bodyEn": "I once caught a wrong digit in my account number right before sending it.\n\nThat's when I noticed I was a little tense every time I retyped the same things. That small \"what if it's wrong\" tension. It tired me more than the time it took.\n\nSince then I've been using an app I made that keeps the things I type often on my keyboard. The biggest change is that I no longer stare at the numbers one more time before sending.\n\nHave you ever counted, for one day, every time you retype the same thing? I'm curious what would come up most."
+ },
+ {
+  "id": "bb7e483f-989a-5e98-8f43-35a59b529d0c",
+  "project": "com.Ysoup.TokenMemo",
+  "kind": "post",
+  "channel": "r/productivity",
+  "title": "The 5 things I stopped retyping on my phone (and how)",
+  "angle": "자기홍보 규칙이 빡빡하다. 방법이 먼저고 앱은 끝에 한 줄, 내 앱이라고 밝힌다. 할인 얘기 금지, 링크 넣지 않는다(물으면 댓글로). 같은 글을 24시간 안에 두 곳에 올리지 않는다. 첫 두 시간은 댓글에 답한다. 리뷰 부탁 · 업보트 부탁 · 제목 이모지 금지.",
+  "stage": "ready",
+  "body": "",
+  "bodyEn": "I counted how often I type the same things on my phone. It was a lot. Here is how I cut it down. My own app shows up at the end, but the first fixes need nothing extra.\n\n1. Email and address: Settings > General > Keyboard > Text Replacement. A short abbreviation expands into the full text. Free and built in.\n2. Account number: you can put it in Text Replacement too, but I didn't like it popping up as an autocorrect suggestion, so I keep it elsewhere.\n3. Stock replies: just keeping your best-written version in Notes and copying it raises the quality of every reply.\n4. Replies where only the name and date change: this is where Text Replacement ran out for me.\n5. The thing I copied a minute ago: iOS only remembers the last one.\n\nFor 4 and 5 I ended up building ClipKeyboard (disclosure: it's my app). It puts templates with blanks and your copy history inside the keyboard.\n\nWhat do you retype the most?",
+  "plannedAt": "2026-10-29T01:00:00Z"
+ },
+ {
+  "id": "542240f7-9cd2-574c-83da-82505fe0ae0d",
+  "project": "com.Ysoup.TokenMemo",
+  "kind": "post",
+  "stage": "ready",
+  "channel": "r/iosapps",
+  "title": "[iOS] ClipKeyboard – a keyboard for the things you retype, now typing in 23 languages",
+  "angle": "개발자 자기 앱 글 허용, 제목에 [iOS]. 메인 피드는 리뷰 20개 이상이거나, 실명과 개인정보처리방침 · 이용약관 공개가 필요하다. 막히면 그달 'App Shelf' 메가스레드에 같은 글을 댓글로. 영상 docs/media/clipkeyboard-demo-en.mp4 (클립키보드 레포) 를 글에 직접 올린다. 같은 글을 24시간 안에 두 곳에 올리지 않는다. 첫 두 시간은 댓글에 답한다. 리뷰 부탁 · 업보트 부탁 · 제목 이모지 금지.",
+  "plannedAt": "2026-10-27T01:00:00Z",
+  "body": "",
+  "bodyEn": "Hi, I'm Leeo, the solo developer behind this one.\n\nClipKeyboard keeps the text you retype (account numbers, addresses, stock replies) inside your keyboard, so it's one tap in any app.\n\nWhat it does\n- Snippets: one tap, exactly as saved\n- Templates: leave blanks for the parts that change, pick values when you use it\n- Stacks: several values inserted in order\n- Smart clipboard: what you copy is kept and sorted (emails, phones, addresses, IBANs, cards)\n- Text recognition: photograph a document and swipe over just the part you need\n- Secure snippets behind Face ID\n- Full keyboard in 23 languages (no kanji conversion for Japanese/Chinese yet)\n\nPrice: every feature is free for your first 100 inserts. After that, what you made keeps working, and Pro is a one-time purchase or yearly.\n\nPrivacy: snippets stay on your device and your own iCloud. No third-party analytics SDK.\n\nhttps://apps.apple.com/app/id1543660502\n\nFeedback welcome, especially from people who answer customers from their phone."
+ },
+ {
+  "id": "14f117bc-ee18-562f-af4e-e3fae36e4551",
+  "project": "com.Ysoup.TokenMemo",
+  "kind": "post",
+  "stage": "ready",
+  "channel": "r/apphunt",
+  "title": "ClipKeyboard: an iPhone keyboard that remembers your account numbers, addresses and replies",
+  "angle": "앱 쇼케이스 서브. 글 하나에 앱 하나. 짧게. 영상 docs/media/clipkeyboard-demo-en.mp4 (클립키보드 레포) 를 글에 직접 올린다. 같은 글을 24시간 안에 두 곳에 올리지 않는다. 첫 두 시간은 댓글에 답한다. 리뷰 부탁 · 업보트 부탁 · 제목 이모지 금지.",
+  "plannedAt": "2026-10-28T01:00:00Z",
+  "body": "",
+  "bodyEn": "What it is: an iOS keyboard that holds the text you type again and again.\n\nWho it's for: anyone who sends the same bank details, address or replies from their phone. Freelancers and people doing customer support use it the most.\n\nWhat makes it different from Text Replacement: templates with blanks you fill per message, a copy history right in the keyboard, Face ID for sensitive snippets, and it types in 23 languages so you don't have to switch keyboards.\n\nFree for the first 100 inserts, then Pro as a one-time purchase or yearly.\n\nhttps://apps.apple.com/app/id1543660502\n\nMade by me, a solo dev. Happy to answer anything."
+ },
+ {
+  "id": "4bdd7a8b-b86f-56af-b63c-4d951739647f",
+  "project": "com.Ysoup.TokenMemo",
+  "kind": "post",
+  "stage": "ready",
+  "channel": "r/freelance",
+  "title": "How do you handle sending the same payment details and client replies from your phone?",
+  "angle": "자기홍보 금지에 가깝다. 질문 글로 쓰고 링크 없이. 앱 이름은 본문 끝에 한 번만, 누가 물으면 댓글로 링크. 같은 글을 24시간 안에 두 곳에 올리지 않는다. 첫 두 시간은 댓글에 답한다. 리뷰 부탁 · 업보트 부탁 · 제목 이모지 금지.",
+  "plannedAt": "2026-10-30T01:00:00Z",
+  "body": "",
+  "bodyEn": "Genuine question, and I'll share what I do.\n\nBetween invoices, \"payment received, thank you\" messages and \"here are my bank details\" emails, I was retyping the same handful of things from my phone every week. Once I caught a wrong digit in my account number right before sending it to a client, and that was the end of typing it by hand.\n\nWhat works for me now:\n- Bank details, tax ID, address: saved once, inserted with one tap\n- Replies where only the client name, amount or date changes: saved as a template with blanks\n- Anything sensitive (passport number for contracts abroad) locked behind Face ID\n\nI do this with a keyboard app I built myself (ClipKeyboard), so I'm biased. Not linking it since that's not what this sub is for.\n\nHow are the rest of you handling this? Text Replacement, a notes file, something else?"
+ },
+ {
+  "id": "47023021-89b5-5512-aa68-b39a0a4eab58",
+  "project": "com.Ysoup.TokenMemo",
+  "kind": "post",
+  "stage": "ready",
+  "channel": "r/digitalnomad",
+  "title": "For those who message in two or more languages: how do you keep addresses and bank details at hand?",
+  "angle": "광고로 보이면 바로 지워진다. 경험 공유 + 질문, 링크 없이. 23개 언어 자판이 이 서브에 맞는 이야기. 같은 글을 24시간 안에 두 곳에 올리지 않는다. 첫 두 시간은 댓글에 답한다. 리뷰 부탁 · 업보트 부탁 · 제목 이모지 금지.",
+  "plannedAt": "2026-10-31T01:00:00Z",
+  "body": "",
+  "bodyEn": "Working with clients and landlords in different countries, I kept running into the same two annoyances on my phone:\n\n1. Switching keyboards back and forth between languages several times in one conversation.\n2. Retyping the same IBAN, address and \"I'll be there at…\" messages in each language.\n\nWhat finally helped me was keeping all of it in one keyboard: it types in the languages I need, and the saved stuff (IBAN, local address, the same reply in English and Korean) sits on that same keyboard, one tap away. Full disclosure, it's an app I built myself (ClipKeyboard), so take that into account. Not linking it here.\n\nCurious how others deal with this. Do you just live with the globe key, or have you found a better setup?"
  }
 ]

@@ -2,32 +2,22 @@
 //  MarketingItemEditor.swift
 //  FeedbackHubViewer
 //
-//  활동 하나를 기획부터 올린 뒤까지. 위에서 아래로 일의 순서다 — 무엇을 · 어디에 · 언제,
-//  자료(Claude 에게 맡기고 답을 붙여 넣거나 직접), 그리고 올렸는지.
+//  자료 하나를 고친다 — 무엇을 · 어디에, 그리고 내용(카드뉴스 장들 · 대본 · 글).
 //
 //  고친 것은 "저장" 을 눌러야 남는다. 대본을 고치다 시트를 실수로 닫아도 반쯤 고친 글이
 //  다른 기기로 넘어가지 않게.
 //
 
 import SwiftUI
-#if os(macOS)
-import AppKit
-#endif
 
 struct MarketingItemEditor: View {
     @EnvironmentObject private var store: FeedbackStore
-    @EnvironmentObject private var connect: AppStoreConnectStore
     @EnvironmentObject private var keywords: KeywordStore
-    @EnvironmentObject private var news: NewsStore
     @ObservedObject private var marketing = MarketingStore.shared
 
     @State private var draft: MarketingItem
     let close: () -> Void
 
-    @State private var pastedMaterial = ""
-    @State private var materialMessage: String?
-    @State private var exported: [URL] = []
-    @State private var isExporting = false
     @State private var confirmsDelete = false
     /// 미리보기 · 그림에 넣을 앱 아이콘.
     @State private var icon: CGImage?
@@ -47,7 +37,6 @@ struct MarketingItemEditor: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
                     planSection
-                    materialSection
                     languagePicker
                     switch draft.kind {
                     case .cardNews: cardNewsSection
@@ -55,12 +44,11 @@ struct MarketingItemEditor: View {
                     case .post: EmptyView()
                     }
                     captionSection
-                    campaignSection
-                    postedSection
+                    deleteButton
                 }
                 .padding(Platform.cardPadding)
             }
-            .navigationTitle(isNew ? "새 마케팅 · \(appName)" : appName)
+            .navigationTitle(isNew ? "새 자료 · \(appName)" : appName)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("닫기", action: close)
@@ -82,10 +70,10 @@ struct MarketingItemEditor: View {
         }
     }
 
-    // MARK: - 기획
+    // MARK: - 무엇을 · 어디에
 
     private var planSection: some View {
-        Card(title: "기획", systemImage: "lightbulb") {
+        Card(title: "자료", systemImage: "megaphone") {
             Picker("종류", selection: $draft.kind) {
                 ForEach(MarketingItem.Kind.allCases) { Label($0.label, systemImage: $0.systemImage).tag($0) }
             }
@@ -108,86 +96,18 @@ struct MarketingItemEditor: View {
                 .fixedSize()
                 .font(.body)
             }
-
-            Text("누구에게 · 왜 지금 · 무엇을 느끼게")
-                .font(.body)
-                .foregroundStyle(.secondary)
-            GrowingTextField("예: 복사 붙여넣기를 하루에 수십 번 하는 직장인에게, 이 앱이면 3초로 끝난다는 걸", text: $draft.angle, minLines: 2)
-
-            Toggle("올릴 때 정하기", isOn: Binding(
-                get: { draft.plannedAt != nil },
-                set: { on in
-                    draft.plannedAt = on
-                        ? Calendar.current.date(bySettingHour: 10, minute: 0, second: 0,
-                                                of: Calendar.current.date(byAdding: .day, value: 1, to: Date()) ?? Date())
-                        : nil
-                }))
-                .font(.body)
-            if let planned = draft.plannedAt {
-                DatePicker("올릴 때", selection: Binding(get: { planned }, set: { draft.plannedAt = $0; draft.snoozedUntil = nil }))
-                    .font(.body)
-                Text("이때 알림으로 올렸는지 물어볼게요.")
-                    .font(.body)
-                    .foregroundStyle(.secondary)
-            }
-
-            Picker("단계", selection: $draft.stage) {
-                ForEach(MarketingItem.Stage.allCases) { Text($0.label).tag($0) }
-            }
-            .font(.body)
-        }
-    }
-
-    // MARK: - 자료
-
-    private var materialSection: some View {
-        Card(title: "자료 · Claude 에게 맡기기", systemImage: "wand.and.stars") {
-            let context = MarketingContextBuilder.make(project: draft.project, store: store, connect: connect,
-                                                       keywords: keywords, news: news)
-            CopyButton(text: MarketingPrompt.material(draft, context: context),
-                       title: "\(draft.kind.label) 초안 맡길 글 복사")
-                .font(.body)
-                .disabled(draft.title.trimmingCharacters(in: .whitespaces).isEmpty)
-            Text("Claude 에 붙여 넣고, 받은 답을 그대로 아래에 붙여 넣으면 \(draft.kind == .cardNews ? "장들과 캡션이" : draft.kind == .video ? "대본과 캡션이" : "본문이") 채워져요.")
-                .font(.body)
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-            GrowingTextField("Claude 의 답을 여기에 붙여 넣기", text: $pastedMaterial, minLines: 3, monospaced: true)
-            HStack {
-                if let materialMessage {
-                    Text(materialMessage).font(.body).foregroundStyle(.secondary)
-                }
-                Spacer()
-                Button("답 들이기") {
-                    if MarketingImport.material(pastedMaterial, into: &draft) {
-                        pastedMaterial = ""
-                        exported = []
-                        materialMessage = "채웠어요. 다듬고 저장하세요."
-                    }
-                }
-                .buttonStyle(.borderedProminent)
-                .disabled(pastedMaterial.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-            }
         }
     }
 
     // MARK: - 언어
 
     private var languagePicker: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Picker("언어", selection: $english) {
-                Text("한국어").tag(false)
-                Text("English").tag(true)
-            }
-            .pickerStyle(.segmented)
-            .labelsHidden()
-            .onChange(of: english) { exported = [] }
-            if draft.lacksEnglish {
-                Label("영어판이 비어 있어요 — 위의 \"초안 맡길 글\" 은 두 판을 함께 받아요", systemImage: "globe")
-                    .font(.body)
-                    .foregroundStyle(.orange)
-            }
+        Picker("언어", selection: $english) {
+            Text("한국어").tag(false)
+            Text("English").tag(true)
         }
+        .pickerStyle(.segmented)
+        .labelsHidden()
     }
 
     private var scriptBinding: Binding<String> { english ? $draft.scriptEn : $draft.script }
@@ -197,7 +117,7 @@ struct MarketingItemEditor: View {
 
     private var cardNewsSection: some View {
         Card(title: "카드뉴스 \(draft.slides.count)장", systemImage: "square.stack") {
-            Picker("색", selection: Binding(get: { draft.theme ?? 0 }, set: { draft.theme = $0; exported = [] })) {
+            Picker("색", selection: Binding(get: { draft.theme ?? 0 }, set: { draft.theme = $0 })) {
                 ForEach(CardNewsTheme.all) { Text($0.name).tag($0.id) }
             }
             .pickerStyle(.segmented)
@@ -226,7 +146,6 @@ struct MarketingItemEditor: View {
                         Spacer()
                         Button(role: .destructive) {
                             draft.slides.removeAll { $0.id == slide.id }
-                            exported = []
                         } label: { Label("빼기", systemImage: "minus.circle") }
                         .buttonStyle(.borderless)
                         .font(.body)
@@ -236,58 +155,14 @@ struct MarketingItemEditor: View {
                         .font(.body)
                     GrowingTextField(english ? "Body" : "작은 글씨", text: english ? $slide.textEn : $slide.text, minLines: 2)
                 }
-                .onChange(of: slide) { exported = [] }
             }
 
-            HStack(spacing: 12) {
-                Button {
-                    draft.slides.append(.init(headline: "", text: ""))
-                } label: { Label("장 더하기", systemImage: "plus") }
-                Spacer()
-                if isExporting {
-                    ProgressView().controlSize(.small)
-                } else if exported.isEmpty {
-                    Button {
-                        Task {
-                            isExporting = true
-                            exported = await CardNewsExport.render(draft, appName: appName, icon: icon, english: english)
-                            isExporting = false
-                        }
-                    } label: { Label("그림 만들기", systemImage: "photo.on.rectangle") }
-                    .buttonStyle(.borderedProminent)
-                    .disabled(draft.slides.isEmpty)
-                } else {
-                    ShareLink(items: exported) { Label("\(exported.count)장 공유", systemImage: "square.and.arrow.up") }
-                    #if os(macOS)
-                    Button { saveToFolder() } label: { Label("폴더에 저장", systemImage: "folder") }
-                    #endif
-                }
-            }
+            Button {
+                draft.slides.append(.init(headline: "", text: ""))
+            } label: { Label("장 더하기", systemImage: "plus") }
             .font(.body)
         }
     }
-
-    #if os(macOS)
-    /// 고른 폴더에 "앱이름-주제" 폴더를 만들어 장들을 넣고 Finder 에서 보여 준다.
-    private func saveToFolder() {
-        let panel = NSOpenPanel()
-        panel.canChooseDirectories = true
-        panel.canChooseFiles = false
-        panel.canCreateDirectories = true
-        panel.prompt = "여기에 저장"
-        panel.directoryURL = FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask).first
-        guard panel.runModal() == .OK, let base = panel.url else { return }
-        let name = "\(appName)-\(draft.title)".replacingOccurrences(of: "/", with: "-").prefix(60)
-        let folder = base.appendingPathComponent(String(name), isDirectory: true)
-        try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
-        for url in exported {
-            let target = folder.appendingPathComponent(url.lastPathComponent)
-            try? FileManager.default.removeItem(at: target)
-            try? FileManager.default.copyItem(at: url, to: target)
-        }
-        NSWorkspace.shared.activateFileViewerSelecting([folder])
-    }
-    #endif
 
     // MARK: - 영상
 
@@ -320,86 +195,23 @@ struct MarketingItemEditor: View {
                 CopyButton(text: bodyBinding.wrappedValue,
                            title: (english ? "영어 " : "") + (draft.kind == .post ? "글 복사" : "캡션 복사")).font(.body)
             }
-            if draft.hasMaterial, draft.stage == .preparing || draft.stage == .planned {
-                Button("자료 완성으로") { draft.stage = .ready }
-                    .buttonStyle(.bordered)
-                    .font(.body)
-            }
         }
     }
 
-    // MARK: - 캠페인
+    // MARK: - 지우기
 
-    private var campaignSection: some View {
-        Card(title: "캠페인 링크", systemImage: "scope") {
-            if marketing.providerToken.isEmpty {
-                ProviderTokenField()
-            } else if let trackId = keywords.trackId(for: draft.project) {
-                let link = MarketingCampaign.link(trackId: trackId, providerToken: marketing.providerToken,
-                                                  campaignToken: draft.campaignToken)
-                Text("이 링크로 들어온 다운로드는 마케팅 칸의 \"캠페인 추적\" 에 \(draft.campaignToken) 로 잡혀요.")
-                    .font(.body).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-                Text(link)
-                    .font(.body.monospaced())
-                    .textSelection(.enabled)
-                    .fixedSize(horizontal: false, vertical: true)
-                HStack {
-                    CopyButton(text: link, title: "링크 복사").font(.body)
-                    Spacer()
-                    let replaced = MarketingCampaign.replacingStoreLinks(in: draft.body, trackId: trackId, with: link)
-                    let replacedEn = MarketingCampaign.replacingStoreLinks(in: draft.bodyEn, trackId: trackId, with: link)
-                    Button("글 속 스토어 링크를 이걸로 바꾸기(두 판 모두)") {
-                        draft.body = replaced
-                        draft.bodyEn = replacedEn
-                    }
-                    .font(.body)
-                    .disabled(replaced == draft.body && replacedEn == draft.bodyEn)
-                }
-            } else {
-                Text("이 앱이 App Store 와 이어지지 않아 캠페인 링크를 만들 수 없어요.")
-                    .font(.body).foregroundStyle(.secondary)
-            }
-        }
-    }
-
-    // MARK: - 올렸나
-
-    private var postedSection: some View {
-        Card(title: "올렸나요?", systemImage: "checkmark.seal") {
-            TextField("올린 글 주소", text: $draft.postURL)
-                .textFieldStyle(.roundedBorder)
+    @ViewBuilder
+    private var deleteButton: some View {
+        if !isNew {
+            Button("이 자료 지우기", role: .destructive) { confirmsDelete = true }
+                .buttonStyle(.borderless)
                 .font(.body)
-            HStack(spacing: 10) {
-                if draft.stage == .posted {
-                    Label("올라감" + (draft.postedAt.map { " · \(AppFormat.dateTime($0))" } ?? ""),
-                          systemImage: "checkmark.circle.fill")
-                        .foregroundStyle(.green)
-                    if let url = URL(string: draft.postURL), !draft.postURL.isEmpty {
-                        Link("열기", destination: url)
-                    }
-                } else {
-                    Button("올렸어요") {
-                        draft.stage = .posted
-                        draft.postedAt = Date()
-                        marketing.save(draft)
+                .confirmationDialog("이 자료를 지울까요?", isPresented: $confirmsDelete) {
+                    Button("지우기", role: .destructive) {
+                        marketing.delete(draft.id)
                         close()
                     }
-                    .buttonStyle(.borderedProminent)
-                    .disabled(draft.title.trimmingCharacters(in: .whitespaces).isEmpty)
                 }
-                Spacer()
-                if !isNew {
-                    Button("지우기", role: .destructive) { confirmsDelete = true }
-                        .buttonStyle(.borderless)
-                }
-            }
-            .font(.body)
-            .confirmationDialog("이 활동을 지울까요?", isPresented: $confirmsDelete) {
-                Button("지우기", role: .destructive) {
-                    marketing.delete(draft.id)
-                    close()
-                }
-            }
         }
     }
 }
