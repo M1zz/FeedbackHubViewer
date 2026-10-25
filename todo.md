@@ -36,7 +36,7 @@
 - [x] 스레드 올림(@lee25_ios, 영상 + 스크린샷 2장). 처음에 글만 올린 것이 하나 더 남아 있음
 - [x] 긱뉴스는 올리지 않기로 함(2026-10-26)
 - [x] 레딧은 서브마다 따로(채널 "r/…", 시드 2026-10-25b): SideProject · iosapps · apphunt · productivity · freelance · digitalnomad. 상세에 지킬 것 · 제목 복사 · 글쓰기 열기 · 올렸어요, 목록은 "레딧 · 하루에 한 곳씩" 카드
-- [ ] 다른 앱 26개의 레딧 글은 아직 "레딧" 하나뿐 — 서브마다 나누기
+- [x] 나머지 앱 25개도 레딧을 서브마다 3~4곳(시드 2026-10-26, 글 86개). App Store 링크 중 레포로 확인 못 한 것(아이일정 · 퇴사각 · SkyDex · 밑줄 · 그사이에)은 올리기 전에 열어 볼 것, 벅뚜벅뚜는 ID 를 못 찾아 링크 없음
 
 ## 릴리즈 건강: 불안정 이벤트를 갈래별로 (2026-10-24)
 - [x] `VersionMetrics.unstableBySlice`: `launch_incomplete:first-frame` · `:keyboard` 처럼 원래 이름마다 설치 수

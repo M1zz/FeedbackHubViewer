@@ -227,7 +227,8 @@ enum MarketingSeed {
     /// 시드를 바꿀 때마다 올린다. 2026-10-24: 모든 활동에 영어판. 2026-10-24b: 세끼 영어 이름 Sekki.
     /// 2026-10-25: 클립키보드 자료 13개 더함(템플릿 · 클립보드 · 링크드인 카드뉴스, 릴스 · 틱톡 · 쇼츠, PH · HN · 긱뉴스 · 클리앙 · 루리웹 · 스레드 · 레딧).
     /// 2026-10-25b: 클립키보드 레딧을 서브마다(채널 "r/…"): SideProject · iosapps · apphunt · productivity · freelance · digitalnomad.
-    static let version = "2026-10-25b"
+    /// 2026-10-26: 나머지 앱 25개도 레딧을 서브마다 3~4곳으로(첫 글은 r/SideProject, 옛 "레딧" 글을 바꿈).
+    static let version = "2026-10-26"
     static let fileName = "marketing-seed"
     /// 처음 시드를 만든 날. 시드에서 온 활동의 만든 시각 · 고친 시각이 이것이다.
     static let firstStamp = ISO8601DateFormatter().date(from: "2026-10-22T00:00:00Z") ?? .distantPast
