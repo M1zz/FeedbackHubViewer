@@ -5,64 +5,57 @@
   "kind": "cardNews",
   "channel": "인스타그램",
   "title": "계좌번호를 또 치고 있다면",
-  "angle": "카톡·메일로 같은 계좌번호, 주소, 첫인사를 매일 다시 치는 직장인에게. 복사하러 메모 앱을 오가는 피로를 짚고, 탭 한 번으로 끝나는 장면을 보여 줘서 '이거 나도 매일 하는데' 싶게 만든다.",
+  "angle": "장마다 실제 앱 화면(클립키보드 docs/screenshots/raw/iphone/ko): 01-reply 아래 · 05-all-snippets 위 · 02-recent-clips 아래 · 03-template-fill 아래 · 04-snippet-stack 아래 · 마지막 장은 글만",
   "plannedAt": "2026-10-26T00:00:00Z",
   "stage": "posted",
   "slides": [
    {
-    "id": "99d4053c-4a03-5e57-93d6-f0291d2295cf",
-    "headline": "오늘 계좌번호 몇 번 쳤어요?",
-    "text": "메모 앱 열고, 찾고, 복사하고, 돌아와서 붙여넣기.\n하루에도 몇 번씩 하는 그 왕복.",
-    "headlineEn": "How many times did you type it today?",
-    "textEn": "Open Notes, find it, copy, switch back, paste.\nThe same round trip, several times a day."
+    "id": "b6f41f4b-bb9e-5d5d-9dae-64a6043785d3",
+    "headline": "오늘 계좌번호\n몇 번 쳤어요?",
+    "text": "메모 앱을 열지 않아도, 키보드에서 탭 한 번.",
+    "headlineEn": "How many times did you\ntype your account number today?",
+    "textEn": "No need to open Notes. One tap on the keyboard."
    },
    {
-    "id": "de431dd9-4215-5f2a-9106-449b26656f58",
+    "id": "ebdf70d9-9c89-5dcf-a1e8-f9fef7ddebd7",
     "headline": "같은 말은 한 번만 저장",
-    "text": "계좌번호, 주소, 자기소개, 메일 첫인사.\n한 번 저장해 두면 다음부터는 탭 한 번입니다.",
+    "text": "계좌번호, 주소, 문의 답장, 회사 이메일.\n한 번 저장해 두면 버튼이 됩니다.",
     "headlineEn": "Save it once",
-    "textEn": "Account numbers, addresses, a short intro, email openers.\nSave them once. After that, it's one tap."
+    "textEn": "Account number, address, support reply, work email.\nSave it once and it becomes a button."
    },
    {
-    "id": "02c4bd7d-0414-5777-9e98-ffa2c7eba371",
-    "headline": "어디서든 키보드로",
-    "text": "카톡이든 메일이든 사파리든.\n글자를 칠 수 있는 곳이면 키보드만 바꿔서 탭하면 끝.",
-    "headlineEn": "Works wherever you type",
-    "textEn": "Messages, Mail, Safari.\nIf you can type there, switch keyboards and tap."
+    "id": "a97f0fc6-89ce-5e8d-b5bf-5be8d6db6f44",
+    "headline": "복사한 것도 남아요",
+    "text": "송장번호, 전화번호, 주소.\n복사한 건 '최근' 칸에 차례로 쌓입니다.",
+    "headlineEn": "What you copy stays",
+    "textEn": "Tracking numbers, phone numbers, addresses.\nEverything you copy stacks up in Recent."
    },
    {
-    "id": "f0541507-3fdc-51d7-9692-9431b7fd5f76",
+    "id": "541b66de-202f-524f-8d1f-43bb75b008f1",
     "headline": "바뀌는 자리는 빈칸으로",
-    "text": "템플릿은 매번 달라지는 자리를 비워 두고\n쓸 때 저장해 둔 값 중에서 골라 채워요.",
+    "text": "이름만 다른 답장은 빈칸을 남겨 두고\n쓸 때 골라 채워요.",
     "headlineEn": "Leave blanks for what changes",
-    "textEn": "Templates keep the changing parts empty.\nYou fill them from values you've already saved."
+    "textEn": "Replies that only differ by name keep a blank,\nand you pick the value when you use it."
    },
    {
-    "id": "c65ff860-4ebd-575d-826f-3fc5ccb56c2e",
-    "headline": "민감한 건 Face ID로",
-    "text": "여권번호, 카드번호는 보안 단축어로 잠가 두고\n필요할 때만 열어서 넣습니다.",
-    "headlineEn": "Lock the sensitive ones",
-    "textEn": "Passport and card numbers go in secure snippets.\nFace ID opens them only when you need them."
+    "id": "68082cf3-249f-5a70-a1b9-e7d7e814b527",
+    "headline": "여러 값은 순서대로",
+    "text": "이름, 부서, 할 일.\n하나씩 차례로 넣어 줍니다.",
+    "headlineEn": "Several values, in order",
+    "textEn": "Name, team, task.\nIt types them one after another."
    },
    {
-    "id": "be3f111c-47e7-5ab0-9d3d-c30c80d23f68",
-    "headline": "아낀 시간이 쌓여요",
-    "text": "쓸 때마다 아낀 시간이 동전처럼 쌓입니다.\n은근히 뿌듯해요.",
-    "headlineEn": "Watch the saved time add up",
-    "textEn": "Every insert adds to your saved time, like coins in a jar.\nOddly satisfying."
-   },
-   {
-    "id": "6056f6eb-d6b0-57c9-80ef-d525d741ad81",
+    "id": "1c6d80a5-5109-5bf3-915b-e9865805f57d",
     "headline": "클립키보드",
-    "text": "같은 말은 다시 치지 말고, 탭 한 번으로.",
-    "headlineEn": "Clip Keyboard",
-    "textEn": "Stop retyping. Tap once."
+    "text": "같은 말은 다시 치지 말고, 탭 한 번으로.\n단축어 100번까지 모든 기능 무료.",
+    "headlineEn": "ClipKeyboard",
+    "textEn": "Stop retyping. One tap instead.\nEvery feature free for your first 100 inserts."
    }
   ],
   "script": "",
-  "body": "계좌번호 하나 보내려고 메모 앱을 열고, 찾고, 복사하고, 다시 돌아오던 때가 있었어요.\n\n하루에 몇 번이나 그러는지 세어 보니 생각보다 많더라고요. 그래서 자주 치는 말을 키보드에 넣어 두는 앱을 만들어 쓰고 있어요.\n\n여러분은 하루에 제일 많이 다시 치는 말이 뭐예요?\n\n앱스토어에서 \"클립키보드\"를 검색하면 나와요. 단축어를 100번 넣을 때까지는 모든 기능이 무료예요.\n\n#클립키보드 #아이폰키보드 #자주쓰는문구 #아이폰꿀팁 #1인개발자",
+  "body": "계좌번호 하나 보내려고 메모 앱을 열고, 찾고, 복사하고, 다시 돌아오던 때가 있었어요.\n\n하루에 몇 번이나 그러는지 세어 보니 생각보다 많더라고요. 그래서 자주 치는 말을 키보드에 넣어 두는 앱을 만들어 쓰고 있어요. 사진은 실제로 쓰는 화면이에요.\n\n여러분은 하루에 제일 많이 다시 치는 말이 뭐예요?\n\n앱스토어에서 \"클립키보드\"를 검색하면 나와요. 단축어를 100번 넣을 때까지는 모든 기능이 무료예요.\n\n#클립키보드 #아이폰키보드 #자주쓰는문구 #아이폰꿀팁 #1인개발자",
   "scriptEn": "",
-  "bodyEn": "There was a time I'd open my notes app just to send my bank account number. Find it, copy it, switch back, paste.\n\nWhen I counted how often I did that in a day, it was more than I expected. So I built a keyboard that keeps the things I type again and again.\n\nWhat's the one thing you retype most every day?\n\nSearch \"ClipKeyboard\" on the App Store. Every feature is free for your first 100 inserts.\n\n#ClipKeyboard #iPhoneKeyboard #iPhoneTips #IndieDev",
+  "bodyEn": "There was a time I'd open my notes app just to send my bank account number. Find it, copy it, switch back, paste.\n\nWhen I counted how often I did that in a day, it was more than I expected. So I built a keyboard that keeps the things I type again and again. These are real screens from it.\n\nWhat's the one thing you retype most every day?\n\nSearch \"ClipKeyboard\" on the App Store. Every feature is free for your first 100 inserts.\n\n#ClipKeyboard #iPhoneKeyboard #iPhoneTips #IndieDev",
   "theme": 0
  },
  {
