@@ -14,7 +14,7 @@
 //    1. 앱 정보 — `lookup` 한 번에 모든 앱을 묶어 묻는다(무료인지 · 장르 · 맥인지).
 //    2. 피드 — (기기, 차트, 장르, 나라) 마다 **한 번만** 받고, 모든 앱을 그 목록에서 찾는다.
 //       앱이 늘어도 같은 장르 · 같은 나라면 요청 수는 그대로다.
-//    3. 기록 — 차트에 든 것만 한 장으로 적고, 파일에 한 번 쓴다.
+//    3. 기록 — 차트에 든 것만 한 장으로 적고(그 자리 위아래 몇 칸도 근거로), 파일에 한 번 쓴다.
 //
 //  차트는 몇 시간 단위로 움직이고 피드는 무겁다. 그래서 저절로는 12시간에 한 번(나라가
 //  30개를 넘으면 하루 한 번), 그것도 와이파이 같은 싼 네트워크에서만 보고, 더 자주 보고
@@ -113,21 +113,25 @@ final class ChartStore: ObservableObject {
         progress = (0, list.count)
 
         var hits: [ChartHit] = []
+        var snapshots: [ChartSnapshot] = []
         var failedSlots: [ChartSlot] = []
         var done = 0
-        await withTaskGroup(of: (ChartSlot, [Int]?).self) { group in
+        let date = Date()
+        await withTaskGroup(of: (ChartSlot, [ChartEntry]?).self) { group in
             var iterator = list.makeIterator()
             func enqueue() {
                 guard let slot = iterator.next() else { return }
-                group.addTask { (slot, try? await ChartFeed.rankedIDs(for: slot, thrifty: automatic)) }
+                group.addTask { (slot, try? await ChartFeed.ranked(for: slot, thrifty: automatic)) }
             }
             for _ in 0..<Self.maxConcurrency { enqueue() }
-            for await (slot, ids) in group {
+            for await (slot, ranked) in group {
                 done += 1
                 progress = (done, list.count)
-                if let ids {
-                    for (index, id) in ids.enumerated() where wanted.contains(id) {
-                        hits.append(ChartHit(trackId: id, slot: slot, rank: index + 1))
+                if let ranked {
+                    for (index, entry) in ranked.enumerated() where wanted.contains(entry.trackId) {
+                        hits.append(ChartHit(trackId: entry.trackId, slot: slot, rank: index + 1))
+                        snapshots.append(ChartSnapshot(trackId: entry.trackId, slot: slot, date: date,
+                                                       ranked: ranked, rank: index + 1))
                     }
                 } else {
                     failedSlots.append(slot)
@@ -148,9 +152,10 @@ final class ChartStore: ObservableObject {
         }
 
         // 3. 한 장 적고, 한 번 쓴다. 못 받은 칸은 직전 순위를 이어 쓴다.
-        history.record(ChartScan(date: Date(), countries: countries,
+        history.record(ChartScan(date: date, countries: countries,
                                  hits: history.carryingOver(failed: failedSlots, into: hits),
-                                 failedFeeds: failed, failedSlots: failedSlots))
+                                 failedFeeds: failed, failedSlots: failedSlots,
+                                 snapshots: history.carryingOver(failed: failedSlots, into: snapshots)))
         CacheFile.write(history, to: CacheFile.url(Self.fileName))
     }
 

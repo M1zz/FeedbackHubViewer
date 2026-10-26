@@ -37,9 +37,9 @@ enum ChartFeed {
         return URLSession(configuration: configuration)
     }()
 
-    /// 순위대로 늘어선 앱 번호(0번 == 1위). 그 나라에 그 차트가 없으면 빈 배열.
+    /// 순위대로 늘어선 앱(0번 == 1위). 그 나라에 그 차트가 없으면 빈 배열.
     /// `thrifty` 면 비싼 네트워크에서는 받지 않고 오류로 끝난다.
-    static func rankedIDs(for slot: ChartSlot, thrifty: Bool = false) async throws -> [Int] {
+    static func ranked(for slot: ChartSlot, thrifty: Bool = false) async throws -> [ChartEntry] {
         guard let url = slot.feedURL else { return [] }
         for attempt in 0...maxRetries {
             try await ITunesGate.shared.wait()
@@ -57,9 +57,10 @@ enum ChartFeed {
     /// 403 을 받은 피드를 다시 물어볼 횟수.
     private static let maxRetries = 2
 
-    /// `{ "feed": { "entry": [ { "id": { "attributes": { "im:id": "123" } } } ] } }`.
+    /// `{ "feed": { "entry": [ { "id": { "attributes": { "im:id": "123" } }, "im:name": { "label": … },
+    /// "im:artist": { "label": … }, "im:image": [ { "label": url }, … ] } ] } }`.
     /// 항목이 하나뿐이면 `entry` 가 배열이 아니라 객체로 온다.
-    static func parse(_ data: Data) -> [Int] {
+    static func parse(_ data: Data) -> [ChartEntry] {
         guard let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
               let feed = root["feed"] as? [String: Any] else { return [] }
         let entries: [[String: Any]]
@@ -73,8 +74,15 @@ enum ChartFeed {
         return entries.compactMap { entry in
             guard let id = entry["id"] as? [String: Any],
                   let attributes = id["attributes"] as? [String: Any],
-                  let value = attributes["im:id"] as? String else { return nil }
-            return Int(value)
+                  let value = attributes["im:id"] as? String,
+                  let trackId = Int(value) else { return nil }
+            func label(_ key: String) -> String? { (entry[key] as? [String: Any])?["label"] as? String }
+            // 아이콘은 53 · 75 · 100 순으로 온다 — 목록 한 줄에는 가장 큰 것도 작다.
+            let icon = (entry["im:image"] as? [[String: Any]])?.last?["label"] as? String
+            return ChartEntry(trackId: trackId,
+                              name: label("im:name") ?? "#\(trackId)",
+                              developer: label("im:artist"),
+                              iconURL: icon.flatMap(URL.init(string:)))
         }
     }
 

@@ -6,7 +6,8 @@
 //
 //  전체 앱: 앱마다 몇 나라 차트에 들었고 가장 높은 자리가 어디인지, 높은 앱부터.
 //  한 앱: 지금 든 차트(나라 · 차트 · 순위 · 직전과 견준 움직임), 이번에 빠진 차트,
-//  그리고 최근 며칠 동안 가장 좋았던 자리.
+//  그리고 최근 며칠 동안 가장 좋았던 자리. 순위를 누르면 그때의 차트(위아래 몇 칸)가 근거로
+//  뜨고, 오른쪽 클릭으로 App Store 웹 차트 · 원본 피드를 연다.
 //
 
 import SwiftUI
@@ -20,6 +21,7 @@ struct ChartRanksView: View {
 
     @State private var bestDays = 30
     @State private var editingCountries = false
+    @State private var evidence: ChartEvidence?
 
     var body: some View {
         List {
@@ -46,6 +48,9 @@ struct ChartRanksView: View {
         .sheet(isPresented: $editingCountries) {
             ChartCountriesSheet()
                 .environmentObject(charts)
+        }
+        .sheet(item: $evidence) { item in
+            ChartEvidenceSheet(evidence: item, mine: Set(charts.history.apps.keys))
         }
     }
 
@@ -175,10 +180,12 @@ struct ChartRanksView: View {
                         .foregroundStyle(.secondary)
                 } else {
                     ForEach(current, id: \.self) { hit in
-                        ChartRankRow(country: hit.slot.country,
-                                     detail: slotLabel(hit.slot),
-                                     rank: hit.rank,
-                                     move: charts.history.move(of: hit))
+                        evidenceButton(hit: hit, date: nil) {
+                            ChartRankRow(country: hit.slot.country,
+                                         detail: slotLabel(hit.slot),
+                                         rank: hit.rank,
+                                         move: charts.history.move(of: hit))
+                        }
                     }
                 }
             } header: {
@@ -191,6 +198,7 @@ struct ChartRanksView: View {
                         ChartRankRow(country: hit.slot.country,
                                      detail: "\(slotLabel(hit.slot)) · 직전 \(hit.rank)위",
                                      rank: nil, move: nil)
+                            .contextMenu { ChartSourceLinks(slot: hit.slot) }
                     }
                 }
             }
@@ -236,14 +244,29 @@ struct ChartRanksView: View {
                     .foregroundStyle(.secondary)
             } else {
                 ForEach(best, id: \.hit) { entry in
-                    ChartRankRow(country: entry.hit.slot.country,
-                                 detail: "\(slotLabel(entry.hit.slot)) · \(AppFormat.relative(entry.date))",
-                                 rank: entry.hit.rank, move: nil)
+                    evidenceButton(hit: entry.hit, date: entry.date) {
+                        ChartRankRow(country: entry.hit.slot.country,
+                                     detail: "\(slotLabel(entry.hit.slot)) · \(AppFormat.relative(entry.date))",
+                                     rank: entry.hit.rank, move: nil)
+                    }
                 }
             }
         } header: {
             Text("최근 \(bestDays)일 최고 순위 · \(countries)개국")
         }
+    }
+
+    /// 순위 한 줄 — 누르면 그때의 차트, 오른쪽 클릭이면 원본. `date` 가 nil 이면 가장 최근 확인.
+    private func evidenceButton(hit: ChartHit, date: Date?, @ViewBuilder label: () -> some View) -> some View {
+        Button {
+            evidence = ChartEvidence(hit: hit, label: slotLabel(hit.slot),
+                                     date: date ?? charts.history.lastScan?.date ?? .now,
+                                     snapshot: charts.history.snapshot(of: hit, at: date))
+        } label: {
+            label().contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .contextMenu { ChartSourceLinks(slot: hit.slot) }
     }
 
     /// "iPhone 무료 · 전체" / "무료 · 생산성".
@@ -315,6 +338,125 @@ private struct MoveLabel: View {
         case .unknown:
             EmptyView()
         }
+    }
+}
+
+/// 순위 하나의 근거를 띄울 때 넘기는 것.
+private struct ChartEvidence: Identifiable {
+    let hit: ChartHit
+    let label: String
+    /// 그 순위를 적은 확인.
+    let date: Date
+    /// 그때의 차트. 이 기록이 생기기 전 확인이면 nil.
+    let snapshot: ChartSnapshot?
+
+    var id: String { "\(hit.hashValue)-\(date.timeIntervalSince1970)" }
+}
+
+/// 원본으로 가는 길: App Store 웹 차트와 받은 피드. 둘 다 **지금의** 차트를 보여 준다.
+private struct ChartSourceLinks: View {
+    let slot: ChartSlot
+
+    var body: some View {
+        if let url = slot.webURL {
+            Link(destination: url) {
+                Label("App Store 에서 차트 열기", systemImage: "safari")
+            }
+        }
+        if let url = slot.feedURL {
+            Link(destination: url) {
+                Label("차트 피드 열기 (JSON)", systemImage: "curlybraces")
+            }
+        }
+    }
+}
+
+/// 그때의 차트 — 내 앱 위아래 몇 칸, 내 앱은 칠해서. 캡쳐 대신 남겨 둔 근거다.
+private struct ChartEvidenceSheet: View {
+    let evidence: ChartEvidence
+    /// 칠할 앱 — 허브의 내 앱 전부. 같은 차트에 다른 내 앱이 옆에 있으면 그것도 보인다.
+    let mine: Set<Int>
+    @Environment(\.dismiss) private var dismiss
+
+    private var slot: ChartSlot { evidence.hit.slot }
+
+    var body: some View {
+        NavigationStack {
+            List {
+                if let snapshot = evidence.snapshot {
+                    Section {
+                        ForEach(snapshot.rows, id: \.rank) { row in
+                            entryRow(rank: row.rank, entry: row.entry)
+                        }
+                    } header: {
+                        Text("\(ChartStorefronts.flag(slot.country)) \(ChartStorefronts.name(slot.country)) · \(evidence.label)")
+                    } footer: {
+                        Text(sourceText(snapshot))
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                } else {
+                    Section {
+                        Text("이 순위를 적은 확인에는 그때의 차트가 남아 있지 않습니다. 근거를 남기기 전에 한 확인입니다. 다음 확인부터 남습니다.")
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
+                Section {
+                    ChartSourceLinks(slot: slot)
+                } header: {
+                    Text("원본")
+                } footer: {
+                    Text(slot.webURL == nil
+                         ? "지금의 차트가 열립니다. App Store 웹에는 매출 차트가 없어 피드만 엽니다."
+                         : "지금의 차트가 열립니다. 위 목록은 확인했던 때의 것입니다.")
+                }
+            }
+            .navigationTitle("\(evidence.hit.rank)위의 근거")
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("완료") { dismiss() }
+                }
+            }
+        }
+        #if os(macOS)
+        .frame(minWidth: 420, minHeight: 560)
+        #endif
+    }
+
+    private func entryRow(rank: Int, entry: ChartEntry) -> some View {
+        let isMine = mine.contains(entry.trackId)
+        return HStack(spacing: 10) {
+            Text("\(rank)")
+                .font(.body.monospacedDigit().weight(isMine ? .bold : .regular))
+                .frame(minWidth: 32, alignment: .trailing)
+            AppIcon(url: entry.iconURL, size: 36)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(entry.name)
+                    .font(.body.weight(isMine ? .bold : .regular))
+                    .lineLimit(1)
+                if let developer = entry.developer {
+                    Text(developer)
+                        .font(.body)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(.vertical, 2)
+        .listRowBackground(isMine ? Color.yellow.opacity(0.25) : nil)
+        .accessibilityElement(children: .combine)
+    }
+
+    /// 어디서 · 언제 받은 것인지. 이어 쓴 칸이면 그것도 밝힌다.
+    private func sourceText(_ snapshot: ChartSnapshot) -> String {
+        let when = snapshot.date.formatted(date: .abbreviated, time: .shortened)
+        var text = "출처: Apple RSS 차트 피드 · \(when) 확인 · \(snapshot.total)위까지 중 위아래 \(ChartSnapshot.around)칸."
+        if snapshot.date != evidence.date {
+            text += " 이 확인에서는 이 차트를 받지 못해 \(when) 확인의 차트를 이어 썼습니다."
+        }
+        text += " App Store 앱에 보이는 차트와 조금 다를 수 있습니다."
+        return text
     }
 }
 
