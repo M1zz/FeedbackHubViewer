@@ -228,7 +228,8 @@ enum MarketingSeed {
     /// 2026-10-25: 클립키보드 자료 13개 더함(템플릿 · 클립보드 · 링크드인 카드뉴스, 릴스 · 틱톡 · 쇼츠, PH · HN · 긱뉴스 · 클리앙 · 루리웹 · 스레드 · 레딧).
     /// 2026-10-25b: 클립키보드 레딧을 서브마다(채널 "r/…"): SideProject · iosapps · apphunt · productivity · freelance · digitalnomad.
     /// 2026-10-26: 나머지 앱 25개도 레딧을 서브마다 3~4곳으로(첫 글은 r/SideProject, 옛 "레딧" 글을 바꿈).
-    static let version = "2026-10-26"
+    /// 2026-10-26b: 오늘 올린 인스타 카드뉴스 · 스레드 글을 "올림" 으로(시드의 단계도 따라감).
+    static let version = "2026-10-26b"
     static let fileName = "marketing-seed"
     /// 처음 시드를 만든 날. 시드에서 온 활동의 만든 시각 · 고친 시각이 이것이다.
     static let firstStamp = ISO8601DateFormatter().date(from: "2026-10-22T00:00:00Z") ?? .distantPast

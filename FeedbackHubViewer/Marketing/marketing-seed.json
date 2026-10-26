@@ -6,8 +6,8 @@
   "channel": "인스타그램",
   "title": "계좌번호를 또 치고 있다면",
   "angle": "카톡·메일로 같은 계좌번호, 주소, 첫인사를 매일 다시 치는 직장인에게. 복사하러 메모 앱을 오가는 피로를 짚고, 탭 한 번으로 끝나는 장면을 보여 줘서 '이거 나도 매일 하는데' 싶게 만든다.",
-  "plannedAt": "2026-12-01T01:00:00Z",
-  "stage": "ready",
+  "plannedAt": "2026-10-26T00:00:00Z",
+  "stage": "posted",
   "slides": [
    {
     "id": "99d4053c-4a03-5e57-93d6-f0291d2295cf",
@@ -60,9 +60,9 @@
    }
   ],
   "script": "",
-  "body": "같은 말을 다시 치는 시간, 생각보다 깁니다. 계좌번호 하나 넣으려고 메모 앱 열고, 찾고, 복사하고, 돌아오고. 클립키보드는 자주 쓰는 문구를 저장해 두고 키보드에서 탭 한 번으로 넣는 앱이에요. 템플릿으로 바뀌는 자리만 골라 채우고, 여권번호 같은 건 Face ID로 잠가 둘 수 있어요. 단축어 100번 넣을 때까지는 모든 기능이 무료입니다.\n\n#클립키보드 #상용구 #자주쓰는문구 #아이폰키보드 #생산성앱 #직장인앱 #시간절약 #고객응대 #아이폰꿀팁 #1인개발자",
+  "body": "계좌번호 하나 보내려고 메모 앱을 열고, 찾고, 복사하고, 다시 돌아오던 때가 있었어요.\n\n하루에 몇 번이나 그러는지 세어 보니 생각보다 많더라고요. 그래서 자주 치는 말을 키보드에 넣어 두는 앱을 만들어 쓰고 있어요.\n\n여러분은 하루에 제일 많이 다시 치는 말이 뭐예요?\n\n앱스토어에서 \"클립키보드\"를 검색하면 나와요. 단축어를 100번 넣을 때까지는 모든 기능이 무료예요.\n\n#클립키보드 #아이폰키보드 #자주쓰는문구 #아이폰꿀팁 #1인개발자",
   "scriptEn": "",
-  "bodyEn": "Retyping the same thing eats more time than you'd think. One account number means opening Notes, finding it, copying it and switching back. Clip Keyboard saves the phrases you use most and inserts them from the keyboard with one tap. Templates let you fill in only the parts that change, and things like passport numbers can be locked behind Face ID. Everything is free for your first 100 inserts.\n\n#ClipKeyboard #iPhoneTips #iOSApps #ProductivityApps #Snippets #WorkSmarter #iPhoneKeyboard #IndieDev",
+  "bodyEn": "There was a time I'd open my notes app just to send my bank account number. Find it, copy it, switch back, paste.\n\nWhen I counted how often I did that in a day, it was more than I expected. So I built a keyboard that keeps the things I type again and again.\n\nWhat's the one thing you retype most every day?\n\nSearch \"ClipKeyboard\" on the App Store. Every feature is free for your first 100 inserts.\n\n#ClipKeyboard #iPhoneKeyboard #iPhoneTips #IndieDev",
   "theme": 0
  },
  {
@@ -5219,5 +5219,21 @@
   "plannedAt": "2026-10-29T01:00:00Z",
   "body": "",
   "bodyEn": "Mine is mostly the same few replies to people, my address, bank details for invoices, and an email sign-off I apparently can't remember to set up properly.\n\nI've seen people use text expansion with abbreviations, a pinned note they copy from, or just their own sent mail as a search engine. Abbreviations never stuck for me because I forget them.\n\nWhat do you use, and what made it actually stick?\n\n(Full disclosure: I make a snippet app for iPhone and Mac, so I'm partly asking to learn what people need. Not linking anything.)"
+ },
+ {
+  "id": "f884f2f1-e4fb-54c9-ab26-57dec855a39e",
+  "project": "com.Ysoup.TokenMemo",
+  "kind": "post",
+  "channel": "스레드",
+  "title": "복사는 한 칸짜리 서랍",
+  "angle": "최근 클립 칸 — 복사한 게 덮어써져 사라지는 순간에서 시작. 사진: 02-recent-clips",
+  "plannedAt": "2026-10-26T00:00:00Z",
+  "stage": "posted",
+  "slides": [],
+  "script": "",
+  "body": "송장번호를 복사해 두고, 주소를 하나 더 복사하는 순간 앞의 번호는 사라지죠. 그걸 알면서도 또 하고, 다시 앱을 열어 찾고, 또 복사해요.\n\n복사는 한 칸짜리 서랍이더라고요. 새로 넣으면 앞에 있던 게 조용히 밀려나요.\n\n그래서 제가 만들어 쓰는 클립키보드에는 복사한 걸 차례로 쌓아 두는 칸을 넣었어요. 이메일인지, 전화번호인지, 계좌번호인지도 알아서 나눠 두고요.\n\n다들 방금 복사한 걸 덮어써서 다시 찾으러 간 적, 하루에 몇 번쯤 있으세요?\n\n앱스토어에서 \"클립키보드\" 검색하면 나와요.\nhttps://apps.apple.com/kr/app/id1543660502",
+  "scriptEn": "",
+  "bodyEn": "You copy a tracking number, then copy an address, and the number is gone. You know it'll happen, and you do it anyway. Back to the app, find it, copy it again.\n\nThe clipboard is a drawer with one slot. Put something new in, and the old thing quietly slides out.\n\nSo in ClipKeyboard, the keyboard I build and use, everything you copy stacks up in order. It also sorts them for you: email, phone number, account number.\n\nHow many times a day do you go back for something you just overwrote?\n\nSearch \"ClipKeyboard\" on the App Store.\nhttps://apps.apple.com/app/id1543660502",
+  "theme": null
  }
 ]

@@ -58,7 +58,7 @@ struct FeatureListView: View {
                     Button {
                         BadgeReset.markAllRead(metrics: metrics)
                     } label: {
-                        Label("뱃지 모두 읽음 · \(AppFormat.count(readable))", systemImage: "checkmark.circle")
+                        Label("뱃지 모두 읽기 · \(AppFormat.count(readable))", systemImage: "checkmark.circle")
                             .font(.body)
                     }
                     .buttonStyle(.borderless)

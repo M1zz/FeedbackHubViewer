@@ -103,6 +103,7 @@ final class MarketingStore: ObservableObject {
             next.title = seed.title
             next.angle = seed.angle
             next.plannedAt = seed.plannedAt
+            next.stage = seed.stage
             next.slides = seed.slides
             next.script = seed.script
             next.scriptEn = seed.scriptEn
