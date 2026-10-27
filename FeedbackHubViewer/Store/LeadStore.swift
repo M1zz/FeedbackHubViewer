@@ -89,6 +89,11 @@ final class LeadStore: ObservableObject {
         }
     }
 
+    /// 아직 안 본 새 질문의 id.
+    func unseenIDs(for project: String?) -> Set<String> {
+        Set(leads.values.filter { $0.status == .new && !$0.viewed && (project == nil || $0.project == project) }.map(\.id))
+    }
+
     func markViewed(project: String?) {
         var changed = false
         for (id, lead) in leads where !lead.viewed && (project == nil || lead.project == project) {

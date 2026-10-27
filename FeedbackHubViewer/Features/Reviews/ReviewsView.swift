@@ -492,6 +492,8 @@ struct ReviewCard: View {
     let onDelete: () -> Void
 
     @State private var isExpanded = false
+    /// 이 화면을 열 때 안 본 리뷰 — 뱃지가 센 것.
+    @Environment(\.freshItemIDs) private var fresh
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -550,7 +552,7 @@ struct ReviewCard: View {
             }
             StarRatingView(rating: review.rating)
             Tag(text: review.territoryName, systemImage: "globe", isCompact: true)
-            if review.isNew {
+            if review.isNew || fresh.contains(review.id) {
                 Tag(text: "새 리뷰", systemImage: "circle.fill", tint: .red, isCompact: true)
             } else if review.isWaitingForResponse {
                 Tag(text: "답 필요", systemImage: "exclamationmark.bubble", tint: .orange, isCompact: true)

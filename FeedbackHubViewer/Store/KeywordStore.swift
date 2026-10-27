@@ -32,7 +32,13 @@ import SwiftUI
 final class KeywordStore: ObservableObject {
 
     /// Everything tracked, and everything ever seen.
-    @Published private(set) var history = KeywordHistory()
+    @Published private(set) var history = KeywordHistory() {
+        didSet { standingsCache = [:] }
+    }
+    /// 앱마다 `standings` 를 그날 하루 기억한다. 사이드바 뱃지 · 앱 목록 줄이 그리기마다 앱 수 ×
+    /// 키워드 수만큼 30일 축을 다시 짜서, 켜 두기만 해도 메인 스레드가 쉬지 못했다.
+    /// 기록이 바뀌면(`history` 의 didSet) 비운다. 발행하지 않는 칸이라 그리는 중에 채워도 된다.
+    private var standingsCache: [String?: (day: Date, rows: [KeywordStanding])] = [:]
     @Published private(set) var isChecking = false
     @Published private(set) var progress: CheckProgress?
     @Published var errorMessage: String?
@@ -725,8 +731,10 @@ final class KeywordStore: ObservableObject {
     /// One app's keyword rows, ranked ones first — the ones with a number are
     /// what you came to look at, and the unranked ones are the work list.
     func standings(for project: String?) -> [KeywordStanding] {
+        let today = Calendar.current.startOfDay(for: Date())
+        if let cached = standingsCache[project], cached.day == today { return cached.rows }
         let trackId = trackId(for: project)
-        return history.keywords(for: project)
+        let rows = history.keywords(for: project)
             .map { history.standing($0, trackId: trackId) }
             .sorted { lhs, rhs in
                 switch (lhs.rank, rhs.rank) {
@@ -736,6 +744,8 @@ final class KeywordStore: ObservableObject {
                 default:           return lhs.keyword.term < rhs.keyword.term
                 }
             }
+        standingsCache[project] = (today, rows)
+        return rows
     }
 
     /// The terms this app is nearest to owning, nearest first.

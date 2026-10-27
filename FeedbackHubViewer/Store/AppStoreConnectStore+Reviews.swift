@@ -92,6 +92,15 @@ extension AppStoreConnectStore {
         }
     }
 
+    /// 아직 안 본 리뷰의 id.
+    func newReviewIDs(for bundleID: String?) -> Set<String> {
+        let keys = bundleID.map { [$0] } ?? Array(reviewFeeds.keys)
+        return keys.reduce(into: Set<String>()) { ids, key in
+            guard let viewed = viewedReviewIDs[key], let feed = reviewFeeds[key] else { return }
+            ids.formUnion(feed.reviews.map(\.id).filter { !viewed.contains($0) })
+        }
+    }
+
     /// 리뷰 탭을 열었을 때 — 그 앱(nil 이면 모든 앱)의 리뷰를 확인한 것으로.
     func markReviewsViewed(bundleID: String?) {
         var changed = false

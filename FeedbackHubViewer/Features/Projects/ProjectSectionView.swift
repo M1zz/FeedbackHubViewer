@@ -24,6 +24,8 @@ struct ProjectSectionView: View {
     let section: FeedbackStore.ProjectSection
     /// The Mac's inspector follows this; a phone pushes the detail instead.
     @Binding var selection: Feedback.ID?
+    /// 이 화면을 열 때 새것이던 진단 · 리뷰 — "앱|칸" 과 함께. 줄마다 "새" 를 남긴다.
+    @State private var fresh: (key: String, ids: Set<String>) = ("", [])
 
     init(project: String?, section: FeedbackStore.ProjectSection,
          selection: Binding<Feedback.ID?> = .constant(nil)) {
@@ -34,6 +36,7 @@ struct ProjectSectionView: View {
 
     var body: some View {
         content
+            .environment(\.freshItemIDs, fresh.key == freshKey ? fresh.ids : [])
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             // 뱃지를 눌러 들어왔으면 무엇이 바뀌었는지가 맨 위에.
             .safeAreaInset(edge: .top, spacing: 0) {
@@ -49,7 +52,7 @@ struct ProjectSectionView: View {
             .task(id: viewedKey) { markViewed() }
             // 통계 · 차트 같은 칸은 열어 본 지금의 말을 본 것으로 — 보는 동안 바뀐 것도.
             .onChange(of: seenSignatures, initial: true) { _, signatures in
-                SectionChanges.shared.markSeen(section, signatures: signatures)
+                SectionChanges.shared.markSeen(section, signatures: signatures, visiting: true)
                 // 릴리즈 칸을 열어 봤으면 빨강인 앱도 알아본 것으로 — 뱃지만 지우고 판정은 남는다.
                 if section == .release {
                     SectionChanges.shared.acknowledgeRed(project.map { [$0] } ?? store.projectCounts.map(\.key), store: store)
@@ -79,12 +82,21 @@ struct ProjectSectionView: View {
         return SectionChanges.signatures(section, project: project, metrics: metrics)
     }
 
+    private var freshKey: String { "\(project ?? "")|\(section.rawValue)" }
+
+    /// 확인한 것으로 넘기기 전에 새것이던 것을 적어 둔다 — 보고 있는 동안 새로 들어온 것도 더한다.
     private func markViewed() {
+        var ids = fresh.key == freshKey ? fresh.ids : []
         switch section {
-        case .crashes: store.markCrashesViewed(project: project)
-        case .reviews: purchases.markReviewsViewed(bundleID: project)
+        case .crashes:
+            ids.formUnion(store.newCrashIDs(for: project))
+            store.markCrashesViewed(project: project)
+        case .reviews:
+            ids.formUnion(purchases.newReviewIDs(for: project))
+            purchases.markReviewsViewed(bundleID: project)
         default: break
         }
+        fresh = (freshKey, ids)
     }
 
     private var title: String {

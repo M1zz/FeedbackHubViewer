@@ -19,6 +19,8 @@ struct LeadsView: View {
     let project: String?
 
     @State private var editing = false
+    /// 이 화면을 열 때 안 본 질문 — 뱃지가 센 것. 열자마자 본 것으로 넘어가도 "새" 가 남는다.
+    @State private var fresh: Set<String> = []
 
     private var appKeys: [String] {
         store.projectCounts.map(\.key).filter { $0 != Feedback.unclassifiedProject && leads.queries(for: $0) != nil }
@@ -39,7 +41,7 @@ struct LeadsView: View {
                 RedditKeyCard()
                 if let project { settings(project) }
                 ForEach(open) { lead in
-                    LeadCard(lead: lead, showsApp: project == nil)
+                    LeadCard(lead: lead, showsApp: project == nil, isFresh: fresh.contains(lead.id))
                 }
                 if !decided.isEmpty {
                     Card(title: "처리한 질문", systemImage: "checkmark.circle") {
@@ -65,8 +67,10 @@ struct LeadsView: View {
             .frame(maxWidth: .infinity)
         }
         .task(id: project) {
+            fresh = leads.unseenIDs(for: project)
             leads.markViewed(project: project)
             await leads.searchIfStale(project.map { [$0] } ?? appKeys)
+            fresh.formUnion(leads.unseenIDs(for: project))
             leads.markViewed(project: project)
         }
         .sheet(isPresented: $editing) {
@@ -135,9 +139,13 @@ private struct LeadCard: View {
     @ObservedObject private var leads = LeadStore.shared
     let lead: RedditLead
     let showsApp: Bool
+    var isFresh = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
+            if isFresh {
+                Tag(text: "새 질문", systemImage: "circle.fill", tint: .red, font: .body)
+            }
             Text([lead.isQuestion == true ? "질문" : "관련 글", showsApp ? store.displayName(for: lead.project) : nil, lead.subreddit,
                   lead.date.map(AppFormat.relative), "검색어: \(lead.query)"]
                     .compactMap { $0 }.joined(separator: " · "))

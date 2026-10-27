@@ -94,7 +94,7 @@ struct AppListView: View {
                 : project == Feedback.unclassifiedProject ? .secondary : .accentColor,
             detail: metrics.label(section, project: project),
             isAlarming: metrics.isAlarming(section, project: project),
-            badge: metrics.badge(section, project: project),
+            badge: metrics.badge(section, project: project) ?? visitBadge(project),
             release: section == .release ? project.flatMap(store.releaseLevel(for:)) : nil,
             stats: section == .stats ? StatsGlance(traffic: traffic, cycle: project.flatMap(store.usageCycle(for:))) : nil,
             isSelected: isSelected)
@@ -106,6 +106,13 @@ struct AppListView: View {
                 .buttonStyle(.plain)
                 .listRowBackground(Rectangle().fill(isSelected ? AnyShapeStyle(.tint.opacity(0.14)) : AnyShapeStyle(.clear)))
         }
+    }
+
+    /// 이 칸을 열자마자 본 것으로 넘어간 바뀜 — 사이드바 뱃지는 사라져도 여기 줄에는 남는다.
+    private func visitBadge(_ project: String?) -> SectionMetrics.Badge? {
+        let count = changes.visitedCount(section, project: project)
+        guard count > 0 else { return nil }
+        return SectionMetrics.Badge(count: count, systemImage: "sparkles", tint: .red, name: "본 뒤 바뀐 것")
     }
 
     @ViewBuilder

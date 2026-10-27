@@ -8,7 +8,8 @@
 //  같은 칸은 새로고침이 숫자를 바꿀 뿐 "새 건" 이 없어서, 업데이트가 끝나도 어느 칸을 열어
 //  봐야 하는지 알 길이 없었다. 그래서 칸마다 앱마다 그 칸이 하는 말(앱 목록 줄의 한마디 —
 //  "설치 120대", "한국 3위", "문제 2개")을 기억해 두고, 마지막으로 그 칸을 본 때와 말이
-//  달라진 앱을 센다. 숫자가 아니라 말을 견주므로 뜻이 같은 흔들림은 뱃지가 되지 않는다.
+//  달라진 앱을 센다. 말의 꼴이 그대로이고 숫자만 움직였으면 15% 넘게 움직인 것만 센다
+//  (`notableShift`) — 설치 120대가 121대가 될 때마다 뱃지가 서면 뱃지가 아무 말도 하지 않는다.
 //
 //  처음 보는 칸 · 앱은 조용히 기준선으로 잡는다 — 켜자마자 모든 칸에 뱃지가 서지 않게.
 //
@@ -44,6 +45,16 @@ final class SectionChanges: ObservableObject {
 
     /// "칸|앱" → 확인 안 한 바뀜. 화면 맨 위 띠가 읽는다.
     @Published private(set) var recent: [String: Change]
+
+    /// 지금 보고 있는 칸에서, 열었을 때 바뀌어 있던 앱과 그 수. 열자마자 본 것으로 넘어가
+    /// 뱃지가 사라져도 앱 목록 줄에는 이 수가 남는다 — 사이드바에서 3을 보고 들어왔으면 그
+    /// 칸에서 3이 보여야 한다. 기기 메모리에만 두고, 다른 칸을 열거나 띠의 "확인" 으로 비운다.
+    struct Visit: Equatable {
+        let section: String
+        var counts: [String: Int]
+    }
+
+    @Published private(set) var visit: Visit?
 
     /// "칸|앱" → 마지막으로 본 말.
     @Published private var seen: [String: String]
@@ -99,13 +110,17 @@ final class SectionChanges: ObservableObject {
         persist()
     }
 
-    /// 열어 봤다 — 지금 말을 본 것으로. 달라져 있던 것은 띠에 남긴다.
-    func markSeen(_ section: FeedbackStore.ProjectSection, signatures: [String: String]) {
+    /// 열어 봤다 — 지금 말을 본 것으로. 달라져 있던 것은 띠에 남긴다. `visiting` 이면 칸을
+    /// 실제로 연 것이라 바뀌어 있던 앱을 `visit` 에도 적는다("모두 읽음" 은 열지 않은 것).
+    func markSeen(_ section: FeedbackStore.ProjectSection, signatures: [String: String], visiting: Bool = false) {
         var next = seen
         var nextRecent = recent
+        var nextVisit = visit?.section == section.rawValue ? visit! : Visit(section: section.rawValue, counts: [:])
         for (project, signature) in signatures {
             let key = Self.key(section, project)
             if let old = seen[key], old != signature {
+                let weight = Self.weight(section, before: old, after: signature)
+                if weight > 0 { nextVisit.counts[project, default: 0] += weight }
                 // 확인 안 한 바뀜이 또 바뀌면 처음 말부터 지금 말까지 한 줄로.
                 let before = nextRecent[key]?.before ?? old
                 nextRecent[key] = before == signature ? nil
@@ -113,6 +128,7 @@ final class SectionChanges: ObservableObject {
             }
             next[key] = signature
         }
+        if visiting, nextVisit != visit { visit = nextVisit }
         guard next != seen || nextRecent != recent else { return }
         seen = next
         recent = nextRecent
@@ -128,9 +144,21 @@ final class SectionChanges: ObservableObject {
             .sorted { $0.at > $1.at }
     }
 
+    /// 이 칸을 열었을 때 바뀌어 있던 것의 수(한 앱이면 그 앱만). 앱 목록 줄의 뱃지가 쓴다.
+    func visitedCount(_ section: FeedbackStore.ProjectSection, project: String?) -> Int {
+        guard let visit, visit.section == section.rawValue else { return 0 }
+        return project.map { visit.counts[$0] ?? 0 } ?? visit.counts.values.reduce(0, +)
+    }
+
     /// 띠의 "확인".
     func dismiss(_ section: FeedbackStore.ProjectSection, project: String?) {
-        let keys = recentChanges(section, project: project).map { Self.key(section, $0.project) }
+        let items = recentChanges(section, project: project)
+        if var next = visit, next.section == section.rawValue {
+            for item in items { next.counts[item.project] = nil }
+            if project == nil { next.counts = [:] }
+            visit = next
+        }
+        let keys = items.map { Self.key(section, $0.project) }
         guard !keys.isEmpty else { return }
         for key in keys { recent[key] = nil }
         persist()
@@ -168,10 +196,14 @@ final class SectionChanges: ObservableObject {
     /// 그 칸의 모든 앱의 지금 말. 키는 앱.
     static func signatures(_ section: FeedbackStore.ProjectSection, project: String?,
                            metrics: SectionMetrics) -> [String: String] {
+        let key = SectionMetrics.memoKey(section, project)
+        if let cached = metrics.memo.signatures[key] { return cached }
         let projects = project.map { [$0] } ?? appKeys(metrics.store)
-        return Dictionary(uniqueKeysWithValues: projects.map {
+        let value = Dictionary(uniqueKeysWithValues: projects.map {
             ($0, signature(section, project: $0, metrics: metrics))
         })
+        metrics.memo.signatures[key] = value
+        return value
     }
 
     /// 모든 칸 · 모든 앱. 기준선을 잡을 때 쓴다. 키는 "칸|앱".
@@ -195,10 +227,16 @@ final class SectionChanges: ObservableObject {
         guard Self.tracked.contains(section) else { return 0 }
         return Self.signatures(section, project: project, metrics: metrics).reduce(0) { total, entry in
             guard let old = seen[Self.key(section, entry.key)], old != entry.value else { return total }
-            let lines = Self.lines(section, before: old, after: entry.value).count
-            // 키워드는 10위 안으로 들어오거나 밖으로 밀려난 것만 센다. 나머지 칸은 말이 바뀌면 하나.
-            return total + (section == .keywords ? lines : max(1, lines))
+            return total + Self.weight(section, before: old, after: entry.value)
         }
+    }
+
+    /// 바뀜 하나가 뱃지에서 몇인가. 키워드는 10위 선을 넘나든 것마다, 숫자 칸은 15% 넘게
+    /// 움직였을 때만 하나, 릴리즈 · 앱 내 구입은 말이 바뀌면 하나. 뱃지 · 띠 · 앱 목록이 같은 셈을 쓴다.
+    static func weight(_ section: FeedbackStore.ProjectSection, before: String, after: String) -> Int {
+        guard before != after else { return 0 }
+        let lines = lines(section, before: before, after: after).count
+        return section == .release || section == .purchases ? max(1, lines) : lines
     }
 
     // MARK: - 무엇이 바뀌었나
@@ -229,8 +267,53 @@ final class SectionChanges: ObservableObject {
                 pair.0 == pair.1 ? nil : "\(labels[min(index, 1)])\(pair.0) → \(pair.1)"
             }
         default:
-            return ["\(before) → \(after)"]
+            guard let shift = notableShift(before: before, after: after) else { return [] }
+            return ["\(before) → \(after)" + shift]
         }
+    }
+
+    /// 숫자가 이만큼은 움직여야 뱃지가 선다.
+    static let notableRatio = 0.15
+
+    /// 말이 볼 만큼 바뀌었나. 숫자를 뺀 꼴이 다르면(확인 전 → 설치 120대, 새 나라) 그것만으로
+    /// 바뀐 것이고 덧붙일 말은 "". 꼴이 같으면 15% 넘게 움직인 숫자가 있을 때만 — 가장 크게
+    /// 움직인 것을 " (+17%)" 로 붙인다. 볼 만하지 않으면 nil.
+    static func notableShift(before: String, after: String) -> String? {
+        let old = numbers(before), new = numbers(after)
+        guard old.skeleton == new.skeleton, old.values.count == new.values.count else { return "" }
+        let ratios = zip(old.values, new.values).map { was, now -> Double in
+            if was == now { return 0 }
+            return was == 0 ? .infinity : (now - was) / abs(was)
+        }
+        guard let largest = ratios.max(by: { abs($0) < abs($1) }), abs(largest) >= notableRatio else { return nil }
+        guard largest.isFinite else { return "" }
+        let percent = Int((largest * 100).rounded())
+        return " (\(percent > 0 ? "+" : "−")\(abs(percent))%)"
+    }
+
+    /// "설치 1,234대 · 7일 56명" → 꼴 "설치 #대 · 7일 #명", 숫자 [1234, 7, 56].
+    private static func numbers(_ text: String) -> (skeleton: String, values: [Double]) {
+        var skeleton = "", values: [Double] = [], digits = ""
+        func flush() {
+            guard !digits.isEmpty else { return }
+            values.append(Double(digits.replacingOccurrences(of: ",", with: "")) ?? 0)
+            skeleton += "#"
+            digits = ""
+        }
+        for character in text {
+            // 쉼표 · 점은 숫자 사이에 있을 때만 숫자의 일부다.
+            if character.isASCII, character.isNumber || (!digits.isEmpty && (character == "," || character == ".")) {
+                digits.append(character)
+            } else {
+                // "1,234," 처럼 숫자 끝에 붙은 쉼표는 말로 돌려 준다.
+                var tail = ""
+                while let last = digits.last, last == "," || last == "." { tail.insert(digits.removeLast(), at: tail.startIndex) }
+                flush()
+                skeleton += tail + String(character)
+            }
+        }
+        flush()
+        return (skeleton, values)
     }
 
     private static func ranks(_ signature: String) -> [String: String] {
@@ -269,6 +352,19 @@ struct SectionChangesBaseline: ViewModifier {
     }
 }
 
+/// 이 화면을 열 때 새것이던 항목의 id(진단 · 리뷰). 열자마자 본 것으로 넘어가 뱃지가 사라져도
+/// 이번에 보는 동안은 줄마다 "새" 가 남는다 — `ProjectSectionView` 가 채운다.
+private struct FreshItemIDsKey: EnvironmentKey {
+    static let defaultValue: Set<String> = []
+}
+
+extension EnvironmentValues {
+    var freshItemIDs: Set<String> {
+        get { self[FreshItemIDsKey.self] }
+        set { self[FreshItemIDsKey.self] = newValue }
+    }
+}
+
 /// 칸 맨 위의 띠 — 지난번 본 뒤 무엇이 바뀌었나. 사이드바 뱃지를 눌러 들어온 사람이 무엇을
 /// 봐야 하는지 여기서 안다. 전체 앱이면 줄을 눌러 그 앱으로 간다.
 struct SectionChangesBanner: View {
@@ -278,6 +374,8 @@ struct SectionChangesBanner: View {
     let project: String?
 
     private static let shownLimit = 6
+    /// 접어 둔 띠에도 이만큼은 다 보인다 — 뱃지 3을 보고 들어왔는데 한 줄만 보이면 나머지를 못 찾는다.
+    private static let collapsedLimit = 3
     /// 띠는 화면 위에 붙어 있어 그만큼 스크롤할 자리를 먹는다. 처음엔 한 줄만, 펼치면 전부.
     @State private var isExpanded = false
     /// 펼친 줄들의 실제 높이. 이보다 크면 띠 안에서 스크롤한다 — 릴리즈처럼 줄이 긴 칸에서
@@ -288,13 +386,14 @@ struct SectionChangesBanner: View {
     var body: some View {
         let items = changes.recentChanges(section, project: project)
         if !items.isEmpty {
+            let total = items.reduce(0) { $0 + SectionChanges.weight(section, before: $1.before, after: $1.after) }
             VStack(alignment: .leading, spacing: 8) {
                 HStack(alignment: .firstTextBaseline) {
-                    Label("지난번 본 뒤 바뀐 것" + (items.count > 1 ? " \(items.count)개" : ""), systemImage: "sparkles")
+                    Label("지난번 본 뒤 바뀐 것" + (total > 1 ? " \(total)개" : ""), systemImage: "sparkles")
                         .font(.headline)
                         .foregroundStyle(.red)
                     Spacer(minLength: 8)
-                    if items.count > 1 || lineCount(items[0]) > 1 {
+                    if items.count > Self.collapsedLimit {
                         Button(isExpanded ? "접기" : "펼치기") { isExpanded.toggle() }
                             .buttonStyle(.borderless)
                             .font(.body)
@@ -313,8 +412,10 @@ struct SectionChangesBanner: View {
                         .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { rowsHeight = $0 }
                     }
                     .frame(height: min(max(rowsHeight, 1), Self.maxExpandedHeight))
-                } else if let first = items.first {
-                    row(first)
+                } else {
+                    ForEach(items.prefix(Self.collapsedLimit), id: \.project) { item in
+                        row(item)
+                    }
                 }
                 if isExpanded, items.count > Self.shownLimit {
                     Text("외 \(items.count - Self.shownLimit)개 앱")
@@ -329,14 +430,9 @@ struct SectionChangesBanner: View {
         }
     }
 
-    private func lineCount(_ item: SectionChanges.Change) -> Int {
-        SectionChanges.lines(section, before: item.before, after: item.after).count
-    }
-
     @ViewBuilder
     private func row(_ item: SectionChanges.Change) -> some View {
-        let all = SectionChanges.lines(section, before: item.before, after: item.after)
-        let lines = isExpanded ? all : Array(all.prefix(1))
+        let lines = SectionChanges.lines(section, before: item.before, after: item.after)
         let text = VStack(alignment: .leading, spacing: 2) {
             if project == nil {
                 Text(store.displayName(for: item.project))

@@ -19,6 +19,19 @@ struct SectionMetrics {
     let design: DesignDocsStore
     let charts: ChartStore
     let news: NewsStore
+    /// 한 번 그리는 동안의 셈. 사이드바는 한 몸통에서 같은 칸의 뱃지를 네댓 번 묻고(확인할 것 ·
+    /// 줄 · 모두 읽음 · 애니메이션), 그때마다 앱 수만큼 말을 다시 지었다. 몸통마다 새로 만드는
+    /// 값이라 낡을 일이 없다.
+    let memo = Memo()
+
+    final class Memo {
+        var badges: [String: Badge?] = [:]
+        var signatures: [String: [String: String]] = [:]
+    }
+
+    static func memoKey(_ section: FeedbackStore.ProjectSection, _ project: String?) -> String {
+        "\(section.rawValue)|\(project ?? "\u{1}")"
+    }
 
     /// 기능 이름 옆에 붙는 "손볼 것" 표시 하나. 숫자 칸과 같은 활자로 적으면 읽을 것과
     /// 구경할 것이 같은 무게로 보여서 따로 뱃지로 뺀다.
@@ -34,7 +47,11 @@ struct SectionMetrics {
     /// 우선순위: 안 읽은 피드백 → 새 진단 → 새 리뷰 → 답 안 한 리뷰.
     /// 설정 → 알림에서 끈 종류는 뱃지를 달지 않는다(기본: 진단은 안 단다).
     func badge(_ section: FeedbackStore.ProjectSection, project: String?) -> Badge? {
-        itemBadge(section, project: project) ?? changedBadge(section, project: project)
+        let key = Self.memoKey(section, project)
+        if let cached = memo.badges[key] { return cached }
+        let value = itemBadge(section, project: project) ?? changedBadge(section, project: project)
+        memo.badges[key] = value
+        return value
     }
 
     /// 마지막으로 이 칸을 본 뒤 바뀐 것의 수(`SectionChanges`). 무엇이 바뀌었는지는 칸을
