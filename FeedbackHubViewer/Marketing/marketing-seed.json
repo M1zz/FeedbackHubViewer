@@ -807,66 +807,45 @@
   "project": "com.Ysoup.LeaveWise",
   "kind": "cardNews",
   "channel": "인스타그램",
-  "title": "연차 하루로 나흘 쉬기",
-  "angle": "연차를 아무 날에나 쓰고 후회해 본 직장인에게. '어디에 붙이느냐'가 휴식의 길이를 바꾼다는 걸 숫자로 느끼게 한다.",
-  "plannedAt": null,
-  "stage": "ready",
+  "title": "내년 설, 연차 하루로 닷새",
+  "angle": "장마다 실제 앱 화면(골드위크 docs/screenshots/raw/ko): 02-recommend 위 · 03-calendar 위 · 01-home 위 · 마지막 장은 글만",
+  "plannedAt": "2026-10-28T00:00:00Z",
+  "stage": "posted",
   "slides": [
    {
-    "id": "f5d65ba3-9a93-5568-b521-cf79ee07eba4",
-    "headline": "연차 쓰고 후회한 적?",
-    "text": "\"다음 주에 붙였으면 나흘이었는데…\"\n한 번쯤 해 본 그 계산.",
-    "headlineEn": "Ever regretted a day off?",
-    "textEn": "\"If I'd taken it next week, that was four days off...\"\nWe've all done that math."
+    "id": "bcf95379-ef52-575c-94b2-33c6de2a6593",
+    "headline": "내년 설,\n연차 하루면 닷새 쉬어요",
+    "text": "2월 6일 토요일부터 10일 수요일까지.\n수요일 하루만 내면 됩니다.",
+    "headlineEn": "Next Lunar New Year:\none day off, five days of rest",
+    "textEn": "Saturday, Feb 6 to Wednesday, Feb 10.\nYou only need to take Wednesday off."
    },
    {
-    "id": "dd1622fe-6f86-5c48-9637-b9cfa27216f2",
-    "headline": "어디에 붙이느냐가 전부",
-    "text": "같은 연차 하루도\n공휴일 옆에 붙이면 연휴가 됩니다.",
-    "headlineEn": "Where you put it is everything",
-    "textEn": "The same single day off\nturns into a long weekend next to a holiday."
+    "id": "0f40ee8d-afe8-5cc0-a5e3-78114f68d85e",
+    "headline": "달력에 색으로 보여요",
+    "text": "공휴일, 연차, 주말이 한눈에.\n날짜를 누르면 바로 휴가 등록.",
+    "headlineEn": "Color-coded calendar",
+    "textEn": "Holidays, leave and weekends at a glance.\nTap a date to book time off."
    },
    {
-    "id": "8eb1d407-4069-5b2a-8b02-bccfd85fed5d",
-    "headline": "앱이 대신 세어 줘요",
-    "text": "다가오는 공휴일마다\n연차 며칠로 며칠을 쉴 수 있는지 보여 줘요.",
-    "headlineEn": "The app counts for you",
-    "textEn": "For each upcoming holiday, it shows how many days off\nyou get for how many leave days."
-   },
-   {
-    "id": "654e8a2c-52be-59f4-bd16-422b82b2c41b",
-    "headline": "징검다리도 놓치지 않게",
-    "text": "달력을 한 장씩 넘기지 않아도\n최소 연차로 최대 연휴가 되는 조합이 보여요.",
-    "headlineEn": "Don't miss the bridge days",
-    "textEn": "No flipping through the calendar page by page.\nSee the combos that get you the most time off for the least leave."
-   },
-   {
-    "id": "18450f32-1209-516c-9a0c-41cc5a023bfd",
+    "id": "e3fec9a7-78bc-5899-9ae5-6a84c7756f21",
     "headline": "남은 연차도 한 화면에",
-    "text": "총 연차, 쓴 연차, 남은 연차.\n반차, 반반차, 대체휴무까지 기록돼요.",
-    "headlineEn": "Your balance on one screen",
-    "textEn": "Total, used and remaining leave.\nHalf days, quarter days and comp days get tracked too."
+    "text": "쓴 날, 예정된 날, 남은 날.\n다음 휴가까지 며칠인지도요.",
+    "headlineEn": "Your remaining leave, on one screen",
+    "textEn": "Used, planned and remaining days.\nAnd how long until your next break."
    },
    {
-    "id": "a3dc202f-ca80-52ac-b4fc-13e97af70058",
-    "headline": "홈 화면에서 바로",
-    "text": "위젯으로 남은 연차와\n다가오는 휴가를 확인합니다.",
-    "headlineEn": "Right on your Home Screen",
-    "textEn": "A widget shows your remaining leave\nand your next time off."
-   },
-   {
-    "id": "e2ef5a0a-2ca0-5fce-bc62-5c4064ffac6e",
+    "id": "7b31e2e6-afe0-55f3-a26d-f7c27546f61e",
     "headline": "골드위크",
-    "text": "올해 연차, 가장 길게 쉬는 곳에.",
-    "headlineEn": "Goldweek",
-    "textEn": "Put this year's leave where it buys the longest break."
+    "text": "올해 남은 연차, 어디에 붙일지\n미리 정해 두세요.",
+    "headlineEn": "GoldWeek",
+    "textEn": "Decide now where this year's\nleftover days should go."
    }
   ],
   "script": "",
-  "body": "같은 연차 하루도 어디에 붙이느냐에 따라 하루 휴식이 되기도, 나흘 연휴가 되기도 하잖아요. 골드위크는 다가오는 공휴일마다 연차 며칠을 쓰면 며칠을 이어서 쉴 수 있는지 보여 주는 연휴 플래너예요. 남은 연차, 반차, 대체휴무까지 한 화면에서 관리하고, 위젯으로도 볼 수 있어요. 달력 펴 놓고 손으로 세던 계산은 이제 앱에 맡기세요.\n\n#골드위크 #황금연휴 #연차 #연차계산 #휴가계획 #직장인 #공휴일 #징검다리휴일 #여행계획 #1인개발자",
+  "body": "연말이 되면 남은 연차를 어디에 쓸지 고민하게 되죠. 그런데 달력을 보면, 같은 하루라도 어디에 붙이느냐에 따라 그냥 하루가 되기도 하고 닷새 연휴가 되기도 해요.\n\n내년 설이 그래요. 2월 6일 토요일부터 9일 대체공휴일까지 이어지고, 10일 수요일 하루만 연차를 내면 닷새를 쉬어요.\n\n이런 계산을 매번 달력 펴 놓고 하는 게 번거로워서, 공휴일마다 연차 며칠로 며칠을 쉬는지 보여 주는 앱을 만들었어요. 사진은 실제 앱 화면이에요.\n\n여러분은 연차를 미리 정해 두는 편이에요, 그때그때 쓰는 편이에요?\n\n앱스토어에서 \"골드위크\"를 검색하면 나와요.\n\n#골드위크 #연차 #황금연휴 #설연휴 #휴가계획 #1인개발자",
   "scriptEn": "",
-  "bodyEn": "The same day off can be just one day, or a four-day weekend, depending on where you put it. Goldweek is a holiday planner that shows, for each upcoming public holiday, how many leave days get you how many days off in a row. Track your remaining leave, half days and comp days on one screen, and check it from a widget. Stop counting on a calendar by hand.\n\n#PTO #LongWeekend #VacationPlanning #PublicHolidays #BridgeDays #TravelPlanning #WorkLifeBalance #IndieDev",
-  "theme": 1
+  "bodyEn": "Around the end of the year you start wondering where to use your remaining days off. Look at a calendar and the same single day can be just a day, or the start of a five-day break.\n\nKorea's Lunar New Year in 2027 is like that. The holiday runs from Saturday, Feb 6 through the substitute holiday on the 9th. Take Wednesday the 10th off and you get five days.\n\nDoing that math with a calendar every time got tedious, so I made an app that shows how many days off turn into how many days of rest for every holiday. These are real screens from it.\n\nDo you plan your days off ahead, or use them as you go?\n\nSearch \"GoldWeek\" on the App Store.\n\n#GoldWeek #PTO #LongWeekend #VacationPlanning #IndieDev",
+  "theme": 0
  },
  {
   "id": "0abecb9f-b8a9-50f6-99d7-12db24f32d3e",
@@ -5230,6 +5209,22 @@
   "body": "회사마다 하나씩은 있는 것 같아요. 매일 아침 단톡방에 올리는 출근 보고. 이름, 부서, 오늘 할 일. 세 줄인데 매일 같은 순서로 칩니다.\n\n이상하게 그런 건 매일 해도 손에 안 붙어요. 한 줄을 빼먹거나, 어제 할 일을 그대로 보내거나요. 매일 하는 일일수록 오히려 덜 들여다보게 되나 봐요.\n\n그래서 제가 만들어 쓰는 클립키보드에는 값을 순서대로 넣어 두는 칸이 있어요. 키보드 버튼 하나를 누를 때마다 다음 값이 차례로 들어가요. 사진이 실제 화면이에요.\n\n매일 같은 양식으로 보내는 거, 다들 하나씩은 있으시죠? 어떤 건지 궁금해요.\n\n앱스토어에서 \"클립키보드\" 검색하면 나와요.\nhttps://apps.apple.com/kr/app/id1543660502",
   "scriptEn": "",
   "bodyEn": "Every team seems to have one. The morning check-in in the group chat: name, team, today's task. Three lines, typed in the same order every day.\n\nOddly, it never becomes automatic. You skip a line, or send yesterday's task again. Maybe the things we do daily are the ones we look at least.\n\nSo ClipKeyboard, the keyboard I build and use, has a spot where you line up values in order. Each tap on one keyboard button types the next one. The picture is the real screen.\n\nEveryone has some form they send the same way every day, right? I'm curious what yours is.\n\nSearch \"ClipKeyboard\" on the App Store.\nhttps://apps.apple.com/app/id1543660502",
+  "theme": null
+ },
+ {
+  "id": "475bec57-450e-50eb-af8e-a6ca24591e6d",
+  "project": "com.Ysoup.LeaveWise",
+  "kind": "post",
+  "channel": "스레드",
+  "title": "마지막으로 쉰 게 며칠 전이었나",
+  "angle": "첫 화면의 쉬어가는 흐름 — 지난 휴가 며칠 전 · 다음 휴가 며칠 후 · 평소 주기. 사진: marketing/ko/01-home",
+  "plannedAt": "2026-10-28T00:00:00Z",
+  "stage": "posted",
+  "slides": [],
+  "script": "",
+  "body": "마지막으로 쉬었던 게 언제였는지 바로 대답이 안 나올 때가 있어요. 세어 보면 두 달이 넘어 있고요.\n\n요즘 유독 지치는 건 일이 많아서라기보다, 쉬는 날 사이가 너무 벌어져서일 때가 많더라고요. 연차는 남아 있는데도요.\n\n그래서 제가 만든 골드위크 첫 화면에는 지난 휴가가 며칠 전이었는지, 다음 휴가까지 며칠 남았는지가 나와요. 평소에 며칠에 한 번씩 쉬는지도요. 사진이 실제 화면이에요.\n\n다들 마지막으로 쉬어 본 게 며칠 전이세요?\n\n앱스토어에서 \"골드위크\" 검색하면 나와요.\nhttps://apps.apple.com/kr/app/id6755983135",
+  "scriptEn": "",
+  "bodyEn": "Sometimes I can't say right away when I last took a break. When I count, it's been over two months.\n\nLately, when I feel worn out, it's less about the workload and more that the gaps between days off got too long. Even with leave still left.\n\nSo the first screen of GoldWeek, the app I made, shows how many days ago your last break was and how many days until the next one. And how often you usually take one. The picture is the real screen.\n\nHow many days has it been since your last break?\n\nSearch \"GoldWeek\" on the App Store.\nhttps://apps.apple.com/app/id6755983135",
   "theme": null
  }
 ]
