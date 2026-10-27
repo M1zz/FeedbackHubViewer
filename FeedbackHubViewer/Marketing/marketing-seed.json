@@ -4140,62 +4140,49 @@
   "kind": "cardNews",
   "channel": "인스타그램",
   "title": "이름만 바꾸면 되는 답장, 매번 다 치고 있다면",
-  "angle": "고객 문의·예약 확인을 하루에 여러 번 보내는 자영업자·프리랜서에게, 빈칸만 고르면 답장이 끝난다는 걸",
-  "stage": "ready",
+  "angle": "장마다 실제 앱 화면(클립키보드 docs/screenshots/raw/iphone/ko): 01-reply 위 · 01-reply 아래 · 03-template-fill 아래 · 05-all-snippets 위 · 마지막 장은 글만",
+  "stage": "posted",
   "theme": 1,
   "slides": [
    {
-    "headline": "이름만 바꾸면 되는 답장\n매번 처음부터 치고 있나요?",
-    "text": "예약 확인, 견적 안내, 입금 안내.\n바뀌는 건 이름과 날짜뿐인데.",
-    "headlineEn": "Same reply, new name.\nStill typing it from scratch?",
-    "textEn": "Booking confirmations, quotes, payment notes.\nOnly the name and date change.",
-    "id": "ad7f7dc7-bf68-5bf9-bc7b-f6d789a45823"
+    "id": "ef4e3c12-24f2-5890-a328-e930f3a9871a",
+    "headline": "이름만 다른 답장,\n매번 처음부터 치나요?",
+    "text": "예약 확인, 문의 답장, 입금 안내.\n바뀌는 건 이름 하나인데.",
+    "headlineEn": "Same reply, only the name changes.\nStill typing it from scratch?",
+    "textEn": "Booking confirmations, support replies, payment notes.\nOnly the name is different."
    },
    {
-    "headline": "하루 열 번이면\n한 달에 삼백 번",
-    "text": "같은 문장을 손으로 치는 시간,\n오타 하나에 다시 보내는 민망함까지.",
-    "headlineEn": "Ten a day is\nthree hundred a month",
-    "textEn": "All that typing, plus the awkward resend\nwhen one digit is wrong.",
-    "id": "17a3f0a7-573e-544b-87b2-67730939faa6"
+    "id": "39990ef6-859b-5ff7-b141-20425803aedc",
+    "headline": "답장은 버튼 하나로",
+    "text": "자주 보내는 답장을 저장해 두면\n키보드에 버튼으로 떠요.",
+    "headlineEn": "One button per reply",
+    "textEn": "Save the replies you send most\nand they show up as keyboard buttons."
    },
    {
-    "headline": "빈칸을 남겨 두세요",
-    "text": "안녕하세요 {이름}님, {날짜} 예약 확인드려요.\n바뀌는 자리만 빈칸으로 저장합니다.",
-    "headlineEn": "Leave the blanks",
-    "textEn": "Hi {name}, your booking on {date} is confirmed.\nSave it once with blanks where things change.",
-    "id": "b78b1f30-05bb-5712-bd50-c7c5e377c359"
+    "id": "3c484d12-c994-5bd9-a9e6-9f5accd64a8e",
+    "headline": "이름 자리만 빈칸으로",
+    "text": "누르면 저장해 둔 이름이 뜨고\n고르면 문장이 완성돼요.",
+    "headlineEn": "Leave a blank for the name",
+    "textEn": "Tap it, your saved names appear,\npick one and the sentence is done."
    },
    {
-    "headline": "쓸 때는 고르기만",
-    "text": "키보드에서 템플릿을 누르면\n빈칸마다 저장해 둔 값이 뜹니다. 탭, 탭, 끝.",
-    "headlineEn": "Then just pick",
-    "textEn": "Tap the template on the keyboard.\nEach blank offers values you saved. Tap, tap, done.",
-    "id": "f692d282-c55d-507a-b8f5-7c30286c1e23"
+    "id": "ebff5704-91b7-5b53-856e-926fc7583ac7",
+    "headline": "자주 쓰는 말은 한곳에",
+    "text": "사업자번호, 계좌번호, 주소도\n같은 키보드에서 꺼내 써요.",
+    "headlineEn": "Everything you reuse, in one place",
+    "textEn": "Business number, bank account, address.\nAll from the same keyboard."
    },
    {
-    "headline": "카톡이든 메일이든\n어디서나",
-    "text": "글자를 칠 수 있는 곳이면 같은 키보드에서.\n쓰던 키보드로는 알아서 돌아갑니다.",
-    "headlineEn": "Messages, Mail,\nanywhere you type",
-    "textEn": "Same keyboard everywhere.\nIt switches back to your usual keyboard after.",
-    "id": "c6d9be8d-35be-512e-ab62-98ddd9965ae3"
-   },
-   {
-    "headline": "100번까지는\n모든 기능이 무료",
-    "text": "단축어를 100번 넣을 때까지 다 써 보세요.\n그 뒤에도 만든 건 그대로 씁니다.",
-    "headlineEn": "Every feature free\nfor your first 100 inserts",
-    "textEn": "Try everything. What you made keeps working after.",
-    "id": "e359773e-0780-54a5-90b9-422ce101e567"
-   },
-   {
+    "id": "2426559f-1e3f-5519-a28c-a1a6a5589a9a",
     "headline": "클립키보드",
-    "text": "같은 말을 다시 치지 마세요.",
+    "text": "이름만 고르면 답장 끝.\n단축어 100번까지 모든 기능 무료.",
     "headlineEn": "ClipKeyboard",
-    "textEn": "Stop typing the same thing twice.",
-    "id": "7d254d93-7cc1-5c91-a80d-9aeb9b816b08"
+    "textEn": "Pick a name, and the reply is done.\nEvery feature free for your first 100 inserts."
    }
   ],
-  "body": "이름만 바꾸면 되는 답장, 아직 처음부터 치고 계신가요?\n\n클립키보드 템플릿은 바뀌는 자리만 빈칸으로 남겨 두고, 쓸 때 저장해 둔 값에서 골라 채웁니다. 카톡, 문자, 메일, 인스타 DM 어디서나 같은 키보드에서요.\n\n단축어를 100번 넣을 때까지 모든 기능이 무료예요.\n앱스토어에서 클립키보드 검색\n\n#자영업 #고객응대 #프리랜서 #업무효율 #아이폰꿀팁 #아이폰키보드 #생산성 #클립키보드",
-  "bodyEn": "Same reply, different name. Still typing it from scratch?\n\nClipKeyboard templates keep the parts that change as blanks. When you reply, pick the values you already saved, right from the keyboard, in any app.\n\nEvery feature is free for your first 100 inserts.\nSearch \"Clip Keyboard\" on the App Store\n\n#smallbusiness #customerservice #freelancer #productivity #iphonetips #iosapps"
+  "body": "가게 문의 답장을 들여다보면, 손님 이름 말고는 매번 똑같은 문장이에요. \"○○님 안녕하세요, 문의 주셔서 감사합니다.\"\n\n그 문장에서 정말 새로 쓰는 건 이름 석 자뿐이더라고요. 나머지는 손이 기억하는 대로 치는 거고요. 그래서 제가 만들어 쓰는 키보드에 이름 자리만 비워 두는 기능을 넣었어요. 누르면 저장해 둔 이름이 뜨고, 고르면 끝이에요. 사진은 실제 앱 화면이에요.\n\n여러분이 매일 보내는 답장 중에, 진짜로 새로 쓰는 부분은 몇 글자쯤 되세요?\n\n앱스토어에서 \"클립키보드\"를 검색하면 나와요. 단축어를 100번 넣을 때까지는 모든 기능이 무료예요.\n\n#클립키보드 #자영업 #고객응대 #아이폰키보드 #1인개발자",
+  "bodyEn": "Look at the replies a small shop sends to customers and they're the same sentence every time, except for the name. \"Hi ___, thanks for reaching out.\"\n\nThe only part actually being written is the name. The rest is muscle memory. So I added a blank for the name to the keyboard I build and use. Tap it, your saved names show up, pick one and you're done. These are real screens from the app.\n\nOf the replies you send every day, how many characters are actually new?\n\nSearch \"ClipKeyboard\" on the App Store. Every feature is free for your first 100 inserts.\n\n#ClipKeyboard #SmallBusiness #CustomerService #iPhoneKeyboard #IndieDev",
+  "plannedAt": "2026-10-27T00:00:00Z"
  },
  {
   "id": "5ff3c18a-f53d-54ee-afa2-9936bf553e69",
@@ -5227,6 +5214,22 @@
   "body": "송장번호를 복사해 두고, 주소를 하나 더 복사하는 순간 앞의 번호는 사라지죠. 그걸 알면서도 또 하고, 다시 앱을 열어 찾고, 또 복사해요.\n\n복사는 한 칸짜리 서랍이더라고요. 새로 넣으면 앞에 있던 게 조용히 밀려나요.\n\n그래서 제가 만들어 쓰는 클립키보드에는 복사한 걸 차례로 쌓아 두는 칸을 넣었어요. 이메일인지, 전화번호인지, 계좌번호인지도 알아서 나눠 두고요.\n\n다들 방금 복사한 걸 덮어써서 다시 찾으러 간 적, 하루에 몇 번쯤 있으세요?\n\n앱스토어에서 \"클립키보드\" 검색하면 나와요.\nhttps://apps.apple.com/kr/app/id1543660502",
   "scriptEn": "",
   "bodyEn": "You copy a tracking number, then copy an address, and the number is gone. You know it'll happen, and you do it anyway. Back to the app, find it, copy it again.\n\nThe clipboard is a drawer with one slot. Put something new in, and the old thing quietly slides out.\n\nSo in ClipKeyboard, the keyboard I build and use, everything you copy stacks up in order. It also sorts them for you: email, phone number, account number.\n\nHow many times a day do you go back for something you just overwrote?\n\nSearch \"ClipKeyboard\" on the App Store.\nhttps://apps.apple.com/app/id1543660502",
+  "theme": null
+ },
+ {
+  "id": "c5516f3f-ff0e-5294-9a1f-23ae0e2017d6",
+  "project": "com.Ysoup.TokenMemo",
+  "kind": "post",
+  "channel": "스레드",
+  "title": "매일 아침 세 줄짜리 출근 보고",
+  "angle": "스택 — 매일 같은 양식(이름 · 부서 · 할 일)을 순서대로. 사진: marketing/ko/04-snippet-stack",
+  "plannedAt": "2026-10-27T00:00:00Z",
+  "stage": "posted",
+  "slides": [],
+  "script": "",
+  "body": "회사마다 하나씩은 있는 것 같아요. 매일 아침 단톡방에 올리는 출근 보고. 이름, 부서, 오늘 할 일. 세 줄인데 매일 같은 순서로 칩니다.\n\n이상하게 그런 건 매일 해도 손에 안 붙어요. 한 줄을 빼먹거나, 어제 할 일을 그대로 보내거나요. 매일 하는 일일수록 오히려 덜 들여다보게 되나 봐요.\n\n그래서 제가 만들어 쓰는 클립키보드에는 값을 순서대로 넣어 두는 칸이 있어요. 키보드 버튼 하나를 누를 때마다 다음 값이 차례로 들어가요. 사진이 실제 화면이에요.\n\n매일 같은 양식으로 보내는 거, 다들 하나씩은 있으시죠? 어떤 건지 궁금해요.\n\n앱스토어에서 \"클립키보드\" 검색하면 나와요.\nhttps://apps.apple.com/kr/app/id1543660502",
+  "scriptEn": "",
+  "bodyEn": "Every team seems to have one. The morning check-in in the group chat: name, team, today's task. Three lines, typed in the same order every day.\n\nOddly, it never becomes automatic. You skip a line, or send yesterday's task again. Maybe the things we do daily are the ones we look at least.\n\nSo ClipKeyboard, the keyboard I build and use, has a spot where you line up values in order. Each tap on one keyboard button types the next one. The picture is the real screen.\n\nEveryone has some form they send the same way every day, right? I'm curious what yours is.\n\nSearch \"ClipKeyboard\" on the App Store.\nhttps://apps.apple.com/app/id1543660502",
   "theme": null
  }
 ]

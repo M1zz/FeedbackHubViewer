@@ -230,7 +230,8 @@ enum MarketingSeed {
     /// 2026-10-26: 나머지 앱 25개도 레딧을 서브마다 3~4곳으로(첫 글은 r/SideProject, 옛 "레딧" 글을 바꿈).
     /// 2026-10-26b: 오늘 올린 인스타 카드뉴스 · 스레드 글을 "올림" 으로(시드의 단계도 따라감).
     /// 2026-10-26c: 계좌번호 카드뉴스를 실제 앱 화면이 든 6장으로 다시 올린 대로.
-    static let version = "2026-10-26c"
+    /// 2026-10-27: 오늘 올린 클립키보드 인스타 카드뉴스(이름만 다른 답장) · 스레드 글(출근 보고 스택).
+    static let version = "2026-10-27"
     static let fileName = "marketing-seed"
     /// 처음 시드를 만든 날. 시드에서 온 활동의 만든 시각 · 고친 시각이 이것이다.
     static let firstStamp = ISO8601DateFormatter().date(from: "2026-10-22T00:00:00Z") ?? .distantPast
