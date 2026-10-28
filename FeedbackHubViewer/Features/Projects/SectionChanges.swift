@@ -82,6 +82,28 @@ final class SectionChanges: ObservableObject {
         projects.filter { Self.redKey($0, store: store).map { !acknowledgedRed.contains($0) } ?? false }
     }
 
+    /// 릴리즈 칸이 앱마다 알리는 수 — 본 뒤 판정이 바뀌었으면 그 바뀜, 아니면 읽음으로 안 넘긴
+    /// 빨강이면 1. 사이드바 · 앱 아이콘 · 앱 목록 줄이 이 하나의 셈을 쓴다. 빨강만 세는 사이드바와
+    /// 바뀜만 세는 줄이 따로 놀아, 사이드바 3을 보고 들어가면 줄에 1이 열한 개 서던 일이 있었다.
+    func releaseAlerts(metrics: SectionMetrics) -> [String: Int] {
+        let red = Set(unacknowledgedRed(Self.appKeys(metrics.store), store: metrics.store))
+        var alerts: [String: Int] = [:]
+        for (project, signature) in Self.signatures(.release, project: nil, metrics: metrics) {
+            let changed = seen[Self.key(.release, project)].map { Self.weight(.release, before: $0, after: signature) } ?? 0
+            let count = changed > 0 ? changed : (red.contains(project) ? 1 : 0)
+            if count > 0 { alerts[project] = count }
+        }
+        return alerts
+    }
+
+    /// 칸을 열 때 본 것으로 넘기는 것을 줄의 뱃지로 남긴다 — 바뀜이 없던 릴리즈 빨강까지.
+    func noteVisited(_ section: FeedbackStore.ProjectSection, counts: [String: Int]) {
+        guard !counts.isEmpty else { return }
+        var next = visit?.section == section.rawValue ? visit! : Visit(section: section.rawValue, counts: [:])
+        next.counts.merge(counts) { max($0, $1) }
+        if next != visit { visit = next }
+    }
+
     func acknowledgeRed(_ projects: [String], store: FeedbackStore) {
         let keys = projects.compactMap { Self.redKey($0, store: store) }
         // 빨강이 아닌 앱의 옛 기록은 지운다 — 다시 빨강이 되면 다시 알리게.

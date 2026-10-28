@@ -36,8 +36,7 @@ enum BadgeReset {
         case .news: return metrics.news.unreadCount(for: nil)
         case .leads: return LeadStore.shared.unseenCount(for: nil)
         case .release:
-            return SectionChanges.shared.unacknowledgedRed(store.projectCounts.map(\.key), store: store).count
-                + SectionChanges.shared.changedCount(section, project: nil, metrics: metrics)
+            return SectionChanges.shared.releaseAlerts(metrics: metrics).values.reduce(0, +)
         default: return SectionChanges.shared.changedCount(section, project: nil, metrics: metrics)
         }
     }

@@ -106,11 +106,11 @@ struct ReleaseHealthView: View {
                     HStack(alignment: .firstTextBaseline, spacing: 8) {
                         Text(name)
                             .font(.body.weight(.semibold))
-                            .lineLimit(1)
+                            .lineLimit(2)
                         Text(versions)
                             .font(.subheadline.monospacedDigit())
                             .foregroundStyle(.secondary)
-                            .lineLimit(1)
+                            .lineLimit(2)
                         Spacer(minLength: 4)
                         Tag(text: level.label, systemImage: ReleaseHealthCard.symbol(level),
                             tint: ReleaseHealthCard.tint(level))

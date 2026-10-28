@@ -219,24 +219,27 @@ private struct AppRow: View {
     let isSelected: Bool
 
     var body: some View {
-        HStack(spacing: 10) {
-            AppIcon(url: iconURL, symbol: systemImage, tint: tint, size: 26)
+        HStack(spacing: 12) {
+            AppIcon(url: iconURL, symbol: systemImage, tint: tint, size: 36)
 
-            VStack(alignment: .leading, spacing: 2) {
-                HStack(spacing: 6) {
-                    Text(name)
-                        .font(.body)
-                        .fontWeight(isSelected ? .semibold : .regular)
-                        .lineLimit(1)
+            // 자르지 않는다 — 길면 줄을 넘긴다.
+            VStack(alignment: .leading, spacing: 3) {
+                Text(name)
+                    .font(.body.weight(isSelected ? .semibold : .medium))
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+                HStack(spacing: 5) {
                     ReleaseDot(level: release)
+                    Text(detail)
+                        .font(.subheadline.monospacedDigit())
+                        .foregroundStyle(isAlarming ? Color.red : Color.secondary)
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
-                Text(detail)
-                    .font(.subheadline.monospacedDigit())
-                    .foregroundStyle(isAlarming ? Color.red : Color.secondary)
-                    .lineLimit(1)
             }
+            .layoutPriority(1)
 
-            Spacer(minLength: 4)
+            Spacer(minLength: 8)
 
             if let badge {
                 CountBadge(count: badge.count, systemImage: badge.systemImage,
@@ -254,7 +257,7 @@ private struct AppRow: View {
                 }
             }
         }
-        .padding(.vertical, 3)
+        .padding(.vertical, 6)
         .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(isSelected ? [.isSelected] : [])

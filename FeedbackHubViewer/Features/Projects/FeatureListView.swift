@@ -153,7 +153,7 @@ private struct FeatureRow: View {
                 Text(detail)
                     .font(.caption.monospacedDigit())
                     .foregroundStyle(.secondary)
-                    .lineLimit(1)
+                    .lineLimit(2)
             }
             Spacer(minLength: 4)
             if let badge {

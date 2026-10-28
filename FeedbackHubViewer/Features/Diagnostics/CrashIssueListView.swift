@@ -141,7 +141,7 @@ struct CrashIssueRow: View {
             HStack(spacing: 6) {
                 Text(issue.title)
                     .font(.callout.weight(.semibold))
-                    .lineLimit(1)
+                    .lineLimit(2)
                     .truncationMode(.middle)
                 if issue.isNew {
                     Tag(text: "새로 생김", tint: .orange, font: .caption2)

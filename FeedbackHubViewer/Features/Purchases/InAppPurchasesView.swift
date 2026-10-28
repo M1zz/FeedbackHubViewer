@@ -347,7 +347,7 @@ private struct PurchaseComparison: View {
                                     .frame(minWidth: 22, alignment: .trailing)
                                 Text(entry.0.name)
                                     .font(.body.weight(index == 0 ? .semibold : .regular))
-                                    .lineLimit(1)
+                                    .lineLimit(2)
                                 Spacer(minLength: 8)
                                 Text(entry.1.text)
                                     .font(.body.monospacedDigit().weight(.semibold))

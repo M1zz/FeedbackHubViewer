@@ -50,7 +50,7 @@ struct LeadsView: View {
                                 HStack {
                                     Image(systemName: lead.status == .replied ? "checkmark.circle.fill" : "xmark.circle")
                                         .foregroundStyle(lead.status == .replied ? .green : .secondary)
-                                    Link(lead.title, destination: lead.url).font(.body).lineLimit(1)
+                                    Link(lead.title, destination: lead.url).font(.body).lineLimit(2)
                                 }
                             }
                         }

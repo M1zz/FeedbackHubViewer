@@ -162,7 +162,7 @@ struct KeywordRecommendationCard: View {
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
                     Text(item.term)
                         .font(.body.weight(.semibold))
-                        .lineLimit(1)
+                        .lineLimit(2)
                     Tag(text: verdict.label, tint: Self.tint(verdict), isCompact: true)
                     Spacer(minLength: 4)
                     Text("인기 \(item.popularity)")

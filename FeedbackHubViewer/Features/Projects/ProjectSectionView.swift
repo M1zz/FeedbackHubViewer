@@ -52,9 +52,12 @@ struct ProjectSectionView: View {
             .task(id: viewedKey) { markViewed() }
             // 통계 · 차트 같은 칸은 열어 본 지금의 말을 본 것으로 — 보는 동안 바뀐 것도.
             .onChange(of: seenSignatures, initial: true) { _, signatures in
+                // 릴리즈는 지우기 전에 센다 — 사이드바에서 본 수가 줄에 그대로 남게.
+                let alerts = section == .release ? SectionChanges.shared.releaseAlerts(metrics: metrics) : [:]
                 SectionChanges.shared.markSeen(section, signatures: signatures, visiting: true)
                 // 릴리즈 칸을 열어 봤으면 빨강인 앱도 알아본 것으로 — 뱃지만 지우고 판정은 남는다.
                 if section == .release {
+                    SectionChanges.shared.noteVisited(section, counts: alerts.filter { project == nil || $0.key == project })
                     SectionChanges.shared.acknowledgeRed(project.map { [$0] } ?? store.projectCounts.map(\.key), store: store)
                 }
             }

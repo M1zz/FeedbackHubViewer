@@ -111,10 +111,10 @@ struct CountBadge: View {
     var body: some View {
         if count > 0 {
             Text(count > 99 ? "99+" : "\(count)")
-                .font(.body.monospacedDigit().weight(.semibold))
+                .font(.callout.monospacedDigit().weight(.semibold))
                 .foregroundStyle(.white)
                 .padding(.horizontal, 7)
-                .padding(.vertical, 1)
+                .padding(.vertical, 2)
                 .frame(minWidth: 22)
                 .background(Color.red, in: Capsule())
             .help("\(name) \(count)건")

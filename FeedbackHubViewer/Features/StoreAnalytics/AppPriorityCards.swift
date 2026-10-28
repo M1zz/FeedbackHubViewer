@@ -158,7 +158,7 @@ struct AppPriorityCards: View {
                     .foregroundStyle(tint)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(title).font(.caption).foregroundStyle(.secondary)
-                    Text(row.name).font(.title3.bold()).lineLimit(1)
+                    Text(row.name).font(.title3.bold()).lineLimit(2)
                     Text(detail).font(.caption).foregroundStyle(.secondary)
                 }
                 Spacer(minLength: 0)
@@ -232,7 +232,7 @@ private struct PriorityRowCard: View {
                     AppIcon(url: iconURL, size: 26)
                     Text(row.name)
                         .font(.headline)
-                        .lineLimit(1)
+                        .lineLimit(2)
                     Spacer(minLength: 8)
                     Text("\(Int(score))")
                         .font(.title2.monospacedDigit().weight(.heavy))

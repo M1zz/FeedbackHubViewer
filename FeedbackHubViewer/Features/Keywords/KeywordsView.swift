@@ -298,7 +298,7 @@ struct KeywordsView: View {
 
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 4) {
-                    Text(competitor.app.name).font(.callout.weight(.medium)).lineLimit(1)
+                    Text(competitor.app.name).font(.callout.weight(.medium)).lineLimit(2)
                     if let rating = competitor.app.averageRating, competitor.app.ratingCount > 0 {
                         Text(String(format: "★%.1f (%@)", rating,
                                     AppFormat.count(competitor.app.ratingCount)))
@@ -307,7 +307,7 @@ struct KeywordsView: View {
                 }
                 Text(competitor.terms.prefix(4).joined(separator: " · ")
                      + (competitor.terms.count > 4 ? " 외 \(competitor.terms.count - 4)" : ""))
-                    .font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                    .font(.caption).foregroundStyle(.secondary).lineLimit(2)
             }
             Spacer()
             VStack(alignment: .trailing, spacing: 2) {
@@ -546,7 +546,7 @@ private struct KeywordRow: View {
                         Text(history.apps[String(id)]?.name ?? "앱 \(id)")
                             .font(.caption)
                             .fontWeight(isMine ? .bold : .regular)
-                            .lineLimit(1)
+                            .lineLimit(2)
                         Spacer()
                     }
                     .padding(.vertical, 1)

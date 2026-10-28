@@ -144,7 +144,7 @@ struct ChartRanksView: View {
             AppIcon(url: keywords.storeApp(for: project)?.iconURL, size: 28)
             VStack(alignment: .leading, spacing: 2) {
                 Text(store.displayName(for: project))
-                    .lineLimit(1)
+                    .lineLimit(2)
                 Group {
                     if !byCountry.isEmpty {
                         // 나라마다 가장 높은 자리 — 어디서 몇 위인지가 한 줄에 다 보이게.
@@ -295,7 +295,7 @@ private struct ChartRankRow: View {
                 Text(detail)
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
-                    .lineLimit(1)
+                    .lineLimit(2)
             }
             Spacer(minLength: 4)
             if let move { MoveLabel(move: move) }
@@ -433,7 +433,7 @@ private struct ChartEvidenceSheet: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(entry.name)
                     .font(.body.weight(isMine ? .bold : .regular))
-                    .lineLimit(1)
+                    .lineLimit(2)
                 if let developer = entry.developer {
                     Text(developer)
                         .font(.body)

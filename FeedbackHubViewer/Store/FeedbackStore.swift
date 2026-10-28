@@ -1651,9 +1651,21 @@ final class FeedbackStore: ObservableObject {
     func displayName(for key: String) -> String {
         if key == Feedback.unclassifiedProject { return key }
         if let override = appNameOverrides[key], !override.isEmpty { return override }
-        if let store = storeAppNames[key], !store.isEmpty { return store }
-        if let learned = learnedAppNames[key], !learned.isEmpty { return learned }
+        if let store = storeAppNames[key], !store.isEmpty { return Self.shortName(store) }
+        if let learned = learnedAppNames[key], !learned.isEmpty { return Self.shortName(learned) }
         return key
+    }
+
+    /// 스토어 이름은 부제까지 달고 온다("두번알림 - 발표·수업 타이머", "KORA: 한국 지하철").
+    /// 목록마다 그 꼬리가 잘려 "…" 로 끝났다 — 앱을 알아보는 데는 앞 이름이면 된다.
+    static func shortName(_ name: String) -> String {
+        for separator in [":", " - ", " – ", " — ", " | "] {
+            if let range = name.range(of: separator) {
+                let head = name[..<range.lowerBound].trimmingCharacters(in: .whitespaces)
+                if !head.isEmpty { return head }
+            }
+        }
+        return name
     }
 
     // MARK: - Auto refresh
