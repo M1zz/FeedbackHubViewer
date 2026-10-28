@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>징검돌 결제까지 마인드맵</title>
+<style>
+:root{--bg:#f5f5f2;--paper:#fff;--fg:#1b1d1c;--muted:#5f6662;--line:#cfd4d0;
+--c1:#c8463b;--c2:#2f6fcf;--c3:#7a4fc4;--c4:#1f8a5b;--wall:#c98a12;color-scheme:light;
+--font:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo",system-ui,sans-serif;--mono:ui-monospace,Menlo,monospace}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#141716;--paper:#1d211f;--fg:#e8ece9;
+--muted:#a1aaa4;--line:#3a423e;--c1:#f07a6f;--c2:#6ea2ef;--c3:#ad8bef;--c4:#4cc38a;--wall:#e7b24a;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#141716;--paper:#1d211f;--fg:#e8ece9;--muted:#a1aaa4;--line:#3a423e;
+--c1:#f07a6f;--c2:#6ea2ef;--c3:#ad8bef;--c4:#4cc38a;--wall:#e7b24a;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.55 var(--font)}
+.wrap{max-width:1280px;margin:0 auto;padding:32px max(16px,env(safe-area-inset-left)) 64px;display:grid;gap:36px}
+header{display:grid;gap:8px}
+h1{font-size:30px;line-height:1.2;margin:0}
+h2{font-size:18px;margin:0 0 10px}
+p{margin:0}
+.eyebrow{font:12px var(--mono);letter-spacing:.06em;color:var(--muted)}
+.lede{color:var(--muted);font-size:16px;max-width:60ch}
+.pill{display:inline-block;font-size:13px;padding:2px 10px;border-radius:99px;border:1px solid var(--c4);color:var(--c4)}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+.card{background:var(--paper);border:1px solid var(--line);border-top:4px solid var(--c);border-radius:10px;padding:16px}
+.c1{--c:var(--c1)}.c2{--c:var(--c2)}.c3{--c:var(--c3)}.c4{--c:var(--c4)}
+.card ul{margin:0;padding-left:18px;display:grid;gap:4px}
+.proposal{--c:var(--line);border-style:dashed;border-top-style:solid}
+.proposal h2 span{font:12px var(--mono);color:var(--muted);font-weight:400;margin-left:6px}
+dl{margin:0;display:grid;gap:4px}
+dt{font-size:13px;color:var(--muted)}
+dd{margin:0 0 6px}
+.map{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:20px;overflow-x:auto}
+/* 가로 트리: 줄기는 왼쪽, 가지는 오른쪽으로 뻗는다 */
+.tree,.tree ul{list-style:none;margin:0;padding:0}
+.tree ul{display:flex;flex-direction:column;justify-content:center;position:relative;padding-left:24px}
+.tree li{display:flex;align-items:center;position:relative;padding:3px 0 3px 24px}
+.tree>li{padding-left:0}
+.tree ul::before{content:"";position:absolute;left:0;top:50%;width:24px;border-top:2px solid var(--line)}
+.tree li::before{content:"";position:absolute;left:0;top:50%;width:24px;border-top:2px solid var(--line)}
+.tree li::after{content:"";position:absolute;left:0;top:0;bottom:0;border-left:2px solid var(--line)}
+.tree li:first-child::after{top:50%}
+.tree li:last-child::after{bottom:50%}
+.tree li:only-child::after,.tree>li::before,.tree>li::after{display:none}
+.node{flex:none;max-width:280px;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:6px 10px;font-size:14px}
+.root{background:var(--fg);color:var(--bg);border:none;font-size:20px;font-weight:700;max-width:220px;padding:14px 16px}
+.root small{display:block;font-size:13px;font-weight:400;opacity:.8;margin-top:4px}
+.branch{color:#fff;border:none;font-weight:700;font-size:16px;padding:8px 14px}
+.b1{background:var(--c1)}.b2{background:var(--c2)}.b3{background:var(--c3)}.b4{background:var(--c4)}
+.lead{font-weight:600;background:var(--paper)}
+.muted{color:var(--muted)}
+.wall{border:2px solid var(--wall)}
+.pay{background:var(--c4);color:#fff;border:none}
+footer{display:grid;gap:6px}
+.sources{margin:0;padding-left:18px;font:12px var(--mono);color:var(--muted)}
+/* 좁은 화면: 들여쓴 세로 목록 */
+@media (max-width:760px){
+.map{padding:14px}
+.tree ul{display:block;padding-left:0;margin-left:12px}
+.tree li{display:block;padding:4px 0 4px 18px}
+.tree ul::before{display:none}
+.tree li::before{top:20px;width:14px}
+.tree li::after,.tree li:first-child::after{top:0;bottom:auto;height:100%}
+.tree li:last-child::after{height:20px}
+.tree li:only-child::after{display:block;height:20px}
+.node{display:inline-block;max-width:100%}
+}
+</style></head><body><main class="wrap">
+<header>
+  <p class="eyebrow">문제 → 타겟 → 솔루션 → 결제</p>
+  <h1>징검돌</h1>
+  <p class="lede">헛디딘 날을 조약돌과 다정하게 돌아봐요</p>
+  <p><span class="pill">평생 이용권</span></p>
+</header>
+<section class="cards">
+  <article class="card c1"><h2>문제 정의</h2><p>계획대로 안 된 날을 자책하며 그냥 넘겨, 같은 데서 또 헛디딘다</p></article>
+  <article class="card c2"><h2>타겟</h2><p>계획이 틀어진 날 스스로를 탓하며 넘기는 사람</p></article>
+  <article class="card c3"><h2>솔루션</h2><p>조약돌이 먼저 말을 걸어, 대답만 해도 하루가 기록된다</p></article>
+</section>
+<section><h2>마인드맵</h2><div class="map"><ul class="tree"><li><div class="node root">징검돌<small>헛디딘 날을 조약돌과 다정하게 돌아봐요</small></div><ul><li><div class="node branch b1">문제</div><ul><li><div class="node lead ">계획대로 안 된 날을 자책하며 그냥 넘겨, 같은 데서 또 헛디딘다</div><ul><li><div class="node ">빈 일기장 앞에서 아무것도 못 쓴다</div></li><li><div class="node ">안 된 날은 빨리 잊고 싶다</div></li><li><div class="node ">돌아보지 않으니 같은 실수를 한다</div></li></ul></li></ul></li><li><div class="node branch b2">타겟</div><ul><li><div class="node lead ">계획이 틀어진 날 스스로를 탓하며 넘기는 사람</div><ul><li><div class="node ">다짐한 일을 또 못 지킨 밤</div></li><li><div class="node ">일기를 시작했다 포기한 뒤</div></li><li><div class="node ">감정·회고 일기 앱을 찾을 때</div></li></ul></li><li><div class="node muted">노리지 않는 사람 · 할 일 관리나 습관 체크만 원하는 사람</div></li></ul></li><li><div class="node branch b3">솔루션</div><ul><li><div class="node lead ">조약돌이 먼저 말을 걸어, 대답만 해도 하루가 기록된다</div><ul><li><div class="node ">지난 얘기를 기억하고 먼저 묻는 조약돌</div></li><li><div class="node ">고르거나 쓰거나 말로 남기기</div></li><li><div class="node ">한 주가 징검다리로 놓이는 지나온 길</div></li><li><div class="node ">위젯과 정한 시간 알림</div></li><li><div class="node ">가입 없음, 비밀번호 잠금</div></li></ul></li></ul></li><li><div class="node branch b4">결제까지</div><ul><li><div class="node lead ">1 발견 · &#x27;계획대로 안 된 날을 그냥 넘기면&#x27; 공감 글</div><ul><li><div class="node ">조약돌이 먼저 말 거는 영상</div></li><li><div class="node ">회고·감정 일기 검색 블로그</div></li><li><div class="node ">레딧 일기 커뮤니티 질문 글</div></li></ul></li><li><div class="node lead ">2 스토어 페이지 · &#x27;헛디딘 날을 다정하게 돌아봐요&#x27;</div><ul><li><div class="node ">가입도 광고도 없다고 명시</div></li><li><div class="node ">목표 3개까지 무료, 구독 아닌 한 번 구매</div></li><li><div class="node ">기록은 내 기기와 iCloud에만</div></li></ul></li><li><div class="node lead ">3 첫 실행 · 조약돌이 인사하고 해보려는 일을 묻는다</div><ul><li><div class="node ">&#x27;안녕하세요. 저는 징검돌이에요.&#x27;</div></li><li><div class="node ">&#x27;요즘 해보려는 거 있어요?&#x27;</div></li><li><div class="node ">첫 목표 하나를 적으며 시작</div></li></ul></li><li><div class="node lead ">4 첫 성공 · 답만 골랐는데 오늘이 정리된다</div><ul><li><div class="node ">있었던 일과 마음을 따로 물음</div></li><li><div class="node ">답하기 힘든 날엔 더 묻지 않음</div></li><li><div class="node ">말로 남기면 문장을 다듬어 줌</div></li></ul></li><li><div class="node lead ">5 다시 찾기 · 조약돌이 지난 얘기를 기억해 먼저 묻는다</div><ul><li><div class="node ">정한 시간에 돌아보기 알림</div></li><li><div class="node ">홈 화면 위젯의 한마디</div></li><li><div class="node ">건너뛴 날도 남는 징검다리</div></li></ul></li><li><div class="node lead wall">6 결제 벽 · 4번째 목표를 적으려 할 때</div><ul><li><div class="node ">무료는 목표 3개까지</div></li><li><div class="node ">&#x27;프로로 더 적을래요&#x27; 선택지</div></li><li><div class="node ">조약돌 고르기·기록 내보내기도 잠김</div></li></ul></li><li><div class="node lead pay">7 결제 · 한 번 사면 계속 쓰는 징검돌 프로</div><ul><li><div class="node ">징검돌 프로 (평생) · 7,900</div></li><li><div class="node ">구독 아님, 한 번 구매</div></li><li><div class="node ">설정의 프로 줄에서도 구매 가능</div></li></ul></li></ul></li></ul></li></ul></div></section>
+<section class="cards">
+  <article class="card c4"><h2>결제하는 순간</h2>
+    <dl><dt>방식</dt><dd>평생 이용권</dd>
+    <dt>무료로 되는 것</dt><dd>목표 3개, 기본 조약돌, 대화·기록·위젯은 무료</dd>
+    <dt>결제 버튼이 보일 때</dt><dd>4번째 목표 추가, 잠긴 조약돌 선택, 기록 내보내기를 누를 때</dd>
+    <dt>상품</dt><dd><ul><li>징검돌 프로 (평생) · 7,900 (테스트 설정 값)</li></ul></dd></dl>
+  </article>
+  <article class="card proposal"><h2>제안 <span>확인된 사실 아님</span></h2><ul><li>한 달 꾸준히 돌아본 날 조약돌이 프로를 살짝 권하기</li><li>잠긴 조약돌을 하루 미리 써 보게 하기</li><li>기록이 쌓인 사람에게 내보내기 가치를 먼저 보여 주기</li></ul></article>
+</section>
+<footer><p class="eyebrow">근거 파일</p><ul class="sources"><li>APPSTORE.md</li><li>Products.storekit</li><li>RELEASE_NOTES.md</li><li>ZinggumDol/App/ZinggumDolSpec.swift</li><li>ZinggumDol/Features/Pro/ProFeature.swift</li><li>ZinggumDol/Features/Home/AddGoalView.swift</li><li>ZinggumDol/Features/Settings/SettingsView.swift</li><li>ZinggumDol/Features/Home/HomeGreeting.swift</li></ul></footer>
+</main></body></html>

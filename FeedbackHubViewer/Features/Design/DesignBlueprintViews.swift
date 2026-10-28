@@ -72,6 +72,8 @@ struct BlueprintOpenButton: View {
     let title: String
     let source: DesignBlueprints.Source
     var prominent = false
+    /// 폰 · 패드 시트의 제목.
+    var sheetTitle = "화면 설계도"
     @State private var showing: URL?
 
     var body: some View {
@@ -83,7 +85,7 @@ struct BlueprintOpenButton: View {
             }
         }
         .sheet(item: $showing) { url in
-            BlueprintSheet(url: url)
+            BlueprintSheet(url: url, title: sheetTitle)
         }
     }
 
@@ -179,16 +181,17 @@ struct DesignBlueprintRollCall: View {
     }
 }
 
-/// 폰 · 패드에서 앱에 든 설계도를 띄우는 시트.
+/// 폰 · 패드에서 앱에 든 HTML(설계도 · 마인드맵)을 띄우는 시트.
 private struct BlueprintSheet: View {
     @Environment(\.dismiss) private var dismiss
     let url: URL
+    let title: String
 
     var body: some View {
         NavigationStack {
             BlueprintWebView(url: url)
                 .ignoresSafeArea(edges: .bottom)
-                .navigationTitle("화면 설계도")
+                .navigationTitle(title)
                 #if os(iOS)
                 .navigationBarTitleDisplayMode(.inline)
                 #endif

@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>벅뚜벅뚜 결제까지 마인드맵</title>
+<style>
+:root{--bg:#f5f5f2;--paper:#fff;--fg:#1b1d1c;--muted:#5f6662;--line:#cfd4d0;
+--c1:#c8463b;--c2:#2f6fcf;--c3:#7a4fc4;--c4:#1f8a5b;--wall:#c98a12;color-scheme:light;
+--font:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo",system-ui,sans-serif;--mono:ui-monospace,Menlo,monospace}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#141716;--paper:#1d211f;--fg:#e8ece9;
+--muted:#a1aaa4;--line:#3a423e;--c1:#f07a6f;--c2:#6ea2ef;--c3:#ad8bef;--c4:#4cc38a;--wall:#e7b24a;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#141716;--paper:#1d211f;--fg:#e8ece9;--muted:#a1aaa4;--line:#3a423e;
+--c1:#f07a6f;--c2:#6ea2ef;--c3:#ad8bef;--c4:#4cc38a;--wall:#e7b24a;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.55 var(--font)}
+.wrap{max-width:1280px;margin:0 auto;padding:32px max(16px,env(safe-area-inset-left)) 64px;display:grid;gap:36px}
+header{display:grid;gap:8px}
+h1{font-size:30px;line-height:1.2;margin:0}
+h2{font-size:18px;margin:0 0 10px}
+p{margin:0}
+.eyebrow{font:12px var(--mono);letter-spacing:.06em;color:var(--muted)}
+.lede{color:var(--muted);font-size:16px;max-width:60ch}
+.pill{display:inline-block;font-size:13px;padding:2px 10px;border-radius:99px;border:1px solid var(--c4);color:var(--c4)}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+.card{background:var(--paper);border:1px solid var(--line);border-top:4px solid var(--c);border-radius:10px;padding:16px}
+.c1{--c:var(--c1)}.c2{--c:var(--c2)}.c3{--c:var(--c3)}.c4{--c:var(--c4)}
+.card ul{margin:0;padding-left:18px;display:grid;gap:4px}
+.proposal{--c:var(--line);border-style:dashed;border-top-style:solid}
+.proposal h2 span{font:12px var(--mono);color:var(--muted);font-weight:400;margin-left:6px}
+dl{margin:0;display:grid;gap:4px}
+dt{font-size:13px;color:var(--muted)}
+dd{margin:0 0 6px}
+.map{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:20px;overflow-x:auto}
+/* 가로 트리: 줄기는 왼쪽, 가지는 오른쪽으로 뻗는다 */
+.tree,.tree ul{list-style:none;margin:0;padding:0}
+.tree ul{display:flex;flex-direction:column;justify-content:center;position:relative;padding-left:24px}
+.tree li{display:flex;align-items:center;position:relative;padding:3px 0 3px 24px}
+.tree>li{padding-left:0}
+.tree ul::before{content:"";position:absolute;left:0;top:50%;width:24px;border-top:2px solid var(--line)}
+.tree li::before{content:"";position:absolute;left:0;top:50%;width:24px;border-top:2px solid var(--line)}
+.tree li::after{content:"";position:absolute;left:0;top:0;bottom:0;border-left:2px solid var(--line)}
+.tree li:first-child::after{top:50%}
+.tree li:last-child::after{bottom:50%}
+.tree li:only-child::after,.tree>li::before,.tree>li::after{display:none}
+.node{flex:none;max-width:280px;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:6px 10px;font-size:14px}
+.root{background:var(--fg);color:var(--bg);border:none;font-size:20px;font-weight:700;max-width:220px;padding:14px 16px}
+.root small{display:block;font-size:13px;font-weight:400;opacity:.8;margin-top:4px}
+.branch{color:#fff;border:none;font-weight:700;font-size:16px;padding:8px 14px}
+.b1{background:var(--c1)}.b2{background:var(--c2)}.b3{background:var(--c3)}.b4{background:var(--c4)}
+.lead{font-weight:600;background:var(--paper)}
+.muted{color:var(--muted)}
+.wall{border:2px solid var(--wall)}
+.pay{background:var(--c4);color:#fff;border:none}
+footer{display:grid;gap:6px}
+.sources{margin:0;padding-left:18px;font:12px var(--mono);color:var(--muted)}
+/* 좁은 화면: 들여쓴 세로 목록 */
+@media (max-width:760px){
+.map{padding:14px}
+.tree ul{display:block;padding-left:0;margin-left:12px}
+.tree li{display:block;padding:4px 0 4px 18px}
+.tree ul::before{display:none}
+.tree li::before{top:20px;width:14px}
+.tree li::after,.tree li:first-child::after{top:0;bottom:auto;height:100%}
+.tree li:last-child::after{height:20px}
+.tree li:only-child::after{display:block;height:20px}
+.node{display:inline-block;max-width:100%}
+}
+</style></head><body><main class="wrap">
+<header>
+  <p class="eyebrow">문제 → 타겟 → 솔루션 → 결제</p>
+  <h1>벅뚜벅뚜</h1>
+  <p class="lede">두 발로 걸은 곳만 채워지는 백지도</p>
+  <p><span class="pill">결제 없음</span></p>
+</header>
+<section class="cards">
+  <article class="card c1"><h2>문제 정의</h2><p>매일 걷는데 늘 같은 길만 걷고, 어디를 안 가 봤는지 모른다</p></article>
+  <article class="card c2"><h2>타겟</h2><p>산책과 동네 걷기를 즐기는 사람</p></article>
+  <article class="card c3"><h2>솔루션</h2><p>걸은 자리만 점으로 채워, 새 길로 가야 지도가 넓어진다</p></article>
+</section>
+<section><h2>마인드맵</h2><div class="map"><ul class="tree"><li><div class="node root">벅뚜벅뚜<small>두 발로 걸은 곳만 채워지는 백지도</small></div><ul><li><div class="node branch b1">문제</div><ul><li><div class="node lead ">매일 걷는데 늘 같은 길만 걷고, 어디를 안 가 봤는지 모른다</div><ul><li><div class="node ">산책 코스가 늘 똑같아 지루하다</div></li><li><div class="node ">지도 앱엔 다 그려져 있어 안 간 곳이 안 보인다</div></li><li><div class="node ">걸음 수는 쌓여도 남는 이야기가 없다</div></li></ul></li></ul></li><li><div class="node branch b2">타겟</div><ul><li><div class="node lead ">산책과 동네 걷기를 즐기는 사람</div><ul><li><div class="node ">매일 같은 산책길이 지겨워질 때</div></li><li><div class="node ">새 동네로 이사해 골목을 알고 싶을 때</div></li><li><div class="node ">걷기 기록 앱을 찾아볼 때</div></li></ul></li><li><div class="node muted">노리지 않는 사람 · 달리기 기록이나 운동량 측정을 원하는 사람</div></li></ul></li><li><div class="node branch b3">솔루션</div><ul><li><div class="node lead ">걸은 자리만 점으로 채워, 새 길로 가야 지도가 넓어진다</div><ul><li><div class="node ">차·지하철은 빼고 걸은 곳만 그리기</div></li><li><div class="node ">오늘과 지난 걸음을 색으로 구분</div></li><li><div class="node ">가본 곳·가볼 곳 도장 212가지</div></li><li><div class="node ">덜 걸은 방향을 짚는 개척 나침반</div></li><li><div class="node ">지도가 그려지는 과정을 영상으로</div></li></ul></li></ul></li><li><div class="node branch b4">결제까지</div><ul><li><div class="node lead ">1 발견 · 인스타·스레드·블로그의 &#x27;같은 길만 걷던&#x27; 이야기</div><ul><li><div class="node ">한 달 걸은 지도가 그려지는 영상</div></li><li><div class="node ">산책 기록 앱 검색 글</div></li><li><div class="node ">레딧 걷기 커뮤니티 질문 글</div></li></ul></li><li><div class="node lead ">2 스토어 페이지 · &#x27;처음 걷는 길만 채워지는 나만의 백지&#x27;</div><ul><li><div class="node ">이름: 벅뚜벅뚜: 걸어서 그리는 지도</div></li><li><div class="node ">무료, 기록은 내 iCloud에</div></li><li><div class="node ">24개 언어 지원</div></li></ul></li><li><div class="node lead ">3 첫 실행 · 빈 종이 소개 후 지금 자리에 첫 도장</div><ul><li><div class="node ">&#x27;빈 종이에서 시작합니다&#x27; 안내</div></li><li><div class="node ">위치를 찾아 첫 기준점 도장 찍기</div></li><li><div class="node ">&#x27;이제 걸어 보세요&#x27;로 지도 열기</div></li></ul></li><li><div class="node lead ">4 첫 성공 · 걸은 자리가 종이에 붉은 점으로 찍힌다</div><ul><li><div class="node ">오늘 걸은 길이 붉은 먹으로 보임</div></li><li><div class="node ">지도 아이콘을 누르는 동안만 배경 지도</div></li><li><div class="node ">간판을 찍으면 그 자리 스티커로</div></li></ul></li><li><div class="node lead ">5 다시 찾기 · 새 길을 그어야 지도가 넓어지는 고리</div><ul><li><div class="node ">개척 나침반이 다음 산책 방향 제시</div></li><li><div class="node ">홈·잠금화면 위젯에 오늘 그은 길이</div></li><li><div class="node ">달력에 그날 걸은 모양, 일기</div></li></ul></li><li><div class="node lead wall">6 결제 벽 · 아직 결제 장치 없음</div><ul><li><div class="node ">모든 기능이 무료</div></li><li><div class="node ">앱 설정상 수익 모델이 &#x27;무료&#x27;로 선언됨</div></li></ul></li><li><div class="node lead pay">7 결제 · 아직 결제 장치 없음</div><ul><li><div class="node ">판매 상품 없음</div></li><li><div class="node ">후원·구독 화면도 없음</div></li></ul></li></ul></li></ul></li></ul></div></section>
+<section class="cards">
+  <article class="card c4"><h2>결제하는 순간</h2>
+    <dl><dt>방식</dt><dd>결제 없음</dd>
+    <dt>무료로 되는 것</dt><dd>모든 기능을 제한 없이 무료로 쓴다</dd>
+    <dt>결제 버튼이 보일 때</dt><dd>결제 버튼이 나오는 순간 없음</dd>
+    <dt>상품</dt><dd><ul><li>없음 (앱 설정에 무료로 선언)</li></ul></dd></dl>
+  </article>
+  <article class="card proposal"><h2>제안 <span>확인된 사실 아님</span></h2><ul><li>필름 영상 고화질 내보내기와 테마 종이를 평생 이용권으로</li><li>도장 묶음 추가팩을 한 번 구매로 판매</li><li>지도가 일정 넓이를 넘을 때 응원 후원 버튼</li></ul></article>
+</section>
+<footer><p class="eyebrow">근거 파일</p><ul class="sources"><li>APPSTORE.md</li><li>README.md</li><li>RELEASE_NOTES.md</li><li>FootprintDiary/FootprintDiarySpec.swift</li><li>FootprintDiary/OnboardingView.swift</li><li>FootprintDiary/FootprintDiaryRoadmap.swift</li></ul></footer>
+</main></body></html>

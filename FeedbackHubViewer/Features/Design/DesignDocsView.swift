@@ -18,7 +18,12 @@ struct DesignDocsView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
-                // 화면 설계도는 아티팩트 주소라 폴더 허락 없이도, 맥이 아니어도 판정한다.
+                // 마인드맵과 화면 설계도는 앱에 든 사본이 있어 폴더 허락 없이도, 맥이 아니어도 판정한다.
+                if let project {
+                    DesignMindmapCard(project: project)
+                } else {
+                    DesignMindmapRollCall()
+                }
                 if let project {
                     DesignBlueprintCard(project: project)
                 } else {

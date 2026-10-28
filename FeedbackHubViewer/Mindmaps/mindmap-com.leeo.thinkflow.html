@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>이어생각 결제까지 마인드맵</title>
+<style>
+:root{--bg:#f5f5f2;--paper:#fff;--fg:#1b1d1c;--muted:#5f6662;--line:#cfd4d0;
+--c1:#c8463b;--c2:#2f6fcf;--c3:#7a4fc4;--c4:#1f8a5b;--wall:#c98a12;color-scheme:light;
+--font:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo",system-ui,sans-serif;--mono:ui-monospace,Menlo,monospace}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#141716;--paper:#1d211f;--fg:#e8ece9;
+--muted:#a1aaa4;--line:#3a423e;--c1:#f07a6f;--c2:#6ea2ef;--c3:#ad8bef;--c4:#4cc38a;--wall:#e7b24a;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#141716;--paper:#1d211f;--fg:#e8ece9;--muted:#a1aaa4;--line:#3a423e;
+--c1:#f07a6f;--c2:#6ea2ef;--c3:#ad8bef;--c4:#4cc38a;--wall:#e7b24a;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.55 var(--font)}
+.wrap{max-width:1280px;margin:0 auto;padding:32px max(16px,env(safe-area-inset-left)) 64px;display:grid;gap:36px}
+header{display:grid;gap:8px}
+h1{font-size:30px;line-height:1.2;margin:0}
+h2{font-size:18px;margin:0 0 10px}
+p{margin:0}
+.eyebrow{font:12px var(--mono);letter-spacing:.06em;color:var(--muted)}
+.lede{color:var(--muted);font-size:16px;max-width:60ch}
+.pill{display:inline-block;font-size:13px;padding:2px 10px;border-radius:99px;border:1px solid var(--c4);color:var(--c4)}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+.card{background:var(--paper);border:1px solid var(--line);border-top:4px solid var(--c);border-radius:10px;padding:16px}
+.c1{--c:var(--c1)}.c2{--c:var(--c2)}.c3{--c:var(--c3)}.c4{--c:var(--c4)}
+.card ul{margin:0;padding-left:18px;display:grid;gap:4px}
+.proposal{--c:var(--line);border-style:dashed;border-top-style:solid}
+.proposal h2 span{font:12px var(--mono);color:var(--muted);font-weight:400;margin-left:6px}
+dl{margin:0;display:grid;gap:4px}
+dt{font-size:13px;color:var(--muted)}
+dd{margin:0 0 6px}
+.map{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:20px;overflow-x:auto}
+/* 가로 트리: 줄기는 왼쪽, 가지는 오른쪽으로 뻗는다 */
+.tree,.tree ul{list-style:none;margin:0;padding:0}
+.tree ul{display:flex;flex-direction:column;justify-content:center;position:relative;padding-left:24px}
+.tree li{display:flex;align-items:center;position:relative;padding:3px 0 3px 24px}
+.tree>li{padding-left:0}
+.tree ul::before{content:"";position:absolute;left:0;top:50%;width:24px;border-top:2px solid var(--line)}
+.tree li::before{content:"";position:absolute;left:0;top:50%;width:24px;border-top:2px solid var(--line)}
+.tree li::after{content:"";position:absolute;left:0;top:0;bottom:0;border-left:2px solid var(--line)}
+.tree li:first-child::after{top:50%}
+.tree li:last-child::after{bottom:50%}
+.tree li:only-child::after,.tree>li::before,.tree>li::after{display:none}
+.node{flex:none;max-width:280px;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:6px 10px;font-size:14px}
+.root{background:var(--fg);color:var(--bg);border:none;font-size:20px;font-weight:700;max-width:220px;padding:14px 16px}
+.root small{display:block;font-size:13px;font-weight:400;opacity:.8;margin-top:4px}
+.branch{color:#fff;border:none;font-weight:700;font-size:16px;padding:8px 14px}
+.b1{background:var(--c1)}.b2{background:var(--c2)}.b3{background:var(--c3)}.b4{background:var(--c4)}
+.lead{font-weight:600;background:var(--paper)}
+.muted{color:var(--muted)}
+.wall{border:2px solid var(--wall)}
+.pay{background:var(--c4);color:#fff;border:none}
+footer{display:grid;gap:6px}
+.sources{margin:0;padding-left:18px;font:12px var(--mono);color:var(--muted)}
+/* 좁은 화면: 들여쓴 세로 목록 */
+@media (max-width:760px){
+.map{padding:14px}
+.tree ul{display:block;padding-left:0;margin-left:12px}
+.tree li{display:block;padding:4px 0 4px 18px}
+.tree ul::before{display:none}
+.tree li::before{top:20px;width:14px}
+.tree li::after,.tree li:first-child::after{top:0;bottom:auto;height:100%}
+.tree li:last-child::after{height:20px}
+.tree li:only-child::after{display:block;height:20px}
+.node{display:inline-block;max-width:100%}
+}
+</style></head><body><main class="wrap">
+<header>
+  <p class="eyebrow">문제 → 타겟 → 솔루션 → 결제</p>
+  <h1>이어생각</h1>
+  <p class="lede">끊어둔 문장에서 다시 시작하는 생각 노트</p>
+  <p><span class="pill">결제 없음</span></p>
+</header>
+<section class="cards">
+  <article class="card c1"><h2>문제 정의</h2><p>며칠에 걸친 깊은 생각은 돌아올 때마다 어디까지 했는지 잊는다</p></article>
+  <article class="card c2"><h2>타겟</h2><p>글감·기획·고민을 며칠씩 붙잡고 생각하는 사람</p></article>
+  <article class="card c3"><h2>솔루션</h2><p>멈출 때 다음 질문 한 줄을 남기고, 돌아오면 그 자리부터 보여 준다</p></article>
+</section>
+<section><h2>마인드맵</h2><div class="map"><ul class="tree"><li><div class="node root">이어생각<small>끊어둔 문장에서 다시 시작하는 생각 노트</small></div><ul><li><div class="node branch b1">문제</div><ul><li><div class="node lead ">며칠에 걸친 깊은 생각은 돌아올 때마다 어디까지 했는지 잊는다</div><ul><li><div class="node ">다시 열면 어디서부터 이어야 할지 모른다</div></li><li><div class="node ">메모는 쌓이는데 생각이 무르익지 않는다</div></li><li><div class="node ">조사한 자료와 내 생각이 뒤섞인다</div></li><li><div class="node ">손 놓은 생각은 그대로 잊힌다</div></li></ul></li></ul></li><li><div class="node branch b2">타겟</div><ul><li><div class="node lead ">글감·기획·고민을 며칠씩 붙잡고 생각하는 사람</div><ul><li><div class="node ">어제 하다 만 생각을 다시 붙잡을 때</div></li><li><div class="node ">머릿속이 복잡해 일단 다 쏟아내고 싶을 때</div></li><li><div class="node ">회고나 기획 글을 쓰기 전 생각을 모을 때</div></li></ul></li><li><div class="node muted">노리지 않는 사람 · 장보기 목록 같은 짧은 메모만 쓰는 사람</div></li></ul></li><li><div class="node branch b3">솔루션</div><ul><li><div class="node lead ">멈출 때 다음 질문 한 줄을 남기고, 돌아오면 그 자리부터 보여 준다</div><ul><li><div class="node ">끊어둔 문장이 다음에 맨 위에서 기다림</div></li><li><div class="node ">핵심과 직전 생각을 한 카드에 보여 줌</div></li><li><div class="node ">메모·정리·핵심·요약 네 단계로 다듬기</div></li><li><div class="node ">사흘 넘게 손 놓은 생각을 따로 모음</div></li><li><div class="node ">위젯과 잠금 화면에서 끊어둔 문장 보기</div></li></ul></li></ul></li><li><div class="node branch b4">결제까지</div><ul><li><div class="node lead ">1 발견 · 생각정리·브레인덤프 같은 말로 검색해 찾는다</div><ul><li><div class="node ">키워드: 헤밍웨이, 생각정리, 세컨드브레인</div></li><li><div class="node ">제텔카스텐, 브레인스토밍, 저널</div></li><li><div class="node ">앱 안 홍보 글은 아직 없음</div></li></ul></li><li><div class="node lead ">2 스토어 페이지 · 헤밍웨이처럼 일부러 멈추는 방법을 보여 준다</div><ul><li><div class="node ">부제: 끊어둔 문장에서 다시 시작하는 생각 노트</div></li><li><div class="node ">기록은 기기 안에만, 계정 필요 없음</div></li><li><div class="node ">24개 언어 지원, 내보내기 가능</div></li></ul></li><li><div class="node lead ">3 첫 실행 · 빈 화면에서 첫 생각 꺼내기를 권한다</div><ul><li><div class="node ">샘플 없이 빈 화면으로 시작</div></li><li><div class="node ">생각을 이어 나가 보세요 안내 문구</div></li><li><div class="node ">따로 안내 화면은 없음</div></li></ul></li><li><div class="node lead ">4 첫 성공 · 생각을 마치며 끊어둔 문장을 남긴다</div><ul><li><div class="node ">생각하는 동안 잠금 화면에 시간 표시</div></li><li><div class="node ">다음에 열면 그 문장이 맨 위에 있음</div></li><li><div class="node ">탭 한 번에 덤프 메모가 생각이 됨</div></li></ul></li><li><div class="node lead ">5 다시 찾기 · 위젯의 끊어둔 문장을 보고 다시 연다</div><ul><li><div class="node ">첫 화면 여기서 이어서 카드</div></li><li><div class="node ">사흘 넘은 생각은 되살릴 생각으로 모임</div></li><li><div class="node ">생각마다 들인 시간이 쌓임</div></li></ul></li><li><div class="node lead wall">6 결제 벽 · 아직 결제 장치 없음</div><ul><li><div class="node ">모든 기능이 무료로 열려 있음</div></li><li><div class="node ">막히는 횟수나 개수 제한 없음</div></li></ul></li><li><div class="node lead pay">7 결제 · 아직 결제 장치 없음</div><ul><li><div class="node ">앱 설정에 무료로 등록됨</div></li><li><div class="node ">판매 상품 없음</div></li></ul></li></ul></li></ul></li></ul></div></section>
+<section class="cards">
+  <article class="card c4"><h2>결제하는 순간</h2>
+    <dl><dt>방식</dt><dd>결제 없음</dd>
+    <dt>무료로 되는 것</dt><dd>모든 기능 무료, 제한 없음</dd>
+    <dt>결제 버튼이 보일 때</dt><dd>결제 화면 없음</dd>
+    <dt>상품</dt><dd><ul><li>상품 없음</li></ul></dd></dl>
+  </article>
+  <article class="card proposal"><h2>제안 <span>확인된 사실 아님</span></h2><ul><li>기기 간 동기화를 유료 기능으로 묶기</li><li>되살릴 생각 알림을 프로 기능으로 제안</li><li>생각 시간 30시간 같은 기념 순간에 후원 권하기</li></ul></article>
+</section>
+<footer><p class="eyebrow">근거 파일</p><ul class="sources"><li>ThinkFlow/ThinkFlowSpec.swift</li><li>ThinkFlow/ThinkFlowRoadmap.swift</li><li>ThinkFlow/Views/HomeView.swift</li><li>ThinkFlow/Models/ThoughtStore.swift</li><li>APPSTORE.md</li><li>RELEASE_NOTES.md</li><li>todo.md</li></ul></footer>
+</main></body></html>

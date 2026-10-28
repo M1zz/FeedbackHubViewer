@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>팔랑북 결제까지 마인드맵</title>
+<style>
+:root{--bg:#f5f5f2;--paper:#fff;--fg:#1b1d1c;--muted:#5f6662;--line:#cfd4d0;
+--c1:#c8463b;--c2:#2f6fcf;--c3:#7a4fc4;--c4:#1f8a5b;--wall:#c98a12;color-scheme:light;
+--font:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo",system-ui,sans-serif;--mono:ui-monospace,Menlo,monospace}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#141716;--paper:#1d211f;--fg:#e8ece9;
+--muted:#a1aaa4;--line:#3a423e;--c1:#f07a6f;--c2:#6ea2ef;--c3:#ad8bef;--c4:#4cc38a;--wall:#e7b24a;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#141716;--paper:#1d211f;--fg:#e8ece9;--muted:#a1aaa4;--line:#3a423e;
+--c1:#f07a6f;--c2:#6ea2ef;--c3:#ad8bef;--c4:#4cc38a;--wall:#e7b24a;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.55 var(--font)}
+.wrap{max-width:1280px;margin:0 auto;padding:32px max(16px,env(safe-area-inset-left)) 64px;display:grid;gap:36px}
+header{display:grid;gap:8px}
+h1{font-size:30px;line-height:1.2;margin:0}
+h2{font-size:18px;margin:0 0 10px}
+p{margin:0}
+.eyebrow{font:12px var(--mono);letter-spacing:.06em;color:var(--muted)}
+.lede{color:var(--muted);font-size:16px;max-width:60ch}
+.pill{display:inline-block;font-size:13px;padding:2px 10px;border-radius:99px;border:1px solid var(--c4);color:var(--c4)}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+.card{background:var(--paper);border:1px solid var(--line);border-top:4px solid var(--c);border-radius:10px;padding:16px}
+.c1{--c:var(--c1)}.c2{--c:var(--c2)}.c3{--c:var(--c3)}.c4{--c:var(--c4)}
+.card ul{margin:0;padding-left:18px;display:grid;gap:4px}
+.proposal{--c:var(--line);border-style:dashed;border-top-style:solid}
+.proposal h2 span{font:12px var(--mono);color:var(--muted);font-weight:400;margin-left:6px}
+dl{margin:0;display:grid;gap:4px}
+dt{font-size:13px;color:var(--muted)}
+dd{margin:0 0 6px}
+.map{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:20px;overflow-x:auto}
+/* 가로 트리: 줄기는 왼쪽, 가지는 오른쪽으로 뻗는다 */
+.tree,.tree ul{list-style:none;margin:0;padding:0}
+.tree ul{display:flex;flex-direction:column;justify-content:center;position:relative;padding-left:24px}
+.tree li{display:flex;align-items:center;position:relative;padding:3px 0 3px 24px}
+.tree>li{padding-left:0}
+.tree ul::before{content:"";position:absolute;left:0;top:50%;width:24px;border-top:2px solid var(--line)}
+.tree li::before{content:"";position:absolute;left:0;top:50%;width:24px;border-top:2px solid var(--line)}
+.tree li::after{content:"";position:absolute;left:0;top:0;bottom:0;border-left:2px solid var(--line)}
+.tree li:first-child::after{top:50%}
+.tree li:last-child::after{bottom:50%}
+.tree li:only-child::after,.tree>li::before,.tree>li::after{display:none}
+.node{flex:none;max-width:280px;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:6px 10px;font-size:14px}
+.root{background:var(--fg);color:var(--bg);border:none;font-size:20px;font-weight:700;max-width:220px;padding:14px 16px}
+.root small{display:block;font-size:13px;font-weight:400;opacity:.8;margin-top:4px}
+.branch{color:#fff;border:none;font-weight:700;font-size:16px;padding:8px 14px}
+.b1{background:var(--c1)}.b2{background:var(--c2)}.b3{background:var(--c3)}.b4{background:var(--c4)}
+.lead{font-weight:600;background:var(--paper)}
+.muted{color:var(--muted)}
+.wall{border:2px solid var(--wall)}
+.pay{background:var(--c4);color:#fff;border:none}
+footer{display:grid;gap:6px}
+.sources{margin:0;padding-left:18px;font:12px var(--mono);color:var(--muted)}
+/* 좁은 화면: 들여쓴 세로 목록 */
+@media (max-width:760px){
+.map{padding:14px}
+.tree ul{display:block;padding-left:0;margin-left:12px}
+.tree li{display:block;padding:4px 0 4px 18px}
+.tree ul::before{display:none}
+.tree li::before{top:20px;width:14px}
+.tree li::after,.tree li:first-child::after{top:0;bottom:auto;height:100%}
+.tree li:last-child::after{height:20px}
+.tree li:only-child::after{display:block;height:20px}
+.node{display:inline-block;max-width:100%}
+}
+</style></head><body><main class="wrap">
+<header>
+  <p class="eyebrow">문제 → 타겟 → 솔루션 → 결제</p>
+  <h1>팔랑북</h1>
+  <p class="lede">따라 그리면 아이 그림이 움직여요</p>
+  <p><span class="pill">평생 이용권</span></p>
+</header>
+<section class="cards">
+  <article class="card c1"><h2>문제 정의</h2><p>아이 그림을 움직이는 애니메이션으로 만들기는 어렵다</p></article>
+  <article class="card c2"><h2>타겟</h2><p>아이패드로 아이와 미술 놀이를 하는 유아·초등 부모</p></article>
+  <article class="card c3"><h2>솔루션</h2><p>연한 밑그림을 한 장씩 따라 그리면 아이 그림만 움직이게 재생한다</p></article>
+</section>
+<section><h2>마인드맵</h2><div class="map"><ul class="tree"><li><div class="node root">팔랑북<small>따라 그리면 아이 그림이 움직여요</small></div><ul><li><div class="node branch b1">문제</div><ul><li><div class="node lead ">아이 그림을 움직이는 애니메이션으로 만들기는 어렵다</div><ul><li><div class="node ">애니메이션 앱은 어른용이라 복잡하다</div></li><li><div class="node ">글을 모르는 아이는 메뉴를 못 읽는다</div></li><li><div class="node ">한 장씩 이어 그리기가 어려워 포기한다</div></li><li><div class="node ">그린 그림이 종이로만 남고 흩어진다</div></li></ul></li></ul></li><li><div class="node branch b2">타겟</div><ul><li><div class="node lead ">아이패드로 아이와 미술 놀이를 하는 유아·초등 부모</div><ul><li><div class="node ">주말에 집에서 할 엄마표 놀이를 찾을 때</div></li><li><div class="node ">아이가 그림판·색칠놀이에 질렸을 때</div></li><li><div class="node ">아이 작품을 가족에게 보여 주고 싶을 때</div></li></ul></li><li><div class="node muted">노리지 않는 사람 · 전문 애니메이션 작업을 하려는 어른</div></li></ul></li><li><div class="node branch b3">솔루션</div><ul><li><div class="node lead ">연한 밑그림을 한 장씩 따라 그리면 아이 그림만 움직이게 재생한다</div><ul><li><div class="node ">공·토끼·새 등 따라 그리기 10세트</div></li><li><div class="node ">글자 없이 그림으로만 된 버튼</div></li><li><div class="node ">내 동영상 위에 따라 그리기, 빈 종이 플립북</div></li><li><div class="node ">도장·색·목소리 녹음으로 꾸미기</div></li><li><div class="node ">완성작을 사진 앱에 동영상으로 저장</div></li></ul></li></ul></li><li><div class="node branch b4">결제까지</div><ul><li><div class="node lead ">1 발견 · 스톱모션·따라그리기·엄마표놀이로 검색한다</div><ul><li><div class="node ">키워드: 플립북, 색칠놀이, 움직이는그림</div></li><li><div class="node ">레딧 할인 홍보 글 준비됨</div></li></ul></li><li><div class="node lead ">2 스토어 페이지 · 따라 그리면 팔랑팔랑 움직인다는 부제</div><ul><li><div class="node ">글을 몰라도 쓰는 그림 버튼</div></li><li><div class="node ">무료 범위와 평생 이용권을 설명에 명시</div></li><li><div class="node ">결제는 어른 확인 뒤에만 열림</div></li></ul></li><li><div class="node lead ">3 첫 실행 · 그림 세 장으로 쓰는 법을 보여 준다</div><ul><li><div class="node ">동영상·빈 종이·따라 그리기 중 고르기</div></li><li><div class="node ">한 장 그리고 주황 버튼으로 다음 장</div></li><li><div class="node ">작품이 없는 새 설치에만 한 번</div></li></ul></li><li><div class="node lead ">4 첫 성공 · 재생을 누르면 밑그림은 사라지고 그림이 움직인다</div><ul><li><div class="node ">공·토끼·꽃 세트는 무료</div></li><li><div class="node ">앞 장이 흐리게 비쳐 이어 그리기 쉬움</div></li><li><div class="node ">목소리를 넣어 사진 앱에 저장</div></li></ul></li><li><div class="node lead ">5 다시 찾기 · 홈 화면에 모인 작품을 이어 그린다</div><ul><li><div class="node ">작품이 홈 화면 격자에 모여 있음</div></li><li><div class="node ">Siri나 단축어로 새 플립북 열기</div></li></ul></li><li><div class="node lead wall">6 결제 벽 · 잠긴 세트나 한도에 닿으면 자물쇠가 뜬다</div><ul><li><div class="node ">따라 그리기 7세트는 잠김</div></li><li><div class="node ">작품 3개, 빈 종이 10장까지</div></li><li><div class="node ">동영상 불러오기 1번, 녹음 15초까지</div></li><li><div class="node ">무료 저장 영상 끝에 팔랑북 카드</div></li></ul></li><li><div class="node lead pay">7 결제 · 팔랑북 평생 이용권, 한 번 결제</div><ul><li><div class="node ">시험용 설정 가격 9,900원</div></li><li><div class="node ">구독 아님, 가족 공유, 구매 복원 있음</div></li><li><div class="node ">곱셈 문제 어른 확인을 풀어야 가격이 보임</div></li><li><div class="node ">무료 시절 설치자는 평생 전부 열림</div></li></ul></li></ul></li></ul></li></ul></div></section>
+<section class="cards">
+  <article class="card c4"><h2>결제하는 순간</h2>
+    <dl><dt>방식</dt><dd>평생 이용권</dd>
+    <dt>무료로 되는 것</dt><dd>따라 그리기 3세트, 작품 3개, 동영상 1번, 녹음 15초</dd>
+    <dt>결제 버튼이 보일 때</dt><dd>잠긴 세트·한도 도달 시 어른 확인 뒤, 또는 설정</dd>
+    <dt>상품</dt><dd><ul><li>팔랑북 평생 이용권 · 9,900원 (시험용 설정)</li></ul></dd></dl>
+  </article>
+  <article class="card proposal"><h2>제안 <span>확인된 사실 아님</span></h2><ul><li>첫 작품 저장 직후 부모에게 전 세트 미리보기</li><li>명절·생일 시즌에 가족 공유 강조</li><li>새 따라 그리기 세트 추가 소식으로 재방문 유도</li></ul></article>
+</section>
+<footer><p class="eyebrow">근거 파일</p><ul class="sources"><li>RotoscopeiPad/RotoscopeiPadSpec.swift</li><li>RotoscopeiPad/Models/FreeTier.swift</li><li>RotoscopeiPad/Views/UnlockSheet.swift</li><li>RotoscopeiPad/Views/HomeView.swift</li><li>RotoscopeiPad/Views/FirstRunOnboarding.swift</li><li>Products.storekit</li><li>APPSTORE.md</li><li>README.md</li></ul></footer>
+</main></body></html>
