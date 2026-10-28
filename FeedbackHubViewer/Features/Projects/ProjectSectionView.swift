@@ -42,6 +42,9 @@ struct ProjectSectionView: View {
             .safeAreaInset(edge: .top, spacing: 0) {
                 SectionChangesBanner(section: section, project: project)
             }
+            // 띠를 얹은 화면은 "띠 + 내용" 높이를 우겨 맥 창보다 커졌고, 넘친 만큼 위아래로
+            // 삐져 띠 윗부분이 툴바 밑에 깔렸다. 높이는 창이 주는 만큼만 — 띠 아래 내용이 준다.
+            .frame(minHeight: 0, maxHeight: .infinity)
             // Everything downstream reads the scope off the store, so the pushed
             // screen and the store can never disagree about which project this is.
             // 다시 보일 때마다(아이폰 탭을 오갈 때도) 맞춘다 — 다른 탭이 가게를 바꿔 놓았을 수 있다.
