@@ -221,7 +221,8 @@ extension AppStoreConnect {
 
     /// 최근 `days`일의 퍼널 — 경로별 노출 → 페이지 조회 → 첫 다운로드. 행은 공통 층이
     /// 날짜마다 한 벌씩 모아 준다(`AppStoreConnect+AnalyticsReports.swift`).
-    func funnel(requestID: String, appID: String, days: Int) async throws -> StoreFunnel {
+    /// `requestID` 가 nil 이면 디스크에 둔 파일만 읽는다.
+    func funnel(requestID: String?, appID: String, days: Int) async throws -> StoreFunnel {
         let engagement = try await analyticsRows(.engagementStandard, requestID: requestID, appID: appID, days: days)
         let downloads = try await analyticsRows(.downloadsStandard, requestID: requestID, appID: appID, days: days)
 

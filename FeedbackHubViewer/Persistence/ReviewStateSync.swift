@@ -29,7 +29,8 @@
 //
 //   · **읽음**은 늘어나기만 하는 집합이라 합집합이다. "다시 안 읽음으로"가
 //     없으므로 합집합으로 잃을 것이 없다.
-//   · **처리**는 레코드마다 `decidedAt`이 늦은 쪽이 이긴다. 그래서 "확인
+//   · **처리**(피드백)와 **리뷰 완료**(할 일에서 답 없이 넘긴 스토어 리뷰)는
+//     항목마다 `decidedAt`이 늦은 쪽이 이긴다. 그래서 "확인
 //     필요로 되돌리기"도 항목을 지우는 대신 시각을 가진 빈 항목으로 남긴다
 //     (`FeedbackStore.apply`) — 지웠다는 사실은 전할 수 없지만, 되돌렸다는
 //     사실은 시각과 함께 전할 수 있다.
@@ -40,14 +41,40 @@
 
 import Foundation
 
+/// 할 일에서 스토어 리뷰 하나를 "완료" 로 둔 기록. 답장을 달면 리뷰는 저절로 할 일에서
+/// 빠지지만, 답할 필요가 없는 리뷰("좋아요!")도 있다 — 그걸 치우는 자리다.
+/// 되돌리기도 지우지 않고 `isDone == false` 와 시각으로 남긴다(처리와 같은 까닭).
+struct ReviewDoneEntry: Codable, Hashable {
+    var isDone: Bool
+    var decidedAt: Date
+}
+
 /// 기기 사이에서 공유하는 검토 상태.
 struct ReviewState: Codable {
     /// 이미 열어 본 레코드 이름.
     var readIDs: Set<String> = []
     /// 레코드 이름 → 무엇을 결정했는지.
     var triage: [String: FeedbackTriageEntry] = [:]
+    /// App Store 리뷰 id → 할 일에서 완료로 뒀는지.
+    var reviewsDone: [String: ReviewDoneEntry] = [:]
 
-    var isEmpty: Bool { readIDs.isEmpty && triage.isEmpty }
+    var isEmpty: Bool { readIDs.isEmpty && triage.isEmpty && reviewsDone.isEmpty }
+
+    init(readIDs: Set<String> = [], triage: [String: FeedbackTriageEntry] = [:],
+         reviewsDone: [String: ReviewDoneEntry] = [:]) {
+        self.readIDs = readIDs
+        self.triage = triage
+        self.reviewsDone = reviewsDone
+    }
+
+    /// 리뷰 완료가 생기기 전 기기가 올린 값에는 그 칸이 없다 — 없으면 빈 것으로 읽는다.
+    /// 못 읽고 버리면 그 기기의 읽음 · 처리까지 통째로 사라진다.
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        readIDs = try container.decodeIfPresent(Set<String>.self, forKey: .readIDs) ?? []
+        triage = try container.decodeIfPresent([String: FeedbackTriageEntry].self, forKey: .triage) ?? [:]
+        reviewsDone = try container.decodeIfPresent([String: ReviewDoneEntry].self, forKey: .reviewsDone) ?? [:]
+    }
 
     /// 두 기기가 각자 고친 것을 하나로. 파일 머리말의 규칙 그대로다.
     func merged(with other: ReviewState) -> ReviewState {
@@ -59,6 +86,10 @@ struct ReviewState: Codable {
                 continue
             }
             if incoming.decidedAt > mine.decidedAt { result.triage[id] = incoming }
+        }
+        for (id, incoming) in other.reviewsDone {
+            if let mine = result.reviewsDone[id], mine.decidedAt >= incoming.decidedAt { continue }
+            result.reviewsDone[id] = incoming
         }
         return result
     }

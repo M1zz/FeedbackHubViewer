@@ -144,9 +144,15 @@ struct RankTrendCard: View {
                 + (names.count > 3 ? " 외 \(names.count - 3)개" : "")
             icon = "person.2.badge.gearshape"
         }
+        // 순위가 오르고 내린 알림은 시세판 색(오름 빨강 · 내림 파랑), 나머지는 좋고 나쁨 색.
+        let tint: Color = switch alert.kind {
+        case .climbed, .entered: RankTrend.up
+        case .dropped, .lost: RankTrend.down
+        case .overtaken: .orange
+        }
         return HStack(alignment: .firstTextBaseline, spacing: 8) {
             Image(systemName: icon)
-                .foregroundStyle(alert.kind.isBad ? .orange : .green)
+                .foregroundStyle(tint)
             VStack(alignment: .leading, spacing: 2) {
                 Text("\(alert.keyword.term) (\(alert.keyword.country.uppercased()))")
                     .font(.headline)
@@ -195,7 +201,11 @@ struct StoreMetadataCard: View {
                 }
             }
         }
-        .task(id: project) { await connect.loadMetadata(bundleID: project) }
+        .task(id: project) {
+            await connect.loadMetadata(bundleID: project)
+            // 읽은 김에 키워드 칸을 들인다 — 하루 한 번 도는 것보다 먼저 볼 수 있게.
+            if let metadata = connect.metadata[project]?.value { keywords.absorb(metadata, for: project) }
+        }
         .sheet(isPresented: $isEditing) {
             if let metadata = connect.metadata[project]?.value, let locale = currentLocale(metadata) {
                 MetadataEditor(project: project, metadata: metadata, locale: locale) { isEditing = false }
@@ -222,9 +232,6 @@ struct StoreMetadataCard: View {
                 }
                 .fixedSize()
                 Spacer()
-                Button {
-                    Task { await connect.loadMetadata(bundleID: project, force: true) }
-                } label: { Label("다시 읽기", systemImage: "arrow.clockwise") }
                 Button { isEditing = true } label: { Label("고치기", systemImage: "pencil") }
                     .buttonStyle(.borderedProminent)
             }

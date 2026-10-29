@@ -321,6 +321,7 @@ extension FeedbackStore {
             filtered.installs = installs
             filtered.events = 0
             filtered.byEvent = [:]
+            filtered.eventInstalls = bucket.eventInstalls?.mapValues { $0.intersection(ids) }
             return filtered
         }
     }

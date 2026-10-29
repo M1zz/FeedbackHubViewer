@@ -11,8 +11,8 @@ import Foundation
 extension AppStoreConnect {
 
     /// 최근 `days`일 출처별 셈. 상세 리포트는 퍼널이 쓰는 Standard 와 같은 요청 안에 있어서
-    /// 따로 요청을 만들 필요가 없다.
-    func referrals(requestID: String, appID: String, days: Int) async throws -> ReferralReport {
+    /// 따로 요청을 만들 필요가 없다. `requestID` 가 nil 이면 디스크에 둔 파일만 읽는다.
+    func referrals(requestID: String?, appID: String, days: Int) async throws -> ReferralReport {
         let downloads = try await analyticsRows(.downloadsDetailed, requestID: requestID, appID: appID, days: days)
         let engagement = try await analyticsRows(.engagementDetailed, requestID: requestID, appID: appID, days: days)
         return ReferralReport(days: days, downloads: downloads, engagement: engagement)

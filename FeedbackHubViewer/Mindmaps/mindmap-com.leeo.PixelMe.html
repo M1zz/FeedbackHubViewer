@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>한땀 결제까지 마인드맵</title>
+<style>
+:root{--bg:#f5f5f2;--paper:#fff;--fg:#1b1d1c;--muted:#5f6662;--line:#cfd4d0;
+--c1:#c8463b;--c2:#2f6fcf;--c3:#7a4fc4;--c4:#1f8a5b;--wall:#c98a12;color-scheme:light;
+--font:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo",system-ui,sans-serif;--mono:ui-monospace,Menlo,monospace}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#141716;--paper:#1d211f;--fg:#e8ece9;
+--muted:#a1aaa4;--line:#3a423e;--c1:#f07a6f;--c2:#6ea2ef;--c3:#ad8bef;--c4:#4cc38a;--wall:#e7b24a;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#141716;--paper:#1d211f;--fg:#e8ece9;--muted:#a1aaa4;--line:#3a423e;
+--c1:#f07a6f;--c2:#6ea2ef;--c3:#ad8bef;--c4:#4cc38a;--wall:#e7b24a;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.55 var(--font)}
+.wrap{max-width:1280px;margin:0 auto;padding:32px max(16px,env(safe-area-inset-left)) 64px;display:grid;gap:36px}
+header{display:grid;gap:8px}
+h1{font-size:30px;line-height:1.2;margin:0}
+h2{font-size:18px;margin:0 0 10px}
+p{margin:0}
+.eyebrow{font:12px var(--mono);letter-spacing:.06em;color:var(--muted)}
+.lede{color:var(--muted);font-size:16px;max-width:60ch}
+.pill{display:inline-block;font-size:13px;padding:2px 10px;border-radius:99px;border:1px solid var(--c4);color:var(--c4)}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+.card{background:var(--paper);border:1px solid var(--line);border-top:4px solid var(--c);border-radius:10px;padding:16px}
+.c1{--c:var(--c1)}.c2{--c:var(--c2)}.c3{--c:var(--c3)}.c4{--c:var(--c4)}
+.card ul{margin:0;padding-left:18px;display:grid;gap:4px}
+.proposal{--c:var(--line);border-style:dashed;border-top-style:solid}
+.proposal h2 span{font:12px var(--mono);color:var(--muted);font-weight:400;margin-left:6px}
+dl{margin:0;display:grid;gap:4px}
+dt{font-size:13px;color:var(--muted)}
+dd{margin:0 0 6px}
+.map{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:20px;overflow-x:auto}
+/* 가로 트리: 줄기는 왼쪽, 가지는 오른쪽으로 뻗는다 */
+.tree,.tree ul{list-style:none;margin:0;padding:0}
+.tree ul{display:flex;flex-direction:column;justify-content:center;position:relative;padding-left:24px}
+.tree li{display:flex;align-items:center;position:relative;padding:3px 0 3px 24px}
+.tree>li{padding-left:0}
+.tree ul::before{content:"";position:absolute;left:0;top:50%;width:24px;border-top:2px solid var(--line)}
+.tree li::before{content:"";position:absolute;left:0;top:50%;width:24px;border-top:2px solid var(--line)}
+.tree li::after{content:"";position:absolute;left:0;top:0;bottom:0;border-left:2px solid var(--line)}
+.tree li:first-child::after{top:50%}
+.tree li:last-child::after{bottom:50%}
+.tree li:only-child::after,.tree>li::before,.tree>li::after{display:none}
+.node{flex:none;max-width:280px;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:6px 10px;font-size:14px}
+.root{background:var(--fg);color:var(--bg);border:none;font-size:20px;font-weight:700;max-width:220px;padding:14px 16px}
+.root small{display:block;font-size:13px;font-weight:400;opacity:.8;margin-top:4px}
+.branch{color:#fff;border:none;font-weight:700;font-size:16px;padding:8px 14px}
+.b1{background:var(--c1)}.b2{background:var(--c2)}.b3{background:var(--c3)}.b4{background:var(--c4)}
+.lead{font-weight:600;background:var(--paper)}
+.muted{color:var(--muted)}
+.wall{border:2px solid var(--wall)}
+.pay{background:var(--c4);color:#fff;border:none}
+footer{display:grid;gap:6px}
+.sources{margin:0;padding-left:18px;font:12px var(--mono);color:var(--muted)}
+/* 좁은 화면: 들여쓴 세로 목록 */
+@media (max-width:760px){
+.map{padding:14px}
+.tree ul{display:block;padding-left:0;margin-left:12px}
+.tree li{display:block;padding:4px 0 4px 18px}
+.tree ul::before{display:none}
+.tree li::before{top:20px;width:14px}
+.tree li::after,.tree li:first-child::after{top:0;bottom:auto;height:100%}
+.tree li:last-child::after{height:20px}
+.tree li:only-child::after{display:block;height:20px}
+.node{display:inline-block;max-width:100%}
+}
+</style></head><body><main class="wrap">
+<header>
+  <p class="eyebrow">문제 → 타겟 → 솔루션 → 결제</p>
+  <h1>한땀</h1>
+  <p class="lede">사진 한 장을 비즈·십자수 도안으로</p>
+  <p><span class="pill">구독</span></p>
+</header>
+<section class="cards">
+  <article class="card c1"><h2>문제 정의</h2><p>좋아하는 사진으로 비즈·십자수를 하고 싶어도 도안이 없다</p></article>
+  <article class="card c2"><h2>타겟</h2><p>아이롱 비즈·십자수를 하는 30~40대 취미 공예인과 부모</p></article>
+  <article class="card c3"><h2>솔루션</h2><p>사진을 실제로 파는 색 번호로 맞춘 도안과 필요한 개수로 바꾼다</p></article>
+</section>
+<section><h2>마인드맵</h2><div class="map"><ul class="tree"><li><div class="node root">한땀<small>사진 한 장을 비즈·십자수 도안으로</small></div><ul><li><div class="node branch b1">문제</div><ul><li><div class="node lead ">좋아하는 사진으로 비즈·십자수를 하고 싶어도 도안이 없다</div><ul><li><div class="node ">도안을 직접 칸칸이 옮기기 너무 힘들다</div></li><li><div class="node ">화면 색과 실제 파는 색이 안 맞는다</div></li><li><div class="node ">색마다 몇 개 사야 할지 모른다</div></li><li><div class="node ">보드·천 크기에 맞춰 나누기 어렵다</div></li></ul></li></ul></li><li><div class="node branch b2">타겟</div><ul><li><div class="node lead ">아이롱 비즈·십자수를 하는 30~40대 취미 공예인과 부모</div><ul><li><div class="node ">반려동물·아이 사진으로 굿즈를 만들고 싶을 때</div></li><li><div class="node ">아이와 함께할 비즈 공예 도안을 찾을 때</div></li><li><div class="node ">재료를 사러 가기 전 필요한 개수가 궁금할 때</div></li></ul></li><li><div class="node muted">노리지 않는 사람 · 기성 도안을 사서 그대로 따라 하는 사람</div></li></ul></li><li><div class="node branch b3">솔루션</div><ul><li><div class="node lead ">사진을 실제로 파는 색 번호로 맞춘 도안과 필요한 개수로 바꾼다</div><ul><li><div class="node ">Perler·Hama·Artkal 비즈, DMC 실 색표</div></li><li><div class="node ">29×29 보드·천 카운트에 맞춘 도안</div></li><li><div class="node ">배경 지우기, 칸 고치기, 색 통째로 바꾸기</div></li><li><div class="node ">색마다 개수와 구매 목록 복사</div></li><li><div class="node ">인쇄용 PDF 기호 도안</div></li></ul></li></ul></li><li><div class="node branch b4">결제까지</div><ul><li><div class="node lead ">1 발견 · 아이롱비즈·십자수 도안 같은 말로 검색한다</div><ul><li><div class="node ">키워드: 아이롱비즈, 픽셀도안, 크로스스티치</div></li><li><div class="node ">일본 &#x27;図案&#x27;·&#x27;手芸&#x27; 순위도 지켜봄</div></li></ul></li><li><div class="node lead ">2 스토어 페이지 · 사진으로 만드는 DIY 키링·액자 도안</div><ul><li><div class="node ">실제 색, 실제 번호를 앞세움</div></li><li><div class="node ">사진은 내 폰 밖으로 안 나감</div></li><li><div class="node ">다운로드 자체가 유료 6,600원</div></li></ul></li><li><div class="node lead ">3 첫 실행 · 세 장 안내 뒤 사진을 고른다</div><ul><li><div class="node ">사진 한 장이 도안이 된다</div></li><li><div class="node ">살 수 있는 색으로 맞춘다</div></li><li><div class="node ">인쇄해서 바로 만든다</div></li></ul></li><li><div class="node lead ">4 첫 성공 · 내 사진이 색 번호 붙은 도안으로 바뀐다</div><ul><li><div class="node ">크기·색 수를 바꾸면 바로 미리보기</div></li><li><div class="node ">색마다 필요한 개수를 세어 줌</div></li><li><div class="node ">구매 목록 복사는 무료</div></li></ul></li><li><div class="node lead ">5 다시 찾기 · 새 작품을 만들 때마다 다시 연다</div><ul><li><div class="node ">만든 도안을 보관해 두고 다시 보기</div></li><li><div class="node ">픽셀 아트 도구와 따라 그리기 110가지</div></li></ul></li><li><div class="node lead wall">6 결제 벽 · 도안을 인쇄하려는 순간 막힌다</div><ul><li><div class="node ">인쇄용 PDF는 Pro 전용</div></li><li><div class="node ">보드 2장 이상·40칸 넘는 크기</div></li><li><div class="node ">4번째 도안 저장, 표시 없는 이미지</div></li><li><div class="node ">고급 픽셀 아트 도구도 잠김</div></li></ul></li><li><div class="node lead pay">7 결제 · 한땀 Pro: 월·연 구독 또는 평생</div><ul><li><div class="node ">월 6,600원, 연 44,000원</div></li><li><div class="node ">평생 77,000원 (한국 스토어)</div></li><li><div class="node ">연간은 7일 무료 체험</div></li><li><div class="node ">예전 구매자는 Pro로 인정</div></li></ul></li></ul></li></ul></li></ul></div></section>
+<section class="cards">
+  <article class="card c4"><h2>결제하는 순간</h2>
+    <dl><dt>방식</dt><dd>구독</dd>
+    <dt>무료로 되는 것</dt><dd>보드 1장·40칸 도안, 3개 보관, 표시 든 이미지</dd>
+    <dt>결제 버튼이 보일 때</dt><dd>PDF 인쇄 버튼, 큰 크기 선택, 4번째 저장, 홈 배너</dd>
+    <dt>상품</dt><dd><ul><li>앱 다운로드 · 6,600원 (유료 앱)</li><li>한땀 Pro 월간 · 6,600원</li><li>한땀 Pro 연간 · 44,000원 (7일 체험)</li><li>한땀 Pro 평생 · 77,000원</li></ul></dd></dl>
+  </article>
+  <article class="card proposal"><h2>제안 <span>확인된 사실 아님</span></h2><ul><li>유료 다운로드 사용자에게 평생 할인 먼저 보여 주기</li><li>PDF 첫 장은 무료로 미리 인쇄하게 하기</li><li>완성 작품 사진 공유로 다음 도안 유도</li></ul></article>
+</section>
+<footer><p class="eyebrow">근거 파일</p><ul class="sources"><li>Hantam/HantamSpec.swift</li><li>Hantam/Views/PaywallView.swift</li><li>Hantam/Pattern/PatternDetailView.swift</li><li>Hantam/Pattern/PatternStore.swift</li><li>Hantam/Views/OnboardingView.swift</li><li>STRATEGY.md</li><li>README.md</li><li>APPSTORE.md</li></ul></footer>
+</main></body></html>

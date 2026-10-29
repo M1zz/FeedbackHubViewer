@@ -108,7 +108,10 @@ extension CachedHub {
         feedback = RecordMerge.byID(other.feedback, into: feedback) {
             ($0.createdAt ?? .distantPast) > ($1.createdAt ?? .distantPast)
         }
-        snapshots = RecordMerge.byID(other.snapshots, into: snapshots) {
+        // 스냅샷은 설치가 제자리에 덮어쓰는 레코드라, 저쪽 요약본이 이쪽보다
+        // 오래됐을 수 있다. 마지막 활동이 더 늦은 쪽을 남긴다.
+        snapshots = RecordMerge.byID(other.snapshots, into: snapshots,
+                                     replaces: { ($0.lastActiveAt ?? .distantPast) > ($1.lastActiveAt ?? .distantPast) }) {
             ($0.lastActiveAt ?? .distantPast) > ($1.lastActiveAt ?? .distantPast)
         }
         events = RecordMerge.byID(other.events, into: events) { $0.occurredAt > $1.occurredAt }

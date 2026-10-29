@@ -137,9 +137,14 @@ struct ReferralRow: View {
                     .font(.callout)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
-                if let search = searchURL {
-                    Link("이 사이트에서 \(appName) 찾아보기", destination: search)
-                        .font(.callout)
+                if let site = siteURL, let search = searchURL {
+                    HStack(spacing: 14) {
+                        Link(destination: site) {
+                            Label("\(item.source.info) 열기", systemImage: "arrow.up.right.square")
+                        }
+                        Link("이 사이트에서 \(appName) 찾아보기", destination: search)
+                    }
+                    .font(.callout)
                 }
             }
             Spacer(minLength: 8)
@@ -166,6 +171,12 @@ struct ReferralRow: View {
         if !territories.isEmpty { parts.append(territories.joined(separator: " · ")) }
         parts.append("처음 본 날 \(item.firstSeen)")
         return parts.joined(separator: " · ")
+    }
+
+    /// 웹 출처는 그 사이트로 바로. 앱 출처와 통로는 열 곳이 없다.
+    private var siteURL: URL? {
+        guard item.source.kind == .web, !item.profile.isPassage else { return nil }
+        return URL(string: "https://\(item.source.info)")
     }
 
     /// 웹 출처는 그 사이트 안에서 앱 이름을 찾는 검색으로. 앱 출처는 주소가 없다.

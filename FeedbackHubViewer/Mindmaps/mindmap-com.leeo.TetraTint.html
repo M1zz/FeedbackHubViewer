@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>TetraTint 결제까지 마인드맵</title>
+<style>
+:root{--bg:#f5f5f2;--paper:#fff;--fg:#1b1d1c;--muted:#5f6662;--line:#cfd4d0;
+--c1:#c8463b;--c2:#2f6fcf;--c3:#7a4fc4;--c4:#1f8a5b;--wall:#c98a12;color-scheme:light;
+--font:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo",system-ui,sans-serif;--mono:ui-monospace,Menlo,monospace}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#141716;--paper:#1d211f;--fg:#e8ece9;
+--muted:#a1aaa4;--line:#3a423e;--c1:#f07a6f;--c2:#6ea2ef;--c3:#ad8bef;--c4:#4cc38a;--wall:#e7b24a;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#141716;--paper:#1d211f;--fg:#e8ece9;--muted:#a1aaa4;--line:#3a423e;
+--c1:#f07a6f;--c2:#6ea2ef;--c3:#ad8bef;--c4:#4cc38a;--wall:#e7b24a;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.55 var(--font)}
+.wrap{max-width:1280px;margin:0 auto;padding:32px max(16px,env(safe-area-inset-left)) 64px;display:grid;gap:36px}
+header{display:grid;gap:8px}
+h1{font-size:30px;line-height:1.2;margin:0}
+h2{font-size:18px;margin:0 0 10px}
+p{margin:0}
+.eyebrow{font:12px var(--mono);letter-spacing:.06em;color:var(--muted)}
+.lede{color:var(--muted);font-size:16px;max-width:60ch}
+.pill{display:inline-block;font-size:13px;padding:2px 10px;border-radius:99px;border:1px solid var(--c4);color:var(--c4)}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+.card{background:var(--paper);border:1px solid var(--line);border-top:4px solid var(--c);border-radius:10px;padding:16px}
+.c1{--c:var(--c1)}.c2{--c:var(--c2)}.c3{--c:var(--c3)}.c4{--c:var(--c4)}
+.card ul{margin:0;padding-left:18px;display:grid;gap:4px}
+.proposal{--c:var(--line);border-style:dashed;border-top-style:solid}
+.proposal h2 span{font:12px var(--mono);color:var(--muted);font-weight:400;margin-left:6px}
+dl{margin:0;display:grid;gap:4px}
+dt{font-size:13px;color:var(--muted)}
+dd{margin:0 0 6px}
+.map{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:20px;overflow-x:auto}
+/* 가로 트리: 줄기는 왼쪽, 가지는 오른쪽으로 뻗는다 */
+.tree,.tree ul{list-style:none;margin:0;padding:0}
+.tree ul{display:flex;flex-direction:column;justify-content:center;position:relative;padding-left:24px}
+.tree li{display:flex;align-items:center;position:relative;padding:3px 0 3px 24px}
+.tree>li{padding-left:0}
+.tree ul::before{content:"";position:absolute;left:0;top:50%;width:24px;border-top:2px solid var(--line)}
+.tree li::before{content:"";position:absolute;left:0;top:50%;width:24px;border-top:2px solid var(--line)}
+.tree li::after{content:"";position:absolute;left:0;top:0;bottom:0;border-left:2px solid var(--line)}
+.tree li:first-child::after{top:50%}
+.tree li:last-child::after{bottom:50%}
+.tree li:only-child::after,.tree>li::before,.tree>li::after{display:none}
+.node{flex:none;max-width:280px;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:6px 10px;font-size:14px}
+.root{background:var(--fg);color:var(--bg);border:none;font-size:20px;font-weight:700;max-width:220px;padding:14px 16px}
+.root small{display:block;font-size:13px;font-weight:400;opacity:.8;margin-top:4px}
+.branch{color:#fff;border:none;font-weight:700;font-size:16px;padding:8px 14px}
+.b1{background:var(--c1)}.b2{background:var(--c2)}.b3{background:var(--c3)}.b4{background:var(--c4)}
+.lead{font-weight:600;background:var(--paper)}
+.muted{color:var(--muted)}
+.wall{border:2px solid var(--wall)}
+.pay{background:var(--c4);color:#fff;border:none}
+footer{display:grid;gap:6px}
+.sources{margin:0;padding-left:18px;font:12px var(--mono);color:var(--muted)}
+/* 좁은 화면: 들여쓴 세로 목록 */
+@media (max-width:760px){
+.map{padding:14px}
+.tree ul{display:block;padding-left:0;margin-left:12px}
+.tree li{display:block;padding:4px 0 4px 18px}
+.tree ul::before{display:none}
+.tree li::before{top:20px;width:14px}
+.tree li::after,.tree li:first-child::after{top:0;bottom:auto;height:100%}
+.tree li:last-child::after{height:20px}
+.tree li:only-child::after{display:block;height:20px}
+.node{display:inline-block;max-width:100%}
+}
+</style></head><body><main class="wrap">
+<header>
+  <p class="eyebrow">문제 → 타겟 → 솔루션 → 결제</p>
+  <h1>TetraTint</h1>
+  <p class="lede">내 브랜드 색을 다크·고대비에 맞춰 주는 맥 도구</p>
+  <p><span class="pill">결제 없음</span></p>
+</header>
+<section class="cards">
+  <article class="card c1"><h2>문제 정의</h2><p>기본 색은 다크 모드에 맞춰지는데 내가 정한 색은 그대로다</p></article>
+  <article class="card c2"><h2>타겟</h2><p>아이폰·맥 앱을 만드는 개발자와 디자이너</p></article>
+  <article class="card c3"><h2>솔루션</h2><p>색 하나로 네 가지 모드 색을 만들고 바로 내보낸다</p></article>
+</section>
+<section><h2>마인드맵</h2><div class="map"><ul class="tree"><li><div class="node root">TetraTint<small>내 브랜드 색을 다크·고대비에 맞춰 주는 맥 도구</small></div><ul><li><div class="node branch b1">문제</div><ul><li><div class="node lead ">기본 색은 다크 모드에 맞춰지는데 내가 정한 색은 그대로다</div><ul><li><div class="node ">다크 모드 색을 감으로 고르게 된다</div></li><li><div class="node ">고대비 버전은 매번 그냥 건너뛴다</div></li><li><div class="node ">색맹인 사람에게 어떻게 보일지 모른다</div></li><li><div class="node ">직접 넣은 글꼴은 글자 크기를 안 따라간다</div></li></ul></li></ul></li><li><div class="node branch b2">타겟</div><ul><li><div class="node lead ">아이폰·맥 앱을 만드는 개발자와 디자이너</div><ul><li><div class="node ">다크 모드에서 내 앱 색만 어색해 보일 때</div></li><li><div class="node ">스토어 접근성 표기의 &#x27;충분한 대비&#x27;를 채울 때</div></li><li><div class="node ">브랜드 색 팔레트를 새로 잡을 때</div></li><li><div class="node ">큰 글씨 설정에서 화면이 깨질 때</div></li></ul></li><li><div class="node muted">노리지 않는 사람 · 앱을 만들지 않는 일반 맥 사용자</div></li></ul></li><li><div class="node branch b3">솔루션</div><ul><li><div class="node lead ">색 하나로 네 가지 모드 색을 만들고 바로 내보낸다</div><ul><li><div class="node ">라이트 색 하나로 다크·고대비 포함 4가지 생성</div></li><li><div class="node ">색 목록 붙여 넣으면 대비 합격 여부 판정</div></li><li><div class="node ">색맹 시뮬레이션과 헷갈리는 색 쌍 경고</div></li><li><div class="node ">직접 넣은 글꼴용 글자 크기 대응 코드</div></li><li><div class="node ">저장한 색 전체를 한 번에 내보내기</div></li></ul></li></ul></li><li><div class="node branch b4">결제까지</div><ul><li><div class="node lead ">1 발견 · 개발자 모임에서 &#x27;내 색은 왜 안 바뀌나&#x27; 공감</div><ul><li><div class="node ">인스타 &#x27;브랜드 컬러는 다크 모드를 모른다&#x27;</div></li><li><div class="node ">쇼츠: 색 하나에 네 모드가 동시에 뜨는 장면</div></li><li><div class="node ">레딧 개발자 게시판, 디스콰이엇 소개글</div></li><li><div class="node ">맥 앱스토어에서 색상대비·WCAG 검색</div></li></ul></li><li><div class="node lead ">2 스토어 페이지 · 부제 &#x27;커스텀 색상·폰트를 다크·고대비에 맞춰 변환&#x27;</div><ul><li><div class="node ">애플이 안 해 주는 일을 대신한다는 설명</div></li><li><div class="node ">기능 여섯 가지를 차례로 소개</div></li><li><div class="node ">맥 전용, 24개 언어</div></li></ul></li><li><div class="node lead ">3 첫 실행 · 저장한 색이 없으면 시작 안내가 뜸</div><ul><li><div class="node ">도움말 메뉴에서 안내를 다시 볼 수 있음</div></li><li><div class="node ">화면에서 색 집기 팁 풍선</div></li><li><div class="node ">색맹 미리보기 팁 풍선</div></li></ul></li><li><div class="node lead ">4 첫 성공 · 내 색을 넣자 네 모드 색이 나란히 뜸</div><ul><li><div class="node ">고대비는 흰 배경 4.5:1, 검은 배경 7:1</div></li><li><div class="node ">마음에 안 드는 변형은 색 고르기로 손봄</div></li><li><div class="node ">색상 파일이나 코드로 바로 내보내기</div></li></ul></li><li><div class="node lead ">5 다시 찾기 · 새 앱·새 화면을 만들 때마다 꺼냄</div><ul><li><div class="node ">저장한 브랜드 색 팔레트가 남아 있음</div></li><li><div class="node ">기본 색 값을 클릭 한 번에 복사</div></li><li><div class="node ">단축어 앱에서 화면 색 집기</div></li></ul></li><li><div class="node lead wall">6 결제 벽 · 아직 결제 장치 없음</div><ul><li><div class="node ">모든 기능이 무료로 열려 있음</div></li></ul></li><li><div class="node lead pay">7 결제 · 아직 결제 장치 없음</div><ul><li><div class="node ">앱 설정에 무료 앱으로 지정되어 있음</div></li><li><div class="node ">판매 상품 없음</div></li></ul></li></ul></li></ul></li></ul></div></section>
+<section class="cards">
+  <article class="card c4"><h2>결제하는 순간</h2>
+    <dl><dt>방식</dt><dd>결제 없음</dd>
+    <dt>무료로 되는 것</dt><dd>모든 기능 무제한 무료</dd>
+    <dt>결제 버튼이 보일 때</dt><dd>결제 화면 없음</dd>
+    <dt>상품</dt><dd><ul><li>상품 없음</li></ul></dd></dl>
+  </article>
+  <article class="card proposal"><h2>제안 <span>확인된 사실 아님</span></h2><ul><li>팔레트 전체 내보내기와 대비 일괄 검사를 평생 이용권으로</li><li>저장 색 5개까지 무료, 그 이상 저장할 때 안내</li><li>내보내기 성공 직후 &#x27;팀에서 쓰신다면&#x27; 후원 안내</li></ul></article>
+</section>
+<footer><p class="eyebrow">근거 파일</p><ul class="sources"><li>APPSTORE.md</li><li>README.md</li><li>RELEASE_NOTES.md</li><li>TetraTint/Support/TetraTintSpec.swift</li><li>TetraTint/TetraTintApp.swift</li><li>TetraTint/Support/Tips.swift</li><li>deploy.env</li></ul></footer>
+</main></body></html>

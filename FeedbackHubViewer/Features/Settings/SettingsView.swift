@@ -2,7 +2,7 @@
 //  SettingsView.swift
 //  FeedbackHubViewer
 //
-//  설정 — 지금은 App Store Connect 연결 하나.
+//  설정 — App Store Connect 연결, 그리고 어떤 것을 뱃지 · 알림으로 볼지.
 //
 //  연결 폼은 원래 "앱 내 구입" 화면 안에 있었는데, 그 키는 앱 내 구입만이 아니라 키워드
 //  화면의 메타데이터 · 노출 카드도 쓴다. 한 화면 안에 두면 다른 화면에서는 "어디서 넣지"가
@@ -11,6 +11,9 @@
 
 import SwiftUI
 import UniformTypeIdentifiers
+#if os(macOS)
+import ServiceManagement
+#endif
 
 struct SettingsView: View {
     @EnvironmentObject private var connect: AppStoreConnectStore
@@ -21,11 +24,20 @@ struct SettingsView: View {
         TabView {
             ScrollView { connectSection.padding(20) }
                 .tabItem { Label("App Store Connect", systemImage: "key") }
+            ScrollView { AttentionSettings().padding(20) }
+                .tabItem { Label("알림", systemImage: "bell.badge") }
         }
         .frame(width: 560, height: 620)
         #else
         NavigationStack {
-            ScrollView { connectSection.padding() }
+            ScrollView {
+                VStack(alignment: .leading, spacing: 28) {
+                    AttentionSettings()
+                    Divider()
+                    connectSection
+                }
+                .padding()
+            }
                 .navigationTitle("설정")
                 .toolbar {
                     ToolbarItem(placement: .confirmationAction) {
@@ -47,6 +59,111 @@ struct SettingsView: View {
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
             ConnectKeyForm(onSaved: {})
+        }
+    }
+}
+
+// MARK: - 알림
+
+/// 무엇을 뱃지(앱 아이콘 · 종 · 탭)로 세고, 무엇이 오면 시스템 알림을 띄울지.
+/// 뱃지는 리뷰 → 피드백 → 진단 순으로 선다 — 이 목록의 순서가 그 우선순위다.
+private struct AttentionSettings: View {
+    @EnvironmentObject private var store: FeedbackStore
+    @EnvironmentObject private var news: NewsStore
+
+    /// 시스템 알림을 띄울 수 있는 것 - 뱃지와 같은 순서.
+    private let alertable: [AttentionKind] = [.review, .feedback, .crash]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            VStack(alignment: .leading, spacing: 10) {
+                Text("뱃지").font(.headline)
+                Text("앱 아이콘 · 툴바의 종 · 탭에 새로 온 수를 붙일 것. 켠 것 가운데 새 리뷰가 맨 앞, 그다음 피드백, 진단 순으로 보입니다.")
+                    .font(.body)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                ForEach(AttentionKind.allCases) { kind in
+                    Toggle(isOn: binding(for: kind, in: \.badgeKinds)) {
+                        Label("새 \(kind.name)", systemImage: kind.systemImage)
+                    }
+                }
+            }
+
+            VStack(alignment: .leading, spacing: 10) {
+                Text("알림").font(.headline)
+                Toggle(isOn: $store.notificationsEnabled) {
+                    Label("새것이 오면 이 기기에 알림 보내기", systemImage: "bell")
+                }
+                ForEach(alertable) { kind in
+                    VStack(alignment: .leading, spacing: 2) {
+                        Toggle(isOn: binding(for: kind, in: \.alertKinds)) {
+                            Label("새 \(kind.name)", systemImage: kind.systemImage)
+                        }
+                        .disabled(!store.notificationsEnabled)
+                        if store.notificationsEnabled && store.alertKinds.contains(kind) {
+                            Text(how(kind))
+                                .font(.body)
+                                .foregroundStyle(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                                .padding(.leading, 28)
+                        }
+                    }
+                    .padding(.leading, 20)
+                }
+                VStack(alignment: .leading, spacing: 2) {
+                    Toggle(isOn: $news.alertsEnabled) {
+                        Label("내 앱 소식", systemImage: "newspaper")
+                    }
+                    .disabled(!store.notificationsEnabled)
+                    if store.notificationsEnabled && news.alertsEnabled {
+                        Text("아침 9시에 하루 한 번, 일어난 일 가운데 볼 만한 것만 골라 다섯 줄까지 브리핑합니다. 볼 만한 게 없는 날은 울리지 않아요.")
+                            .font(.body)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .padding(.leading, 28)
+                    }
+                }
+                .padding(.leading, 20)
+                Text("사용 통계 · 차트 같은 숫자는 하루에 한 번만 저절로 다시 읽습니다. 바로 보려면 새로고침(⌘R)을 누르세요.")
+                    .font(.body)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                #if os(macOS)
+                LoginItemToggle()
+                #endif
+                if store.notificationsEnabled && !store.notificationsAuthorized {
+                    Text("시스템 설정에서 이 앱의 알림을 허용해야 알림이 표시됩니다.")
+                        .font(.body)
+                        .foregroundStyle(.orange)
+                }
+            }
+        }
+        .font(.body)
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// 그 종류가 어떻게 오는지. 푸시가 걸렸는지는 기기마다 다르다.
+    private func how(_ kind: AttentionKind) -> String {
+        switch kind {
+        case .review:
+            #if os(macOS)
+            return "App Store 는 리뷰를 푸시로 알려 주지 않아서, 앱이 떠 있는 동안 30분마다 확인합니다. 창을 닫아도 앱이 떠 있으면 확인합니다."
+            #else
+            return "App Store 는 리뷰를 푸시로 알려 주지 않아서, iOS 가 허락할 때 뒤에서 확인합니다. 몇 시간 늦을 수 있습니다."
+            #endif
+        case .feedback, .crash:
+            return store.pushKinds.contains(kind)
+                ? "푸시로 받습니다 - 앱이 꺼져 있어도 옵니다."
+                : "푸시를 걸지 못해 앱이 떠 있을 때만 옵니다(iCloud 로그인 · 네트워크 확인)."
+        }
+    }
+
+    private func binding(for kind: AttentionKind,
+                         in keyPath: ReferenceWritableKeyPath<FeedbackStore, Set<AttentionKind>>) -> Binding<Bool> {
+        Binding {
+            store[keyPath: keyPath].contains(kind)
+        } set: { isOn in
+            if isOn { store[keyPath: keyPath].insert(kind) } else { store[keyPath: keyPath].remove(kind) }
         }
     }
 }
@@ -86,7 +203,7 @@ struct ConnectKeyForm: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("App Store Connect → 사용자 및 액세스 → 통합 → App Store Connect API에서 팀 키를 만들고, 아래 세 값을 넣어 주세요. 키는 이 기기의 키체인에만 저장됩니다.")
+            Text("App Store Connect → 사용자 및 액세스 → 통합 → App Store Connect API에서 팀 키를 만들고, 아래 세 값을 넣어 주세요. 키는 iCloud 키체인에 저장되어 같은 Apple 계정의 다른 기기(맥 · 아이폰 · 아이패드)에도 저절로 들어갑니다.")
                 .font(.body)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -131,9 +248,25 @@ struct ConnectKeyForm: View {
                         purchases.signOut()
                         onSaved()
                     }
+                    .help("iCloud 키체인의 키를 지웁니다. 같은 Apple 계정의 모든 기기에서 지워집니다.")
                 }
             }
             .font(.body)
+
+            if purchases.isConfigured {
+                // 다른 기기로 가는지 — 안 간다면 왜인지와 무엇을 켜면 되는지.
+                if purchases.isKeySynced {
+                    Label("iCloud 키체인에 저장됨 · 다른 기기에도 들어갑니다", systemImage: "checkmark.icloud")
+                        .font(.callout)
+                        .foregroundStyle(.green)
+                } else {
+                    Label("이 기기에만 저장됨 · 설정 → Apple 계정 → iCloud → 암호 및 키체인을 켜고 다시 저장하면 다른 기기로 갑니다",
+                          systemImage: "icloud.slash")
+                        .font(.callout)
+                        .foregroundStyle(.orange)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
         }
         .onAppear {
             guard let saved = purchases.credentials else { return }
@@ -189,3 +322,33 @@ struct ConnectKeyForm: View {
         }
     }
 }
+
+#if os(macOS)
+/// 맥에 로그인하면 허브가 저절로 떠서 리뷰를 계속 본다.
+private struct LoginItemToggle: View {
+    @State private var isOn = SMAppService.mainApp.status == .enabled
+    @State private var problem: String?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Toggle(isOn: Binding(get: { isOn }, set: set)) {
+                Label("로그인할 때 열기", systemImage: "power")
+            }
+            Text(problem ?? "켜 두면 맥을 켤 때마다 허브가 떠서 새 리뷰를 놓치지 않습니다.")
+                .font(.body)
+                .foregroundStyle(problem == nil ? AnyShapeStyle(.secondary) : AnyShapeStyle(.orange))
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    private func set(_ on: Bool) {
+        do {
+            if on { try SMAppService.mainApp.register() } else { try SMAppService.mainApp.unregister() }
+            problem = nil
+        } catch {
+            problem = "바꾸지 못했습니다: \(error.localizedDescription)"
+        }
+        isOn = SMAppService.mainApp.status == .enabled
+    }
+}
+#endif

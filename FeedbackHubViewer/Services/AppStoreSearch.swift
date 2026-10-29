@@ -61,17 +61,9 @@ actor AppStoreDirectory {
 
     static let shared = AppStoreDirectory()
 
-    /// Apple throttles this endpoint at roughly twenty requests a minute per
-    /// address, and answers a burst with 403s rather than an error you can read.
-    /// Three seconds keeps a long check comfortably under that, and a check runs
-    /// in the background anyway — nobody is watching it tick.
-    private static let minimumInterval: TimeInterval = 3
-
     /// How deep a search reads. 200 is the endpoint's own ceiling, and it is
     /// also about as far down as a rank still means anything.
     static let searchDepth = 200
-
-    private var lastRequest = Date.distantPast
 
     enum Failure: LocalizedError {
         case throttled
@@ -107,6 +99,15 @@ actor AppStoreDirectory {
         return results
     }
 
+    /// App Store id 로 바로. 번들 ID 가 어긋난 앱을 스토어 링크로 이을 때 쓴다.
+    func lookup(ids: [Int], country: String) async throws -> [StoreApp] {
+        guard !ids.isEmpty else { return [] }
+        return try await get(path: "lookup", query: [
+            "id": ids.map(String.init).joined(separator: ","),
+            "country": country,
+        ])
+    }
+
     /// The store's search results for a term, in the order the store returns
     /// them. Position in this list is what "순위" means everywhere else.
     func search(term: String, country: String) async throws -> [StoreApp] {
@@ -131,17 +132,15 @@ actor AppStoreDirectory {
 
         let (data, response) = try await URLSession.shared.data(for: request)
         if let http = response as? HTTPURLResponse, http.statusCode != 200 {
+            if http.statusCode == 403 { await ITunesGate.shared.backOff() }
             throw http.statusCode == 403 ? Failure.throttled : Failure.badResponse(http.statusCode)
         }
         return try Self.decode(data)
     }
 
-    /// Hold each request `minimumInterval` after the last. Measured from when
-    /// the previous one *started*, so a slow response does not add to the wait.
+    /// 차트 피드와 같은 줄에 선다(`ITunesGate`).
     private func pace() async throws {
-        let wait = Self.minimumInterval - Date().timeIntervalSince(lastRequest)
-        if wait > 0 { try await Task.sleep(nanoseconds: UInt64(wait * 1_000_000_000)) }
-        lastRequest = Date()
+        try await ITunesGate.shared.wait()
     }
 
     /// Decoded by hand rather than with `Codable`.
@@ -176,4 +175,37 @@ actor AppStoreDirectory {
         formatter.formatOptions = [.withInternetDateTime]
         return formatter
     }()
+}
+
+/// `itunes.apple.com` 의 문지기. 키워드 검색 · 앱 조회 · 차트 피드는 길은 달라도 같은 주소라
+/// 한도도 하나다 — 주소 하나에 분에 스무 번 남짓, 넘으면 읽을 수 있는 오류 대신 403 을 준다.
+/// 차트 피드를 여섯 개씩 한꺼번에 받으면 열 번째쯤부터 다 403 이 오고, 그 피드의 순위는 통째로
+/// 빠진다. 그래서 셋 다 이 줄에 선다.
+///
+/// 차례를 미리 잡아 두는 방식이라 여럿이 동시에 불러도 3초씩 벌어진다. 403 을 한 번 받으면
+/// 줄 전체가 잠시 쉰다 — 막힌 동안 더 두드리면 막힘이 길어진다.
+actor ITunesGate {
+
+    static let shared = ITunesGate()
+
+    /// 요청 사이 간격. 긴 확인이 한도 아래에 넉넉히 머문다.
+    static let interval: TimeInterval = 3
+    /// 403 을 받은 뒤 줄 전체가 쉬는 시간.
+    static let coolDown: TimeInterval = 60
+
+    private var nextSlot = Date.distantPast
+
+    /// 내 차례가 올 때까지 기다린다.
+    func wait() async throws {
+        let now = Date()
+        let slot = max(now, nextSlot)
+        nextSlot = slot.addingTimeInterval(Self.interval)
+        let delay = slot.timeIntervalSince(now)
+        if delay > 0 { try await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000)) }
+    }
+
+    /// 막혔다 — 다음 차례를 `coolDown` 뒤로 민다.
+    func backOff() {
+        nextSlot = max(nextSlot, Date().addingTimeInterval(Self.coolDown))
+    }
 }

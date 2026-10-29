@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>골드위크 결제까지 마인드맵</title>
+<style>
+:root{--bg:#f5f5f2;--paper:#fff;--fg:#1b1d1c;--muted:#5f6662;--line:#cfd4d0;
+--c1:#c8463b;--c2:#2f6fcf;--c3:#7a4fc4;--c4:#1f8a5b;--wall:#c98a12;color-scheme:light;
+--font:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo",system-ui,sans-serif;--mono:ui-monospace,Menlo,monospace}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#141716;--paper:#1d211f;--fg:#e8ece9;
+--muted:#a1aaa4;--line:#3a423e;--c1:#f07a6f;--c2:#6ea2ef;--c3:#ad8bef;--c4:#4cc38a;--wall:#e7b24a;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#141716;--paper:#1d211f;--fg:#e8ece9;--muted:#a1aaa4;--line:#3a423e;
+--c1:#f07a6f;--c2:#6ea2ef;--c3:#ad8bef;--c4:#4cc38a;--wall:#e7b24a;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.55 var(--font)}
+.wrap{max-width:1280px;margin:0 auto;padding:32px max(16px,env(safe-area-inset-left)) 64px;display:grid;gap:36px}
+header{display:grid;gap:8px}
+h1{font-size:30px;line-height:1.2;margin:0}
+h2{font-size:18px;margin:0 0 10px}
+p{margin:0}
+.eyebrow{font:12px var(--mono);letter-spacing:.06em;color:var(--muted)}
+.lede{color:var(--muted);font-size:16px;max-width:60ch}
+.pill{display:inline-block;font-size:13px;padding:2px 10px;border-radius:99px;border:1px solid var(--c4);color:var(--c4)}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+.card{background:var(--paper);border:1px solid var(--line);border-top:4px solid var(--c);border-radius:10px;padding:16px}
+.c1{--c:var(--c1)}.c2{--c:var(--c2)}.c3{--c:var(--c3)}.c4{--c:var(--c4)}
+.card ul{margin:0;padding-left:18px;display:grid;gap:4px}
+.proposal{--c:var(--line);border-style:dashed;border-top-style:solid}
+.proposal h2 span{font:12px var(--mono);color:var(--muted);font-weight:400;margin-left:6px}
+dl{margin:0;display:grid;gap:4px}
+dt{font-size:13px;color:var(--muted)}
+dd{margin:0 0 6px}
+.map{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:20px;overflow-x:auto}
+/* 가로 트리: 줄기는 왼쪽, 가지는 오른쪽으로 뻗는다 */
+.tree,.tree ul{list-style:none;margin:0;padding:0}
+.tree ul{display:flex;flex-direction:column;justify-content:center;position:relative;padding-left:24px}
+.tree li{display:flex;align-items:center;position:relative;padding:3px 0 3px 24px}
+.tree>li{padding-left:0}
+.tree ul::before{content:"";position:absolute;left:0;top:50%;width:24px;border-top:2px solid var(--line)}
+.tree li::before{content:"";position:absolute;left:0;top:50%;width:24px;border-top:2px solid var(--line)}
+.tree li::after{content:"";position:absolute;left:0;top:0;bottom:0;border-left:2px solid var(--line)}
+.tree li:first-child::after{top:50%}
+.tree li:last-child::after{bottom:50%}
+.tree li:only-child::after,.tree>li::before,.tree>li::after{display:none}
+.node{flex:none;max-width:280px;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:6px 10px;font-size:14px}
+.root{background:var(--fg);color:var(--bg);border:none;font-size:20px;font-weight:700;max-width:220px;padding:14px 16px}
+.root small{display:block;font-size:13px;font-weight:400;opacity:.8;margin-top:4px}
+.branch{color:#fff;border:none;font-weight:700;font-size:16px;padding:8px 14px}
+.b1{background:var(--c1)}.b2{background:var(--c2)}.b3{background:var(--c3)}.b4{background:var(--c4)}
+.lead{font-weight:600;background:var(--paper)}
+.muted{color:var(--muted)}
+.wall{border:2px solid var(--wall)}
+.pay{background:var(--c4);color:#fff;border:none}
+footer{display:grid;gap:6px}
+.sources{margin:0;padding-left:18px;font:12px var(--mono);color:var(--muted)}
+/* 좁은 화면: 들여쓴 세로 목록 */
+@media (max-width:760px){
+.map{padding:14px}
+.tree ul{display:block;padding-left:0;margin-left:12px}
+.tree li{display:block;padding:4px 0 4px 18px}
+.tree ul::before{display:none}
+.tree li::before{top:20px;width:14px}
+.tree li::after,.tree li:first-child::after{top:0;bottom:auto;height:100%}
+.tree li:last-child::after{height:20px}
+.tree li:only-child::after{display:block;height:20px}
+.node{display:inline-block;max-width:100%}
+}
+</style></head><body><main class="wrap">
+<header>
+  <p class="eyebrow">문제 → 타겟 → 솔루션 → 결제</p>
+  <h1>골드위크</h1>
+  <p class="lede">최소 연차로 최대 연휴를 찾아 주는 플래너</p>
+  <p><span class="pill">구독</span></p>
+</header>
+<section class="cards">
+  <article class="card c1"><h2>문제 정의</h2><p>연차를 어디에 붙여야 가장 오래 쉬는지 손으로 센다</p></article>
+  <article class="card c2"><h2>타겟</h2><p>남은 연차를 가장 길게 쓰고 싶은 직장인</p></article>
+  <article class="card c3"><h2>솔루션</h2><p>공휴일마다 연차 며칠로 며칠 쉬는지 바로 보여 준다</p></article>
+</section>
+<section><h2>마인드맵</h2><div class="map"><ul class="tree"><li><div class="node root">골드위크<small>최소 연차로 최대 연휴를 찾아 주는 플래너</small></div><ul><li><div class="node branch b1">문제</div><ul><li><div class="node lead ">연차를 어디에 붙여야 가장 오래 쉬는지 손으로 센다</div><ul><li><div class="node ">매년 달력을 넘기며 연휴를 직접 계산한다</div></li><li><div class="node ">쓰고 나서 &quot;목요일에 붙일걸&quot; 후회한다</div></li><li><div class="node ">남은 연차와 따로 받은 휴가가 헷갈린다</div></li><li><div class="node ">쉬는 날 사이가 벌어져 쉽게 지친다</div></li></ul></li></ul></li><li><div class="node branch b2">타겟</div><ul><li><div class="node lead ">남은 연차를 가장 길게 쓰고 싶은 직장인</div><ul><li><div class="node ">새해에 올해 연휴 계획을 짤 때</div></li><li><div class="node ">연말에 남은 연차를 어디 쓸지 고민할 때</div></li><li><div class="node ">다가오는 설·추석에 연차를 붙일까 할 때</div></li><li><div class="node ">가족과 같이 쉴 날을 맞춰야 할 때</div></li></ul></li><li><div class="node muted">노리지 않는 사람 · 연차 제도가 없는 사람</div></li></ul></li><li><div class="node branch b3">솔루션</div><ul><li><div class="node lead ">공휴일마다 연차 며칠로 며칠 쉬는지 바로 보여 준다</div><ul><li><div class="node ">연휴 추천: 징검다리 휴일까지 자동으로</div></li><li><div class="node ">42개 나라 공휴일, 지역 선택·직접 추가</div></li><li><div class="node ">연차·반차·반반차·포상휴가 만료일 관리</div></li><li><div class="node ">휴가 내역 사진으로 기록 한 번에 불러오기</div></li><li><div class="node ">홈 위젯으로 남은 연차 바로 확인</div></li></ul></li></ul></li><li><div class="node branch b4">결제까지</div><ul><li><div class="node lead ">1 발견 · &quot;내년 설, 연차 하루면 닷새&quot; 같은 글</div><ul><li><div class="node ">명절·연말 시기 인스타·스레드·블로그</div></li><li><div class="node ">레딧 r/expats, r/iosapps 소개</div></li><li><div class="node ">스토어 검색: 연차계산기, 징검다리, 빨간날</div></li></ul></li><li><div class="node lead ">2 스토어 페이지 · &quot;최소 연차로 최대 연휴 만들기&quot;</div><ul><li><div class="node ">연휴 추천·42개 나라·연차 관리 소개</div></li><li><div class="node ">위젯과 iCloud 백업, 가족 일정 공유</div></li><li><div class="node ">플러스·프로 연 구독 자동 갱신 안내</div></li></ul></li><li><div class="node lead ">3 첫 실행 · &quot;3일 연차로 9일 연휴&quot; 장면부터 본다</div><ul><li><div class="node ">기기 지역으로 공휴일 나라를 먼저 고름</div></li><li><div class="node ">이름과 올해 연차 수를 넣는다</div></li><li><div class="node ">마지막 장에서 프로 기능을 소개</div></li></ul></li><li><div class="node lead ">4 첫 성공 · 다가오는 공휴일에 붙일 연차가 보인다</div><ul><li><div class="node ">올해 추천은 전부 무료로 볼 수 있음</div></li><li><div class="node ">마음에 드는 추천을 휴가로 등록</div></li></ul></li><li><div class="node lead ">5 다시 찾기 · 연차를 쓸 때마다 기록하고 위젯으로 확인</div><ul><li><div class="node ">쉬는 간격·번아웃 안내와 알림</div></li><li><div class="node ">가족과 휴가 일정 보기 공유</div></li></ul></li><li><div class="node lead wall">6 결제 벽 · 추천 4번째 등록과 다른 해 추천이 잠김</div><ul><li><div class="node ">무료는 올해 추천 3개까지만 등록</div></li><li><div class="node ">지난해·다음 해로 넘기면 자물쇠</div></li><li><div class="node ">연간 플래너·학교 달력·함께 쉬기는 유료</div></li></ul></li><li><div class="node lead pay">7 결제 · 플러스와 프로, 각각 연 구독 또는 평생</div><ul><li><div class="node ">플러스: 알아서 짜 주는 연간 플래너</div></li><li><div class="node ">프로: 복잡한 규칙·가족과 같이 계획</div></li><li><div class="node ">프로 연 구독이 기본 선택, 첫 해 반값</div></li></ul></li></ul></li></ul></li></ul></div></section>
+<section class="cards">
+  <article class="card c4"><h2>결제하는 순간</h2>
+    <dl><dt>방식</dt><dd>구독</dd>
+    <dt>무료로 되는 것</dt><dd>기록·공휴일·올해 추천 보기 무료, 추천 등록 3개까지</dd>
+    <dt>결제 버튼이 보일 때</dt><dd>추천 4번째 등록, 다른 해 넘기기, 온보딩 마지막 장</dd>
+    <dt>상품</dt><dd><ul><li>플러스 연 구독 · 17,000원 ($9.99)</li><li>프로 연 구독 · 33,000원 ($19.99)</li><li>플러스 평생 · 52,000원 ($29.99)</li><li>프로 평생 · 99,000원 ($59.99)</li><li>플러스 평생에서 프로로 · 47,000원 ($29.99)</li><li>팁 · $0.99 / $2.99 / $9.99</li></ul></dd></dl>
+  </article>
+  <article class="card proposal"><h2>제안 <span>확인된 사실 아님</span></h2><ul><li>연말에 &quot;남은 연차로 만들 수 있는 연휴&quot; 알림</li><li>명절 한 달 전 다음 해 추천 맛보기 한 장</li><li>가족 공유받은 사람에게 함께 쉬기 미리보기</li></ul></article>
+</section>
+<footer><p class="eyebrow">근거 파일</p><ul class="sources"><li>APPSTORE.md</li><li>RELEASE_NOTES.md</li><li>docs/MONETIZATION.md</li><li>Goldweek/Goldweek.storekit</li><li>Goldweek/Services/ProManager.swift</li><li>Goldweek/Views/RecommendationsView.swift</li><li>Goldweek/Views/OnboardingView.swift</li><li>Goldweek/Views/PaywallView.swift</li></ul></footer>
+</main></body></html>

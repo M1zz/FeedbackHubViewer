@@ -60,10 +60,16 @@ struct Feedback: HubRecord, Codable {
         rating = fields.int("rating", "stars", "star", "score", "rate")
         appVersion = fields.string("appVersion", "version", "appVer", "buildVersion",
                                    "app_version", "build")
+        // LeeoKit writes device, OS and app-supplied context into one
+        // `deviceInfo` string ("App 5.1.7 (21) | iPhone17,2 | iOS 26.1\n보낸 곳: …")
+        // rather than separate fields, so a new field never has to be deployed
+        // to Production first. Fall back to its first line when the dedicated
+        // fields are absent.
+        let info = Self.parseDeviceInfo(fields.string("deviceInfo"))
         deviceModel = fields.string("deviceModel", "device", "model", "deviceName",
-                                    "device_model", "hardware")
+                                    "device_model", "hardware") ?? info.model
         systemVersion = fields.string("systemVersion", "osVersion", "os", "iosVersion",
-                                      "macosVersion", "system_version")
+                                      "macosVersion", "system_version") ?? info.system
         contactEmail = fields.string("email", "contactEmail", "contact", "userEmail", "mail")
         feedbackType = fields.string("type", "category", "kind", "feedbackType", "topic")
         platform = fields.string("platform", "os", "osName", "deviceOS")
@@ -93,6 +99,26 @@ struct Feedback: HubRecord, Codable {
         if let appVersion { fields.append(RecordField(key: "appVersion", value: appVersion)) }
         if let deviceModel { fields.append(RecordField(key: "deviceModel", value: deviceModel)) }
         self.allFields = fields
+    }
+
+    // MARK: - deviceInfo
+
+    /// Splits LeeoKit's `App x | model | OS` first line. Older records carry
+    /// the generic `iPhone` there; it is still better than an empty cell.
+    static func parseDeviceInfo(_ raw: String?) -> (model: String?, system: String?) {
+        guard let first = raw?.split(separator: "\n").first else { return (nil, nil) }
+        let parts = first.split(separator: "|").map { $0.trimmingCharacters(in: .whitespaces) }
+        guard parts.count >= 3 else { return (nil, nil) }
+        return (parts[1].isEmpty ? nil : parts[1], parts[2].isEmpty ? nil : parts[2])
+    }
+
+    /// The lines an app attached below the device line: where the form was
+    /// opened from, plan, keyboard state. Empty for records that predate it.
+    var attachedInfoLines: [String] {
+        guard let raw = allFields.first(where: { $0.key == "deviceInfo" })?.value else { return [] }
+        return raw.split(separator: "\n").dropFirst()
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .filter { !$0.isEmpty }
     }
 
     // MARK: - Presentation helpers

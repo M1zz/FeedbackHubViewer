@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>StickyPresenterRemote 결제까지 마인드맵</title>
+<style>
+:root{--bg:#f5f5f2;--paper:#fff;--fg:#1b1d1c;--muted:#5f6662;--line:#cfd4d0;
+--c1:#c8463b;--c2:#2f6fcf;--c3:#7a4fc4;--c4:#1f8a5b;--wall:#c98a12;color-scheme:light;
+--font:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo",system-ui,sans-serif;--mono:ui-monospace,Menlo,monospace}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#141716;--paper:#1d211f;--fg:#e8ece9;
+--muted:#a1aaa4;--line:#3a423e;--c1:#f07a6f;--c2:#6ea2ef;--c3:#ad8bef;--c4:#4cc38a;--wall:#e7b24a;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#141716;--paper:#1d211f;--fg:#e8ece9;--muted:#a1aaa4;--line:#3a423e;
+--c1:#f07a6f;--c2:#6ea2ef;--c3:#ad8bef;--c4:#4cc38a;--wall:#e7b24a;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.55 var(--font)}
+.wrap{max-width:1280px;margin:0 auto;padding:32px max(16px,env(safe-area-inset-left)) 64px;display:grid;gap:36px}
+header{display:grid;gap:8px}
+h1{font-size:30px;line-height:1.2;margin:0}
+h2{font-size:18px;margin:0 0 10px}
+p{margin:0}
+.eyebrow{font:12px var(--mono);letter-spacing:.06em;color:var(--muted)}
+.lede{color:var(--muted);font-size:16px;max-width:60ch}
+.pill{display:inline-block;font-size:13px;padding:2px 10px;border-radius:99px;border:1px solid var(--c4);color:var(--c4)}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+.card{background:var(--paper);border:1px solid var(--line);border-top:4px solid var(--c);border-radius:10px;padding:16px}
+.c1{--c:var(--c1)}.c2{--c:var(--c2)}.c3{--c:var(--c3)}.c4{--c:var(--c4)}
+.card ul{margin:0;padding-left:18px;display:grid;gap:4px}
+.proposal{--c:var(--line);border-style:dashed;border-top-style:solid}
+.proposal h2 span{font:12px var(--mono);color:var(--muted);font-weight:400;margin-left:6px}
+dl{margin:0;display:grid;gap:4px}
+dt{font-size:13px;color:var(--muted)}
+dd{margin:0 0 6px}
+.map{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:20px;overflow-x:auto}
+/* 가로 트리: 줄기는 왼쪽, 가지는 오른쪽으로 뻗는다 */
+.tree,.tree ul{list-style:none;margin:0;padding:0}
+.tree ul{display:flex;flex-direction:column;justify-content:center;position:relative;padding-left:24px}
+.tree li{display:flex;align-items:center;position:relative;padding:3px 0 3px 24px}
+.tree>li{padding-left:0}
+.tree ul::before{content:"";position:absolute;left:0;top:50%;width:24px;border-top:2px solid var(--line)}
+.tree li::before{content:"";position:absolute;left:0;top:50%;width:24px;border-top:2px solid var(--line)}
+.tree li::after{content:"";position:absolute;left:0;top:0;bottom:0;border-left:2px solid var(--line)}
+.tree li:first-child::after{top:50%}
+.tree li:last-child::after{bottom:50%}
+.tree li:only-child::after,.tree>li::before,.tree>li::after{display:none}
+.node{flex:none;max-width:280px;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:6px 10px;font-size:14px}
+.root{background:var(--fg);color:var(--bg);border:none;font-size:20px;font-weight:700;max-width:220px;padding:14px 16px}
+.root small{display:block;font-size:13px;font-weight:400;opacity:.8;margin-top:4px}
+.branch{color:#fff;border:none;font-weight:700;font-size:16px;padding:8px 14px}
+.b1{background:var(--c1)}.b2{background:var(--c2)}.b3{background:var(--c3)}.b4{background:var(--c4)}
+.lead{font-weight:600;background:var(--paper)}
+.muted{color:var(--muted)}
+.wall{border:2px solid var(--wall)}
+.pay{background:var(--c4);color:#fff;border:none}
+footer{display:grid;gap:6px}
+.sources{margin:0;padding-left:18px;font:12px var(--mono);color:var(--muted)}
+/* 좁은 화면: 들여쓴 세로 목록 */
+@media (max-width:760px){
+.map{padding:14px}
+.tree ul{display:block;padding-left:0;margin-left:12px}
+.tree li{display:block;padding:4px 0 4px 18px}
+.tree ul::before{display:none}
+.tree li::before{top:20px;width:14px}
+.tree li::after,.tree li:first-child::after{top:0;bottom:auto;height:100%}
+.tree li:last-child::after{height:20px}
+.tree li:only-child::after{display:block;height:20px}
+.node{display:inline-block;max-width:100%}
+}
+</style></head><body><main class="wrap">
+<header>
+  <p class="eyebrow">문제 → 타겟 → 솔루션 → 결제</p>
+  <h1>StickyPresenterRemote</h1>
+  <p class="lede">Mac 발표 타이머를 iPhone 손안에서</p>
+  <p><span class="pill">결제 없음</span></p>
+</header>
+<section class="cards">
+  <article class="card c1"><h2>문제 정의</h2><p>발표 중엔 멀리 둔 Mac의 타이머에 손이 닿지 않는다</p></article>
+  <article class="card c2"><h2>타겟</h2><p>Mac용 StickyPresenter로 발표·강의하는 사람</p></article>
+  <article class="card c3"><h2>솔루션</h2><p>같은 Wi-Fi의 Mac 타이머를 iPhone에서 그대로 조작한다</p></article>
+</section>
+<section><h2>마인드맵</h2><div class="map"><ul class="tree"><li><div class="node root">StickyPresenterRemote<small>Mac 발표 타이머를 iPhone 손안에서</small></div><ul><li><div class="node branch b1">문제</div><ul><li><div class="node lead ">발표 중엔 멀리 둔 Mac의 타이머에 손이 닿지 않는다</div><ul><li><div class="node ">시간 추가하려고 Mac까지 걸어가야 한다</div></li><li><div class="node ">타이머 창이 슬라이드를 가려도 못 옮긴다</div></li><li><div class="node ">뒷자리에선 타이머 글자가 작아 안 보인다</div></li><li><div class="node ">청중 앞에서 Mac을 만지면 흐름이 끊긴다</div></li></ul></li></ul></li><li><div class="node branch b2">타겟</div><ul><li><div class="node lead ">Mac용 StickyPresenter로 발표·강의하는 사람</div><ul><li><div class="node ">강단에 서서 Mac과 멀어졌을 때</div></li><li><div class="node ">이야기가 길어져 시간을 늘려야 할 때</div></li><li><div class="node ">타이머가 슬라이드 내용을 가렸을 때</div></li></ul></li><li><div class="node muted">노리지 않는 사람 · Mac 앱 없이 iPhone만 쓰는 사람</div></li></ul></li><li><div class="node branch b3">솔루션</div><ul><li><div class="node lead ">같은 Wi-Fi의 Mac 타이머를 iPhone에서 그대로 조작한다</div><ul><li><div class="node ">남은 시간·뽀모도로 구간을 1초마다 보기</div></li><li><div class="node ">시작·일시정지·30초 더하기와 빼기</div></li><li><div class="node ">3·5·10·15분 프리셋으로 새 타이머</div></li><li><div class="node ">Mac 화면 축소판에서 끌어 위젯 옮기기</div></li><li><div class="node ">계정·서버 없이 짝 맺은 Mac에만 연결</div></li></ul></li></ul></li><li><div class="node branch b4">결제까지</div><ul><li><div class="node lead ">1 발견 · Mac 앱 설정과 소개 페이지에서 리모컨을 안다</div><ul><li><div class="node ">Mac 메뉴 막대 타이머 → Remote 메뉴</div></li><li><div class="node ">StickyPresenter 소개 페이지의 리모컨 안내</div></li><li><div class="node ">발표 타이머 리모컨 같은 말로 검색</div></li></ul></li><li><div class="node lead ">2 스토어 페이지 · 혼자 쓰는 앱이 아니라고 먼저 밝힌다</div><ul><li><div class="node ">부제: Mac 발표 타이머를 손안에서</div></li><li><div class="node ">같은 Wi-Fi의 Mac 앱이 꼭 필요</div></li><li><div class="node ">계정·분석·광고 없음, 24개 언어</div></li></ul></li><li><div class="node lead ">3 첫 실행 · 세 장 안내 뒤 Mac 찾기를 시작한다</div><ul><li><div class="node ">Mac 앱의 리모컨, 같은 Wi-Fi, 코드 한 번</div></li><li><div class="node ">첫 장에 Mac 앱 받기 버튼</div></li><li><div class="node ">안내 뒤에 로컬 네트워크 허용을 묻는다</div></li></ul></li><li><div class="node lead ">4 첫 성공 · 네 자리 코드를 넣자 Mac 타이머가 움직인다</div><ul><li><div class="node ">목록에서 내 Mac 고르고 코드 입력</div></li><li><div class="node ">폰에서 누르면 Mac 타이머가 바로 반응</div></li><li><div class="node ">끌어서 옮기기 팁으로 위젯 이동 체험</div></li></ul></li><li><div class="node lead ">5 다시 찾기 · 발표 때마다 열면 저절로 붙는다</div><ul><li><div class="node ">짝 맺은 Mac에 코드 없이 다시 연결</div></li><li><div class="node ">단축어로 Mac에서 타이머 시작</div></li><li><div class="node ">못 찾으면 원인 체크리스트를 보여 줌</div></li></ul></li><li><div class="node lead wall">6 결제 벽 · 아직 결제 장치 없음, 모든 기능 무료</div><ul><li><div class="node ">기능 잠금이나 횟수 제한이 없다</div></li><li><div class="node ">Mac 앱도 결제 상품이 없다</div></li></ul></li><li><div class="node lead pay">7 결제 · 아직 결제 장치 없음</div><ul><li><div class="node ">앱 설정상 무료 앱으로 지정</div></li><li><div class="node ">Mac 앱 사용을 늘리는 짝 앱 역할</div></li></ul></li></ul></li></ul></li></ul></div></section>
+<section class="cards">
+  <article class="card c4"><h2>결제하는 순간</h2>
+    <dl><dt>방식</dt><dd>결제 없음</dd>
+    <dt>무료로 되는 것</dt><dd>모든 기능 무료, 제한 없음</dd>
+    <dt>결제 버튼이 보일 때</dt><dd>결제 버튼 없음</dd>
+    <dt>상품</dt><dd><ul><li>상품 없음</li></ul></dd></dl>
+  </article>
+  <article class="card proposal"><h2>제안 <span>확인된 사실 아님</span></h2><ul><li>Mac 앱 유료 기능에 리모컨을 묶어 함께 팔기</li><li>발표가 끝난 직후 팁 주기 버튼 보여 주기</li><li>슬라이드 넘기기를 유료 기능으로 더하기</li></ul></article>
+</section>
+<footer><p class="eyebrow">근거 파일</p><ul class="sources"><li>APPSTORE.md</li><li>RELEASE_NOTES.md</li><li>Sources/RemoteSpec.swift</li><li>Sources/RemoteOnboardingView.swift</li><li>Sources/RemoteShortcuts.swift</li><li>Sources/RemoteTips.swift</li><li>deploy.env</li></ul></footer>
+</main></body></html>

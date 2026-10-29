@@ -1,0 +1,88 @@
+{
+  "project": "com.leeo.StickyPresenter.Remote",
+  "name": "StickyPresenterRemote",
+  "tagline": "Mac 발표 타이머를 iPhone 손안에서",
+  "problem": {
+    "statement": "발표 중엔 멀리 둔 Mac의 타이머에 손이 닿지 않는다",
+    "pains": [
+      "시간 추가하려고 Mac까지 걸어가야 한다",
+      "타이머 창이 슬라이드를 가려도 못 옮긴다",
+      "뒷자리에선 타이머 글자가 작아 안 보인다",
+      "청중 앞에서 Mac을 만지면 흐름이 끊긴다"
+    ]
+  },
+  "target": {
+    "who": "Mac용 StickyPresenter로 발표·강의하는 사람",
+    "moments": [
+      "강단에 서서 Mac과 멀어졌을 때",
+      "이야기가 길어져 시간을 늘려야 할 때",
+      "타이머가 슬라이드 내용을 가렸을 때"
+    ],
+    "notFor": "Mac 앱 없이 iPhone만 쓰는 사람"
+  },
+  "solution": {
+    "core": "같은 Wi-Fi의 Mac 타이머를 iPhone에서 그대로 조작한다",
+    "features": [
+      "남은 시간·뽀모도로 구간을 1초마다 보기",
+      "시작·일시정지·30초 더하기와 빼기",
+      "3·5·10·15분 프리셋으로 새 타이머",
+      "Mac 화면 축소판에서 끌어 위젯 옮기기",
+      "계정·서버 없이 짝 맺은 Mac에만 연결"
+    ]
+  },
+  "journey": [
+    {"step": "발견", "what": "Mac 앱 설정과 소개 페이지에서 리모컨을 안다", "details": [
+      "Mac 메뉴 막대 타이머 → Remote 메뉴",
+      "StickyPresenter 소개 페이지의 리모컨 안내",
+      "발표 타이머 리모컨 같은 말로 검색"
+    ]},
+    {"step": "스토어 페이지", "what": "혼자 쓰는 앱이 아니라고 먼저 밝힌다", "details": [
+      "부제: Mac 발표 타이머를 손안에서",
+      "같은 Wi-Fi의 Mac 앱이 꼭 필요",
+      "계정·분석·광고 없음, 24개 언어"
+    ]},
+    {"step": "첫 실행", "what": "세 장 안내 뒤 Mac 찾기를 시작한다", "details": [
+      "Mac 앱의 리모컨, 같은 Wi-Fi, 코드 한 번",
+      "첫 장에 Mac 앱 받기 버튼",
+      "안내 뒤에 로컬 네트워크 허용을 묻는다"
+    ]},
+    {"step": "첫 성공", "what": "네 자리 코드를 넣자 Mac 타이머가 움직인다", "details": [
+      "목록에서 내 Mac 고르고 코드 입력",
+      "폰에서 누르면 Mac 타이머가 바로 반응",
+      "끌어서 옮기기 팁으로 위젯 이동 체험"
+    ]},
+    {"step": "다시 찾기", "what": "발표 때마다 열면 저절로 붙는다", "details": [
+      "짝 맺은 Mac에 코드 없이 다시 연결",
+      "단축어로 Mac에서 타이머 시작",
+      "못 찾으면 원인 체크리스트를 보여 줌"
+    ]},
+    {"step": "결제 벽", "what": "아직 결제 장치 없음, 모든 기능 무료", "details": [
+      "기능 잠금이나 횟수 제한이 없다",
+      "Mac 앱도 결제 상품이 없다"
+    ]},
+    {"step": "결제", "what": "아직 결제 장치 없음", "details": [
+      "앱 설정상 무료 앱으로 지정",
+      "Mac 앱 사용을 늘리는 짝 앱 역할"
+    ]}
+  ],
+  "payment": {
+    "model": "결제 없음",
+    "products": [],
+    "freeLimit": "모든 기능 무료, 제한 없음",
+    "trigger": "결제 버튼 없음"
+  },
+  "proposals": [
+    "Mac 앱 유료 기능에 리모컨을 묶어 함께 팔기",
+    "발표가 끝난 직후 팁 주기 버튼 보여 주기",
+    "슬라이드 넘기기를 유료 기능으로 더하기"
+  ],
+  "sources": [
+    "APPSTORE.md",
+    "RELEASE_NOTES.md",
+    "Sources/RemoteSpec.swift",
+    "Sources/RemoteOnboardingView.swift",
+    "Sources/RemoteShortcuts.swift",
+    "Sources/RemoteTips.swift",
+    "deploy.env"
+  ]
+}

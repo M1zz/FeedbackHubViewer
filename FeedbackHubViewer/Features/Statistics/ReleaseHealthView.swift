@@ -106,11 +106,11 @@ struct ReleaseHealthView: View {
                     HStack(alignment: .firstTextBaseline, spacing: 8) {
                         Text(name)
                             .font(.body.weight(.semibold))
-                            .lineLimit(1)
+                            .lineLimit(2)
                         Text(versions)
                             .font(.subheadline.monospacedDigit())
                             .foregroundStyle(.secondary)
-                            .lineLimit(1)
+                            .lineLimit(2)
                         Spacer(minLength: 4)
                         Tag(text: level.label, systemImage: ReleaseHealthCard.symbol(level),
                             tint: ReleaseHealthCard.tint(level))
@@ -127,6 +127,15 @@ struct ReleaseHealthView: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .contextMenu {
+            if level != .green {
+                Button {
+                    Platform.copyToPasteboard(ReleaseHealthCard.claudePrompt(report, appName: name, project: row.key))
+                } label: {
+                    Label("Claude에게 맡길 글 복사", systemImage: "doc.on.doc")
+                }
+            }
+        }
         .accessibilityLabel("\(name), 릴리즈 건강 \(level.label), \(report.verdict.headline)")
     }
 }

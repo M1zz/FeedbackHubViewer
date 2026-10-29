@@ -970,6 +970,44 @@ extension FeedbackStore {
     }
 
 
+    // MARK: - Daily installs
+
+    /// 하루에 새로 설치된 수 하나.
+    struct DailyInstall: Identifiable {
+        var id: Date { date }
+        let date: Date
+        let count: Int
+    }
+
+    /// 첫 설치일부터 오늘까지 하루도 빠짐없는 일별 신규 설치.
+    ///
+    /// `trend(unit: .day)` 와 같은 것을 세지만 거기는 첫 기록부터 400칸에서 멈춰,
+    /// 오래된 앱은 오늘까지 오지 못한다. 이 카드는 최근이 주인공이라 끝을 오늘에
+    /// 못박고, 기간을 자르는 것은 보는 쪽(`suffix`)이 한다. 설치일은 스냅샷의
+    /// `installDate` — 스냅샷 하나가 설치 하나라 무리를 골라도 정확하다.
+    func dailyInstalls(for project: String?, audience: Audience = .all,
+                       calendar: Calendar = .current) -> [DailyInstall] {
+        memoized(\.dailyInstalls, ScopeKey(project: project, audience: audience)) {
+            var counts: [Date: Int] = [:]
+            for snapshot in snapshots(for: project, audience: audience) {
+                guard let installed = snapshot.installDate else { continue }
+                counts[calendar.startOfDay(for: installed), default: 0] += 1
+            }
+            let today = calendar.startOfDay(for: Date())
+            guard let first = counts.keys.min() else { return [] }
+
+            var days: [DailyInstall] = []
+            var cursor = min(first, today)
+            while cursor <= today {
+                days.append(DailyInstall(date: cursor, count: counts[cursor] ?? 0))
+                guard let next = calendar.date(byAdding: .day, value: 1, to: cursor) else { break }
+                cursor = next
+            }
+            return days
+        }
+    }
+
+
     // MARK: - Carrying capacity
 
     /// 이 프로젝트의 성장 상한 — 지금의 유입과 이탈이 이어질 때 활동 사용자가

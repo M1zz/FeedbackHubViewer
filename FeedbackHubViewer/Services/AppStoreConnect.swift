@@ -52,18 +52,72 @@ struct AppStoreConnectCredentials: Codable, Equatable {
 }
 
 /// 키는 리포도 UserDefaults도 아니라 키체인에 둔다. 한 벌을 JSON 하나로.
+///
+/// **iCloud 키체인**(동기화 항목)에 둔다 — 맥에서 한 번 넣으면 같은 Apple 계정의 아이폰 ·
+/// 아이패드에도 저절로 들어온다. 비밀키(.p8)라 iCloud 키·값 저장소 같은 데가 아니라
+/// 종단 간 암호화되는 키체인이어야 한다.
+///
+/// 항목은 엔타이틀먼트의 첫 `keychain-access-groups`(…FeedbackHubViewer.shared)에 들어간다.
+/// 그래서 Development · Production 빌드(번들 ID 가 다르다)도 같은 키를 본다.
+///
+/// 예전에는 이 기기에만 있는 항목이었다. 그런 것이 있으면 읽을 때 iCloud 쪽으로 옮기고
+/// 옛 사본은 지운다. iCloud 키체인을 못 쓰는 기기(꺼져 있음 등)에서는 지금까지처럼 기기
+/// 항목으로 남는다 — 키가 아예 저장되지 않는 것보다 낫다.
 enum AppStoreConnectKeychain {
     private static let service = "com.Ysoup.FeedbackHubViewer.appstoreconnect"
     private static let account = "api-key"
 
-    private static var baseQuery: [String: Any] {
+    private static var identity: [String: Any] {
         [kSecClass as String: kSecClassGenericPassword,
          kSecAttrService as String: service,
          kSecAttrAccount as String: account]
     }
 
+    /// iCloud 키체인 항목. 맥에서도 데이터 보호 키체인을 써야 동기화 항목이 된다.
+    private static var syncedQuery: [String: Any] {
+        var query = identity
+        query[kSecAttrSynchronizable as String] = kCFBooleanTrue
+        query[kSecUseDataProtectionKeychain as String] = true
+        return query
+    }
+
+    /// 이 기기에만 있는 옛 항목(맥이면 로그인 키체인 파일).
+    private static var deviceQuery: [String: Any] { identity }
+
     static func load() -> AppStoreConnectCredentials? {
-        var query = baseQuery
+        if let synced = read(syncedQuery) { return synced }
+        guard let local = read(deviceQuery) else { return nil }
+        // 옮겨 본다. 못 옮기면(iCloud 키체인 꺼짐) 기기 항목을 그대로 쓴다.
+        if addSynced(local) { SecItemDelete(deviceQuery as CFDictionary) }
+        return local
+    }
+
+    static func save(_ credentials: AppStoreConnectCredentials) throws {
+        if addSynced(credentials) {
+            SecItemDelete(deviceQuery as CFDictionary)
+            return
+        }
+        // iCloud 키체인을 못 쓰면 이 기기에만.
+        let data = try JSONEncoder().encode(credentials)
+        SecItemDelete(deviceQuery as CFDictionary)
+        var query = deviceQuery
+        query[kSecValueData as String] = data
+        query[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlock
+        let status = SecItemAdd(query as CFDictionary, nil)
+        guard status == errSecSuccess else { throw AppStoreConnect.Failure.keychain(status) }
+    }
+
+    /// 지우면 **모든 기기에서** 지워진다 — 동기화 항목이 하나뿐이라서.
+    static func delete() {
+        SecItemDelete(syncedQuery as CFDictionary)
+        SecItemDelete(deviceQuery as CFDictionary)
+    }
+
+    /// 지금 키가 iCloud 키체인에 있는가(다른 기기로 가는가). 설정 화면이 한 줄로 알린다.
+    static var isSynced: Bool { read(syncedQuery) != nil }
+
+    private static func read(_ base: [String: Any]) -> AppStoreConnectCredentials? {
+        var query = base
         query[kSecReturnData as String] = true
         query[kSecMatchLimit as String] = kSecMatchLimitOne
         var item: CFTypeRef?
@@ -72,25 +126,21 @@ enum AppStoreConnectKeychain {
         return try? JSONDecoder().decode(AppStoreConnectCredentials.self, from: data)
     }
 
-    static func save(_ credentials: AppStoreConnectCredentials) throws {
-        let data = try JSONEncoder().encode(credentials)
-        SecItemDelete(baseQuery as CFDictionary)
-        var query = baseQuery
+    private static func addSynced(_ credentials: AppStoreConnectCredentials) -> Bool {
+        guard let data = try? JSONEncoder().encode(credentials) else { return false }
+        SecItemDelete(syncedQuery as CFDictionary)
+        var query = syncedQuery
         query[kSecValueData as String] = data
+        // 동기화 항목은 "이 기기에서만" 접근성을 쓸 수 없다.
         query[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlock
-        let status = SecItemAdd(query as CFDictionary, nil)
-        guard status == errSecSuccess else { throw AppStoreConnect.Failure.keychain(status) }
-    }
-
-    static func delete() {
-        SecItemDelete(baseQuery as CFDictionary)
+        return SecItemAdd(query as CFDictionary, nil) == errSecSuccess
     }
 }
 
 // MARK: - 모델
 
 /// 스토어에 걸린 상품 하나 — 인앱 구입이든 구독이든.
-struct StoreProduct: Identifiable, Hashable {
+struct StoreProduct: Identifiable, Hashable, Codable {
     /// App Store Connect의 id. 판매 리포트의 Apple Identifier와 같은 값이다.
     let id: String
     let name: String
@@ -102,8 +152,11 @@ struct StoreProduct: Identifiable, Hashable {
     var period: String?
     /// "₩4,400" — 못 읽었으면 nil.
     var price: String?
+    /// 같은 가격의 숫자와 통화. 한국 가격이 없는 상품을 원화로 어림하는 데 쓴다.
+    var priceAmount: Double?
+    var priceCurrency: String?
 
-    enum Kind: String, Hashable {
+    enum Kind: String, Hashable, Codable {
         case consumable = "CONSUMABLE"
         case nonConsumable = "NON_CONSUMABLE"
         case nonRenewing = "NON_RENEWING_SUBSCRIPTION"
@@ -155,14 +208,14 @@ struct StoreProduct: Identifiable, Hashable {
 }
 
 /// App Store Connect에 있는 앱 하나.
-struct ConnectApp: Hashable {
+struct ConnectApp: Hashable, Codable {
     let id: String
     let name: String
     let bundleID: String
 }
 
 /// 판매 리포트 한 줄에서 필요한 것만.
-struct SalesLine: Hashable {
+struct SalesLine: Hashable, Codable {
     let appleID: String
     let productType: String
     let units: Int
@@ -173,6 +226,12 @@ struct SalesLine: Hashable {
     let customerPrice: Double
     /// 프로모션 · 오퍼 코드 이름(없으면 빈 문자열).
     let promoCode: String
+    /// 산 사람의 나라(ISO 3166 두 글자, 대문자 "KR"). 수익 지도가 이것으로 나라를 가른다.
+    ///
+    /// 옵셔널이 아닌 것은 일부러다. 이 칸이 생기기 전에 디스크에 쓴 리포트는 읽다가
+    /// 실패해 버려지고(`CacheFile.read`), 다음 새로고침이 나라가 붙은 것으로 다시 받는다.
+    /// 옵셔널로 두면 지난 날짜는 "이미 받음" 으로 남아 지도에 영영 안 나온다.
+    let countryCode: String
 
     /// 앱 첫 다운로드(업데이트·재다운로드 제외).
     var isFirstDownload: Bool { ["1", "1F", "1T", "F1"].contains(productType) }
@@ -215,6 +274,9 @@ actor AppStoreConnect {
 
     private let credentials: AppStoreConnectCredentials
     private var token: (value: String, expires: Date)?
+    /// 앱 id → 지난 기록(ONE_TIME_SNAPSHOT) 요청 id. 리포트 열두 종이 저마다 묻지 않게
+    /// 한 번 찾으면 이번 실행 동안 둔다(`AppStoreConnect+AnalyticsReports.swift`).
+    var snapshotRequests: [String: String?] = [:]
     private static let base = URL(string: "https://api.appstoreconnect.apple.com")!
 
     init(credentials: AppStoreConnectCredentials) {
@@ -360,13 +422,16 @@ actor AppStoreConnect {
 
         // 가격은 상품마다 한 번씩 물어야 해서 따로 돈다. 하나를 못 읽어도 목록은 선다.
         for index in products.indices {
-            products[index].price = try? await price(for: products[index])
+            guard let found = try? await price(for: products[index]) else { continue }
+            products[index].price = Self.formatMoney(found.amount, currency: found.currency)
+            products[index].priceAmount = found.amount
+            products[index].priceCurrency = found.currency
         }
         return products
     }
 
     /// 지금 적용 중인 가격. 한국 가격이 따로 정해져 있으면 그것, 아니면 기준 국가의 가격.
-    private func price(for product: StoreProduct) async throws -> String? {
+    private func price(for product: StoreProduct) async throws -> (amount: Double, currency: String?)? {
         let today = Self.day.string(from: Date())
         func isCurrent(_ resource: ASCResource) -> Bool {
             let start = resource.string("startDate") ?? "0000-00-00"
@@ -425,13 +490,13 @@ actor AppStoreConnect {
         return doc.data
     }
 
-    private static func formatPrice(_ price: ASCResource, point: String, in doc: ASCDocument) -> String? {
+    private static func formatPrice(_ price: ASCResource, point: String, in doc: ASCDocument) -> (amount: Double, currency: String?)? {
         guard let pointID = price.relationshipID(point),
               let pricePoint = doc.included.first(where: { $0.id == pointID }),
               let amount = pricePoint.string("customerPrice").flatMap(Double.init) else { return nil }
         let territoryID = price.relationshipID("territory")
         let currency = doc.included.first { $0.type == "territories" && $0.id == territoryID }?.string("currency")
-        return formatMoney(amount, currency: currency)
+        return (amount, currency)
     }
 
     static func formatMoney(_ amount: Double, currency: String?) -> String {
@@ -474,15 +539,17 @@ actor AppStoreConnect {
               let currency = column("Currency of Proceeds") else { return [] }
         let price = column("Customer Price")
         let promo = column("Promo Code")
+        let country = column("Country Code")
         return lines.compactMap { row in
-            guard row.count > max(apple, type, units, proceeds, currency, price ?? 0) else { return nil }
+            guard row.count > max(apple, type, units, proceeds, currency, price ?? 0, country ?? 0) else { return nil }
             return SalesLine(appleID: row[apple],
                              productType: row[type],
                              units: Int(Double(row[units]) ?? 0),
                              proceedsPerUnit: Double(row[proceeds]) ?? 0,
                              proceedsCurrency: row[currency],
                              customerPrice: price.flatMap { Double(row[$0]) } ?? 0,
-                             promoCode: promo.map { row[$0].trimmingCharacters(in: .whitespaces) } ?? "")
+                             promoCode: promo.map { row[$0].trimmingCharacters(in: .whitespaces) } ?? "",
+                             countryCode: country.map { row[$0].trimmingCharacters(in: .whitespaces).uppercased() } ?? "")
         }
     }
 

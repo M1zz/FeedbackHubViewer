@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>불타는 내인생 결제까지 마인드맵</title>
+<style>
+:root{--bg:#f5f5f2;--paper:#fff;--fg:#1b1d1c;--muted:#5f6662;--line:#cfd4d0;
+--c1:#c8463b;--c2:#2f6fcf;--c3:#7a4fc4;--c4:#1f8a5b;--wall:#c98a12;color-scheme:light;
+--font:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo",system-ui,sans-serif;--mono:ui-monospace,Menlo,monospace}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#141716;--paper:#1d211f;--fg:#e8ece9;
+--muted:#a1aaa4;--line:#3a423e;--c1:#f07a6f;--c2:#6ea2ef;--c3:#ad8bef;--c4:#4cc38a;--wall:#e7b24a;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#141716;--paper:#1d211f;--fg:#e8ece9;--muted:#a1aaa4;--line:#3a423e;
+--c1:#f07a6f;--c2:#6ea2ef;--c3:#ad8bef;--c4:#4cc38a;--wall:#e7b24a;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.55 var(--font)}
+.wrap{max-width:1280px;margin:0 auto;padding:32px max(16px,env(safe-area-inset-left)) 64px;display:grid;gap:36px}
+header{display:grid;gap:8px}
+h1{font-size:30px;line-height:1.2;margin:0}
+h2{font-size:18px;margin:0 0 10px}
+p{margin:0}
+.eyebrow{font:12px var(--mono);letter-spacing:.06em;color:var(--muted)}
+.lede{color:var(--muted);font-size:16px;max-width:60ch}
+.pill{display:inline-block;font-size:13px;padding:2px 10px;border-radius:99px;border:1px solid var(--c4);color:var(--c4)}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+.card{background:var(--paper);border:1px solid var(--line);border-top:4px solid var(--c);border-radius:10px;padding:16px}
+.c1{--c:var(--c1)}.c2{--c:var(--c2)}.c3{--c:var(--c3)}.c4{--c:var(--c4)}
+.card ul{margin:0;padding-left:18px;display:grid;gap:4px}
+.proposal{--c:var(--line);border-style:dashed;border-top-style:solid}
+.proposal h2 span{font:12px var(--mono);color:var(--muted);font-weight:400;margin-left:6px}
+dl{margin:0;display:grid;gap:4px}
+dt{font-size:13px;color:var(--muted)}
+dd{margin:0 0 6px}
+.map{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:20px;overflow-x:auto}
+/* 가로 트리: 줄기는 왼쪽, 가지는 오른쪽으로 뻗는다 */
+.tree,.tree ul{list-style:none;margin:0;padding:0}
+.tree ul{display:flex;flex-direction:column;justify-content:center;position:relative;padding-left:24px}
+.tree li{display:flex;align-items:center;position:relative;padding:3px 0 3px 24px}
+.tree>li{padding-left:0}
+.tree ul::before{content:"";position:absolute;left:0;top:50%;width:24px;border-top:2px solid var(--line)}
+.tree li::before{content:"";position:absolute;left:0;top:50%;width:24px;border-top:2px solid var(--line)}
+.tree li::after{content:"";position:absolute;left:0;top:0;bottom:0;border-left:2px solid var(--line)}
+.tree li:first-child::after{top:50%}
+.tree li:last-child::after{bottom:50%}
+.tree li:only-child::after,.tree>li::before,.tree>li::after{display:none}
+.node{flex:none;max-width:280px;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:6px 10px;font-size:14px}
+.root{background:var(--fg);color:var(--bg);border:none;font-size:20px;font-weight:700;max-width:220px;padding:14px 16px}
+.root small{display:block;font-size:13px;font-weight:400;opacity:.8;margin-top:4px}
+.branch{color:#fff;border:none;font-weight:700;font-size:16px;padding:8px 14px}
+.b1{background:var(--c1)}.b2{background:var(--c2)}.b3{background:var(--c3)}.b4{background:var(--c4)}
+.lead{font-weight:600;background:var(--paper)}
+.muted{color:var(--muted)}
+.wall{border:2px solid var(--wall)}
+.pay{background:var(--c4);color:#fff;border:none}
+footer{display:grid;gap:6px}
+.sources{margin:0;padding-left:18px;font:12px var(--mono);color:var(--muted)}
+/* 좁은 화면: 들여쓴 세로 목록 */
+@media (max-width:760px){
+.map{padding:14px}
+.tree ul{display:block;padding-left:0;margin-left:12px}
+.tree li{display:block;padding:4px 0 4px 18px}
+.tree ul::before{display:none}
+.tree li::before{top:20px;width:14px}
+.tree li::after,.tree li:first-child::after{top:0;bottom:auto;height:100%}
+.tree li:last-child::after{height:20px}
+.tree li:only-child::after{display:block;height:20px}
+.node{display:inline-block;max-width:100%}
+}
+</style></head><body><main class="wrap">
+<header>
+  <p class="eyebrow">문제 → 타겟 → 솔루션 → 결제</p>
+  <h1>불타는 내인생</h1>
+  <p class="lede">잠들 때까지 남은 시간이 타들어가는 양피지</p>
+  <p><span class="pill">평생 이용권</span></p>
+</header>
+<section class="cards">
+  <article class="card c1"><h2>문제 정의</h2><p>퇴근 후 저녁이 뭘 했는지 모르게 사라진다</p></article>
+  <article class="card c2"><h2>타겟</h2><p>저녁 시간을 흘려보내고 허무한 직장인</p></article>
+  <article class="card c3"><h2>솔루션</h2><p>남은 시간을 타는 양피지로 보여 주고 하루를 끄게 한다</p></article>
+</section>
+<section><h2>마인드맵</h2><div class="map"><ul class="tree"><li><div class="node root">불타는 내인생<small>잠들 때까지 남은 시간이 타들어가는 양피지</small></div><ul><li><div class="node branch b1">문제</div><ul><li><div class="node lead ">퇴근 후 저녁이 뭘 했는지 모르게 사라진다</div><ul><li><div class="node ">잠깐 폰 봤는데 어느새 자정</div></li><li><div class="node ">숫자 시계로는 시간이 줄어드는 감각이 없음</div></li><li><div class="node ">하루를 마무리하는 의식이 없음</div></li><li><div class="node ">시간이 어디로 갔는지 돌아볼 길이 없음</div></li></ul></li></ul></li><li><div class="node branch b2">타겟</div><ul><li><div class="node lead ">저녁 시간을 흘려보내고 허무한 직장인</div><ul><li><div class="node ">퇴근 후 저녁 루틴을 다시 잡고 싶을 때</div></li><li><div class="node ">자꾸 늦게 자서 취침 습관을 고치고 싶을 때</div></li><li><div class="node ">마감 있는 목표까지 남은 시간을 볼 때</div></li><li><div class="node ">하루를 한 줄로 돌아보고 싶을 때</div></li></ul></li></ul></li><li><div class="node branch b3">솔루션</div><ul><li><div class="node lead ">남은 시간을 타는 양피지로 보여 주고 하루를 끄게 한다</div><ul><li><div class="node ">하루, 주, 달, 해 남은 시간을 양피지로</div></li><li><div class="node ">잠들기 30분 전 후 불어 불 끄기</div></li><li><div class="node ">남은 조각 뒷면에 한 줄 회고, 회고 책</div></li><li><div class="node ">시간 분포 그래프와 불씨 달력</div></li><li><div class="node ">위젯, 다이나믹 아일랜드로 늘 눈앞에</div></li></ul></li></ul></li><li><div class="node branch b4">결제까지</div><ul><li><div class="node lead ">1 발견 · 사라진 저녁에 대한 공감에서 들어온다</div><ul><li><div class="node ">인스타 카드뉴스: 오늘 저녁, 어디로 갔을까</div></li><li><div class="node ">쇼츠: 타오르는 양피지 화면, 후 불어 끄기</div></li><li><div class="node ">블로그: 저녁 루틴, 취침 습관 검색</div></li><li><div class="node ">스토어 검색어: 하루남은시간, 취침시간, 회고</div></li></ul></li><li><div class="node lead ">2 스토어 페이지 · 남은 시간이 타들어가는 양피지</div><ul><li><div class="node ">이름: 불타는 내인생: 취침 카운트다운</div></li><li><div class="node ">핵심 의식은 모두 무료라고 밝힘</div></li><li><div class="node ">프로는 구독 아닌 한 번 구매로 평생</div></li></ul></li><li><div class="node lead ">3 첫 실행 · 세 장짜리 안내가 처음 한 번 뜬다</div><ul><li><div class="node ">남은 시간이 눈앞에서 타들어가요</div></li><li><div class="node ">잠들기 30분 전, 후 불어 끄세요</div></li><li><div class="node ">하루는 재로 남아요</div></li><li><div class="node ">업데이트한 사람에게는 새 소식 화면</div></li></ul></li><li><div class="node lead ">4 첫 성공 · 내 저녁이 타들어가는 걸 눈으로 본다</div><ul><li><div class="node ">기상부터 취침까지 양피지가 천천히 탐</div></li><li><div class="node ">밤에 후 불어 끄고 남은 조각을 모음</div></li></ul></li><li><div class="node lead ">5 다시 찾기 · 매일 밤 불 끄기와 회고가 고리가 된다</div><ul><li><div class="node ">잠들기 전 1시간 다이나믹 아일랜드</div></li><li><div class="node ">조각 뒷면 한 줄 회고, 주제별 항아리</div></li><li><div class="node ">홈, 잠금화면 위젯으로 남은 시간 확인</div></li></ul></li><li><div class="node lead wall">6 결제 벽 · 꾸미고, 꺼내고, 더 세고 싶을 때</div><ul><li><div class="node ">마감 2개째를 더할 때</div></li><li><div class="node ">달빛 한지, 청자, 노을 테마를 고를 때</div></li><li><div class="node ">조각 카드 공유, 회고 책 PDF 내보낼 때</div></li><li><div class="node ">지난 열두 달 재 흐름이 흐리게 잠김</div></li><li><div class="node ">나만의 자유시간만 태우기를 켤 때</div></li></ul></li><li><div class="node lead pay">7 결제 · 불타는 내인생 프로 한 번 구매</div><ul><li><div class="node ">평생 이용, 구독 아님</div></li><li><div class="node ">테스트 설정 값 9.99, 원화 가격 미확인</div></li><li><div class="node ">앞으로 추가되는 프로 기능도 포함</div></li><li><div class="node ">구매 복원 지원</div></li></ul></li></ul></li></ul></li></ul></div></section>
+<section class="cards">
+  <article class="card c4"><h2>결제하는 순간</h2>
+    <dl><dt>방식</dt><dd>평생 이용권</dd>
+    <dt>무료로 되는 것</dt><dd>양피지, 회고, 후 불기 무료, 마감 1개까지</dd>
+    <dt>결제 버튼이 보일 때</dt><dd>마감 2개째, 테마, 내보내기, 한 해 재, 자유시간</dd>
+    <dt>상품</dt><dd><ul><li>불타는 내인생 프로 · 9.99(테스트 설정 값, 원화 미확인)</li></ul></dd></dl>
+  </article>
+  <article class="card proposal"><h2>제안 <span>확인된 사실 아님</span></h2><ul><li>후 불어 끈 7일째에 조각 포스터 미리보기로 안내</li><li>흐린 한 해 재 화면에 지난달만 맛보기로 열기</li><li>연말에 회고 책 PDF를 선물처럼 권하는 시기 판매</li></ul></article>
+</section>
+<footer><p class="eyebrow">근거 파일</p><ul class="sources"><li>APPSTORE.md</li><li>RELEASE_NOTES.md</li><li>Config/BurningParchment.storekit</li><li>BurningParchment/BurningParchmentSpec.swift</li><li>BurningParchment/Models/StoreManager.swift</li><li>BurningParchment/Views/PaywallView.swift</li><li>BurningParchment/Views/OnboardingView.swift</li><li>BurningParchment/Views/AshYearView.swift</li></ul></footer>
+</main></body></html>

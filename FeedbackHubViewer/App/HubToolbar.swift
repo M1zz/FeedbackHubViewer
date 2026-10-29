@@ -13,33 +13,45 @@
 
 import SwiftUI
 
-/// 지금 새로고침. Disabled while a read is already in flight.
-struct RefreshButton: View {
-    @EnvironmentObject private var store: FeedbackStore
-
-    var body: some View {
-        Button {
-            Task { await store.load() }
-        } label: {
-            Label("새로고침", systemImage: "arrow.clockwise")
-        }
-        .disabled(store.isRefreshing)
-        .help("지금 새로고침")
-    }
-}
-
 /// The touch platforms' "더 보기" menu: everything the Mac spreads across its
 /// window toolbar, folded into one item.
 struct HubOverflowMenu: View {
     @EnvironmentObject private var store: FeedbackStore
+    @EnvironmentObject private var keywords: KeywordStore
+    @EnvironmentObject private var purchases: AppStoreConnectStore
+    @EnvironmentObject private var design: DesignDocsStore
+    @EnvironmentObject private var charts: ChartStore
+    @EnvironmentObject private var news: NewsStore
+    /// 데이터 상태 시트. 메뉴 안에는 시트를 못 붙여서 바깥(`HubToolbar`)이 쥔다.
+    @Binding var showsDataSources: Bool
 
     var body: some View {
         Menu {
+            // 툴바의 새로고침은 아이콘뿐이라, 무엇을 받는지 이름으로 한 번 더.
+            Section {
+                RefreshButton()
+                RefreshAllButton()
+            }
+            let metrics = SectionMetrics(store: store, keywords: keywords, purchases: purchases,
+                                         design: design, charts: charts, news: news)
+            let readable = BadgeReset.readableCount(metrics)
+            if readable > 0 {
+                Button {
+                    BadgeReset.markAllRead(metrics: metrics)
+                } label: {
+                    Label("뱃지 모두 읽기 · \(AppFormat.count(readable))", systemImage: "checkmark.circle")
+                }
+            }
+            Button {
+                showsDataSources = true
+            } label: {
+                Label("데이터 상태 · 무엇을 언제 받았나", systemImage: "list.bullet.rectangle")
+            }
             Toggle(isOn: $store.autoRefresh) {
                 Label("자동 갱신 (1분)", systemImage: "timer")
             }
             Toggle(isOn: $store.notificationsEnabled) {
-                Label("새 피드백·진단 알림", systemImage: "bell.badge")
+                Label("새것 알림", systemImage: "bell.badge")
             }
             if store.notificationsEnabled && !store.notificationsAuthorized {
                 Section {
@@ -69,14 +81,34 @@ struct HubOverflowMenu: View {
 /// pushed view its own bar.
 struct HubToolbar: ViewModifier {
     @EnvironmentObject private var store: FeedbackStore
+    @EnvironmentObject private var connect: AppStoreConnectStore
+    @EnvironmentObject private var keywords: KeywordStore
+    @State private var showsDataSources = false
 
     func body(content: Content) -> some View {
         content
             .toolbar {
+                ToolbarItem(placement: .topBarTrailing) { AttentionButton() }
                 ToolbarItem(placement: .topBarTrailing) { RefreshButton() }
-                ToolbarItem(placement: .topBarTrailing) { HubOverflowMenu() }
+                ToolbarItem(placement: .topBarTrailing) {
+                    HubOverflowMenu(showsDataSources: $showsDataSources)
+                }
             }
-            .refreshable { await store.load() }
+            .modifier(SectionRefreshable())
+            .sheet(isPresented: $showsDataSources) {
+                NavigationStack {
+                    ScrollView { DataSourcesPanel() }
+                        .toolbar {
+                            ToolbarItem(placement: .confirmationAction) {
+                                Button("닫기") { showsDataSources = false }
+                            }
+                        }
+                }
+                .environmentObject(store)
+                .environmentObject(connect)
+                .environmentObject(keywords)
+                .presentationDetents([.medium, .large])
+            }
     }
 }
 
@@ -97,8 +129,32 @@ extension View {
 /// rebuilds this label alone rather than the whole toolbar (see `IdentityMenu`).
 struct RefreshStatus: View {
     @EnvironmentObject private var store: FeedbackStore
+    @EnvironmentObject private var connect: AppStoreConnectStore
 
     var body: some View {
+        label
+            .font(.body)
+            .foregroundStyle(.secondary)
+            .monospacedDigit()
+            .lineLimit(1)
+            .truncationMode(.tail)
+            #if os(macOS)
+            // **너비를 하나로 박는다.** 예전에는 상태마다 `minWidth: 260` 에 글자 길이만큼
+            // 늘어났다. 피드백을 골라 오른쪽 상세 칸이 열리면 가운데 칸이 좁아지는데,
+            // 새로고침 중에 이 칸이 늘었다 줄었다 하면 분할 칸의 최소 너비가 끝없이 다시
+            // 계산되고 AppKit 이 "Update Constraints in Window pass" 예외로 앱을 죽였다.
+            // 넘치는 글자는 끝을 줄이고, 전부는 누르면 열리는 데이터 상태 칸이 말한다.
+            .frame(width: Self.width, alignment: .leading)
+            #endif
+    }
+
+    static let width: CGFloat = 230
+
+    @ViewBuilder
+    private var label: some View {
+        // CloudKit 이 끝나도 App Store Connect 는 더 걸릴 수 있다(링크 출처는 1분).
+        // 그동안 "업데이트: 지금"이라고만 하면 리뷰가 아직 옛것인 줄 모른다.
+        let connectLoading = connect.loadingSources(project: store.selectedProject)
         if store.isRefreshing || store.isPublishingSummary {
             HStack(spacing: 6) {
                 // 올리기는 새로고침의 마지막 걸음이라 같은 자리에 나온다.
@@ -118,16 +174,14 @@ struct RefreshStatus: View {
                     Text("업데이트 확인 중…")
                 }
             }
-            .font(.caption)
-            .foregroundStyle(.secondary)
-            // The step number and the record count both change width as they
-            // climb; without this the neighbouring toolbar items jitter.
-            .frame(minWidth: 210, alignment: .leading)
-            .monospacedDigit()
+        } else if !connectLoading.isEmpty {
+            HStack(spacing: 6) {
+                ProgressView().controlSize(.small)
+                Text("App Store Connect 받는 중 · \(connectLoading.joined(separator: " · "))")
+            }
+            .help("App Store Connect 받는 중 · \(connectLoading.joined(separator: " · "))")
         } else if let updated = store.lastUpdated {
             Text("업데이트: \(AppFormat.time(updated))")
-                .font(.caption)
-                .foregroundStyle(.secondary)
         }
     }
 }

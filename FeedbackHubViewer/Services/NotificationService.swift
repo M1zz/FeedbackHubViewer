@@ -5,10 +5,10 @@
 //  App icon badge and local notifications for what arrives in the hub.
 //
 //  These are *local* notifications posted after a refresh finds records the
-//  viewer hasn't seen before, so they land while the app is running (the 자동
-//  갱신 toggle keeps it polling every minute). Push that wakes a closed app
-//  would need the Push Notifications capability and a CKQuerySubscription —
-//  see README §3.
+//  viewer hasn't seen before, so they land while the app is running. 피드백 ·
+//  진단은 그 위에 CloudKit 푸시(`PushSubscriptions`)가 따로 있어서 앱이 꺼져 있어도
+//  오고, 푸시가 걸린 종류는 여기서 다시 알리지 않는다. 리뷰는 Apple 이 푸시를 주지
+//  않아 이 로컬 알림뿐이다(`AlertWatcher`).
 //
 
 import Foundation
@@ -72,6 +72,42 @@ enum NotificationService {
         post(id: "new-crash",
              title: "새 진단 \(count)건",
              body: "크래시·멈춤 리포트가 올라왔습니다\(scope)")
+    }
+
+    /// 한 앱에 새 리뷰. 한 건이면 별점과 제목까지, 여럿이면 수와 가장 낮은 별점.
+    static func notifyNewReviews(app: String, reviews: [CustomerReview]) {
+        guard let first = reviews.first else { return }
+        let stars = { (rating: Int) in String(repeating: "★", count: rating) + String(repeating: "☆", count: max(0, 5 - rating)) }
+        if reviews.count == 1 {
+            let text = [first.title, first.body].compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines) }
+                .filter { !$0.isEmpty }.joined(separator: " · ")
+            post(id: "new-review",
+                 title: "\(app) 새 리뷰 \(stars(first.rating))",
+                 body: text.isEmpty ? "App Store 에 새 리뷰가 달렸습니다" : text)
+        } else {
+            let lowest = reviews.map(\.rating).min() ?? first.rating
+            post(id: "new-review",
+                 title: "\(app) 새 리뷰 \(reviews.count)건",
+                 body: "가장 낮은 별점 \(stars(lowest))")
+        }
+    }
+
+    // MARK: - 앱 소식
+
+    /// 아침 브리핑 — 볼 만한 것만 골라 번호를 붙인다. 미리 예약해 두어 앱이 꺼져 있어도
+    /// 울린다. 같은 id 로 다시 걸면 앞의 예약을 바꾸고, 줄이 없으면 예약을 지운다.
+    static func scheduleBriefing(id: String, at date: Date, lines: [String], more: Int) {
+        let center = UNUserNotificationCenter.current()
+        center.removePendingNotificationRequests(withIdentifiers: [id])
+        guard !lines.isEmpty else { return }
+        let content = UNMutableNotificationContent()
+        content.title = "오늘 내 앱 소식 · 볼 만한 것 \(lines.count + more)개"
+        content.body = lines.enumerated().map { "\($0.offset + 1). \($0.element)" }.joined(separator: "\n")
+            + (more > 0 ? "\n외 \(more)개는 소식 칸에" : "")
+        content.sound = .default
+        let parts = Calendar.current.dateComponents([.year, .month, .day, .hour, .minute], from: date)
+        let trigger = UNCalendarNotificationTrigger(dateMatching: parts, repeats: false)
+        center.add(UNNotificationRequest(identifier: id, content: content, trigger: trigger))
     }
 
     private static func post(id: String, title: String, body: String) {

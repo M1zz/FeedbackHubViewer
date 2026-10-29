@@ -63,6 +63,7 @@ extension FeedbackStore {
         var activeUsers: [ScopeKey: ActiveUsers] = [:]
         var retention: [ScopeKey: Retention] = [:]
         var activeDays: [ScopeKey: ActiveDays] = [:]
+        var habit: [ScopeKey: Habit] = [:]
         var lifecycle: [ScopeKey: Lifecycle] = [:]
         var eventStats: [ScopeKey: [EventStat]] = [:]
         var eventTallies: [ScopeKey: [String: UsageNameTotal]] = [:]
@@ -71,6 +72,7 @@ extension FeedbackStore {
         var flagShares: [ScopeKey: [FlagShare]] = [:]
         var distribution: [DistributionKey: [DistributionBucket]] = [:]
         var trend: [TrendKey: [TrendPoint]] = [:]
+        var dailyInstalls: [ScopeKey: [DailyInstall]] = [:]
         // The value is itself optional — "잴 활동이 없다"는 계산 결과이지 미계산이
         // 아니므로, 그것도 캐시해야 매 프레임 다시 훑지 않는다.
         var carryingCapacity: [CapacityKey: CarryingCapacity?] = [:]
@@ -145,6 +147,7 @@ extension FeedbackStore {
         derived.activeUsers = [:]
         derived.retention = [:]
         derived.activeDays = [:]
+        derived.habit = [:]
         derived.lifecycle = [:]
         derived.eventStats = [:]
         derived.eventTallies = [:]

@@ -133,16 +133,22 @@ struct CrashIssueListView: View {
 struct CrashIssueRow: View {
     let issue: CrashIssue
     var projectLabel: String?
+    /// 이 화면을 열 때 안 본 진단 — 뱃지가 센 것.
+    @Environment(\.freshItemIDs) private var fresh
 
     var body: some View {
         VStack(alignment: .leading, spacing: 5) {
             HStack(spacing: 6) {
                 Text(issue.title)
                     .font(.callout.weight(.semibold))
-                    .lineLimit(1)
+                    .lineLimit(2)
                     .truncationMode(.middle)
                 if issue.isNew {
                     Tag(text: "새로 생김", tint: .orange, font: .caption2)
+                }
+                let unseen = fresh.isEmpty ? 0 : issue.reports.filter { fresh.contains($0.id) }.count
+                if unseen > 0 {
+                    Tag(text: "새 진단 \(unseen)건", systemImage: "circle.fill", tint: .red, font: .body)
                 }
                 Spacer(minLength: 4)
                 Text("\(issue.count)건")
