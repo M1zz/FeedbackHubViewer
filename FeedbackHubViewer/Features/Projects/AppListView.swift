@@ -38,11 +38,13 @@ struct AppListView: View {
     var body: some View {
         let metrics = SectionMetrics(store: store, keywords: keywords, purchases: purchases, design: design, charts: charts, news: news)
         let traffic = section == .stats ? store.trafficByProject : [:]
-        // 릴리즈는 빨강이 먼저 와야 그 기능의 목록이다. 나머지는 MAU 순 그대로 — 기능을
-        // 바꿔도 앱 자리가 그대로여야 눈이 앱을 다시 찾지 않는다.
-        let entries = section == .release
+        // 뱃지가 선 앱이 언제나 맨 위 — 볼 것을 찾아다니지 않게. 그 안과 나머지는 MAU 순
+        // 그대로(릴리즈는 빨강 먼저). 열어 본 뒤에도 뱃지(`visitBadge`)가 남아 있어 자리가 튀지 않는다.
+        let base = section == .release
             ? store.redFirst(store.projectCounts, key: { $0.key })
             : store.projectCounts
+        let flagged = Set(base.map(\.key).filter { (metrics.badge(section, project: $0) ?? visitBadge($0)) != nil })
+        let entries = base.filter { flagged.contains($0.key) } + base.filter { !flagged.contains($0.key) }
 
         List {
             Section {
