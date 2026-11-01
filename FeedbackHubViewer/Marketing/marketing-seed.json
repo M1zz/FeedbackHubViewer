@@ -484,62 +484,41 @@
   "kind": "cardNews",
   "channel": "인스타그램",
   "title": "이번 주, 얼마나 겹쳐 있나요",
-  "angle": "하고 싶은 게 많아 일을 자꾸 벌리는 사람에게. 캘린더가 안 보여 주는 '겹침'을 색으로 보여 주고, 5분짜리 조각으로 쪼개는 방법을 건넨다.",
-  "plannedAt": "2026-12-04T01:00:00Z",
-  "stage": "ready",
+  "angle": "버거운 주의 이유가 겹침이라는 것. 장마다 실제 앱 화면: 02-list · 01-rainbow · 03-two-questions · 04-steps. 원본 캡처가 없어 marketing/ko 그림에서 화면만 잘라 씀. https://www.instagram.com/lee25_ios/p/DfMsYIyCZ8U/",
+  "plannedAt": "2026-11-01T00:00:00Z",
+  "stage": "posted",
   "slides": [
    {
     "id": "a8773b8e-39f3-5185-95af-d58c5a9a7924",
-    "headline": "캘린더는 비어 보이는데",
-    "text": "일정은 몇 개 없는데 왜 이렇게 버거울까요.\n끝나지 않은 일들이 겹겹이 쌓여 있어서예요.",
-    "headlineEn": "Your calendar looks empty",
-    "textEn": "Only a few events, so why does the week feel so heavy?\nBecause unfinished things are piling up underneath."
+    "headline": "캘린더는 비어 보이는데\n왜 이렇게 버겁지",
+    "text": "끝나지 않은 일은 손 안 대는 날에도\n같이 굴러가니까요.",
+    "headlineEn": "",
+    "textEn": ""
    },
    {
     "id": "97616eac-96b3-5438-bf44-281a07b43eac",
     "headline": "겹칠수록 짙어지는 색",
-    "text": "욕망의 무지개는 한 주를 격자로 그리고\n일이 겹칠수록 색을 짙게 칠합니다.",
-    "headlineEn": "Darker where things overlap",
-    "textEn": "Rainbow Of Desire draws your week as a grid\nand shades it darker the more things overlap."
+    "text": "일정마다 한 줄씩.\n빡빡한 주가 들어서기 전에 보여요.",
+    "headlineEn": "",
+    "textEn": ""
    },
    {
     "id": "bdd5939c-17db-59c3-8638-95c319d6e1f2",
-    "headline": "빡빡한 주를 먼저 본다",
-    "text": "들어서기 전에 어느 날이 꽉 찼는지 보여요.\n그래서 하나 더 벌리기 전에 멈출 수 있어요.",
-    "headlineEn": "See the heavy week first",
-    "textEn": "You see which days are packed before you get there.\nSo you can stop before taking on one more thing."
+    "headline": "물음은 딱 둘",
+    "text": "시동 없이 바로 시작되나?\n5분 안에 끝까지 가나?",
+    "headlineEn": "",
+    "textEn": ""
    },
    {
     "id": "fa17a3e2-7b7b-51c8-9542-8995150b3f8e",
-    "headline": "물음은 딱 둘",
-    "text": "시동 없이 바로 시작되나요?\n5분 안에 끝까지 가나요?",
-    "headlineEn": "Just two questions",
-    "textEn": "Can you start without warming up?\nCan you finish it within 5 minutes?"
-   },
-   {
-    "id": "68df280b-b6ed-5c16-9b4c-51e59adf79c1",
-    "headline": "둘 다 예면 조각",
-    "text": "5분이 비면 바로 집는 일이에요.\n나머지는 따로 시간을 떼어 둡니다.",
-    "headlineEn": "Two yeses make a piece",
-    "textEn": "Pieces are what you grab when 5 minutes open up.\nEverything else gets its own block of time."
-   },
-   {
-    "id": "f152488c-4ddf-5417-a0e8-120f0e7201a8",
-    "headline": "번개 붙은 일부터",
-    "text": "지금 할 수 있는 일에 번개를 붙이면 맨 위로.\n짬이 나면 거기만 보면 됩니다.",
-    "headlineEn": "Lightning goes first",
-    "textEn": "Add a lightning bolt to what you can do now and it moves to the top.\nWhen you have a spare moment, look only there."
-   },
-   {
-    "id": "612fdf9b-e01c-59ac-af2f-9565041664b5",
     "headline": "욕망의 무지개",
     "text": "벌려 놓은 일, 겹친 만큼 보이게.",
-    "headlineEn": "Rainbow Of Desire",
-    "textEn": "See everything you've started, as much as it overlaps."
+    "headlineEn": "",
+    "textEn": ""
    }
   ],
   "script": "",
-  "body": "캘린더는 일정이 잡혔는지만 알려 주지, 그 일들이 얼마나 겹쳐 있는지는 안 알려 주더라고요. 욕망의 무지개는 한 주를 격자로 그리고 일이 겹칠수록 색을 짙게 칠해요. 큰 일은 단계로 쪼개서 5분 안에 끝나는 조각만 따로 표시해 두고요. 할 일 적기, 무지개, 단계 쪼개기, 타이머는 모두 무료이고 가입도 필요 없어요.\n\n#욕망의무지개 #일벌리기 #시간관리 #할일관리 #주간계획 #번아웃 #사이드프로젝트 #생산성앱 #자기관리 #1인개발자",
+  "body": "일정은 몇 개 없는데 이상하게 버거운 주가 있어요.\n\n벌려 놓은 일들이 안 끝난 채로 겹쳐 있어서 그래요. 욕망의 무지개는 일정마다 한 줄씩 긋고 겹칠수록 색을 짙게 칠합니다. 큰 일은 단계로 쪼개고요. 5분 안에 끝나는 조각만 위로 올라와요.\n\n앱스토어에서 \"욕망의 무지개\" 검색\n\n#욕망의무지개 #일벌리기 #시간관리 #할일관리 #주간계획 #1인개발자",
   "scriptEn": "",
   "bodyEn": "A calendar tells you what's scheduled. It doesn't tell you how much is piling up at once. Rainbow Of Desire draws your week as a grid and shades it darker the more things overlap. Big tasks get broken into steps, and the ones you can finish within 5 minutes are marked on their own. Writing tasks, the grid, step breakdown and the timer are all free, with no sign-up.\n\n#TimeManagement #Productivity #WeeklyPlanning #TaskManagement #Overcommitted #SideProjects #ProductivityApps #IndieDev",
   "theme": 3
@@ -565,13 +544,13 @@
   "project": "com.example.ScheduleDensityApp",
   "kind": "post",
   "channel": "스레드",
-  "title": "하고 싶은 게 많은 사람의 문제",
-  "angle": "일을 벌리는 사람의 과부하를 '의지 문제가 아니라 겹침 문제'로 다시 짚는다.",
-  "plannedAt": "2026-10-29T01:00:00Z",
-  "stage": "ready",
+  "title": "캘린더는 비어 있는데 왜 숨이 차지",
+  "angle": "겹침을 색으로 보여 주는 무지개 격자. 사진: 카드뉴스 2장(겹칠수록 짙어지는 색). https://www.threads.com/@lee25_ios/post/DfMsKscH7ST",
+  "plannedAt": "2026-11-01T00:00:00Z",
+  "stage": "posted",
   "slides": [],
   "script": "",
-  "body": "하고 싶은 게 많아서 자꾸 일을 벌리는 편인데요, 캘린더를 보면 이번 주는 비어 보여요. 그런데 왜 이렇게 버거운지.\n\n알고 보니 끝나지 않은 일들이 손대지 않는 날에도 저를 붙잡고 있었더라고요. 그래서 그걸 눈에 보이게 하는 앱을 만들었어요.\n\n욕망의 무지개는 한 주를 격자로 그리고, 일이 겹칠수록 색을 짙게 칠합니다. 빡빡한 주는 들어서기 전에 먼저 보여요. 기본 기능은 무료고 가입도 없어요.\nhttps://apps.apple.com/kr/app/id6755280882",
+  "body": "이번 주 캘린더 보면 비어 있는데 왜 이렇게 숨이 차지.\n\n끝나지 않은 일은 손 안 대는 날에도 같이 굴러가거든요. 캘린더엔 그게 안 나오고요.\n\n그걸 보이게 하려고 만든 앱이에요. 일정마다 한 줄씩 긋고, 겹칠수록 색이 짙어져요.\n\n앱스토어에서 \"욕망의 무지개\" 검색\nhttps://apps.apple.com/kr/app/id6755280882",
   "scriptEn": "",
   "bodyEn": "I want to do a lot of things, so I keep starting new ones. My calendar says this week is wide open. So why does it feel so heavy?\n\nTurns out the unfinished stuff was holding on to me even on days I didn't touch it. So I made an app that makes that visible.\n\nRainbow Of Desire draws your week as a grid and shades it darker the more things overlap. You can see a heavy week before you walk into it. The core is free, no sign-up.\nhttps://apps.apple.com/us/app/id6755280882",
   "theme": 3
