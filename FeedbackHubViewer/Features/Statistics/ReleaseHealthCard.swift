@@ -27,9 +27,7 @@ struct ReleaseHealthCard: View {
         VStack(alignment: .leading, spacing: 12) {
             if let report = store.releaseHealth(for: project) {
                 header(report.verdict)
-                if report.verdict.level != .green {
-                    copyForClaude(report)
-                }
+                copyForClaude(report)
                 comparison(report)
                 adoption(report)
                 if report.verdict.reasons.count > 1 { reasons(report.verdict) }
@@ -70,14 +68,15 @@ struct ReleaseHealthCard: View {
         }
     }
 
-    /// 적신호를 Claude 에게 그대로 넘길 글. 판정 · 숫자 · 새 크래시 · 스펙을 한 덩어리로
+    /// 신호를 Claude 에게 그대로 넘길 글. 판정 · 숫자 · 새 크래시 · 스펙을 한 덩어리로
     /// 담아, 받는 쪽이 이 화면을 못 봐도 무엇을 고쳐야 하는지 알게 한다.
     private func copyForClaude(_ report: ReleaseHealth.Report) -> some View {
         HStack(spacing: 8) {
             CopyButton(text: Self.claudePrompt(report, appName: store.displayName(for: project), project: project),
                        title: "Claude에게 맡길 글 복사")
                 .buttonStyle(.bordered)
-            Text("앱 리포에서 연 Claude 에 붙여넣으면 원인을 찾아 고칩니다.")
+            Text(report.verdict.level == .green ? "앱 리포에서 연 Claude 에 붙여넣으면 놓친 위험을 점검합니다."
+                                                : "앱 리포에서 연 Claude 에 붙여넣으면 원인을 찾아 고칩니다.")
                 .font(.body)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -88,7 +87,9 @@ struct ReleaseHealthCard: View {
         let latest = report.latest
         let previous = report.previous
         var lines: [String] = []
-        lines.append("\(appName) (\(project)) 의 릴리즈 건강이 \(report.verdict.level.label)입니다. 원인을 찾아 고쳐 주세요.")
+        let isGreen = report.verdict.level == .green
+        lines.append("\(appName) (\(project)) 의 릴리즈 건강이 \(report.verdict.level.label)입니다. "
+                     + (isGreen ? "숫자가 놓친 위험이 있는지 점검해 주세요." : "원인을 찾아 고쳐 주세요."))
         lines.append("")
         lines.append("## 판정")
         for reason in report.verdict.reasons { lines.append("- \(reason)") }
@@ -151,7 +152,8 @@ struct ReleaseHealthCard: View {
         }
         lines.append("")
         lines.append("## 부탁")
-        lines.append("1. \(previous.map { "\($0.version) → " } ?? "")\(latest.version) 사이의 변경(git log · diff)에서 위 신호의 원인을 찾아 주세요.")
+        lines.append("1. \(previous.map { "\($0.version) → " } ?? "")\(latest.version) 사이의 변경(git log · diff)에서 "
+                     + (isGreen ? "아직 숫자에 안 잡힌 위험이 있는지 봐 주세요." : "위 신호의 원인을 찾아 주세요."))
         lines.append("2. 크래시라면 지문 · 제목으로 코드 위치를 짚고, 불안정 이벤트(\(report.spec.stabilityEvents.joined(separator: ", ")))가 늘었다면 그 이벤트를 보내는 경로를 확인해 주세요.")
         lines.append("3. 원인과 고친 방법을 설명하고, 고칠 수 있으면 고쳐 주세요. 숫자만으로 확실하지 않으면 무엇을 더 봐야 하는지 알려 주세요.")
         lines.append("")

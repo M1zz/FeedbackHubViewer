@@ -99,7 +99,8 @@ struct ReleaseHealthView: View {
         var versions = report.latest.version
         if let previous = report.previous { versions += " ← \(previous.version)" }
 
-        return Button {
+        return HStack(alignment: .top, spacing: 8) {
+        Button {
             store.open(project: row.key, section: .release)
         } label: {
             HStack(alignment: .top, spacing: 10) {
@@ -129,15 +130,8 @@ struct ReleaseHealthView: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .contextMenu {
-            if level != .green {
-                Button {
-                    Platform.copyToPasteboard(ReleaseHealthCard.claudePrompt(report, appName: name, project: row.key))
-                } label: {
-                    Label("Claude에게 맡길 글 복사", systemImage: "doc.on.doc")
-                }
-            }
-        }
         .accessibilityLabel("\(name), 릴리즈 건강 \(level.label), \(report.verdict.headline)")
+        ClaudeCopyIcon(text: ReleaseHealthCard.claudePrompt(report, appName: name, project: row.key))
+        }
     }
 }

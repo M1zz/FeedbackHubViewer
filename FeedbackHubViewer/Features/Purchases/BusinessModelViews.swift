@@ -41,9 +41,45 @@ struct SignalDot: View {
 }
 
 struct BusinessModelCard: View {
+    @EnvironmentObject private var store: FeedbackStore
     @EnvironmentObject private var connect: AppStoreConnectStore
     @ObservedObject private var portfolio = PortfolioStore.shared
     let project: String
+
+    /// 신호등을 Claude 에게 넘길 글. 근거 · 상품 · 페이월까지 담아 이 화면 없이도 읽히게.
+    static func claudePrompt(_ signal: BusinessSignal, appName: String, project: String,
+                             portfolio: PortfolioStore) -> String {
+        var lines = ["\(appName) (\(project)) 의 비즈니스 모델 신호등이 \(signal.level.label)입니다: \(signal.headline)", ""]
+        lines.append("수익 모델: \(signal.model)")
+        if let next = signal.next { lines.append("다음 할 일: \(next)") }
+        lines.append("")
+        lines.append("## 근거")
+        lines += signal.reasons.map { "- \($0)" }
+        if let items = portfolio.app(for: project)?.price?.iapItems, !items.isEmpty {
+            lines.append("")
+            lines.append("## 스토어 상품")
+            lines += items.map { "- \($0.name) \($0.price)" }
+        }
+        if let paywall = portfolio.paywall(for: project) {
+            lines.append("")
+            lines.append("## 페이월")
+            lines.append(paywall.hasPaywall ? "- 종류: \(paywall.kindLabel)" : "- 앱 안 결제 화면 없음")
+            if paywall.hidden == true { lines.append("- 출시 빌드에서 꺼 둠") }
+            for file in paywall.paywallFiles ?? [] { lines.append("- 파일: \(file)") }
+        }
+        lines.append("")
+        lines.append("## 부탁")
+        switch signal.level {
+        case .green:
+            lines.append("지금은 초록입니다. 결제 흐름에 놓친 위험이 있는지 코드로 점검하고, 없으면 없다고 말해 주세요.")
+        case .unknown:
+            lines.append("왜 판정할 수 없는지 확인해 주세요. app-portfolio 나 앱 쪽에서 채울 정보가 있으면 무엇인지 알려 주세요.")
+        default:
+            lines.append("앱 리포에서 결제 코드와 페이월을 읽고 위 판정의 원인을 확인한 뒤, 코드로 고칠 수 있는 것은 고쳐 주세요.")
+        }
+        lines.append("가격 변경과 App Store Connect 설정처럼 제가 직접 정할 일은 고치지 말고 목록으로 알려 주세요.")
+        return lines.joined(separator: "\n")
+    }
 
     var body: some View {
         let signal = BusinessSignal.of(project, connect: connect)
@@ -64,6 +100,10 @@ struct BusinessModelCard: View {
                     .font(.body)
                     .fixedSize(horizontal: false, vertical: true)
             }
+            CopyButton(text: Self.claudePrompt(signal, appName: store.displayName(for: project), project: project,
+                                               portfolio: portfolio),
+                       title: "Claude에게 맡길 글 복사")
+                .buttonStyle(.bordered)
             DisclosureGroup("근거") {
                 VStack(alignment: .leading, spacing: 4) {
                     ForEach(signal.reasons, id: \.self) { Text($0).font(.body) }
@@ -215,6 +255,7 @@ struct BusinessOverviewCard: View {
                 .font(.body.monospacedDigit())
                 .foregroundStyle(.secondary)
             ForEach(rows, id: \.key) { row in
+                HStack(alignment: .top, spacing: 8) {
                 Button { store.open(project: row.key, section: .purchases) } label: {
                     HStack(alignment: .top, spacing: 10) {
                         SignalDot(level: row.signal.level)
@@ -237,6 +278,9 @@ struct BusinessOverviewCard: View {
                 }
                 .buttonStyle(.plain)
                 .padding(.vertical, 2)
+                ClaudeCopyIcon(text: BusinessModelCard.claudePrompt(row.signal, appName: store.displayName(for: row.key),
+                                                                    project: row.key, portfolio: portfolio))
+                }
             }
         }
     }

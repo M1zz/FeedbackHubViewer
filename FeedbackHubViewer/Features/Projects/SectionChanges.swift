@@ -48,7 +48,8 @@ final class SectionChanges: ObservableObject {
 
     /// 지금 보고 있는 칸에서, 열었을 때 바뀌어 있던 앱과 그 수. 열자마자 본 것으로 넘어가
     /// 뱃지가 사라져도 앱 목록 줄에는 이 수가 남는다 — 사이드바에서 3을 보고 들어왔으면 그
-    /// 칸에서 3이 보여야 한다. 기기 메모리에만 두고, 다른 칸을 열거나 띠의 "확인" 으로 비운다.
+    /// 칸에서 3이 보여야 한다. 기기 메모리에만 두고, 그 앱을 열면 그 줄만, 다른 칸으로 가면
+    /// 전부 비운다. 띠의 "확인" 도 비운다.
     struct Visit: Equatable {
         let section: String
         var counts: [String: Int]
@@ -102,6 +103,17 @@ final class SectionChanges: ObservableObject {
         var next = visit?.section == section.rawValue ? visit! : Visit(section: section.rawValue, counts: [:])
         next.counts.merge(counts) { max($0, $1) }
         if next != visit { visit = next }
+    }
+
+    /// 이 앱을 열어 봤다 — 줄의 뱃지는 할 일을 다 했다.
+    func clearVisit(_ section: FeedbackStore.ProjectSection, project: String) {
+        guard visit?.section == section.rawValue, visit?.counts[project] != nil else { return }
+        visit?.counts[project] = nil
+    }
+
+    /// 다른 칸으로 왔다 — 떠난 칸의 줄 뱃지를 남겨 두지 않는다.
+    func leaveVisit(except section: FeedbackStore.ProjectSection) {
+        if let visit, visit.section != section.rawValue { self.visit = nil }
     }
 
     func acknowledgeRed(_ projects: [String], store: FeedbackStore) {
@@ -371,6 +383,46 @@ struct SectionChangesBaseline: ViewModifier {
             .onChange(of: isRestored ? SectionChanges.allSignatures(metrics: metrics) : [:], initial: true) { _, signatures in
                 SectionChanges.shared.adoptBaselines(signatures)
             }
+    }
+}
+
+/// 칸을 보고 있으면 본 것으로 넘긴다. 전체 앱으로 보면 바뀐 앱을 줄 뱃지로 남기고, 한 앱을
+/// 보면 그 앱의 줄 뱃지를 지운다. 아이폰 탭처럼 안 보여도 살아 있는 화면은 `isActive` 로 막는다.
+struct SectionVisitTracker: ViewModifier {
+    @EnvironmentObject private var store: FeedbackStore
+    let section: FeedbackStore.ProjectSection
+    let project: String?
+    let metrics: SectionMetrics
+    var isActive = true
+
+    private var signatures: [String: String] {
+        guard isActive, SectionChanges.tracked.contains(section) else { return [:] }
+        return SectionChanges.signatures(section, project: project, metrics: metrics)
+    }
+
+    func body(content: Content) -> some View {
+        content
+            .onAppear { leave() }
+            .onChange(of: section) { leave() }
+            .onChange(of: isActive) { leave() }
+            // 열어 본 지금의 말을 본 것으로 — 보는 동안 바뀐 것도.
+            .onChange(of: signatures, initial: true) { _, signatures in
+                guard isActive else { return }
+                let changes = SectionChanges.shared
+                // 릴리즈는 지우기 전에 센다 — 사이드바에서 본 수가 줄에 그대로 남게.
+                let alerts = section == .release && project == nil ? changes.releaseAlerts(metrics: metrics) : [:]
+                changes.markSeen(section, signatures: signatures, visiting: project == nil)
+                if let project { changes.clearVisit(section, project: project) }
+                // 릴리즈 칸을 열어 봤으면 빨강인 앱도 알아본 것으로 — 뱃지만 지우고 판정은 남는다.
+                if section == .release {
+                    changes.noteVisited(section, counts: alerts)
+                    changes.acknowledgeRed(project.map { [$0] } ?? store.projectCounts.map(\.key), store: store)
+                }
+            }
+    }
+
+    private func leave() {
+        if isActive { SectionChanges.shared.leaveVisit(except: section) }
     }
 }
 

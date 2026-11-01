@@ -16,6 +16,7 @@
 import SwiftUI
 
 struct StoreAnalyticsView: View {
+    @EnvironmentObject private var store: FeedbackStore
     @EnvironmentObject private var connect: AppStoreConnectStore
     /// nil == 전체 프로젝트.
     let project: String?
@@ -93,7 +94,7 @@ struct StoreAnalyticsView: View {
 
     @ViewBuilder
     private func cards(_ analytics: StoreAnalytics) -> some View {
-        if let insights = analytics.insights { StoreInsightsCard(insights: insights) }
+        if let insights = analytics.insights { StoreInsightsCard(insights: insights, appName: project.map { "\(store.displayName(for: $0)) (\($0))" } ?? "전체 앱") }
         AnalyticsSummaryCard(analytics: analytics)
         if let sessions = analytics.sessions { SessionsCard(sessions: sessions, days: analytics.days) }
         if let installs = analytics.installs { InstallsCard(installs: installs) }

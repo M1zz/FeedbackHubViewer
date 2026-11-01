@@ -31,6 +31,8 @@ struct AppListView: View {
     @ObservedObject private var icons = StoreIcons.shared
     /// App Store 와 손수 이을 앱(오른쪽 클릭 메뉴).
     @State private var linking: String?
+    /// 뱃지가 선 채로 눌러 고른 앱. 뱃지가 사라져도 떠날 때까지 그 자리에 둔다.
+    @State private var held: String?
     let section: FeedbackStore.ProjectSection
     /// 아이폰은 고르면 민다. 맥 · 아이패드는 `store.selectedProject` 만 바꾼다.
     var pushes = false
@@ -39,11 +41,13 @@ struct AppListView: View {
         let metrics = SectionMetrics(store: store, keywords: keywords, purchases: purchases, design: design, charts: charts, news: news)
         let traffic = section == .stats ? store.trafficByProject : [:]
         // 뱃지가 선 앱이 언제나 맨 위 — 볼 것을 찾아다니지 않게. 그 안과 나머지는 MAU 순
-        // 그대로(릴리즈는 빨강 먼저). 열어 본 뒤에도 뱃지(`visitBadge`)가 남아 있어 자리가 튀지 않는다.
+        // 그대로(릴리즈는 빨강 먼저). 눌러 고른 앱은 뱃지가 사라져도 떠날 때까지 자리를 지킨다.
         let base = section == .release
             ? store.redFirst(store.projectCounts, key: { $0.key })
             : store.projectCounts
-        let flagged = Set(base.map(\.key).filter { (metrics.badge(section, project: $0) ?? visitBadge($0)) != nil })
+        let flagged = Set(base.map(\.key).filter {
+            (metrics.badge(section, project: $0) ?? visitBadge($0)) != nil || ($0 == held && $0 == store.selectedProject)
+        })
         let entries = base.filter { flagged.contains($0.key) } + base.filter { !flagged.contains($0.key) }
 
         List {
@@ -72,6 +76,8 @@ struct AppListView: View {
                 hiddenSection
             }
         }
+        .animation(.default, value: entries.map(\.key))
+        .onChange(of: section) { held = nil }
         .hubSidebarListStyle()
         .modifier(PushedTitle(title: section.rawValue, isPushed: pushes))
         .task(id: entries.count) { await icons.resolve(entries.map(\.key), keywords: keywords) }
@@ -104,7 +110,11 @@ struct AppListView: View {
         if pushes {
             NavigationLink(value: FeedbackStore.ProjectRoute(project: project, section: section)) { content }
         } else {
-            Button { store.selectedProject = project } label: { content }
+            Button {
+                let hasBadge = project.flatMap { metrics.badge(section, project: $0) ?? visitBadge($0) } != nil
+                held = hasBadge ? project : nil
+                store.selectedProject = project
+            } label: { content }
                 .buttonStyle(.plain)
                 .listRowBackground(Rectangle().fill(isSelected ? AnyShapeStyle(.tint.opacity(0.14)) : AnyShapeStyle(.clear)))
         }

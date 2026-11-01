@@ -29,6 +29,8 @@ struct FeatureListView: View {
     @ObservedObject private var marketing = MarketingStore.shared
     /// 질문 찾기 칸의 새 질문 뱃지.
     @ObservedObject private var leadStore = LeadStore.shared
+    /// "확인할 것" 에서 눌러 고른 칸. 뱃지가 사라져도 떠날 때까지 그 자리에 둔다.
+    @State private var held: FeedbackStore.ProjectSection?
 
     var body: some View {
         let metrics = SectionMetrics(store: store, keywords: keywords, purchases: purchases, design: design, charts: charts, news: news)
@@ -66,9 +68,10 @@ struct FeatureListView: View {
                 }
             }
 
-            // 뱃지가 달린 칸은 맨 위 "확인할 것" 으로 올린다. 뱃지가 사라지면 제 무리의 제자리로.
+            // 뱃지가 달린 칸은 맨 위 "확인할 것" 으로 올린다. 뱃지가 사라지고 그 칸을 떠나면 제 무리의
+            // 제자리로 — 누르자마자 줄이 도망가면 무엇을 골랐는지 볼 수 없다.
             // 할 일은 이미 맨 위 한 줄이라 그대로 둔다.
-            let flagged = Self.flagged(metrics)
+            let flagged = flagged(metrics)
             if !flagged.isEmpty {
                 Section("확인할 것") {
                     ForEach(flagged) { section in
@@ -91,7 +94,7 @@ struct FeatureListView: View {
                 }
             }
         }
-        .animation(.default, value: Self.flagged(metrics))
+        .animation(.default, value: flagged(metrics))
         .hubSidebarListStyle()
         .modifier(SectionChangesBaseline(metrics: metrics))
         .navigationTitle("FeedbackHub")
@@ -104,16 +107,19 @@ struct FeatureListView: View {
     }
 
     /// 뱃지가 달린 칸 — 무리 차례 그대로.
-    private static func flagged(_ metrics: SectionMetrics) -> [FeedbackStore.ProjectSection] {
+    private func flagged(_ metrics: SectionMetrics) -> [FeedbackStore.ProjectSection] {
         FeedbackStore.ProjectSection.Group.allCases
             .filter { $0 != .today }
             .flatMap(\.sections)
-            .filter { metrics.badge($0, project: nil) != nil }
+            .filter { metrics.badge($0, project: nil) != nil || ($0 == held && $0 == store.projectSection) }
     }
 
     private func row(_ section: FeedbackStore.ProjectSection, metrics: SectionMetrics) -> some View {
         let isSelected = store.projectSection == section
-        return Button { store.projectSection = section } label: {
+        return Button {
+            held = metrics.badge(section, project: nil) != nil ? section : nil
+            store.projectSection = section
+        } label: {
             FeatureRow(section: section,
                        detail: metrics.label(section, project: nil),
                        badge: metrics.badge(section, project: nil),

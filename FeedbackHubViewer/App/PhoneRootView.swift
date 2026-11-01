@@ -115,6 +115,12 @@ private struct PhoneTab: View {
                 .safeAreaInset(edge: .top, spacing: 0) { header(current: section) }
                 .onAppear { store.projectSection = section }
                 .onChange(of: section) { _, new in store.projectSection = new }
+                // 탭을 열어 목록을 봤으면 탭 뱃지는 지운다. 어느 앱이 바뀌었는지는 줄에 남는다.
+                .modifier(SectionVisitTracker(section: section, project: nil,
+                                              metrics: SectionMetrics(store: store, keywords: keywords,
+                                                                      purchases: purchases, design: design,
+                                                                      charts: charts, news: news),
+                                              isActive: store.phoneTab == tab))
         } else {
             ProjectSectionView(project: nil, section: section)
                 .safeAreaInset(edge: .top, spacing: 0) { header(current: section) }
@@ -123,38 +129,25 @@ private struct PhoneTab: View {
         }
     }
 
-    /// 무리 안의 기능 고르기 + 개발 빌드 띠. 기능이 하나뿐이면 세그먼트는 없다.
+    /// 무리 안의 기능 고르기. 기능이 하나뿐이면 없다. 개발 빌드 표시는 왼쪽 위 DEV 배지와 강조색이 한다.
     @ViewBuilder
     private func header(current: FeedbackStore.ProjectSection) -> some View {
         let sections = tab.phoneSections
-        if sections.count > 1 || CloudKitEnvironment.current == .development {
-            VStack(spacing: 8) {
-                DevelopmentBanner()
-                if sections.count > 1 {
-                    Picker("기능", selection: Binding(get: { current },
-                                                     set: { store.phoneSections[tab] = $0 })) {
-                        // 탭 뱃지가 어느 기능 것인지 — 세그먼트에 수를 붙인다.
-                        let metrics = SectionMetrics(store: store, keywords: keywords, purchases: purchases,
-                                                     design: design, charts: charts, news: news)
-                        ForEach(sections) { section in
-                            let count = metrics.badge(section, project: nil)?.count ?? 0
-                            Text(count > 0 ? "\(section.rawValue) ● \(count > 99 ? "99+" : "\(count)")" : section.rawValue)
-                                .tag(section)
-                        }
-                    }
-                    .pickerStyle(.segmented)
-                    .labelsHidden()
+        if sections.count > 1 {
+            Picker("기능", selection: Binding(get: { current },
+                                             set: { store.phoneSections[tab] = $0 })) {
+                // 탭 뱃지가 어느 기능 것인지 — 세그먼트에 수를 붙인다.
+                let metrics = SectionMetrics(store: store, keywords: keywords, purchases: purchases,
+                                             design: design, charts: charts, news: news)
+                ForEach(sections) { section in
+                    let count = metrics.badge(section, project: nil)?.count ?? 0
+                    Text(count > 0 ? "\(section.rawValue) ● \(count > 99 ? "99+" : "\(count)")" : section.rawValue)
+                        .tag(section)
                 }
             }
+            .pickerStyle(.segmented)
+            .labelsHidden()
             .hubHeaderBar(horizontalPadding: 16, verticalPadding: 8)
-        }
-    }
-
-    @ViewBuilder
-    private var banner: some View {
-        if CloudKitEnvironment.current == .development {
-            DevelopmentBanner()
-                .hubHeaderBar(horizontalPadding: 16, verticalPadding: 8)
         }
     }
 }

@@ -448,6 +448,8 @@ struct FeedbackRow: View {
     let isUnread: Bool
     let status: FeedbackStatus
     let note: String
+    /// 앱별로 묶인 목록(할 일)에서는 머리글이 이미 앱 이름을 말한다.
+    var showsProject = true
 
     // A phone row has no detail column beside it, so it carries a little more
     // of the body text and every badge the record has.
@@ -471,7 +473,9 @@ struct FeedbackRow: View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(alignment: .center, spacing: 8) {
                 UnreadDot(isUnread: isUnread)
-                Tag(text: projectLabel, systemImage: "square.grid.2x2")
+                if showsProject {
+                    Tag(text: projectLabel, systemImage: "square.grid.2x2")
+                }
                 if let rating = feedback.rating {
                     StarRatingView(rating: rating)
                 }
@@ -498,24 +502,42 @@ struct FeedbackRow: View {
                     .lineLimit(2)
             }
 
-            // Wraps instead of dropping badges off the right edge: on a phone
-            // an email plus a device name never fits on one line.
-            FlowLayout(spacing: 6, lineSpacing: 4) {
-                if let type = feedback.feedbackType, !type.isEmpty {
-                    Tag(text: type, systemImage: "tag")
-                }
-                if let version = feedback.appVersion, !version.isEmpty {
-                    Tag(text: "v\(version)", systemImage: "app.badge")
-                }
-                if let device = feedback.deviceModel, !device.isEmpty {
-                    Tag(text: device, systemImage: "iphone")
-                }
-                if let email = feedback.contactEmail, !email.isEmpty {
-                    Tag(text: email, systemImage: "envelope")
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
+            metadata
         }
         .padding(.vertical, 8)
+    }
+
+    /// 맥은 칩으로, 아이폰은 한 줄 글로. 좁은 줄에서 칩은 접히며 본문보다 큰 자리를 차지한다.
+    /// 전체 값은 상세 화면에 있다.
+    @ViewBuilder
+    private var metadata: some View {
+        #if os(iOS)
+        let parts = [feedback.feedbackType, feedback.appVersion.map { "v\($0)" },
+                     feedback.deviceModel, feedback.contactEmail]
+            .compactMap { $0 }
+            .filter { !$0.isEmpty && $0 != "v" }
+        if !parts.isEmpty {
+            Text(parts.joined(separator: " · "))
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+        }
+        #else
+        FlowLayout(spacing: 6, lineSpacing: 4) {
+            if let type = feedback.feedbackType, !type.isEmpty {
+                Tag(text: type, systemImage: "tag")
+            }
+            if let version = feedback.appVersion, !version.isEmpty {
+                Tag(text: "v\(version)", systemImage: "app.badge")
+            }
+            if let device = feedback.deviceModel, !device.isEmpty {
+                Tag(text: device, systemImage: "iphone")
+            }
+            if let email = feedback.contactEmail, !email.isEmpty {
+                Tag(text: email, systemImage: "envelope")
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        #endif
     }
 }

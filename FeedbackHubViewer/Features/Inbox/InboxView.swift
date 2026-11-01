@@ -361,7 +361,8 @@ struct InboxView: View {
                         projectLabel: store.displayName(for: feedback.projectKey),
                         isUnread: store.isUnread(feedback),
                         status: store.status(of: feedback),
-                        note: store.note(for: feedback))
+                        note: store.note(for: feedback),
+                        showsProject: false)
                 #if os(iOS)
                 .contentShape(Rectangle())
                 .onTapGesture { store.push(feedback) }
@@ -374,9 +375,10 @@ struct InboxView: View {
                     Image(systemName: "circle")
                         .font(.title2)
                     Text("반영함")
-                        .font(.body)
+                        .font(.footnote)
                 }
-                .foregroundStyle(.secondary)
+                // 단추 안의 .secondary 는 강조색이 옅어진 색이라 잘 안 읽힌다.
+                .foregroundStyle(Color.secondary)
                 .frame(minWidth: 54, minHeight: 54)
                 .contentShape(Rectangle())
             }
