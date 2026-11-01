@@ -66,6 +66,9 @@ final class AppStoreConnectStore: ObservableObject {
     var onNewReviews: ((String, [CustomerReview]) -> Void)?
     /// 번들 ID → 가장 최근 App Store 버전.
     @Published var versions: [String: AppVersionStatus] = [:]
+    /// 번들 ID → 제출된 버전 기록과 버전별 성능(`AppStoreConnectStore+Stabilization.swift`).
+    @Published var stabilitySources: [String: Stabilization.Source] = [:]
+    @Published var stabilityErrors: [String: String] = [:]
     /// 전체 프로젝트의 우선순위 분석 — 지금 보이는 것과 지난 기록.
     @Published var priority: PriorityAnalysis?
     @Published var priorityHistory: [PriorityAnalysis] = []
@@ -136,6 +139,7 @@ final class AppStoreConnectStore: ObservableObject {
         client = credentials.map(AppStoreConnect.init)
         rates = CacheFile.read(ExchangeRates.self, at: Self.ratesFile)
         restoreReviews()
+        restoreStability()
         restoreReferralLedger()
         if credentials != nil { restoreStoreCaches() }
     }
@@ -219,6 +223,7 @@ final class AppStoreConnectStore: ObservableObject {
         forgetSubscriptionEvents()
         forgetReferrals()
         forgetStoreAnalytics()
+        forgetStability()
     }
 
     // MARK: - 앱 찾기

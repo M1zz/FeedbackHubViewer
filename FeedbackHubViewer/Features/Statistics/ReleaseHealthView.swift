@@ -23,11 +23,13 @@ struct ReleaseHealthView: View {
 
     var body: some View {
         ScrollView {
-            Group {
+            VStack(alignment: .leading, spacing: 12) {
                 if let project {
                     ReleaseHealthCard(project: project)
+                    StabilizationCard(project: project)
                 } else {
                     overview
+                    StabilizationOverview()
                 }
             }
             .padding(contentPadding)

@@ -57,14 +57,18 @@ struct ReviewState: Codable {
     var triage: [String: FeedbackTriageEntry] = [:]
     /// App Store 리뷰 id → 할 일에서 완료로 뒀는지.
     var reviewsDone: [String: ReviewDoneEntry] = [:]
+    /// "앱|버전" → 그 릴리즈의 가설과 종료 조건.
+    var hypotheses: [String: Stabilization.Hypothesis] = [:]
 
-    var isEmpty: Bool { readIDs.isEmpty && triage.isEmpty && reviewsDone.isEmpty }
+    var isEmpty: Bool { readIDs.isEmpty && triage.isEmpty && reviewsDone.isEmpty && hypotheses.isEmpty }
 
     init(readIDs: Set<String> = [], triage: [String: FeedbackTriageEntry] = [:],
-         reviewsDone: [String: ReviewDoneEntry] = [:]) {
+         reviewsDone: [String: ReviewDoneEntry] = [:],
+         hypotheses: [String: Stabilization.Hypothesis] = [:]) {
         self.readIDs = readIDs
         self.triage = triage
         self.reviewsDone = reviewsDone
+        self.hypotheses = hypotheses
     }
 
     /// 리뷰 완료가 생기기 전 기기가 올린 값에는 그 칸이 없다 — 없으면 빈 것으로 읽는다.
@@ -74,6 +78,7 @@ struct ReviewState: Codable {
         readIDs = try container.decodeIfPresent(Set<String>.self, forKey: .readIDs) ?? []
         triage = try container.decodeIfPresent([String: FeedbackTriageEntry].self, forKey: .triage) ?? [:]
         reviewsDone = try container.decodeIfPresent([String: ReviewDoneEntry].self, forKey: .reviewsDone) ?? [:]
+        hypotheses = try container.decodeIfPresent([String: Stabilization.Hypothesis].self, forKey: .hypotheses) ?? [:]
     }
 
     /// 두 기기가 각자 고친 것을 하나로. 파일 머리말의 규칙 그대로다.
@@ -90,6 +95,10 @@ struct ReviewState: Codable {
         for (id, incoming) in other.reviewsDone {
             if let mine = result.reviewsDone[id], mine.decidedAt >= incoming.decidedAt { continue }
             result.reviewsDone[id] = incoming
+        }
+        for (id, incoming) in other.hypotheses {
+            if let mine = result.hypotheses[id], mine.updatedAt >= incoming.updatedAt { continue }
+            result.hypotheses[id] = incoming
         }
         return result
     }

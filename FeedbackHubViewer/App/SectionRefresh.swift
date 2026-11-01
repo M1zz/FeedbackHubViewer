@@ -65,7 +65,7 @@ struct SectionRefresh {
         case .feedback: "피드백"
         case .reviews: "\(scope)App Store 리뷰"
         case .stats: "사용 현황 · 이벤트"
-        case .release: project == nil ? "사용 현황 · 이벤트 · 진단" : "사용 현황 · 이벤트 · 진단 · 리뷰"
+        case .release: project == nil ? "사용 현황 · 이벤트 · 진단 · 모든 앱의 버전 기록 · 성능" : "사용 현황 · 이벤트 · 진단 · 리뷰 · 버전 기록 · 성능"
         case .acquisition: project == nil ? "모든 앱의 노출 · 전환 · 스토어 문구" : "노출 · 전환 · 스토어 문구 · 링크 출처"
         case .storeAnalytics: project == nil ? "분석 리포트가 있는 앱 목록" : "스토어 분석 리포트"
         case .crashes: "진단"
@@ -136,7 +136,14 @@ struct SectionRefresh {
         case .stats:
             await store.load(.numbers)
         case .release:
-            if let project { Task { await connect.loadReviews(bundleID: project, force: true) } }
+            if let project {
+                Task {
+                    await connect.loadReviews(bundleID: project, force: true)
+                    await connect.loadStability(bundleID: project, force: true)
+                }
+            } else {
+                Task { await connect.loadStability(bundleIDs: appKeys, force: true) }
+            }
             await store.load([.numbers, .crashes])
         case .acquisition:
             if let project {

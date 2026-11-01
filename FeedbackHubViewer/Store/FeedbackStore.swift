@@ -447,6 +447,8 @@ final class FeedbackStore: ObservableObject {
         triage = Self.decodeTriage(defaults.data(forKey: Self.triageKey))
         reviewsDone = defaults.data(forKey: Self.reviewsDoneKey)
             .flatMap { try? JSONDecoder().decode([String: ReviewDoneEntry].self, from: $0) } ?? [:]
+        releaseHypotheses = defaults.data(forKey: Self.releaseHypothesesKey)
+            .flatMap { try? JSONDecoder().decode([String: Stabilization.Hypothesis].self, from: $0) } ?? [:]
         statusFilter = defaults.string(forKey: Self.statusFilterKey)
             .flatMap(FeedbackStatusFilter.init(rawValue:)) ?? .pending
         hiddenProjects = Set(defaults.stringArray(forKey: Self.hiddenProjectsKey) ?? [])
@@ -1478,6 +1480,24 @@ final class FeedbackStore: ObservableObject {
         defaults.set(data, forKey: Self.reviewsDoneKey)
     }
 
+    // MARK: - 릴리즈 가설 (안정화)
+
+    /// "앱|버전" → 그 릴리즈의 가설과 종료 조건. 읽음 · 처리와 같은 길로 기기 사이에 오간다.
+    @Published private(set) var releaseHypotheses: [String: Stabilization.Hypothesis] = [:]
+    private static let releaseHypothesesKey = "releaseHypotheses"
+
+    func setReleaseHypothesis(_ hypothesis: String, exitCondition: String, project: String, version: String) {
+        releaseHypotheses[Stabilization.Hypothesis.key(project: project, version: version)] =
+            Stabilization.Hypothesis(hypothesis: hypothesis, exitCondition: exitCondition, updatedAt: Date())
+        persistReleaseHypothesesLocally()
+        pushReviewState()
+    }
+
+    private func persistReleaseHypothesesLocally() {
+        guard let data = try? JSONEncoder().encode(releaseHypotheses) else { return }
+        defaults.set(data, forKey: Self.releaseHypothesesKey)
+    }
+
     // MARK: - 기기 사이 동기화
 
     /// 읽음·처리를 iCloud 키·값 저장소와 맞추기 시작한다. 저장소를 못 쓰면
@@ -1494,7 +1514,7 @@ final class FeedbackStore: ObservableObject {
 
     /// 지금 이 기기가 들고 있는 판단.
     private var currentReviewState: ReviewState {
-        ReviewState(readIDs: readIDs, triage: triage, reviewsDone: reviewsDone)
+        ReviewState(readIDs: readIDs, triage: triage, reviewsDone: reviewsDone, hypotheses: releaseHypotheses)
     }
 
     /// 이 기기의 판단을 저장소에 올리고, 합쳐져 돌아온 것을 다시 받는다.
@@ -1520,6 +1540,10 @@ final class FeedbackStore: ObservableObject {
         if state.reviewsDone != reviewsDone {
             reviewsDone = state.reviewsDone
             persistReviewsDoneLocally()
+        }
+        if state.hypotheses != releaseHypotheses {
+            releaseHypotheses = state.hypotheses
+            persistReleaseHypothesesLocally()
         }
     }
 
