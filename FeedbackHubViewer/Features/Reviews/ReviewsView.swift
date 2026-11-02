@@ -282,8 +282,7 @@ private struct ProjectReviewsView: View {
     private var summary: some View {
         FlowLayout(spacing: 6, lineSpacing: 6) {
             if let version = purchases.versions[project] {
-                Tag(text: "v\(version.version) · \(version.stateLabel)", systemImage: "shippingbox",
-                    tint: version.tone == .live ? .green : (version.tone == .blocked ? .red : .orange))
+                StoreVersionTag(status: version, font: .subheadline)
             }
             if let average = feed.average {
                 Tag(text: String(format: "평균 %.2f", average), systemImage: "star.fill", tint: .yellow)
