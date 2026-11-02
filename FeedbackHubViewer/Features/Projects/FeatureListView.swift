@@ -140,7 +140,7 @@ struct FeatureListView: View {
 }
 
 /// 기능 한 줄: 아이콘 · 이름 · 전체 앱 기준 한마디 · 손볼 것 뱃지.
-private struct FeatureRow: View {
+struct FeatureRow: View {
     let section: FeedbackStore.ProjectSection
     let detail: String
     let badge: SectionMetrics.Badge?

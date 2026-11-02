@@ -107,7 +107,7 @@ final class FeedbackStore: ObservableObject {
             case build = "만들기"
             var id: String { rawValue }
             var sections: [ProjectSection] { ProjectSection.allCases.filter { $0.group == self } }
-            /// 아이폰 탭에 담을 기능. 설계는 맥의 디스크를 읽는 칸이라(`DesignDocsStore.isSupported`)
+            /// 아이폰에서 여는 기능. 설계는 맥의 디스크를 읽는 칸이라(`DesignDocsStore.isSupported`)
             /// 아이폰에는 없다.
             var phoneSections: [ProjectSection] {
                 #if os(macOS)
@@ -115,16 +115,6 @@ final class FeedbackStore: ObservableObject {
                 #else
                 sections.filter { $0 != .design }
                 #endif
-            }
-            /// 아이폰 하단 탭 — 담을 기능이 있는 무리만.
-            static var phoneTabs: [Group] { allCases.filter { !$0.phoneSections.isEmpty } }
-            /// 탭 바에 들어갈 짧은 이름.
-            var tabTitle: String {
-                switch self {
-                case .today: "할 일"
-                case .voice: "목소리"
-                default: rawValue
-                }
             }
             var systemImage: String {
                 switch self {
@@ -299,28 +289,62 @@ final class FeedbackStore: ObservableObject {
     /// 세운다 (`HubSummary.swift` 머리말의 예외).
     private var summaryOverwrites = false
 
+    /// 아이폰 하단 탭. 맥의 기능 무리(일곱)를 그대로 옮기면 탭이 넘쳐 "더 보기" 로 숨었다.
+    /// 숫자를 읽는 칸은 모두 "앱 상태" 한 탭으로 모은다. 탭마다 맨 앞은 기능 목록이고,
+    /// 기능을 누르면 그 기능의 화면을 민다.
+    enum PhoneTab: String, CaseIterable, Identifiable {
+        case today = "할 일"
+        case voice = "목소리"
+        case status = "앱 상태"
+        case marketing = "마케팅"
+        var id: String { rawValue }
+
+        /// 이 탭에 담는 무리. 차례가 곧 기능 목록의 차례다.
+        var groups: [ProjectSection.Group] {
+            switch self {
+            case .today: [.today]
+            case .voice: [.voice]
+            case .status: [.quality, .growth, .revenue, .build]
+            case .marketing: [.marketing]
+            }
+        }
+
+        var sections: [ProjectSection] { groups.flatMap(\.phoneSections) }
+
+        var systemImage: String {
+            switch self {
+            case .today: "tray.full"
+            case .voice: "bubble.left.and.bubble.right"
+            case .status: "waveform.path.ecg"
+            case .marketing: "megaphone"
+            }
+        }
+
+        static func containing(_ section: ProjectSection) -> PhoneTab {
+            allCases.first { $0.sections.contains(section) } ?? .status
+        }
+    }
+
+    /// 탭의 기능 목록에서 기능 하나를 골라 민 그 기능의 앱 목록.
+    struct SectionRoute: Hashable {
+        let section: ProjectSection
+    }
+
     // Navigation
 
     /// 지금 고른 기능. 화면의 첫 단계다 — 앱은 그 안에서 고른다.
     @Published var projectSection: ProjectSection = .inbox
     /// 맥 · 아이패드에서 앱 화면 위에 밀려 들어온 것(아이패드의 피드백 상세).
     @Published var path = NavigationPath()
-    /// 아이폰의 하단 탭 — 기능 무리 하나가 탭 하나다.
-    @Published var phoneTab: ProjectSection.Group = .today
+    /// 아이폰의 하단 탭.
+    @Published var phoneTab: PhoneTab = .today
     /// 아이폰 탭마다 따로 쌓인 화면. 탭을 오가도 각자 보던 자리가 남는다.
-    @Published var phonePaths: [ProjectSection.Group: NavigationPath] = [:]
-    /// 아이폰 탭마다 위쪽 세그먼트에서 고른 기능.
-    @Published var phoneSections: [ProjectSection.Group: ProjectSection] = [:]
+    @Published var phonePaths: [PhoneTab: NavigationPath] = [:]
     /// True on the layout where the app screen is *pushed* (iPhone) rather
     /// than shown beside the app list (Mac, iPad). Set by the root view;
     /// `open(project:section:)` needs it to know whether to push or to swap
     /// what the content column is scoped to.
     var usesStackNavigation = false
-
-    /// 아이폰 탭 하나에서 지금 고른 기능. 고른 적이 없으면 그 무리의 첫 기능.
-    func phoneSection(for tab: ProjectSection.Group) -> ProjectSection {
-        phoneSections[tab] ?? tab.phoneSections.first ?? .inbox
-    }
 
     /// 지금 보이는 스택에 한 화면을 민다 — 아이폰이면 열린 탭의 스택, 아니면 `path`.
     func push(_ value: some Hashable) {
@@ -343,11 +367,13 @@ final class FeedbackStore: ObservableObject {
         }
         if usesStackNavigation {
             // 그 기능이 사는 탭으로 옮겨 가서 민다. 뒤로 가면 그 탭의 앱 목록이 나온다.
-            let tab = projectSection.group
+            let tab = PhoneTab.containing(projectSection)
             phoneTab = tab
-            if projectSection.usesAppList { phoneSections[tab] = projectSection }
-            phonePaths[tab, default: NavigationPath()]
-                .append(ProjectRoute(project: project, section: projectSection))
+            // 기능 목록 → 앱 목록 → 앱 차례라, 뒤로 가면 그 기능의 앱 목록이 나오게.
+            var path = NavigationPath()
+            if projectSection.usesAppList { path.append(SectionRoute(section: projectSection)) }
+            path.append(ProjectRoute(project: project, section: projectSection))
+            phonePaths[tab] = path
         }
     }
 
