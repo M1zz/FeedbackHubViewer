@@ -56,7 +56,7 @@ struct Figure: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(title)
-                .font(.caption2)
+                .font(.hubCaption2)
                 .foregroundStyle(.secondary)
                 // 이름은 두 줄까지 접힌다. 아래 `lineLimit(1)`은 숫자를 위한
                 // 것이고(자릿수가 늘어도 줄을 바꾸지 않아야 한다), 이름까지
@@ -71,8 +71,8 @@ struct Figure: View {
             }
             if let note {
                 Text(note)
-                    .font(.caption2)
-                    .foregroundStyle(.tertiary)
+                    .font(.hubCaption2)
+                    .foregroundStyle(HierarchicalShapeStyle.hubFaint)
             }
         }
         // A figure sits in a row of figures: it shrinks rather than wraps, so
@@ -100,7 +100,7 @@ struct StatTile: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             Label(title, systemImage: systemImage)
-                .font(.caption2)
+                .font(.hubCaption2)
                 .foregroundStyle(.secondary)
                 .labelStyle(.titleAndIcon)
                 .lineLimit(1)
@@ -110,7 +110,7 @@ struct StatTile: View {
                     .font(.figure(textStyle))
                     .foregroundStyle(tint)
                 if !unit.isEmpty {
-                    Text(unit).font(.caption2).foregroundStyle(.secondary)
+                    Text(unit).font(.hubCaption2).foregroundStyle(.secondary)
                 }
             }
             .lineLimit(1)
@@ -119,5 +119,38 @@ struct StatTile: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(Platform.tilePadding)
         .cardSurface()
+    }
+}
+
+/// 글씨 크기 — 맥은 그대로 촘촘하게, 아이폰 · 아이패드는 본문(.body) 아래로 내려가지 않게.
+///
+/// 아이폰은 맥보다 화면에서 눈이 멀고, 작은 글씨(캡션 · 각주)는 손에 들고 읽기 어렵다. 그래서
+/// 작은 글씨 자리는 아이폰에서 본문 크기로 키우고, 위계는 굵기와 색(.secondary)이 맡는다.
+/// 다이내믹 타입을 따르므로 설정에서 글씨를 키우면 함께 커진다.
+extension Font {
+    static var hubCaption: Font { adaptive(.caption) }
+    static var hubCaption2: Font { adaptive(.caption2) }
+    static var hubFootnote: Font { adaptive(.footnote) }
+    static var hubSubheadline: Font { adaptive(.subheadline) }
+    static var hubCallout: Font { adaptive(.callout) }
+
+    private static func adaptive(_ mac: Font) -> Font {
+        #if os(macOS)
+        return mac
+        #else
+        return .body
+        #endif
+    }
+}
+
+extension HierarchicalShapeStyle {
+    /// 덜 중요한 설명 글. 맥은 세 번째 단계(.tertiary), 아이폰은 바깥에서 들고 읽어도 보이게
+    /// 두 번째 단계(.secondary)로 한 단계 진하게.
+    static var hubFaint: HierarchicalShapeStyle {
+        #if os(macOS)
+        return .tertiary
+        #else
+        return .secondary
+        #endif
     }
 }

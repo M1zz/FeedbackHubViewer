@@ -20,7 +20,8 @@
 
 import SwiftUI
 
-/// 칸 · 앱마다 마지막으로 본 말. 이 기기에만 둔다.
+/// 칸 · 앱마다 마지막으로 본 말. 본 시각과 함께 iCloud 로 기기 사이에서 맞춘다(`SyncedDefaults`) —
+/// 맥에서 확인한 뱃지가 아이폰에서도 지워진다.
 @MainActor
 final class SectionChanges: ObservableObject {
     static let shared = SectionChanges()
@@ -32,7 +33,15 @@ final class SectionChanges: ObservableObject {
 
     private static let defaultsKey = "section-seen-signatures"
     private static let recentKey = "section-recent-changes"
-    private static let releaseAckKey = "release-red-acknowledged"
+    static let releaseAckKey = "release-red-acknowledged"
+    /// 기기 사이에서 맞추는 칸 · 앱마다 본 말과 그 시각(`Mark`).
+    static let marksKey = "section-seen-marks"
+
+    /// 본 말 하나와 본 시각. 두 기기가 같은 칸을 따로 봤으면 늦게 본 쪽이 이긴다.
+    struct Mark: Codable, Equatable {
+        var signature: String
+        var at: Date
+    }
 
     /// 열어 본 순간 달라져 있던 것 — 그 전 말과 지금 말.
     struct Change: Codable, Equatable {
@@ -59,16 +68,60 @@ final class SectionChanges: ObservableObject {
 
     /// "칸|앱" → 마지막으로 본 말.
     @Published private var seen: [String: String]
+    /// "칸|앱" → 그 말을 본 시각. 기준선으로만 잡은 것은 `.distantPast`.
+    private var seenAt: [String: Date]
+    private var syncObserver: NSObjectProtocol?
 
     /// 읽음으로 넘긴 릴리즈 빨강 — "앱|버전". 같은 버전이 빨강인 동안은 뱃지를 다시 달지
     /// 않고, 새 버전이 빨강이 되면 다시 단다. 빨강 점 · 판정은 그대로다.
     @Published private var acknowledgedRed: Set<String>
 
     private init() {
-        seen = UserDefaults.standard.dictionary(forKey: Self.defaultsKey) as? [String: String] ?? [:]
+        let legacy = UserDefaults.standard.dictionary(forKey: Self.defaultsKey) as? [String: String] ?? [:]
+        var marks = Self.decodeMarks(UserDefaults.standard.object(forKey: Self.marksKey))
+        for (key, signature) in legacy where marks[key] == nil {
+            marks[key] = Mark(signature: signature, at: .distantPast)
+        }
+        seen = marks.mapValues(\.signature)
+        seenAt = marks.mapValues(\.at)
         recent = (UserDefaults.standard.data(forKey: Self.recentKey))
             .flatMap { try? JSONDecoder().decode([String: Change].self, from: $0) } ?? [:]
         acknowledgedRed = Set(UserDefaults.standard.stringArray(forKey: Self.releaseAckKey) ?? [])
+        syncObserver = NotificationCenter.default.addObserver(forName: SyncedDefaults.changed, object: nil,
+                                                              queue: .main) { note in
+            guard note.touches(Self.marksKey, Self.releaseAckKey) else { return }
+            Task { @MainActor in SectionChanges.shared.adoptSynced() }
+        }
+    }
+
+    // MARK: - 기기 사이
+
+    /// 다른 기기가 본 것을 들인다. 그 뒤에 본 바뀜은 띠에서도 내린다.
+    private func adoptSynced() {
+        let marks = Self.decodeMarks(UserDefaults.standard.object(forKey: Self.marksKey))
+        let nextSeen = marks.mapValues(\.signature)
+        let nextAt = marks.mapValues(\.at)
+        let nextRecent = recent.filter { key, change in (nextAt[key] ?? .distantPast) <= change.at }
+        if nextSeen != seen { seen = nextSeen }
+        seenAt = nextAt
+        if nextRecent != recent { recent = nextRecent }
+        let ack = Set(UserDefaults.standard.stringArray(forKey: Self.releaseAckKey) ?? [])
+        if ack != acknowledgedRed { acknowledgedRed = ack }
+    }
+
+    nonisolated static func decodeMarks(_ value: Any?) -> [String: Mark] {
+        guard let data = value as? Data else { return [:] }
+        return (try? JSONDecoder().decode([String: Mark].self, from: data)) ?? [:]
+    }
+
+    /// 칸마다 늦게 본 쪽. `SyncedDefaults` 가 부른다.
+    nonisolated static func mergeSyncedMarks(_ local: Any?, _ remote: Any?) -> Any? {
+        if local == nil && remote == nil { return nil }
+        var merged = decodeMarks(local)
+        for (key, mark) in decodeMarks(remote) where (merged[key]?.at ?? .distantPast) < mark.at || merged[key] == nil {
+            merged[key] = mark
+        }
+        return try? JSONEncoder().encode(merged)
     }
 
     // MARK: - 릴리즈 빨강
@@ -123,7 +176,7 @@ final class SectionChanges: ObservableObject {
         let next = acknowledgedRed.intersection(live).union(keys)
         guard next != acknowledgedRed else { return }
         acknowledgedRed = next
-        UserDefaults.standard.set(Array(next), forKey: Self.releaseAckKey)
+        SyncedDefaults.set(Array(next).sorted(), forKey: Self.releaseAckKey)
     }
 
     private static func key(_ section: FeedbackStore.ProjectSection, _ project: String) -> String {
@@ -141,6 +194,7 @@ final class SectionChanges: ObservableObject {
         let missing = signatures.filter { seen[$0.key] == nil }
         guard !missing.isEmpty else { return }
         seen.merge(missing) { old, _ in old }
+        for key in missing.keys where seenAt[key] == nil { seenAt[key] = .distantPast }
         persist()
     }
 
@@ -150,6 +204,8 @@ final class SectionChanges: ObservableObject {
         var next = seen
         var nextRecent = recent
         var nextVisit = visit?.section == section.rawValue ? visit! : Visit(section: section.rawValue, counts: [:])
+        let now = Date()
+        var stamped = false
         for (project, signature) in signatures {
             let key = Self.key(section, project)
             if let old = seen[key], old != signature {
@@ -160,10 +216,14 @@ final class SectionChanges: ObservableObject {
                 nextRecent[key] = before == signature ? nil
                     : Change(section: section.rawValue, project: project, before: before, after: signature, at: Date())
             }
+            if seen[key] != signature {
+                seenAt[key] = now
+                stamped = true
+            }
             next[key] = signature
         }
         if visiting, nextVisit != visit { visit = nextVisit }
-        guard next != seen || nextRecent != recent else { return }
+        guard next != seen || nextRecent != recent || stamped else { return }
         seen = next
         recent = nextRecent
         persist()
@@ -200,6 +260,10 @@ final class SectionChanges: ObservableObject {
 
     private func persist() {
         UserDefaults.standard.set(seen, forKey: Self.defaultsKey)
+        let marks = seen.reduce(into: [String: Mark]()) { marks, entry in
+            marks[entry.key] = Mark(signature: entry.value, at: seenAt[entry.key] ?? .distantPast)
+        }
+        SyncedDefaults.set(try? JSONEncoder().encode(marks), forKey: Self.marksKey)
         UserDefaults.standard.set(try? JSONEncoder().encode(recent), forKey: Self.recentKey)
     }
 

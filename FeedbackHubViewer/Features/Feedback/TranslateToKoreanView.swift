@@ -94,7 +94,7 @@ private struct InlineTranslation: View {
             }
             if let errorText {
                 Label(errorText, systemImage: "exclamationmark.triangle")
-                    .font(.callout)
+                    .font(.hubCallout)
                     .foregroundStyle(.secondary)
             }
             controls
@@ -124,7 +124,7 @@ private struct InlineTranslation: View {
                 ProgressView()
                     .controlSize(.small)
                 Text("번역 중…")
-                    .font(.caption)
+                    .font(.hubCaption)
                     .foregroundStyle(.secondary)
             } else if result != nil {
                 Button("번역 숨기기") {
@@ -140,7 +140,7 @@ private struct InlineTranslation: View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
                 Text(TranslateToKoreanView.languageLabel(from: result.sourceLanguage))
-                    .font(.caption)
+                    .font(.hubCaption)
                     .foregroundStyle(.secondary)
                 Spacer(minLength: 12)
                 // The translation is the part worth pasting into a reply, so it

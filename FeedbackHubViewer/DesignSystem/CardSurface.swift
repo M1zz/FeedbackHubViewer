@@ -36,7 +36,7 @@ struct Card<Content: View>: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             Label(title, systemImage: systemImage)
-                .font(.subheadline.weight(.semibold))
+                .font(.hubSubheadline.weight(.semibold))
             content
         }
         .frame(maxWidth: .infinity, alignment: .leading)

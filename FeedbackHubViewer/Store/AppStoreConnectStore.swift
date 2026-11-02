@@ -59,6 +59,13 @@ final class AppStoreConnectStore: ObservableObject {
     @Published var reviewFeeds: [String: ReviewFeed] = [:]
     /// 번들 ID → 리뷰 탭에서 확인한 리뷰 id. 디스크에 남는다.
     @Published var viewedReviewIDs: [String: Set<String>] = [:]
+    /// 확인한 리뷰를 iCloud 비공개 DB 로 기기 사이에서 하나로(`SyncedBlob`). 맥에서 본 리뷰는
+    /// 아이폰에서도 "새 리뷰" 가 아니다. 앱마다 합집합.
+    private(set) lazy var viewedReviewsCloud = SyncedBlob<[String: Set<String>]>(
+        name: "reviews-viewed",
+        current: { [weak self] in self?.viewedReviewIDs },
+        adopt: { [weak self] merged in self?.adoptViewedReviews(merged) },
+        merge: { local, remote in local.merging(remote) { $0.union($1) } })
     /// 번들 ID → 알림을 이미 보낸(또는 처음 받을 때 있던) 리뷰 id. 확인과 따로 센다 -
     /// 리뷰 탭을 안 열었다고 같은 리뷰로 30분마다 다시 알리면 안 된다.
     var alertedReviewIDs: [String: Set<String>] = [:]

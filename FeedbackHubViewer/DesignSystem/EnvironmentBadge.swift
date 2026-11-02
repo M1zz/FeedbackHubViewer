@@ -59,7 +59,7 @@ struct EnvironmentBadge: View {
         Label(environment.shortLabel, systemImage: symbol)
             // 툴바 안에서는 Label 이 아이콘만 남기는데, 이 배지는 글자가 요점이다.
             .labelStyle(.titleAndIcon)
-            .font(.caption.weight(.bold))
+            .font(.hubCaption.weight(.bold))
             .padding(.horizontal, 8)
             .padding(.vertical, 3)
             // 배지는 줄어들지 않는다. 좁은 헤더에서 먼저 짜부라져 "PROD" 가 한 글자씩
@@ -79,7 +79,7 @@ struct DevelopmentBanner: View {
     var body: some View {
         if CloudKitEnvironment.current == .development {
             Label("개발 환경 데이터", systemImage: "hammer.fill")
-                .font(.footnote.weight(.semibold))
+                .font(.hubFootnote.weight(.semibold))
                 .lineLimit(1)
                 .foregroundStyle(.white)
                 .padding(.horizontal, 12)

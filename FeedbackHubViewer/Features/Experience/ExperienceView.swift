@@ -140,7 +140,7 @@ struct ExperienceView: View {
         if experience != nil {
             Text("꿈꾸는 모습 · 줘야 하는 경험 · 주면 안 되는 경험은 app-portfolio 의 소개와 vision, 앱 리포의 스토어 문구를 근거로 쓴 초안이에요.")
                 .font(.body)
-                .foregroundStyle(.tertiary)
+                .foregroundStyle(HierarchicalShapeStyle.hubFaint)
                 .fixedSize(horizontal: false, vertical: true)
         }
     }
@@ -178,7 +178,7 @@ struct ExperienceView: View {
                                 .fixedSize(horizontal: false, vertical: true)
                         }
                         Spacer(minLength: 4)
-                        Image(systemName: "chevron.right").foregroundStyle(.tertiary)
+                        Image(systemName: "chevron.right").foregroundStyle(HierarchicalShapeStyle.hubFaint)
                     }
                     .padding(12)
                     .frame(maxWidth: .infinity, alignment: .leading)

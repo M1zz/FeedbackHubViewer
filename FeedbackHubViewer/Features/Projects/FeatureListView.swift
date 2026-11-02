@@ -48,7 +48,7 @@ struct FeatureListView: View {
             if let error = store.errorMessage, !store.hasContent {
                 Section {
                     Label(error, systemImage: "exclamationmark.triangle")
-                        .font(.callout)
+                        .font(.hubCallout)
                         .foregroundStyle(.red)
                 }
             }
@@ -157,7 +157,7 @@ private struct FeatureRow: View {
                     .font(.body)
                     .fontWeight(isSelected ? .semibold : .regular)
                 Text(detail)
-                    .font(.caption.monospacedDigit())
+                    .font(.hubCaption.monospacedDigit())
                     .foregroundStyle(.secondary)
                     .lineLimit(2)
             }

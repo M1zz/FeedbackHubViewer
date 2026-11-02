@@ -69,7 +69,7 @@ private struct SubtitleBar: View {
     var body: some View {
         HStack {
             Text(text)
-                .font(.footnote)
+                .font(.hubFootnote)
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)

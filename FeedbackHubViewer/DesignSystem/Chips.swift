@@ -18,7 +18,7 @@ struct Tag: View {
     /// `nil` is the neutral grey tag. A colour tints the fill and the text
     /// together, which is how a 확인함 or a 크래시 원인 marks itself.
     var tint: Color? = nil
-    var font: Font = .subheadline
+    var font: Font = .hubSubheadline
     /// The dense form for a caption row, where a full-size tag would crowd the
     /// line it sits on.
     var isCompact = false
@@ -71,7 +71,7 @@ struct FilterChip: View {
     var body: some View {
         Button(action: action) {
             Text(title)
-                .font(.callout)
+                .font(.hubCallout)
                 // `Tag`와 같은 이유로 너비를 우기지 않는다.
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
@@ -136,7 +136,7 @@ struct StatusChip: View {
                 chip(withLabel: showsLabel)
                 chip(withLabel: false)
             }
-            .font(.caption2.weight(.medium))
+            .font(.hubCaption2.weight(.medium))
             .lineLimit(1)
             .minimumScaleFactor(0.7)
             .truncationMode(.tail)
@@ -162,7 +162,7 @@ struct PendingBadge: View {
 
     var body: some View {
         Text("\(count)")
-            .font(.caption2.bold().monospacedDigit())
+            .font(.hubCaption2.bold().monospacedDigit())
             .foregroundStyle(.white)
             .padding(.horizontal, 6)
             .padding(.vertical, 2)
@@ -177,7 +177,7 @@ struct UnreadBadge: View {
 
     var body: some View {
         Text("\(count)")
-            .font(.caption2.bold().monospacedDigit())
+            .font(.hubCaption2.bold().monospacedDigit())
             .foregroundStyle(.white)
             .padding(.horizontal, 6)
             .padding(.vertical, 2)
@@ -195,7 +195,7 @@ struct StarRatingView: View {
             ForEach(1...maximum, id: \.self) { index in
                 Image(systemName: index <= rating ? "star.fill" : "star")
                     .foregroundStyle(index <= rating ? .yellow : .secondary)
-                    .font(.subheadline)
+                    .font(.hubSubheadline)
             }
         }
         .accessibilityLabel("\(rating)점 / \(maximum)점")

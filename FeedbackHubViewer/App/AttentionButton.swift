@@ -114,7 +114,7 @@ private struct AttentionList: View {
                         if checkable.contains(.crash) { store.markCrashesViewed(project: nil) }
                     }
                     .buttonStyle(.borderless)
-                    .font(.callout)
+                    .font(.hubCallout)
                 }
             }
             .padding(12)
@@ -123,7 +123,7 @@ private struct AttentionList: View {
             if entries.isEmpty {
                 Text(kinds.isEmpty ? "설정 → 알림에서 뱃지로 볼 것을 고를 수 있습니다."
                                    : "새로 온 \(kinds.map(\.name).joined(separator: " · "))가 없습니다.")
-                    .font(.callout)
+                    .font(.hubCallout)
                     .foregroundStyle(.secondary)
                     .padding(12)
             } else {
@@ -144,7 +144,7 @@ private struct AttentionList: View {
     private func row(_ entry: Entry) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(store.displayName(for: entry.project))
-                .font(.subheadline.weight(.semibold))
+                .font(.hubSubheadline.weight(.semibold))
             HStack(spacing: 6) {
                 ForEach(entry.counts, id: \.kind) { item in
                     chip(item.count, item.kind.name, item.kind.systemImage) {
@@ -159,7 +159,7 @@ private struct AttentionList: View {
                       action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Label("새 \(name) \(count)", systemImage: systemImage)
-                .font(.callout)
+                .font(.hubCallout)
                 .padding(.horizontal, 8)
                 .padding(.vertical, 4)
                 .background(Color.red.opacity(0.12), in: Capsule())

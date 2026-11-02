@@ -28,7 +28,7 @@ struct CopyButton: View {
             let label = Label(copied ? "복사됨" : title,
                               systemImage: copied ? "checkmark" : "doc.on.doc")
             if isCompact {
-                label.labelStyle(.iconOnly).font(.caption)
+                label.labelStyle(.iconOnly).font(.hubCaption)
             } else {
                 label
             }

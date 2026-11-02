@@ -82,7 +82,7 @@ private struct AnalyticsExplorerRow: View {
                 Text(entry.report.name).font(.body)
                 Spacer(minLength: 8)
                 Text(granularityLabel)
-                    .font(.callout)
+                    .font(.hubCallout)
                     .foregroundStyle(.secondary)
             }
         }

@@ -345,7 +345,7 @@ struct StabilizationVersionRow: View {
                 }
                 Spacer(minLength: 4)
                 Text(row.submittedAt.formatted(date: .abbreviated, time: .omitted))
-                    .font(.footnote)
+                    .font(.hubFootnote)
                     .foregroundStyle(Color.secondary)
             }
         }
@@ -354,7 +354,7 @@ struct StabilizationVersionRow: View {
 
     private func metric(_ title: String, _ value: String, tint: Color = .primary) -> some View {
         VStack(alignment: .leading, spacing: 2) {
-            Text(title).font(.footnote).foregroundStyle(.secondary)
+            Text(title).font(.hubFootnote).foregroundStyle(.secondary)
             Text(value).font(.body.monospacedDigit()).foregroundStyle(tint)
         }
         .accessibilityElement(children: .combine)

@@ -103,13 +103,13 @@ struct AppPriorityCards: View {
                 HStack(spacing: 8) {
                     ProgressView().controlSize(.small)
                     Text(progress)
-                        .font(.callout)
+                        .font(.hubCallout)
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
                 }
             } else if let analysis = purchases.priority {
                 Text("\(AppFormat.dateTime(analysis.date))에 낸 점수" + (analysis.id == purchases.priorityHistory.first?.id ? "" : " (지난 기록)"))
-                    .font(.caption)
+                    .font(.hubCaption)
                     .foregroundStyle(.secondary)
             }
         }
@@ -124,7 +124,7 @@ struct AppPriorityCards: View {
             if purchases.credentials?.hasVendorNumber != true {
                 Label("판매자 번호가 없어 결제 · 다운로드 신호 없이 리뷰만으로 냅니다. 설정에서 넣을 수 있어요.",
                       systemImage: "exclamationmark.triangle")
-                    .font(.callout)
+                    .font(.hubCallout)
                     .foregroundStyle(.orange)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -157,9 +157,9 @@ struct AppPriorityCards: View {
                     .font(.title)
                     .foregroundStyle(tint)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(title).font(.caption).foregroundStyle(.secondary)
+                    Text(title).font(.hubCaption).foregroundStyle(.secondary)
                     Text(row.name).font(.title3.bold()).lineLimit(2)
-                    Text(detail).font(.caption).foregroundStyle(.secondary)
+                    Text(detail).font(.hubCaption).foregroundStyle(.secondary)
                 }
                 Spacer(minLength: 0)
             }
@@ -181,12 +181,12 @@ struct AppPriorityCards: View {
             }
             if !analysis.usedSales {
                 Text("판매 리포트 없이 리뷰만으로 낸 점수입니다.")
-                    .font(.caption)
+                    .font(.hubCaption)
                     .foregroundStyle(.orange)
             }
             Text("\"결제 핵심\"은 통화가 섞이지 않게 돈을 낸 인앱 결제 건수로 가립니다. 수익금은 통화별로 따로 적어요.")
-                .font(.caption)
-                .foregroundStyle(.tertiary)
+                .font(.hubCaption)
+                .foregroundStyle(HierarchicalShapeStyle.hubFaint)
                 .fixedSize(horizontal: false, vertical: true)
         }
     }
@@ -194,8 +194,8 @@ struct AppPriorityCards: View {
     private func legendItem(_ range: String, _ tint: Color, _ label: String) -> some View {
         HStack(spacing: 4) {
             Circle().fill(tint).frame(width: 8, height: 8)
-            Text(range).font(.caption.weight(.semibold))
-            Text(label).font(.caption).foregroundStyle(.secondary)
+            Text(range).font(.hubCaption.weight(.semibold))
+            Text(label).font(.hubCaption).foregroundStyle(.secondary)
         }
     }
 }
@@ -224,7 +224,7 @@ private struct PriorityRowCard: View {
         HStack(alignment: .top, spacing: 12) {
             Text("\(rank)")
                 .font(.title3.monospacedDigit().weight(.heavy))
-                .foregroundStyle(.tertiary)
+                .foregroundStyle(HierarchicalShapeStyle.hubFaint)
                 .frame(minWidth: 26)
 
             VStack(alignment: .leading, spacing: 10) {
@@ -285,12 +285,12 @@ private struct PriorityRowCard: View {
     private func axis(_ label: String, _ value: Double, _ tint: Color) -> some View {
         HStack(spacing: 8) {
             Text(label)
-                .font(.caption)
+                .font(.hubCaption)
                 .foregroundStyle(.secondary)
                 .frame(width: 30, alignment: .leading)
             MeterBar(ratio: value / 100, height: 7, tint: tint.opacity(0.85))
             Text("\(Int(value))")
-                .font(.caption.monospacedDigit())
+                .font(.hubCaption.monospacedDigit())
                 .foregroundStyle(.secondary)
                 .frame(width: 26, alignment: .trailing)
         }
@@ -300,8 +300,8 @@ private struct PriorityRowCard: View {
 
     private func metric(_ label: String, _ value: String, tint: Color = .primary) -> some View {
         VStack(alignment: .leading, spacing: 2) {
-            Text(label).font(.caption2).foregroundStyle(.secondary)
-            Text(value).font(.subheadline.weight(.semibold).monospacedDigit()).foregroundStyle(tint)
+            Text(label).font(.hubCaption2).foregroundStyle(.secondary)
+            Text(value).font(.hubSubheadline.weight(.semibold).monospacedDigit()).foregroundStyle(tint)
         }
     }
 }

@@ -394,7 +394,7 @@ final class FeedbackStore: ObservableObject {
     @Published var badgeKinds = AttentionKind.defaultBadgeKinds {
         didSet {
             guard badgeKinds != oldValue else { return }
-            defaults.set(badgeKinds.map(\.rawValue), forKey: Self.badgeKindsKey)
+            SyncedDefaults.set(badgeKinds.map(\.rawValue).sorted(), forKey: Self.badgeKindsKey)
             refreshBadge()
         }
     }
@@ -403,7 +403,7 @@ final class FeedbackStore: ObservableObject {
         didSet {
             guard activityOverrides != oldValue else { return }
             if let data = try? JSONEncoder().encode(activityOverrides) {
-                defaults.set(data, forKey: Self.activityOverridesKey)
+                SyncedDefaults.set(data, forKey: Self.activityOverridesKey)
             }
             derived.habit = [:]
         }
@@ -412,7 +412,7 @@ final class FeedbackStore: ObservableObject {
     @Published var alertKinds = AttentionKind.defaultAlertKinds {
         didSet {
             guard alertKinds != oldValue else { return }
-            defaults.set(alertKinds.map(\.rawValue), forKey: Self.alertKindsKey)
+            SyncedDefaults.set(alertKinds.map(\.rawValue).sorted(), forKey: Self.alertKindsKey)
             syncPushSubscriptions()
         }
     }
@@ -431,6 +431,7 @@ final class FeedbackStore: ObservableObject {
     /// 올린다 — 규칙은 `HubSummary.swift` 머리말에.
     private let summarySync = HubSummarySync()
     private var autoRefreshTask: Task<Void, Never>?
+    private var settingsObserver: NSObjectProtocol?
     private let defaults: UserDefaults
 
     init(defaults: UserDefaults = .standard) {
@@ -476,6 +477,7 @@ final class FeedbackStore: ObservableObject {
         if notificationsEnabled {
             Task { notificationsAuthorized = await NotificationService.isAuthorized() }
         }
+        observeSyncedSettings()
     }
 
     /// Which half of the container this build reads. Fixed at build time by the
@@ -1616,7 +1618,46 @@ final class FeedbackStore: ObservableObject {
     }
 
     private func persistHiddenProjects() {
-        defaults.set(Array(hiddenProjects), forKey: Self.hiddenProjectsKey)
+        SyncedDefaults.set(Array(hiddenProjects).sorted(), forKey: Self.hiddenProjectsKey)
+    }
+
+    // MARK: - 다른 기기에서 고친 설정
+
+    /// 숨긴 앱 · 활동 정의 · 뱃지 · 알림 종류를 다른 기기가 바꿨으면 다시 읽는다(`SyncedDefaults`).
+    func observeSyncedSettings() {
+        guard settingsObserver == nil else { return }
+        settingsObserver = NotificationCenter.default.addObserver(forName: SyncedDefaults.changed, object: nil,
+                                                                  queue: .main) { [weak self] note in
+            guard note.touches(Self.hiddenProjectsKey, Self.activityOverridesKey,
+                               Self.badgeKindsKey, Self.alertKindsKey) else { return }
+            Task { @MainActor in self?.reloadSyncedSettings() }
+        }
+    }
+
+    private func reloadSyncedSettings() {
+        let hidden = Set(defaults.stringArray(forKey: Self.hiddenProjectsKey) ?? [])
+        if hidden != hiddenProjects {
+            hiddenProjects = hidden
+            if let selectedProject, hidden.contains(selectedProject) {
+                self.selectedProject = nil
+                path = NavigationPath()
+                phonePaths = [:]
+            }
+            refreshBadge()
+        }
+        if let data = defaults.data(forKey: Self.activityOverridesKey),
+           let saved = try? JSONDecoder().decode([String: ActivityDefinition].self, from: data),
+           saved != activityOverrides {
+            activityOverrides = saved
+        }
+        if let saved = defaults.stringArray(forKey: Self.badgeKindsKey) {
+            let kinds = Set(saved.compactMap(AttentionKind.init(rawValue:)))
+            if kinds != badgeKinds { badgeKinds = kinds }
+        }
+        if let saved = defaults.stringArray(forKey: Self.alertKindsKey) {
+            let kinds = Set(saved.compactMap(AttentionKind.init(rawValue:)))
+            if kinds != alertKinds { alertKinds = kinds }
+        }
     }
 
     // MARK: - Project name resolution

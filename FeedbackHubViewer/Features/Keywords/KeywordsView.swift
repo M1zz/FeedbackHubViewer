@@ -139,7 +139,7 @@ struct KeywordsView: View {
                 VStack(alignment: .leading, spacing: 3) {
                     Text(app.name).font(.headline)
                     Text(app.genres.joined(separator: " · "))
-                        .font(.caption).foregroundStyle(.secondary)
+                        .font(.hubCaption).foregroundStyle(.secondary)
                     HStack(spacing: 10) {
                         if let rating = app.averageRating, app.ratingCount > 0 {
                             Label(String(format: "%.2f (%d)", rating, app.ratingCount),
@@ -148,7 +148,7 @@ struct KeywordsView: View {
                         if let version = app.version { Text("v\(version)") }
                         if let released = app.releasedAt { Text(AppFormat.relative(released)) }
                     }
-                    .font(.caption).foregroundStyle(.secondary)
+                    .font(.hubCaption).foregroundStyle(.secondary)
                 }
                 Spacer()
                 if let url = app.storeURL {
@@ -170,7 +170,7 @@ struct KeywordsView: View {
                      : keywords.isChecking
                          ? "App Store에서 이 앱을 찾는 중입니다…"
                          : "이 번들 ID로 App Store에서 앱을 찾지 못했습니다. 아직 심사 중이거나 개발용 빌드일 수 있습니다.")
-                    .font(.callout).foregroundStyle(.secondary)
+                    .font(.hubCallout).foregroundStyle(.secondary)
                 if project != nil {
                     Button("App Store에서 다시 찾기") {
                         keywords.refreshLinks(bundleIds: store.allProjectKeys)
@@ -189,9 +189,9 @@ struct KeywordsView: View {
         Card(title: "여기서 시작", systemImage: "sparkle.magnifyingglass") {
             VStack(alignment: .leading, spacing: 10) {
                 Text("추적 중인 검색어가 없습니다. **순위도 경쟁 앱도 검색어에서 나옵니다** — 검색어 하나를 넣으면 그 검색 결과에서 내 순위를 읽고, 같은 결과의 상위 앱들이 경쟁 앱이 됩니다.")
-                    .font(.callout)
+                    .font(.hubCallout)
                 Text("떠올리지 않아도 됩니다. 이 앱 이름으로 검색해 같은 자리에 서는 앱들을 모으고, **경쟁 앱 몇 개의 이웃까지** 훑어 이름들이 공통으로 쓰는 말을 후보로 뽑은 다음, **하나씩 실제로 검색해서 순위에 잡히는 것만** 남깁니다.")
-                    .font(.caption).foregroundStyle(.secondary)
+                    .font(.hubCaption).foregroundStyle(.secondary)
                 HStack {
                     Button {
                         if let project { keywords.discover(for: project, country: addCountries.first) }
@@ -201,7 +201,7 @@ struct KeywordsView: View {
                     .buttonStyle(.borderedProminent)
                     .disabled(project == nil || keywords.isChecking)
                     Text("검색어 하나당 3초, 열두 개면 30초쯤")
-                        .font(.caption2).foregroundStyle(.secondary)
+                        .font(.hubCaption2).foregroundStyle(.secondary)
                 }
             }
         }
@@ -223,13 +223,13 @@ struct KeywordsView: View {
                 countryPicker
                 HStack(spacing: 8) {
                     Text("검색 한 번이 내 앱 전부를 커버합니다. 같은 검색어를 다른 앱에서도 추적해도 요청은 늘지 않습니다.")
-                        .font(.caption).foregroundStyle(.secondary)
+                        .font(.hubCaption).foregroundStyle(.secondary)
                     Spacer()
                     if project != nil, !standings.isEmpty {
                         Button {
                             if let project { keywords.discover(for: project, country: addCountries.first) }
                         } label: {
-                            Label("자동 찾기", systemImage: "wand.and.stars").font(.caption)
+                            Label("자동 찾기", systemImage: "wand.and.stars").font(.hubCaption)
                         }
                         .disabled(keywords.isChecking)
                     }
@@ -346,7 +346,7 @@ struct KeywordsView: View {
                 }
                 if standings.contains(where: { $0.blockers != nil }) {
                     Text("각 줄의 **‘N개 앞섬’** 은 위에 있는 앱 중 내 앱보다 리뷰가 많은 것의 수 — 18위인데 위 17개 중 7개가 나보다 작으면 실제로는 10개 뒤입니다. 순위가 낮아도 앞선 앱이 적으면 그쪽이 더 가깝습니다.")
-                        .font(.caption).foregroundStyle(.secondary)
+                        .font(.hubCaption).foregroundStyle(.secondary)
                         .padding(.top, 10)
                 }
             }
@@ -364,11 +364,11 @@ struct KeywordsView: View {
                     Text(standings.isEmpty
                          ? "아직 없습니다. 경쟁 앱은 **추적 중인 검색어의 결과**에서 뽑으므로, 검색어를 하나 넣어야 나옵니다."
                          : "아직 없습니다. 추적 중인 검색어를 한 번 확인하고 나면 그 결과의 상위 앱들이 여기 섭니다.")
-                        .font(.callout).foregroundStyle(.secondary)
+                        .font(.hubCallout).foregroundStyle(.secondary)
                 }
                 if !competitors.isEmpty {
                     Text("추적 중인 키워드에서 실제로 마주친 앱입니다. 내 앱보다 위에 있는 횟수가 많은 순.")
-                        .font(.caption).foregroundStyle(.secondary)
+                        .font(.hubCaption).foregroundStyle(.secondary)
                 }
                 ForEach(competitors) { competitor in
                     competitorRow(competitor)
@@ -394,29 +394,29 @@ struct KeywordsView: View {
 
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 4) {
-                    Text(competitor.app.name).font(.callout.weight(.medium)).lineLimit(2)
+                    Text(competitor.app.name).font(.hubCallout.weight(.medium)).lineLimit(2)
                     if let rating = competitor.app.averageRating, competitor.app.ratingCount > 0 {
                         Text(String(format: "★%.1f (%@)", rating,
                                     AppFormat.count(competitor.app.ratingCount)))
-                            .font(.caption2).foregroundStyle(.secondary)
+                            .font(.hubCaption2).foregroundStyle(.secondary)
                     }
                 }
                 Text(competitor.terms.prefix(4).joined(separator: " · ")
                      + (competitor.terms.count > 4 ? " 외 \(competitor.terms.count - 4)" : ""))
-                    .font(.caption).foregroundStyle(.secondary).lineLimit(2)
+                    .font(.hubCaption).foregroundStyle(.secondary).lineLimit(2)
             }
             Spacer()
             VStack(alignment: .trailing, spacing: 2) {
                 if competitor.timesAbove > 0 {
                     Text("내 위 \(competitor.timesAbove)")
-                        .font(.caption.weight(.semibold))
+                        .font(.hubCaption.weight(.semibold))
                         .foregroundStyle(.orange)
                 }
                 Text("\(competitor.keywords)개 키워드 · 최고 \(competitor.bestRank)위")
-                    .font(.caption2).foregroundStyle(.secondary)
+                    .font(.hubCaption2).foregroundStyle(.secondary)
             }
             Image(systemName: "chevron.right")
-                .font(.caption2).foregroundStyle(.tertiary)
+                .font(.hubCaption2).foregroundStyle(HierarchicalShapeStyle.hubFaint)
         }
         .contentShape(Rectangle())
 
@@ -437,7 +437,7 @@ struct KeywordsView: View {
         Card(title: "추가해볼 키워드", systemImage: "lightbulb") {
             VStack(alignment: .leading, spacing: 10) {
                 Text("내 위에 있는 앱들의 이름에서 두 번 이상 나온 단어입니다. 추정이 아니라 검색 결과에서 그대로 뽑은 것이라, 실제로 쓸모 있는지는 눌러서 확인해보는 게 맞습니다.")
-                    .font(.caption).foregroundStyle(.secondary)
+                    .font(.hubCaption).foregroundStyle(.secondary)
                 FlowLayout(spacing: 6, lineSpacing: 6) {
                     ForEach(suggestions, id: \.self) { word in
                         Button {
@@ -447,7 +447,7 @@ struct KeywordsView: View {
                             }
                         } label: {
                             Label(word, systemImage: "plus")
-                                .font(.caption)
+                                .font(.hubCaption)
                                 .padding(.horizontal, 9).padding(.vertical, 5)
                                 .background(Color.secondary.opacity(0.15), in: Capsule())
                         }
@@ -480,8 +480,8 @@ struct KeywordsView: View {
 
     private func limit(_ title: String, _ detail: String) -> some View {
         VStack(alignment: .leading, spacing: 1) {
-            Text(title).font(.caption.weight(.medium))
-            Text(detail).font(.caption2).foregroundStyle(.secondary)
+            Text(title).font(.hubCaption.weight(.medium))
+            Text(detail).font(.hubCaption2).foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -492,12 +492,12 @@ struct KeywordsView: View {
         let pending = keywords.pendingToday(for: project)
         if pending == 0 {
             Label("오늘 확인 끝", systemImage: "checkmark.circle")
-                .font(.caption).foregroundStyle(.secondary)
+                .font(.hubCaption).foregroundStyle(.secondary)
                 .padding(.bottom, 10)
         } else if keywords.isChecking {
             Label(project == nil ? "오늘 확인 \(pending)개 남음"
                                  : "오늘 확인 \(pending)개 남음 — 이 앱부터 하는 중", systemImage: "hourglass")
-                .font(.caption).foregroundStyle(.secondary)
+                .font(.hubCaption).foregroundStyle(.secondary)
                 .padding(.bottom, 10)
         }
     }
@@ -509,8 +509,8 @@ struct KeywordsView: View {
         if let progress = keywords.progress {
             HStack(spacing: 10) {
                 ProgressView(value: progress.fraction).frame(width: 90)
-                Text(progress.text).font(.caption).lineLimit(1)
-                Button("중단") { keywords.cancelCheck() }.font(.caption)
+                Text(progress.text).font(.hubCaption).lineLimit(1)
+                Button("중단") { keywords.cancelCheck() }.font(.hubCaption)
             }
             .padding(.horizontal, 12).padding(.vertical, 8)
             .background(.regularMaterial, in: Capsule())
@@ -518,7 +518,7 @@ struct KeywordsView: View {
             .transition(.move(edge: .top).combined(with: .opacity))
         } else if let message = keywords.errorMessage {
             Text(message)
-                .font(.caption)
+                .font(.hubCaption)
                 .padding(.horizontal, 12).padding(.vertical, 8)
                 .background(.regularMaterial, in: Capsule())
                 .padding(.top, 8)
@@ -546,12 +546,12 @@ private struct KeywordRow: View {
             Button(action: onTap) {
                 HStack(spacing: 10) {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(standing.keyword.term).font(.callout.weight(.medium))
+                        Text(standing.keyword.term).font(.hubCallout.weight(.medium))
                         // The country, and — where it is known — how far this
                         // place really is. A rank on its own cannot say whether
                         // it is worth going after; the apps above that are not
                         // smaller than yours can.
-                        Text(subtitle).font(.caption2).foregroundStyle(.secondary)
+                        Text(subtitle).font(.hubCaption2).foregroundStyle(.secondary)
                         if let crossing {
                             Tag(text: crossing.direction,
                                 systemImage: crossing.rose ? "arrow.up" : "arrow.down",
@@ -589,7 +589,7 @@ private struct KeywordRow: View {
     private var blockerLabel: some View {
         if let blockers = standing.blockers, standing.rank ?? 0 > 1 {
             Text(blockers == 0 ? "앞에 없음" : "\(blockers)개 앞섬")
-                .font(.caption2.weight(.semibold))
+                .font(.hubCaption2.weight(.semibold))
                 .foregroundStyle(blockers <= 2 ? .green : (blockers <= 10 ? .orange : .secondary))
                 .frame(width: 62, alignment: .trailing)
         } else {
@@ -604,7 +604,7 @@ private struct KeywordRow: View {
                     .font(.body.weight(.semibold).monospacedDigit())
             } else {
                 Text("안 잡힘")
-                    .font(.caption)
+                    .font(.hubCaption)
                     .foregroundStyle(.secondary)
             }
         }
@@ -634,20 +634,20 @@ private struct KeywordRow: View {
                 if standing.resultCount > 0 { Text("결과 \(standing.resultCount)개") }
                 if let seen = standing.seenAt { Text(AppFormat.relative(seen)) }
                 Spacer()
-                Button("지금 확인", action: onCheck).font(.caption)
+                Button("지금 확인", action: onCheck).font(.hubCaption)
             }
-            .font(.caption).foregroundStyle(.secondary)
+            .font(.hubCaption).foregroundStyle(.secondary)
 
             if let check {
                 ForEach(Array(check.top.prefix(10).enumerated()), id: \.offset) { index, id in
                     let isMine = id == trackId
                     HStack(spacing: 8) {
                         Text("\(index + 1)")
-                            .font(.caption.monospacedDigit())
+                            .font(.hubCaption.monospacedDigit())
                             .foregroundStyle(.secondary)
                             .frame(width: 20, alignment: .trailing)
                         Text(history.apps[String(id)]?.name ?? "앱 \(id)")
-                            .font(.caption)
+                            .font(.hubCaption)
                             .fontWeight(isMine ? .bold : .regular)
                             .lineLimit(2)
                         Spacer()

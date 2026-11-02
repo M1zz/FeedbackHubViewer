@@ -45,8 +45,8 @@ struct CrashIssueDetailView: View {
                             Text("콜스택").textCase(nil)
                             Spacer()
                             Text("0번이 죽은 자리")
-                                .font(.caption2)
-                                .foregroundStyle(.tertiary)
+                                .font(.hubCaption2)
+                                .foregroundStyle(HierarchicalShapeStyle.hubFaint)
                         }
                     }
                 }
@@ -59,8 +59,8 @@ struct CrashIssueDetailView: View {
                     }
                     if issue.reports.count > 20 {
                         Text("그 밖에 \(issue.reports.count - 20)건")
-                            .font(.caption)
-                            .foregroundStyle(.tertiary)
+                            .font(.hubCaption)
+                            .foregroundStyle(HierarchicalShapeStyle.hubFaint)
                     }
                 } header: {
                     Text("개별 진단 \(issue.count)건").textCase(nil)
@@ -94,18 +94,18 @@ struct CrashIssueDetailView: View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 6) {
                 if let projectLabel {
-                    Tag(text: projectLabel, font: .caption, isCompact: true)
+                    Tag(text: projectLabel, font: .hubCaption, isCompact: true)
                 }
                 Tag(text: issue.cause.label,
                     tint: issue.cause.isWatchdog ? .orange : .red,
-                    font: .caption.weight(.semibold), isCompact: true)
-                if issue.isNew { Text("새로 생김").font(.caption).foregroundStyle(.orange) }
-                if issue.isDormant { Text("최근 7일 없음").font(.caption).foregroundStyle(.green) }
+                    font: .hubCaption.weight(.semibold), isCompact: true)
+                if issue.isNew { Text("새로 생김").font(.hubCaption).foregroundStyle(.orange) }
+                if issue.isDormant { Text("최근 7일 없음").font(.hubCaption).foregroundStyle(.green) }
             }
 
             // 무엇을 보라는 안내. 크래시 화면에서 가장 아쉬운 것이 이 한 줄이다.
             Text(issue.cause.hint)
-                .font(.callout)
+                .font(.hubCallout)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
 
@@ -120,7 +120,7 @@ struct CrashIssueDetailView: View {
 
             if issue.variants > 1 {
                 Text("이 이슈 안에 오프셋이 다른 자리가 \(issue.variants)곳 있습니다. 심볼이 없어 이름으로 묶은 결과이니, 서로 다른 사고가 섞여 있을 수 있습니다.")
-                    .font(.caption)
+                    .font(.hubCaption)
                     .foregroundStyle(.orange)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -138,8 +138,8 @@ struct CrashIssueDetailView: View {
 
         if issue.reports.contains(where: { !$0.hasExactTime }) {
             Text("일부는 발생 시각이 없어 허브 도착 시각으로 대신했습니다. MetricKit 배달이 하루까지 늦으므로 실제 발생은 그보다 앞섭니다.")
-                .font(.caption2)
-                .foregroundStyle(.tertiary)
+                .font(.hubCaption2)
+                .foregroundStyle(HierarchicalShapeStyle.hubFaint)
                 .fixedSize(horizontal: false, vertical: true)
         }
     }
@@ -147,11 +147,11 @@ struct CrashIssueDetailView: View {
     private func row(_ title: String, _ value: String) -> some View {
         HStack(alignment: .firstTextBaseline) {
             Text(title)
-                .font(.callout)
+                .font(.hubCallout)
                 .foregroundStyle(.secondary)
                 .frame(width: 68, alignment: .leading)
             Text(value)
-                .font(.callout)
+                .font(.hubCallout)
                 .fixedSize(horizontal: false, vertical: true)
             Spacer(minLength: 0)
         }
@@ -165,40 +165,40 @@ struct CrashIssueDetailView: View {
             let frames = representative.frames
             if frames.isEmpty {
                 Text("콜스택을 가르지 못했습니다.")
-                    .font(.caption)
+                    .font(.hubCaption)
                     .foregroundStyle(.secondary)
             } else {
                 VStack(alignment: .leading, spacing: 0) {
                     ForEach(frames.prefix(40)) { frame in
                         HStack(spacing: 8) {
                             Text("\(frame.id)")
-                                .font(.caption2.monospacedDigit())
-                                .foregroundStyle(.tertiary)
+                                .font(.hubCaption2.monospacedDigit())
+                                .foregroundStyle(HierarchicalShapeStyle.hubFaint)
                                 .frame(width: 24, alignment: .trailing)
                             Text(frame.binary)
                                 // 내 코드가 굵다. 스택의 대부분은 UIKit·SwiftUI 라
                                 // 다 같은 무게로 그리면 볼 줄이 묻힌다.
                                 .font(frame.isSystem
-                                      ? .caption.monospaced()
-                                      : .caption.monospaced().weight(.bold))
+                                      ? .hubCaption.monospaced()
+                                      : .hubCaption.monospaced().weight(.bold))
                                 .foregroundStyle(frame.isSystem ? .secondary : .primary)
                             Text("+\(frame.offset)")
-                                .font(.caption2.monospaced())
-                                .foregroundStyle(.tertiary)
+                                .font(.hubCaption2.monospaced())
+                                .foregroundStyle(HierarchicalShapeStyle.hubFaint)
                             Spacer(minLength: 0)
                         }
                         .padding(.vertical, 1)
                     }
                     if frames.count > 40 {
                         Text("그 아래 \(frames.count - 40)프레임")
-                            .font(.caption2)
-                            .foregroundStyle(.tertiary)
+                            .font(.hubCaption2)
+                            .foregroundStyle(HierarchicalShapeStyle.hubFaint)
                             .padding(.top, 2)
                     }
                     if let note = representative.truncationNote {
                         Text(note)
-                            .font(.caption2)
-                            .foregroundStyle(.tertiary)
+                            .font(.hubCaption2)
+                            .foregroundStyle(HierarchicalShapeStyle.hubFaint)
                             .padding(.top, 2)
                     }
                 }
@@ -213,15 +213,15 @@ struct CrashIssueDetailView: View {
                     } label: {
                         Label("\(culprit.binary) +\(culprit.offset) 심볼 복원 명령 복사",
                               systemImage: "terminal")
-                            .font(.caption)
+                            .font(.hubCaption)
                     }
                     .buttonStyle(.borderless)
                     .help("dSYM 을 찾고 atos 로 함수 이름을 얻는 두 줄입니다")
                 }
 
                 Text("오프셋은 함수 이름이 아닙니다. 이름까지 보려면 그 빌드의 dSYM 이 필요합니다(README 의 \"심볼로 되돌리기\" 절).")
-                    .font(.caption2)
-                    .foregroundStyle(.tertiary)
+                    .font(.hubCaption2)
+                    .foregroundStyle(HierarchicalShapeStyle.hubFaint)
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
@@ -239,16 +239,16 @@ struct CrashIssueDetailView: View {
     private func distribution(_ title: String, _ entries: [(key: String, count: Int)]) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(title)
-                .font(.caption)
+                .font(.hubCaption)
                 .foregroundStyle(.secondary)
             FlowLayout(spacing: 6, lineSpacing: 6) {
                 ForEach(entries.prefix(12), id: \.key) { entry in
-                    Tag(text: "\(entry.key) \(entry.count)", font: .caption.monospacedDigit())
+                    Tag(text: "\(entry.key) \(entry.count)", font: .hubCaption.monospacedDigit())
                 }
                 if entries.count > 12 {
                     Text("그 밖에 \(entries.count - 12)")
-                        .font(.caption)
-                        .foregroundStyle(.tertiary)
+                        .font(.hubCaption)
+                        .foregroundStyle(HierarchicalShapeStyle.hubFaint)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -262,26 +262,26 @@ struct CrashIssueDetailView: View {
         VStack(alignment: .leading, spacing: 2) {
             HStack(spacing: 6) {
                 Text("v\(report.versionLabel)")
-                    .font(.caption.weight(.semibold))
+                    .font(.hubCaption.weight(.semibold))
                 Text(report.deviceType)
-                    .font(.caption2)
+                    .font(.hubCaption2)
                     .foregroundStyle(.secondary)
                 Spacer(minLength: 4)
                 if let at = report.happenedAt {
                     Text(AppFormat.relative(at))
-                        .font(.caption2)
-                        .foregroundStyle(.tertiary)
+                        .font(.hubCaption2)
+                        .foregroundStyle(HierarchicalShapeStyle.hubFaint)
                 }
             }
             if let signalLabel = report.signalLabel {
                 Text(signalLabel)
-                    .font(.caption2.monospaced())
+                    .font(.hubCaption2.monospaced())
                     .foregroundStyle(.secondary)
             }
             if report.hasDetail {
                 Text(report.detail)
-                    .font(.caption2)
-                    .foregroundStyle(.tertiary)
+                    .font(.hubCaption2)
+                    .foregroundStyle(HierarchicalShapeStyle.hubFaint)
                     .lineLimit(2)
             }
         }

@@ -66,7 +66,7 @@ struct TrendFigure: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(title)
-                .font(.caption2)
+                .font(.hubCaption2)
                 .foregroundStyle(.secondary)
             HStack(spacing: 3) {
                 if let symbol {
@@ -78,8 +78,8 @@ struct TrendFigure: View {
             }
             .foregroundStyle(tint)
             Text(note)
-                .font(.caption2.monospacedDigit())
-                .foregroundStyle(.tertiary)
+                .font(.hubCaption2.monospacedDigit())
+                .foregroundStyle(HierarchicalShapeStyle.hubFaint)
         }
         .lineLimit(1)
         .minimumScaleFactor(0.75)
@@ -111,7 +111,7 @@ struct CountBadge: View {
     var body: some View {
         if count > 0 {
             Text(count > 99 ? "99+" : "\(count)")
-                .font(.callout.monospacedDigit().weight(.semibold))
+                .font(.hubCallout.monospacedDigit().weight(.semibold))
                 .foregroundStyle(.white)
                 .padding(.horizontal, 7)
                 .padding(.vertical, 2)

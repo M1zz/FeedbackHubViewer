@@ -344,7 +344,7 @@ struct InboxView: View {
                     }
                 }
             }
-            .font(.callout)
+            .font(.hubCallout)
             .padding(.horizontal, 16)
             .padding(.vertical, 10)
             .background(.bar)
@@ -375,7 +375,7 @@ struct InboxView: View {
                     Image(systemName: "circle")
                         .font(.title2)
                     Text("반영함")
-                        .font(.footnote)
+                        .font(.hubFootnote)
                 }
                 // 단추 안의 .secondary 는 강조색이 옅어진 색이라 잘 안 읽힌다.
                 .foregroundStyle(Color.secondary)

@@ -82,11 +82,11 @@ struct ChartRanksView: View {
                     ProgressView(value: Double(progress.done), total: Double(max(progress.total, 1)))
                         .frame(width: 60)
                     Text("\(progress.done)/\(progress.total)")
-                        .font(.caption.monospacedDigit())
+                        .font(.hubCaption.monospacedDigit())
                         .foregroundStyle(.secondary)
                 } else if let last = charts.history.lastScan {
                     Text("확인 \(AppFormat.relative(last.date))")
-                        .font(.caption)
+                        .font(.hubCaption)
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
                 }
@@ -98,11 +98,11 @@ struct ChartRanksView: View {
                 .disabled(charts.isScanning || trackIds.isEmpty)
             }
             .buttonStyle(.bordered)
-            .font(.callout)
+            .font(.hubCallout)
 
             if let message = charts.errorMessage {
                 Label(message, systemImage: "exclamationmark.triangle")
-                    .font(.caption)
+                    .font(.hubCaption)
                     .foregroundStyle(.orange)
             }
         }
@@ -153,7 +153,7 @@ struct ChartRanksView: View {
                         Text("100위 밖")
                     }
                 }
-                .font(.subheadline)
+                .font(.hubSubheadline)
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
             }
@@ -293,7 +293,7 @@ private struct ChartRankRow: View {
                 Text(ChartStorefronts.name(country))
                     .font(.body.weight(.semibold))
                 Text(detail)
-                    .font(.subheadline)
+                    .font(.hubSubheadline)
                     .foregroundStyle(.secondary)
                     .lineLimit(2)
             }

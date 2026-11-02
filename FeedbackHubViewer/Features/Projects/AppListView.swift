@@ -160,16 +160,16 @@ struct AppListView: View {
                     Spacer()
                     Button("다시 보기") { store.showProject(entry.key) }
                         .buttonStyle(.borderless)
-                        .font(.caption)
+                        .font(.hubCaption)
                 }
-                .font(.callout)
+                .font(.hubCallout)
             }
             if store.hiddenProjectEntries.count > 1 {
                 Button {
                     store.showAllProjects()
                 } label: {
                     Label("모두 다시 보기", systemImage: "eye")
-                        .font(.callout)
+                        .font(.hubCallout)
                 }
                 .buttonStyle(.borderless)
             }
@@ -177,7 +177,7 @@ struct AppListView: View {
             Text("숨긴 앱")
         } footer: {
             Text("이 기기에서만 가려집니다. 허브의 레코드는 그대로입니다.")
-                .font(.caption)
+                .font(.hubCaption)
         }
     }
 }
@@ -243,7 +243,7 @@ private struct AppRow: View {
                 HStack(spacing: 5) {
                     ReleaseDot(level: release)
                     Text(detail)
-                        .font(.subheadline.monospacedDigit())
+                        .font(.hubSubheadline.monospacedDigit())
                         .foregroundStyle(isAlarming ? Color.red : Color.secondary)
                         .lineLimit(2)
                         .fixedSize(horizontal: false, vertical: true)
@@ -260,7 +260,7 @@ private struct AppRow: View {
             if let stats, stats.traffic.hasUsageData {
                 VStack(alignment: .trailing, spacing: 3) {
                     Text("\(stats.metric.name) \(AppFormat.count(stats.metric.value))")
-                        .font(.callout.monospacedDigit().weight(.semibold))
+                        .font(.hubCallout.monospacedDigit().weight(.semibold))
                         .foregroundStyle(stats.metric.value > 0 ? .primary : .secondary)
                     if stats.traffic.totalEvents > 0 {
                         Sparkline(points: stats.traffic.sparkline)

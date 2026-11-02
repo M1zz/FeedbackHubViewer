@@ -127,7 +127,7 @@ struct ReleaseHealthView: View {
                             .font(.body.weight(.semibold))
                             .lineLimit(2)
                         Text(versions)
-                            .font(.subheadline.monospacedDigit())
+                            .font(.hubSubheadline.monospacedDigit())
                             .foregroundStyle(.secondary)
                             .lineLimit(2)
                         Spacer(minLength: 4)

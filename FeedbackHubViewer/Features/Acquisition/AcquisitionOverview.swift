@@ -70,7 +70,7 @@ struct AcquisitionOverview: View {
             Spacer(minLength: 0)
             Image(systemName: "chevron.right")
                 .font(.body)
-                .foregroundStyle(.tertiary)
+                .foregroundStyle(HierarchicalShapeStyle.hubFaint)
         }
         .padding(Platform.cardPadding)
         .frame(maxWidth: .infinity, alignment: .leading)

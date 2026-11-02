@@ -33,17 +33,17 @@ struct ChartReadout: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 3) {
             Text(title)
-                .font(.caption2.weight(.semibold))
+                .font(.hubCaption2.weight(.semibold))
                 .foregroundStyle(.secondary)
             ForEach(items) { item in
                 HStack(spacing: 5) {
                     Circle().fill(item.color).frame(width: 6, height: 6)
                     Text(item.label)
-                        .font(.caption2)
+                        .font(.hubCaption2)
                         .foregroundStyle(.secondary)
                     Spacer(minLength: 8)
                     Text(item.value)
-                        .font(.caption2.monospacedDigit().weight(.semibold))
+                        .font(.hubCaption2.monospacedDigit().weight(.semibold))
                 }
             }
         }

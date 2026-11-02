@@ -294,7 +294,7 @@ struct FeedbackListView: View {
                              : "확인 필요만 보기 (\(store.scopedPendingCount)건)")
                         Spacer(minLength: 0)
                     }
-                    .font(.callout)
+                    .font(.hubCallout)
                     .foregroundStyle(.secondary)
                     .contentShape(Rectangle())
                 }
@@ -349,13 +349,13 @@ struct FeedbackListView: View {
             Section {
                 Label(error, systemImage: "exclamationmark.triangle.fill")
                     .foregroundStyle(.red)
-                    .font(.callout)
+                    .font(.hubCallout)
             }
         } else if store.filteredFeedback.isEmpty && !store.isLoading {
             Section {
                 Text(emptyMessage)
                     .foregroundStyle(.secondary)
-                    .font(.callout)
+                    .font(.hubCallout)
             }
         }
     }
@@ -389,8 +389,8 @@ struct FeedbackListView: View {
 
             #if os(iOS)
             Image(systemName: "chevron.right")
-                .font(.footnote.weight(.semibold))
-                .foregroundStyle(.tertiary)
+                .font(.hubFootnote.weight(.semibold))
+                .foregroundStyle(HierarchicalShapeStyle.hubFaint)
             #endif
 
             decideButton(for: feedback, status: status)
@@ -412,7 +412,7 @@ struct FeedbackListView: View {
                 // 된다 — 음성 안내는 아래 `accessibilityLabel`이 온전히 읽는다.
                 if !typeSize.isAccessibilitySize {
                     Text(status.isHandled ? status.label : "반영함")
-                        .font(.caption2)
+                        .font(.hubCaption2)
                 }
             }
             .foregroundStyle(status.isHandled ? status.tint : Color.secondary)
@@ -482,7 +482,7 @@ struct FeedbackRow: View {
                 StatusChip(status: status)
                 Spacer(minLength: 4)
                 Text(dateLabel)
-                    .font(.footnote)
+                    .font(.hubFootnote)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
             }
@@ -497,7 +497,7 @@ struct FeedbackRow: View {
 
             if !note.isEmpty {
                 Label(note, systemImage: "text.bubble")
-                    .font(.footnote)
+                    .font(.hubFootnote)
                     .foregroundStyle(.secondary)
                     .lineLimit(2)
             }
@@ -518,7 +518,7 @@ struct FeedbackRow: View {
             .filter { !$0.isEmpty && $0 != "v" }
         if !parts.isEmpty {
             Text(parts.joined(separator: " · "))
-                .font(.footnote)
+                .font(.hubFootnote)
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
         }
