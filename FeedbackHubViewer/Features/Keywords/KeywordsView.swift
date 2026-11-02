@@ -28,36 +28,24 @@ struct KeywordsView: View {
     @State private var newTerm = ""
     @State private var addCountries: Set<String> = []
     @State private var expanded: TrackedKeyword.ID?
+    @AppStorage("keywords-shows-more") private var showsMore = false
+    @ObservedObject private var changes = SectionChanges.shared
 
     var body: some View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 14) {
+                // 먼저 답할 것 — 지금 어떤가, 무엇을 할까. 나머지는 고칠 때 펼쳐 본다.
                 if project == nil { KeywordRefreshOverviewCard() }
-                if let app = linkedApp { linkedAppCard(app) } else { unlinkedCard }
-                // 칸을 다시 짤 때가 됐나 — 이 화면에서 가장 먼저 할 결정이라 앱 카드 바로 아래.
-                if let project, linkedApp != nil { KeywordRefreshCard(project: project) }
-                if linkedApp != nil && standings.isEmpty { startCard }
-                // 무엇을 추적할지 고르는 카드라 추가 칸보다 먼저 온다.
-                if let project, linkedApp != nil {
-                    KeywordRecommendationCard(project: project,
-                                              country: addCountries.first ?? keywords.countries.first ?? "kr")
+                if linkedApp == nil { unlinkedCard }
+                if needsTerms {
+                    if linkedApp != nil { startCard }
+                    recommendationCard
+                    addCard
                 }
-                addCard
-                if !standings.isEmpty { rankCard }
-                // ASO 카드들 — 한 앱을 볼 때만. 순위(어디 서 있나) → 메타데이터(무엇을 걸어
-                // 뒀나) → 노출 · 전환(그래서 사람이 왔나) 차례로 읽힌다.
-                if let project, linkedApp != nil {
-                    if !standings.isEmpty { RankTrendCard(project: project) }
-                    StoreMetadataCard(project: project)
-                    StoreFunnelCard(project: project)
-                }
-                // Shown even when empty. Competitors are read out of the
-                // results for the terms you track, so with no terms this card
-                // is blank — and a card that just disappears leaves you to
-                // work out the dependency for yourself.
-                if linkedApp != nil { competitorCard }
-                if !suggestions.isEmpty { suggestionCard }
-                limitsCard
+                if project != nil, !standings.isEmpty { rankCard }
+                if let project, linkedApp != nil, isRefreshDue { KeywordRefreshCard(project: project) }
+                moreToggle
+                if showsMore { moreCards }
             }
             .padding(16)
         }
@@ -65,6 +53,69 @@ struct KeywordsView: View {
         // 하루 확인이 이 앱의 말부터 하게 — 보고 있는 것이 먼저 차야 한다.
         .onChange(of: project, initial: true) { _, project in keywords.focusProject = project }
         .overlay(alignment: .top) { checkBanner }
+    }
+
+    // MARK: - 더 보기
+
+    /// 한 앱인데 추적하는 검색어가 없으면 넣는 것이 할 일이라 접지 않는다.
+    private var needsTerms: Bool { project != nil && standings.isEmpty }
+
+    private var isRefreshDue: Bool {
+        guard let project else { return false }
+        let states = keywords.refreshStates(for: project)
+        return !states.isEmpty && states.allSatisfy(\.isSettled)
+    }
+
+    private var moreToggle: some View {
+        Button {
+            showsMore.toggle()
+        } label: {
+            HStack {
+                Text(project == nil ? "전체 검색어 · 키워드 추가 더 보기" : "키워드 추가 · 메타데이터 · 경쟁 앱 더 보기")
+                    .font(.body)
+                    .fixedSize(horizontal: false, vertical: true)
+                Spacer(minLength: 8)
+                Image(systemName: showsMore ? "chevron.up" : "chevron.down")
+                    .foregroundStyle(.secondary)
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .padding(.horizontal, 4)
+    }
+
+    @ViewBuilder
+    private var recommendationCard: some View {
+        if let project, linkedApp != nil {
+            KeywordRecommendationCard(project: project,
+                                      country: addCountries.first ?? keywords.countries.first ?? "kr")
+        }
+    }
+
+    @ViewBuilder
+    private var moreCards: some View {
+        if let app = linkedApp { linkedAppCard(app) }
+        if let project, linkedApp != nil, !isRefreshDue { KeywordRefreshCard(project: project) }
+        if !needsTerms {
+            recommendationCard
+            addCard
+        }
+        // 전체로 보면 줄이 어느 앱의 말인지 안 적혀 있어 원본으로 둔다.
+        if project == nil, !standings.isEmpty { rankCard }
+        // ASO 카드들 — 순위(어디 서 있나) → 메타데이터(무엇을 걸어 뒀나) → 노출 · 전환(그래서
+        // 사람이 왔나) 차례로 읽힌다.
+        if let project, linkedApp != nil {
+            if !standings.isEmpty { RankTrendCard(project: project) }
+            StoreMetadataCard(project: project)
+            StoreFunnelCard(project: project)
+        }
+        // Shown even when empty. Competitors are read out of the
+        // results for the terms you track, so with no terms this card
+        // is blank — and a card that just disappears leaves you to
+        // work out the dependency for yourself.
+        if linkedApp != nil { competitorCard }
+        if !suggestions.isEmpty { suggestionCard }
+        limitsCard
     }
 
     // MARK: - The app on the store
@@ -231,17 +282,57 @@ struct KeywordsView: View {
 
     private var standings: [KeywordStanding] { keywords.standings(for: project) }
 
+    /// 띠의 "확인" 전까지 남는 10위 선 넘나듦. 전체로 보면 어느 앱의 말인지 못 가려 비운다.
+    private var crossings: [String: SectionChanges.KeywordCrossing] {
+        guard let project else { return [:] }
+        let all = changes.recentChanges(.keywords, project: project)
+            .flatMap { SectionChanges.keywordCrossings(before: $0.before, after: $0.after) }
+        return Dictionary(all.map { ($0.id, $0) }, uniquingKeysWith: { _, new in new })
+    }
+
+    /// 넘나든 줄이 위(밀린 것 먼저), 그 아래는 순위순 그대로.
+    private func ordered(_ crossings: [String: SectionChanges.KeywordCrossing]) -> [KeywordStanding] {
+        func tier(_ standing: KeywordStanding) -> Int {
+            guard let crossing = crossings[standing.keyword.id] else { return 2 }
+            return crossing.rose ? 1 : 0
+        }
+        return standings.enumerated()
+            .sorted { tier($0.element) == tier($1.element) ? $0.offset < $1.offset : tier($0.element) < tier($1.element) }
+            .map(\.element)
+    }
+
+    /// 표를 읽기 전의 한 줄 — 볼 것이 있나.
+    private func rankVerdict(_ crossings: [String: SectionChanges.KeywordCrossing]) -> (text: String, tint: Color) {
+        let fell = crossings.values.filter { !$0.rose }.count
+        let rose = crossings.count - fell
+        let line = SectionChanges.topRankLine
+        if fell > 0 {
+            let gained = rose > 0 ? " · 안으로 든 것 \(rose)개" : ""
+            return ("\(line)위 밖으로 밀린 검색어 \(fell)개를 보세요\(gained)", .orange)
+        }
+        if rose > 0 { return ("\(line)위 안으로 \(rose)개 들어왔어요", .green) }
+        let top = standings.filter { ($0.rank ?? .max) <= line }.count
+        let ranked = standings.filter(\.isRanked).count
+        return ("크게 바뀐 것 없어요 — \(line)위 안 \(top)개 · 순위에 잡힌 것 \(ranked)/\(standings.count)개", .primary)
+    }
+
     private var rankCard: some View {
-        Card(title: "키워드 순위", systemImage: "list.number") {
+        let crossings = crossings
+        let verdict = rankVerdict(crossings)
+        let rows = ordered(crossings)
+        return Card(title: "키워드 순위", systemImage: "list.number") {
             VStack(alignment: .leading, spacing: 0) {
-                todayStatus
-                if standings.contains(where: { $0.blockers != nil }) {
-                    Text("순위순입니다. 각 줄의 **‘N개 앞섬’** 은 위에 있는 앱 중 내 앱보다 리뷰가 많은 것의 수 — 18위인데 위 17개 중 7개가 나보다 작으면 실제로는 10개 뒤입니다. 순위가 낮아도 앞선 앱이 적으면 그쪽이 더 가깝습니다.")
-                        .font(.caption).foregroundStyle(.secondary)
-                        .padding(.bottom, 10)
+                if project != nil {
+                    Text(verdict.text)
+                        .font(.title3.weight(.semibold))
+                        .foregroundStyle(verdict.tint)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.bottom, 8)
                 }
-                ForEach(standings, id: \.keyword.id) { standing in
+                todayStatus
+                ForEach(rows, id: \.keyword.id) { standing in
                     KeywordRow(standing: standing,
+                               crossing: crossings[standing.keyword.id],
                                isExpanded: expanded == standing.keyword.id,
                                trackId: keywords.trackId(for: project),
                                history: keywords.history) {
@@ -251,7 +342,12 @@ struct KeywordsView: View {
                     } onRemove: {
                         keywords.remove(standing.keyword, from: project)
                     }
-                    if standing.keyword.id != standings.last?.keyword.id { Divider() }
+                    if standing.keyword.id != rows.last?.keyword.id { Divider() }
+                }
+                if standings.contains(where: { $0.blockers != nil }) {
+                    Text("각 줄의 **‘N개 앞섬’** 은 위에 있는 앱 중 내 앱보다 리뷰가 많은 것의 수 — 18위인데 위 17개 중 7개가 나보다 작으면 실제로는 10개 뒤입니다. 순위가 낮아도 앞선 앱이 적으면 그쪽이 더 가깝습니다.")
+                        .font(.caption).foregroundStyle(.secondary)
+                        .padding(.top, 10)
                 }
             }
         }
@@ -436,6 +532,8 @@ struct KeywordsView: View {
 /// One row: the term, where it sits, which way it moved, and thirty days of it.
 private struct KeywordRow: View {
     let standing: KeywordStanding
+    /// 본 뒤 10위 선을 넘나들었으면.
+    var crossing: SectionChanges.KeywordCrossing? = nil
     let isExpanded: Bool
     let trackId: Int?
     let history: KeywordHistory
@@ -454,6 +552,11 @@ private struct KeywordRow: View {
                         // it is worth going after; the apps above that are not
                         // smaller than yours can.
                         Text(subtitle).font(.caption2).foregroundStyle(.secondary)
+                        if let crossing {
+                            Tag(text: crossing.direction,
+                                systemImage: crossing.rose ? "arrow.up" : "arrow.down",
+                                tint: crossing.rose ? .green : .orange, font: .body)
+                        }
                     }
                     Spacer()
                     blockerLabel

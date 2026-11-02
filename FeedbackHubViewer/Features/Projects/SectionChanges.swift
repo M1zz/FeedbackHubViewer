@@ -279,16 +279,7 @@ final class SectionChanges: ObservableObject {
     static func lines(_ section: FeedbackStore.ProjectSection, before: String, after: String) -> [String] {
         switch section {
         case .keywords:
-            let old = ranks(before), new = ranks(after)
-            return new.keys.sorted().compactMap { id in
-                let now = new[id] ?? "-"
-                guard let was = old[id] else { return nil }
-                // 순위가 매일 몇 칸씩 흔들려 다 세면 뱃지가 늘 가득했다 — 10위 선을 넘을 때만.
-                guard isTopTen(was) != isTopTen(now) else { return nil }
-                let parts = id.split(separator: "/", maxSplits: 1).map(String.init)
-                let name = parts.count == 2 ? "\(ChartStorefronts.flag(parts[0])) \(parts[1])" : id
-                return "\(name) \(rankText(was)) → \(rankText(now))"
-            }
+            return keywordCrossings(before: before, after: after).map(\.line)
         case .release:
             // "판정|부제" — 부제가 판정까지 담고 있어(… · 초록) 부제가 바뀌었으면 부제 한 줄만.
             let old = before.components(separatedBy: "|"), new = after.components(separatedBy: "|")
@@ -304,6 +295,32 @@ final class SectionChanges: ObservableObject {
             guard let shift = notableShift(before: before, after: after) else { return [] }
             return ["\(before) → \(after)" + shift]
         }
+    }
+
+    /// 10위 선을 넘나든 키워드 하나. 뱃지 · 띠 · 순위 줄이 같은 것을 읽는다.
+    @MainActor struct KeywordCrossing {
+        let id: String
+        let name: String
+        let was: String
+        let now: String
+        var rose: Bool { SectionChanges.isTopTen(now) }
+        var direction: String { rose ? "\(SectionChanges.topRankLine)위 안으로" : "\(SectionChanges.topRankLine)위 밖으로" }
+        var line: String { "\(name) \(SectionChanges.rankText(was)) → \(SectionChanges.rankText(now)) · \(direction)" }
+    }
+
+    /// 밀린 것이 위 — 먼저 손볼 것이 먼저 읽힌다.
+    static func keywordCrossings(before: String, after: String) -> [KeywordCrossing] {
+        let old = ranks(before), new = ranks(after)
+        let crossings = new.keys.sorted().compactMap { id -> KeywordCrossing? in
+            let now = new[id] ?? "-"
+            guard let was = old[id] else { return nil }
+            // 순위가 매일 몇 칸씩 흔들려 다 세면 뱃지가 늘 가득했다 — 10위 선을 넘을 때만.
+            guard isTopTen(was) != isTopTen(now) else { return nil }
+            let parts = id.split(separator: "/", maxSplits: 1).map(String.init)
+            let name = parts.count == 2 ? "\(ChartStorefronts.flag(parts[0])) \(parts[1])" : id
+            return KeywordCrossing(id: id, name: name, was: was, now: now)
+        }
+        return crossings.filter { !$0.rose } + crossings.filter(\.rose)
     }
 
     /// 숫자가 이만큼은 움직여야 뱃지가 선다.
@@ -360,11 +377,11 @@ final class SectionChanges: ObservableObject {
     /// 뱃지를 다는 선. 이 안에 들어야 검색 첫 화면 두 장 안쪽이다.
     static let topRankLine = 10
 
-    private static func isTopTen(_ rank: String) -> Bool {
+    fileprivate static func isTopTen(_ rank: String) -> Bool {
         Int(rank).map { $0 <= topRankLine } ?? false
     }
 
-    private static func rankText(_ rank: String) -> String { rank == "-" ? "순위 밖" : "\(rank)위" }
+    fileprivate static func rankText(_ rank: String) -> String { rank == "-" ? "순위 밖" : "\(rank)위" }
 }
 
 /// 처음 보는 칸 · 앱의 기준선을 잡는다. 저장된 허브를 다 들인 뒤에만 — 들이는 도중의 빈
@@ -495,6 +512,12 @@ struct SectionChangesBanner: View {
                     Text("외 \(items.count - Self.shownLimit)개 앱")
                         .font(.body)
                         .foregroundStyle(.secondary)
+                }
+                if section == .keywords {
+                    Text("뱃지는 \(SectionChanges.topRankLine)위 선을 넘나든 검색어만 셉니다. 밖으로 밀린 것부터 보세요.")
+                        .font(.body)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
             }
             .padding(12)
