@@ -40,6 +40,7 @@ struct AcquisitionDetail: View {
 
             if case .ready(let funnel)? = connect.funnels[project]?.value, funnel.instances > 0 {
                 StoreFlowCard(funnel: funnel, sourceMix: diagnosis.sourceMix)
+                ExposureCard(funnel: funnel, bundleID: project)
             } else if let mix = diagnosis.sourceMix {
                 Card(title: "받는 사람은 어디서 오나", systemImage: "arrow.triangle.branch") {
                     Text(mix)
