@@ -1,0 +1,41 @@
+{
+ "cover": "아이폰에 깔아 두면\n은근 매일 여는 앱 5",
+ "outro": "마음에 드는 거\n하나만 깔아 봐요",
+ "apps": [
+  {
+   "name": "돈꼬마트",
+   "icon": "/Users/hyunholee/Documents/workspace/Auto/돈꼬마트/DontGoMart/Assets.xcassets/AppIcon.appiconset/1024.png",
+   "screen": "/Users/hyunholee/Documents/workspace/Auto/돈꼬마트/docs/screenshots/raw/ko/01-main.png",
+   "headline": "마트 가기 전에\n문 열었는지",
+   "text": "오늘 영업하는지, 다음 휴무일이 언제인지\n앱을 열자마자 보여요."
+  },
+  {
+   "name": "밑줄",
+   "icon": "/Users/hyunholee/Documents/workspace/Auto/밑줄/BookmarkShot/Assets.xcassets/AppIcon.appiconset/icon-light.png",
+   "screen": "/Users/hyunholee/Documents/workspace/Auto/밑줄/docs/screenshots/raw/ko/01-highlight.png",
+   "headline": "책에 밑줄 대신\n사진 한 장",
+   "text": "페이지를 찍고 손가락으로 그으면\n그 문장만 글자로 모여요."
+  },
+  {
+   "name": "하늘색",
+   "icon": "/Users/hyunholee/Documents/workspace/Auto/하늘색/SkyDex/Assets.xcassets/AppIcon.appiconset/AppIcon.png",
+   "screen": "/Users/hyunholee/Documents/workspace/Auto/하늘색/docs/screenshots/raw/ko/02-name.png",
+   "headline": "오늘 하늘을\n색 하나로",
+   "text": "하늘을 찍으면 색 하나로 남아요.\n그 색에 이름이랑 한 줄을 붙여 둬요."
+  },
+  {
+   "name": "벅뚜벅뚜",
+   "icon": "/Users/hyunholee/Documents/workspace/Auto/벅뚜벅뚜/FootprintDiary/Assets.xcassets/AppIcon.appiconset/AppIcon.png",
+   "screen": "/Users/hyunholee/Documents/workspace/Auto/벅뚜벅뚜/docs/screenshots/raw/ko/01-map.png",
+   "headline": "걸은 만큼\n지도가 칠해져요",
+   "text": "동네를 걸을수록 내 지도가 채워져요.\n안 가 본 골목이 보여요."
+  },
+  {
+   "name": "달빛",
+   "icon": "/Users/hyunholee/Documents/workspace/Auto/달빛/Dalbit/App/Assets/Assets.xcassets/AppIcon.appiconset/1024.png",
+   "screen": "/Users/hyunholee/Documents/workspace/Auto/달빛/docs/screenshots/raw/ko/04-timer.png",
+   "headline": "잠들기 전\n빗소리 틀어 두기",
+   "text": "빗소리, 파도, 새소리를 섞어 두고\n타이머로 알아서 꺼지게."
+  }
+ ]
+}
