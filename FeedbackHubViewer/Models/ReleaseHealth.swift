@@ -164,7 +164,24 @@ enum ReleaseHealth {
         let level: Level
         /// 무거운 것부터. 첫 줄이 카드의 한 줄 요약이다.
         let reasons: [String]
+        /// 초록이 되려면 무엇이 바뀌어야 하나. 이유마다 하나씩, 고칠 것이 먼저다. 초록이면 비어 있다.
+        var steps: [Step] = []
         var headline: String { reasons.first ?? level.label }
+    }
+
+    /// 초록까지 남은 일 하나.
+    struct Step: Equatable, Identifiable {
+        enum Kind: Int, Comparable {
+            /// 코드나 앱을 고쳐야 풀린다.
+            case fix
+            /// 고칠 것은 없고 시간 · 설치 · 다음 버전이 풀어 준다.
+            case wait
+
+            static func < (lhs: Kind, rhs: Kind) -> Bool { lhs.rawValue < rhs.rawValue }
+        }
+        let kind: Kind
+        let text: String
+        var id: String { text }
     }
 
     /// 버전 하나에서 처음 본 크래시 지문.
@@ -459,12 +476,16 @@ enum ReleaseHealth {
         var red: [String] = []
         var yellow: [String] = []
         var green: [String] = []
+        var steps: [Step] = []
+        func fix(_ text: String) { steps.append(Step(kind: .fix, text: text)) }
+        func wait(_ text: String) { steps.append(Step(kind: .wait, text: text)) }
 
         // 새 크래시
         let newCrashes = latest.newSignatures.filter(\.isCrash)
         let seriousCrashes = newCrashes.filter { $0.reports >= 2 }
         if let worst = seriousCrashes.first {
             red.append("새 크래시 \(seriousCrashes.count)종이 \(latest.version)에서 처음 났다 (가장 많은 것 \(worst.reports)건)")
+            fix("아래 '처음 본 진단'의 크래시 \(seriousCrashes.count)종을 고쳐 다음 버전을 낸다. 이 버전에 난 기록은 지워지지 않아, 고친 버전이 최신이 될 때 풀린다")
         } else if !latest.newSignatures.isEmpty {
             let lone = newCrashes.count
             let other = latest.newSignatures.count - lone
@@ -472,6 +493,7 @@ enum ReleaseHealth {
             if lone > 0 { parts.append("크래시 \(lone)종(각 1건)") }
             if other > 0 { parts.append("멈춤 · 기타 \(other)종") }
             yellow.append("\(latest.version)에서 처음 본 진단: " + parts.joined(separator: ", "))
+            fix("처음 본 진단(\(parts.joined(separator: ", ")))을 확인한다. 한 번뿐인 사고여도 다음 버전에서 다시 안 나야 풀린다")
         } else {
             green.append("새 크래시 없음")
         }
@@ -481,13 +503,16 @@ enum ReleaseHealth {
 
         if !enough {
             yellow.insert("아직 판단하기 이르다 (최신 버전 활성 설치 \(latest.activeInstalls)대, 판단에 \(thresholds.minInstallsForVerdict)대 필요)", at: 0)
+            wait("최신 버전 활성 설치가 \(thresholds.minInstallsForVerdict - latest.activeInstalls)대 더 생기면 판정한다 (지금 \(latest.activeInstalls)/\(thresholds.minInstallsForVerdict)대). 사용자가 원래 적은 앱이면 앱 리포 docs/usage-spec.json 의 release.thresholds.minInstallsForVerdict 를 낮춘다")
         } else {
             // 안정성
             if let rate = latest.crashFreeRate {
                 if rate < thresholds.crashFreeInstallsMin {
                     red.append("크래시 없는 설치 \(percent(rate)), 문턱 \(percent(thresholds.crashFreeInstallsMin)) 아래")
+                    fix("불안정 설치를 줄여 크래시 없는 설치를 \(percent(thresholds.crashFreeInstallsMin)) 위로 올린다. 아래 표의 불안정 갈래 중 많은 것부터 본다")
                 } else if let before = previous?.crashFreeRate, previousEnough, rate < before - crashFreeWobble {
                     yellow.append("크래시 없는 설치 \(percent(before)) → \(percent(rate))로 내려감")
+                    fix("이번 버전에서 늘어난 불안정 갈래를 찾아 고친다. 앞 버전 \(percent(before)) 수준으로 돌아오면 풀린다")
                 } else {
                     green.append("크래시 없는 설치 \(percent(rate))")
                 }
@@ -502,10 +527,13 @@ enum ReleaseHealth {
                     let significant = dropIsSignificant(before: previous, now: latest)
                     if drop > thresholds.coreActionDropMax && significant {
                         red.append("핵심 행동률 \(percent(before)) → \(percent(now)) (\(percent(drop)) 떨어짐, 허용 \(percent(thresholds.coreActionDropMax)))")
+                        fix("이번 버전에서 핵심 행동까지 가는 길이 바뀌었거나 막혔는지 확인해 고친다")
                     } else if drop > thresholds.coreActionDropMax {
                         yellow.append("핵심 행동률 \(percent(before)) → \(percent(now)) (\(percent(drop)) 떨어짐, 표본이 작아 흔들림 안)")
+                        wait("설치가 더 쌓이면 진짜 떨어진 것인지 가려진다. 그동안 핵심 행동까지 가는 길이 바뀌었는지 한 번 확인한다")
                     } else if drop > thresholds.coreActionDropMax / 2 {
                         yellow.append("핵심 행동률 \(percent(before)) → \(percent(now)) (\(percent(drop)) 떨어짐)")
+                        fix("핵심 행동률을 앞 버전 \(percent(before)) 가까이로 되돌린다. 이번 버전에서 그 길에 바뀐 것을 확인한다")
                     } else {
                         green.append("핵심 행동률 유지 (\(percent(now)))")
                     }
@@ -519,17 +547,22 @@ enum ReleaseHealth {
                let now = latest.crashDensity, let before = previous.crashDensity,
                latest.crashReports >= 2, now > before * 1.5 {
                 yellow.append("설치당 크래시 보고가 늘었다 (\(previous.crashReports)건 → \(latest.crashReports)건)")
+                fix("진단 칸에서 이번 버전에 많이 난 크래시부터 고친다")
             }
         }
 
         if previous == nil {
             yellow.append("견줄 앞 버전이 최근 \(windowDays)일에 없다")
+            wait("다음 버전을 내면 지금 버전이 견줄 앞 버전이 된다")
         } else if let previous, let bugsNow = latest.bugFeedback, bugsNow >= 2, bugsNow > (previous.bugFeedback ?? 0) {
             yellow.append("버그 피드백 \(previous.bugFeedback ?? 0)건 → \(bugsNow)건")
+            fix("이번 버전의 버그 피드백 \(bugsNow)건을 읽고 고친다")
         }
 
-        if !red.isEmpty { return Verdict(level: .red, reasons: red + yellow) }
-        if !yellow.isEmpty { return Verdict(level: .yellow, reasons: yellow) }
+        // 고칠 것이 먼저. 같은 종류 안에서는 이유가 나온 차례를 지킨다.
+        let ordered = steps.enumerated().sorted { ($0.element.kind, $0.offset) < ($1.element.kind, $1.offset) }.map(\.element)
+        if !red.isEmpty { return Verdict(level: .red, reasons: red + yellow, steps: ordered) }
+        if !yellow.isEmpty { return Verdict(level: .yellow, reasons: yellow, steps: ordered) }
         return Verdict(level: .green, reasons: [green.joined(separator: " · ")])
     }
 

@@ -7,7 +7,7 @@
 //  제 탭을 갖는다.
 //
 //  읽는 차례대로 놓는다.
-//   1. 판정(초록 · 노랑 · 빨강)과 그 이유 한 줄
+//   1. 판정(초록 · 노랑 · 빨강)과 그 이유 한 줄, 초록이 아니면 초록까지 할 일(고칠 것 · 기다릴 것)
 //   2. 최신 버전과 앞 버전을 나란히 (활성 설치 · 핵심 행동률 · 크래시 없는 설치 · 크래시 · 피드백)
 //   3. 채택: 지금 쓰는 사람 중 몇이 새 버전인가
 //   4. 처음 본 크래시, 이 앱이 지키기로 한 약속
@@ -27,6 +27,7 @@ struct ReleaseHealthCard: View {
         VStack(alignment: .leading, spacing: 12) {
             if let report = store.releaseHealth(for: project) {
                 header(report.verdict)
+                if !report.verdict.steps.isEmpty { toGreen(report.verdict.steps) }
                 copyForClaude(report)
                 comparison(report)
                 adoption(report)
@@ -93,6 +94,13 @@ struct ReleaseHealthCard: View {
         lines.append("")
         lines.append("## 판정")
         for reason in report.verdict.reasons { lines.append("- \(reason)") }
+        if !report.verdict.steps.isEmpty {
+            lines.append("")
+            lines.append("## 초록이 되려면")
+            for step in report.verdict.steps {
+                lines.append("- [\(step.kind == .fix ? "고칠 것" : "기다릴 것")] \(step.text)")
+            }
+        }
         lines.append("")
         lines.append("## 버전 비교 (최근 \(ReleaseHealth.windowDays)일)")
         lines.append("| 항목 | 최신 \(latest.version) |" + (previous.map { " 앞 버전 \($0.version) |" } ?? ""))
@@ -159,6 +167,33 @@ struct ReleaseHealthCard: View {
         lines.append("")
         lines.append("참고: 크래시 보고는 MetricKit 이 하루쯤 늦게 일부만 보냅니다. 숫자는 FeedbackHub 사용 이벤트 기준입니다.")
         return lines.joined(separator: "\n")
+    }
+
+    /// 초록까지 남은 일. 고칠 것과 기다릴 것을 나눠, 지금 손댈 수 있는 것이 무엇인지 바로 보이게 한다.
+    private func toGreen(_ steps: [ReleaseHealth.Step]) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("초록이 되려면")
+                .font(.body.weight(.semibold))
+            ForEach([ReleaseHealth.Step.Kind.fix, .wait], id: \.self) { kind in
+                let group = steps.filter { $0.kind == kind }
+                if !group.isEmpty {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(kind == .fix ? "고칠 것" : "기다릴 것")
+                            .font(.body)
+                            .foregroundStyle(.secondary)
+                        ForEach(group) { step in
+                            Label(step.text, systemImage: kind == .fix ? "wrench.and.screwdriver" : "hourglass")
+                                .font(.body)
+                                .foregroundStyle(kind == .fix ? Color.primary : Color.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(12)
+        .background(.quaternary.opacity(0.5), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
     }
 
     private func reasons(_ verdict: ReleaseHealth.Verdict) -> some View {
