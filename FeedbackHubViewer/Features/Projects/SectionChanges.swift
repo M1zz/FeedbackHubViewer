@@ -293,12 +293,37 @@ final class SectionChanges: ObservableObject {
         }
     }
 
-    /// 그 칸의 모든 앱의 지금 말. 키는 앱.
+    /// 그 칸이 이 앱에 대해 아직 할 말이 없다 — 불러오는 중이거나 데이터가 없다. 이런 앱은 말에서
+    /// 뺀다: 세지도 본 것으로 적지도 않는다. 켤 때마다 "설치 120대 → 사용 통계 없음" 이 바뀜으로
+    /// 세어지고, 그 사이 칸을 열면 빈 말이 본 것으로 적혀 다 불러온 뒤 또 세어지던 것.
+    static func isBlank(_ section: FeedbackStore.ProjectSection, project: String,
+                        metrics: SectionMetrics) -> Bool {
+        switch section {
+        case .stats, .acquisition:
+            return metrics.count(section, project: project) == 0
+        case .release:
+            return metrics.store.releaseLevel(for: project) == nil
+        case .keywords:
+            return metrics.keywords.standings(for: project).isEmpty
+        case .charts:
+            return metrics.charts.history.lastScan == nil || metrics.keywords.trackId(for: project) == nil
+        case .purchases:
+            return !metrics.purchases.isConfigured || metrics.purchases.products(for: project) == nil
+        case .storeAnalytics:
+            guard case .ready? = metrics.purchases.storeAnalytics[project]?.value else { return true }
+            return false
+        default:
+            return false
+        }
+    }
+
+    /// 그 칸의 모든 앱의 지금 말. 키는 앱. 할 말이 없는 앱은 빠진다(`isBlank`).
     static func signatures(_ section: FeedbackStore.ProjectSection, project: String?,
                            metrics: SectionMetrics) -> [String: String] {
         let key = SectionMetrics.memoKey(section, project)
         if let cached = metrics.memo.signatures[key] { return cached }
-        let projects = project.map { [$0] } ?? appKeys(metrics.store)
+        let projects = (project.map { [$0] } ?? appKeys(metrics.store))
+            .filter { !isBlank(section, project: $0, metrics: metrics) }
         let value = Dictionary(uniqueKeysWithValues: projects.map {
             ($0, signature(section, project: $0, metrics: metrics))
         })
