@@ -192,11 +192,12 @@ struct InboxView: View {
 
         if reviews != nil, !purchases.isConfigured {
             Section {
-                HStack {
+                // 아이폰에서는 말 아래에 버튼 — 옆에 두면 버튼이 두 줄로 꺾인다.
+                VStack(alignment: .leading, spacing: 8) {
                     Text("App Store Connect 키를 넣으면 모든 앱의 리뷰가 여기에 모입니다.")
                         .font(.body)
                         .foregroundStyle(.secondary)
-                    Spacer(minLength: 8)
+                        .fixedSize(horizontal: false, vertical: true)
                     OpenSettingsButton(title: "설정 열기")
                         .font(.body)
                 }

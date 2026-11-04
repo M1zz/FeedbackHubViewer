@@ -293,6 +293,8 @@ final class FeedbackStore: ObservableObject {
     /// 숫자를 읽는 칸은 모두 "앱 상태" 한 탭으로 모은다. 탭마다 맨 앞은 기능 목록이고,
     /// 기능을 누르면 그 기능의 화면을 민다.
     enum PhoneTab: String, CaseIterable, Identifiable {
+        /// 첫 탭 — 모든 기능의 지금을 한 장에(`PhoneOverviewView`). 담는 무리는 없다.
+        case overview = "현황"
         case today = "할 일"
         case voice = "목소리"
         case status = "앱 상태"
@@ -302,6 +304,7 @@ final class FeedbackStore: ObservableObject {
         /// 이 탭에 담는 무리. 차례가 곧 기능 목록의 차례다.
         var groups: [ProjectSection.Group] {
             switch self {
+            case .overview: []
             case .today: [.today]
             case .voice: [.voice]
             case .status: [.quality, .growth, .revenue, .build]
@@ -313,6 +316,7 @@ final class FeedbackStore: ObservableObject {
 
         var systemImage: String {
             switch self {
+            case .overview: "square.grid.2x2"
             case .today: "tray.full"
             case .voice: "bubble.left.and.bubble.right"
             case .status: "waveform.path.ecg"
@@ -337,7 +341,7 @@ final class FeedbackStore: ObservableObject {
     /// 맥 · 아이패드에서 앱 화면 위에 밀려 들어온 것(아이패드의 피드백 상세).
     @Published var path = NavigationPath()
     /// 아이폰의 하단 탭.
-    @Published var phoneTab: PhoneTab = .today
+    @Published var phoneTab: PhoneTab = .overview
     /// 아이폰 탭마다 따로 쌓인 화면. 탭을 오가도 각자 보던 자리가 남는다.
     @Published var phonePaths: [PhoneTab: NavigationPath] = [:]
     /// True on the layout where the app screen is *pushed* (iPhone) rather

@@ -113,7 +113,8 @@ struct ReleaseHealthView: View {
         let level = report.verdict.level
         let name = store.displayName(for: row.key)
         var versions = report.latest.version
-        if let previous = report.previous { versions += " ← \(previous.version)" }
+        // 버전 둘은 한 덩어리 — "1.1.13 ←" 와 "1.1.12" 로 갈라 줄을 넘기지 않게 붙는 공백으로.
+        if let previous = report.previous { versions += "\u{00A0}←\u{00A0}\(previous.version)" }
 
         return HStack(alignment: .top, spacing: 8) {
         Button {
@@ -123,13 +124,27 @@ struct ReleaseHealthView: View {
                 AppIcon(url: keywords.storeApp(for: row.key)?.iconURL, size: 26)
                 VStack(alignment: .leading, spacing: 3) {
                     HStack(alignment: .firstTextBaseline, spacing: 8) {
-                        Text(name)
-                            .font(.body.weight(.semibold))
-                            .lineLimit(2)
-                        Text(versions)
-                            .font(.hubSubheadline.monospacedDigit())
-                            .foregroundStyle(.secondary)
-                            .lineLimit(2)
+                        // 이름과 버전이 한 줄에 들어가면 나란히, 아니면(아이폰) 버전을 이름 아래로.
+                        ViewThatFits(in: .horizontal) {
+                            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                                Text(name)
+                                    .font(.body.weight(.semibold))
+                                    .lineLimit(1)
+                                Text(versions)
+                                    .font(.hubSubheadline.monospacedDigit())
+                                    .foregroundStyle(.secondary)
+                                    .lineLimit(1)
+                            }
+                            VStack(alignment: .leading, spacing: 1) {
+                                Text(name)
+                                    .font(.body.weight(.semibold))
+                                    .fixedSize(horizontal: false, vertical: true)
+                                Text(versions)
+                                    .font(.hubSubheadline.monospacedDigit())
+                                    .foregroundStyle(.secondary)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                        }
                         Spacer(minLength: 4)
                         Tag(text: level.label, systemImage: ReleaseHealthCard.symbol(level),
                             tint: ReleaseHealthCard.tint(level))

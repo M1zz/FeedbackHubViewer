@@ -200,7 +200,8 @@ final class SectionChanges: ObservableObject {
 
     /// 열어 봤다 — 지금 말을 본 것으로. 달라져 있던 것은 띠에 남긴다. `visiting` 이면 칸을
     /// 실제로 연 것이라 바뀌어 있던 앱을 `visit` 에도 적는다("모두 읽음" 은 열지 않은 것).
-    func markSeen(_ section: FeedbackStore.ProjectSection, signatures: [String: String], visiting: Bool = false) {
+    func markSeen(_ section: FeedbackStore.ProjectSection, signatures: [String: String], visiting: Bool = false,
+                  quiet: Set<String> = []) {
         var next = seen
         var nextRecent = recent
         var nextVisit = visit?.section == section.rawValue ? visit! : Visit(section: section.rawValue, counts: [:])
@@ -208,7 +209,8 @@ final class SectionChanges: ObservableObject {
         var stamped = false
         for (project, signature) in signatures {
             let key = Self.key(section, project)
-            if let old = seen[key], old != signature {
+            // 작은 앱은 본 말만 새로 적고, 띠 · 줄 뱃지에는 남기지 않는다.
+            if let old = seen[key], old != signature, !quiet.contains(project) {
                 let weight = Self.weight(section, before: old, after: signature)
                 if weight > 0 { nextVisit.counts[project, default: 0] += weight }
                 // 확인 안 한 바뀜이 또 바뀌면 처음 말부터 지금 말까지 한 줄로.
@@ -319,14 +321,44 @@ final class SectionChanges: ObservableObject {
         store.projectCounts.map(\.key).filter { $0 != Feedback.unclassifiedProject }
     }
 
+    /// 통계가 바뀌어도 뱃지를 세우지 않는 MAU 선. 이보다 작으면 1명 → 2명이 "100% 늘었다" 가
+    /// 되어, 뜻 없는 바뀜이 뱃지를 채운다.
+    static let statsQuietMAU = 100
+
+    /// 이 칸에서 바뀜을 세지 않는 앱 — 지금은 MAU 가 `statsQuietMAU` 아래인 앱의 통계.
+    static func quiet(_ section: FeedbackStore.ProjectSection, metrics: SectionMetrics) -> Set<String> {
+        guard section == .stats else { return [] }
+        let traffic = metrics.store.trafficByProject
+        return Set(appKeys(metrics.store).filter { (traffic[$0]?.mau ?? 0) < statsQuietMAU })
+    }
+
     /// 본 뒤 바뀐 것의 수. 키워드는 10위 선을 넘나든 키워드마다, 나머지 칸은 앱마다 하나.
     func changedCount(_ section: FeedbackStore.ProjectSection, project: String?,
                       metrics: SectionMetrics) -> Int {
         guard Self.tracked.contains(section) else { return 0 }
+        let quiet = Self.quiet(section, metrics: metrics)
         return Self.signatures(section, project: project, metrics: metrics).reduce(0) { total, entry in
-            guard let old = seen[Self.key(section, entry.key)], old != entry.value else { return total }
+            guard !quiet.contains(entry.key),
+                  let old = seen[Self.key(section, entry.key)], old != entry.value else { return total }
             return total + Self.weight(section, before: old, after: entry.value)
         }
+    }
+
+    /// 아직 열어 보지 않은 칸에서 본 뒤 바뀐 것을 사람 말로 — 앱마다 줄 몇 개. 아이폰 현황이
+    /// 뱃지 대신 무엇이 바뀌었는지를 바로 꺼내 보인다. 뱃지와 같은 셈(`weight`)이라 줄이 없는
+    /// 앱은 빠진다.
+    func pendingLines(_ section: FeedbackStore.ProjectSection,
+                      metrics: SectionMetrics) -> [(project: String, lines: [String])] {
+        guard Self.tracked.contains(section) else { return [] }
+        let quiet = Self.quiet(section, metrics: metrics)
+        return Self.signatures(section, project: nil, metrics: metrics)
+            .compactMap { entry -> (project: String, lines: [String])? in
+                guard !quiet.contains(entry.key), let old = seen[Self.key(section, entry.key)], old != entry.value,
+                      Self.weight(section, before: old, after: entry.value) > 0 else { return nil }
+                let lines = Self.lines(section, before: old, after: entry.value)
+                return (entry.key, lines.isEmpty ? ["\(old) → \(entry.value)"] : lines)
+            }
+            .sorted { $0.project < $1.project }
     }
 
     /// 바뀜 하나가 뱃지에서 몇인가. 키워드는 10위 선을 넘나든 것마다, 숫자 칸은 15% 넘게
@@ -492,7 +524,8 @@ struct SectionVisitTracker: ViewModifier {
                 let changes = SectionChanges.shared
                 // 릴리즈는 지우기 전에 센다 — 사이드바에서 본 수가 줄에 그대로 남게.
                 let alerts = section == .release && project == nil ? changes.releaseAlerts(metrics: metrics) : [:]
-                changes.markSeen(section, signatures: signatures, visiting: project == nil)
+                changes.markSeen(section, signatures: signatures, visiting: project == nil,
+                                 quiet: SectionChanges.quiet(section, metrics: metrics))
                 if let project { changes.clearVisit(section, project: project) }
                 // 릴리즈 칸을 열어 봤으면 빨강인 앱도 알아본 것으로 — 뱃지만 지우고 판정은 남는다.
                 if section == .release {

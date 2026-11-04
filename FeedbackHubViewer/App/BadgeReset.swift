@@ -61,7 +61,8 @@ enum BadgeReset {
         default:
             guard SectionChanges.tracked.contains(section) else { return }
             SectionChanges.shared.markSeen(section,
-                                           signatures: SectionChanges.signatures(section, project: nil, metrics: metrics))
+                                           signatures: SectionChanges.signatures(section, project: nil, metrics: metrics),
+                                           quiet: SectionChanges.quiet(section, metrics: metrics))
         }
     }
 

@@ -2,7 +2,8 @@
 //  PhoneRootView.swift
 //  FeedbackHubViewer
 //
-//  The iPhone layout: 하단 탭 넷 — 할 일 · 목소리 · 앱 상태 · 마케팅(`FeedbackStore.PhoneTab`).
+//  The iPhone layout: 하단 탭 다섯 — 현황 · 할 일 · 목소리 · 앱 상태 · 마케팅(`FeedbackStore.PhoneTab`).
+//  현황은 모든 기능의 지금을 한 장에 둔 첫 화면이다(`PhoneOverviewView`).
 //
 //  탭마다 맨 앞은 맥 사이드바 같은 기능 목록이다(줄마다 한마디와 뱃지). 기능을 누르면 그
 //  기능으로 본 앱 목록을 밀고, 앱을 누르면 그 앱의 화면 → 피드백 상세로 민다. 할 일 · 소식은
@@ -105,9 +106,14 @@ private struct PhoneTab: View {
         SectionMetrics(store: store, keywords: keywords, purchases: purchases, design: design, charts: charts, news: news)
     }
 
-    /// 맨 앞 — 기능 목록.
+    /// 맨 앞 — 현황 탭은 한 장짜리 현황, 나머지는 기능 목록.
+    @ViewBuilder
     private var root: some View {
-        sectionList
+        if tab == .overview {
+            PhoneOverviewView()
+        } else {
+            sectionList
+        }
     }
 
     /// 한 기능으로 본 앱 목록. 목록을 봤으면 그 기능의 뱃지는 지운다 — 어느 앱이 바뀌었는지는 줄에 남는다.
