@@ -3,7 +3,7 @@
 //  FeedbackHubViewer
 //
 //  The 피드백 section of a project screen: a searchable, sortable list of
-//  feedback rows. Decided feedback (반영함 / 반영 안 함) folds out of the way
+//  feedback rows. Decided feedback (반영함 / 반영 안 함, 답장 보냄) folds out of the way
 //  here — see `FeedbackTriage.swift` and `FeedbackStore.triage`. The screen's
 //  title and scope belong to `ProjectSectionView`; this view owns only the list
 //  and its own controls.
@@ -378,6 +378,7 @@ struct FeedbackListView: View {
                         projectLabel: store.displayName(for: feedback.projectKey),
                         isUnread: store.isUnread(feedback),
                         status: status,
+                        isReplied: store.isReplied(feedback),
                         note: store.note(for: feedback))
                 #if os(iOS)
                 // A plain tap target rather than a `NavigationLink`: a link
@@ -447,6 +448,8 @@ struct FeedbackRow: View {
     let projectLabel: String
     let isUnread: Bool
     let status: FeedbackStatus
+    /// 답장을 보냈다 — 반영 여부와 따로 보인다.
+    var isReplied = false
     let note: String
     /// 앱별로 묶인 목록(할 일)에서는 머리글이 이미 앱 이름을 말한다.
     var showsProject = true
@@ -480,6 +483,10 @@ struct FeedbackRow: View {
                     StarRatingView(rating: rating)
                 }
                 StatusChip(status: status)
+                if isReplied {
+                    Tag(text: "답변함", systemImage: "arrowshape.turn.up.left.fill", tint: .blue,
+                        font: .hubCaption2.weight(.medium))
+                }
                 Spacer(minLength: 4)
                 Text(dateLabel)
                     .font(.hubFootnote)
@@ -493,7 +500,7 @@ struct FeedbackRow: View {
                 .lineLimit(snippetLineLimit)
                 // Decided feedback steps back visually so what is left to do
                 // stands out in a long list.
-                .foregroundStyle(status.isHandled ? .secondary : .primary)
+                .foregroundStyle(status.isHandled || isReplied ? .secondary : .primary)
 
             if !note.isEmpty {
                 Label(note, systemImage: "text.bubble")

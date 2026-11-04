@@ -476,6 +476,7 @@ final class FeedbackStore: ObservableObject {
         }
         readIDs = Set(defaults.stringArray(forKey: Self.readIDsKey) ?? [])
         triage = Self.decodeTriage(defaults.data(forKey: Self.triageKey))
+        repliedIDs = Set(defaults.stringArray(forKey: Self.repliedIDsKey) ?? [])
         reviewsDone = defaults.data(forKey: Self.reviewsDoneKey)
             .flatMap { try? JSONDecoder().decode([String: ReviewDoneEntry].self, from: $0) } ?? [:]
         releaseHypotheses = defaults.data(forKey: Self.releaseHypothesesKey)
@@ -848,6 +849,7 @@ final class FeedbackStore: ObservableObject {
         // refresh, and the badge the unread count it leaves behind.
         announceNewRecords()
         refreshBadge()
+        await checkReplies()
         // An incremental check that found nothing has nothing to write, and the
         // auto-refresh runs every minute — no point rewriting megabytes of JSON
         // to say the same thing. `hasUnsavedChanges` covers the other end: the
@@ -1405,12 +1407,40 @@ final class FeedbackStore: ObservableObject {
 
     // MARK: - Replies (written to the hub, read by the sender's app)
 
+    /// 답장을 보낸 피드백. 답장하면 반영함과 같이 "처리한 것"이 되어 확인 필요 목록에서 빠진다.
+    /// 답장은 허브에 남으니(`FeedbackReply`) 다른 기기에서 보낸 것도 `checkReplies` 가 찾아온다.
+    @Published private(set) var repliedIDs: Set<String> = [] { didSet { invalidateReadState() } }
+    private static let repliedIDsKey = "repliedFeedbackIDs"
+    private var lastReplyCheck: Date?
+
+    func isReplied(_ feedback: Feedback) -> Bool { repliedIDs.contains(feedback.id) }
+
     func reply(for feedback: Feedback) async -> String? {
-        await service.fetchReply(forFeedback: feedback.id)
+        let message = await service.fetchReply(forFeedback: feedback.id)
+        if message != nil { markReplied([feedback.id]) }
+        return message
     }
 
     func sendReply(_ message: String, for feedback: Feedback) async throws {
         try await service.saveReply(message, forFeedback: feedback.id, appId: feedback.appId)
+        markReplied([feedback.id])
+        markRead(feedback)
+    }
+
+    /// 아직 답장을 모르는 피드백에 답장이 달렸는지 허브에서 확인한다. 답장은 이 앱에서만
+    /// 쓰므로 자주 볼 까닭이 없다 — 새로고침이 잦아도 10분에 한 번.
+    private func checkReplies() async {
+        if let last = lastReplyCheck, Date().timeIntervalSince(last) < 600 { return }
+        lastReplyCheck = Date()
+        let unknown = allFeedback.map(\.id).filter { !repliedIDs.contains($0) }
+        guard !unknown.isEmpty else { return }
+        markReplied(await service.repliedFeedbackIDs(among: unknown))
+    }
+
+    private func markReplied(_ ids: Set<String>) {
+        guard !ids.isSubset(of: repliedIDs) else { return }
+        repliedIDs.formUnion(ids)
+        defaults.set(Array(repliedIDs), forKey: Self.repliedIDsKey)
     }
 
     func note(for feedback: Feedback) -> String {
@@ -1422,7 +1452,10 @@ final class FeedbackStore: ObservableObject {
         return entry.decidedAt
     }
 
-    func isHandled(_ feedback: Feedback) -> Bool { status(of: feedback).isHandled }
+    /// 손을 뗀 것: 반영함 · 반영 안 함으로 정했거나 답장을 보냈다.
+    func isHandled(_ feedback: Feedback) -> Bool {
+        status(of: feedback).isHandled || repliedIDs.contains(feedback.id)
+    }
 
     /// Record the decision. Deciding also counts as having read the feedback —
     /// leaving it bold in the list after acting on it would be nonsense.
@@ -1478,7 +1511,7 @@ final class FeedbackStore: ObservableObject {
     var scopedHandledCount: Int { scopedFeedback.count - scopedPendingCount }
 
     func countPending(in items: [Feedback]) -> Int {
-        items.reduce(0) { $0 + (triage[$1.id]?.status.isHandled == true ? 0 : 1) }
+        items.reduce(0) { $0 + (isHandled($1) ? 0 : 1) }
     }
 
     private func persistTriage() {

@@ -316,7 +316,7 @@ extension FeedbackStore {
         // 처리한 피드백은 기본적으로 목록에서 빠진다. 통계는 `scopedFeedback`을
         // 그대로 쓰므로 숫자에서는 사라지지 않는다.
         if statusFilter != .all {
-            items = items.filter { $0.id == keptID || statusFilter.accepts(status(of: $0)) }
+            items = items.filter { $0.id == keptID || statusFilter.accepts(status(of: $0), replied: isReplied($0)) }
         }
 
         if let version = selectedVersion {
@@ -418,7 +418,7 @@ extension FeedbackStore {
     /// overview, which shows the latest items instead of leaving space empty.
     func recentFeedback(limit: Int) -> [Feedback] {
         // 이미 처리한 건은 빼고 보여준다 — 화면의 요점은 남은 일이다.
-        let source = scopedFeedback.filter { !status(of: $0).isHandled }
+        let source = scopedFeedback.filter { !isHandled($0) }
         return Array(source
             .sorted { ($0.createdAt ?? .distantPast) > ($1.createdAt ?? .distantPast) }
             .prefix(limit))

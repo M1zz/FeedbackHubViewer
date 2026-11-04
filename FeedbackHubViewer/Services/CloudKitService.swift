@@ -104,6 +104,20 @@ final class CloudKitService {
         (try? await database.record(for: Self.replyRecordID(forFeedback: id)))?["message"] as? String
     }
 
+    /// Which of these feedback already have a reply. Fetched by record name in
+    /// batches with no fields — a missing reply is just a per-record error.
+    func repliedFeedbackIDs(among ids: [String]) async -> Set<String> {
+        var found: Set<String> = []
+        for start in stride(from: 0, to: ids.count, by: 200) {
+            let batch = ids[start..<min(start + 200, ids.count)].map(Self.replyRecordID(forFeedback:))
+            guard let results = try? await database.records(for: batch, desiredKeys: []) else { continue }
+            for (recordID, result) in results {
+                if case .success = result { found.insert(String(recordID.recordName.dropFirst("reply-".count))) }
+            }
+        }
+        return found
+    }
+
     /// Writes (or rewrites) the reply. The sender sees it in their app under
     /// Settings > 보낸 의견, whether or not they left an email.
     func saveReply(_ message: String, forFeedback id: String, appId: String?) async throws {

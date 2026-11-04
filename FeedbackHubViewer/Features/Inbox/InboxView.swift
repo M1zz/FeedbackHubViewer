@@ -59,7 +59,7 @@ struct InboxView: View {
     /// 처리하지 않은 피드백 전부, 새것부터. 버그와 나머지로 나눈다.
     private var pending: (bugs: [Feedback], others: [Feedback]) {
         let items = store.feedback(for: nil)
-            .filter { !store.status(of: $0).isHandled }
+            .filter { !store.isHandled($0) }
             .sorted { ($0.createdAt ?? .distantPast) > ($1.createdAt ?? .distantPast) }
         return (items.filter(\.isBugReport), items.filter { !$0.isBugReport })
     }
