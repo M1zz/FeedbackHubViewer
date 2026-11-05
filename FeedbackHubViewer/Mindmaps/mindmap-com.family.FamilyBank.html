@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>쑥쑥용돈 결제까지 마인드맵</title>
+<style>
+:root{--bg:#f5f5f2;--paper:#fff;--fg:#1b1d1c;--muted:#5f6662;--line:#cfd4d0;
+--c1:#c8463b;--c2:#2f6fcf;--c3:#7a4fc4;--c4:#1f8a5b;--wall:#c98a12;color-scheme:light;
+--font:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo",system-ui,sans-serif;--mono:ui-monospace,Menlo,monospace}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#141716;--paper:#1d211f;--fg:#e8ece9;
+--muted:#a1aaa4;--line:#3a423e;--c1:#f07a6f;--c2:#6ea2ef;--c3:#ad8bef;--c4:#4cc38a;--wall:#e7b24a;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#141716;--paper:#1d211f;--fg:#e8ece9;--muted:#a1aaa4;--line:#3a423e;
+--c1:#f07a6f;--c2:#6ea2ef;--c3:#ad8bef;--c4:#4cc38a;--wall:#e7b24a;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.55 var(--font)}
+.wrap{max-width:1280px;margin:0 auto;padding:32px max(16px,env(safe-area-inset-left)) 64px;display:grid;gap:36px}
+header{display:grid;gap:8px}
+h1{font-size:30px;line-height:1.2;margin:0}
+h2{font-size:18px;margin:0 0 10px}
+p{margin:0}
+.eyebrow{font:12px var(--mono);letter-spacing:.06em;color:var(--muted)}
+.lede{color:var(--muted);font-size:16px;max-width:60ch}
+.pill{display:inline-block;font-size:13px;padding:2px 10px;border-radius:99px;border:1px solid var(--c4);color:var(--c4)}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+.card{background:var(--paper);border:1px solid var(--line);border-top:4px solid var(--c);border-radius:10px;padding:16px}
+.c1{--c:var(--c1)}.c2{--c:var(--c2)}.c3{--c:var(--c3)}.c4{--c:var(--c4)}
+.card ul{margin:0;padding-left:18px;display:grid;gap:4px}
+.proposal{--c:var(--line);border-style:dashed;border-top-style:solid}
+.proposal h2 span{font:12px var(--mono);color:var(--muted);font-weight:400;margin-left:6px}
+dl{margin:0;display:grid;gap:4px}
+dt{font-size:13px;color:var(--muted)}
+dd{margin:0 0 6px}
+.map{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:20px;overflow-x:auto}
+/* 가로 트리: 줄기는 왼쪽, 가지는 오른쪽으로 뻗는다 */
+.tree,.tree ul{list-style:none;margin:0;padding:0}
+.tree ul{display:flex;flex-direction:column;justify-content:center;position:relative;padding-left:24px}
+.tree li{display:flex;align-items:center;position:relative;padding:3px 0 3px 24px}
+.tree>li{padding-left:0}
+.tree ul::before{content:"";position:absolute;left:0;top:50%;width:24px;border-top:2px solid var(--line)}
+.tree li::before{content:"";position:absolute;left:0;top:50%;width:24px;border-top:2px solid var(--line)}
+.tree li::after{content:"";position:absolute;left:0;top:0;bottom:0;border-left:2px solid var(--line)}
+.tree li:first-child::after{top:50%}
+.tree li:last-child::after{bottom:50%}
+.tree li:only-child::after,.tree>li::before,.tree>li::after{display:none}
+.node{flex:none;max-width:280px;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:6px 10px;font-size:14px}
+.root{background:var(--fg);color:var(--bg);border:none;font-size:20px;font-weight:700;max-width:220px;padding:14px 16px}
+.root small{display:block;font-size:13px;font-weight:400;opacity:.8;margin-top:4px}
+.branch{color:#fff;border:none;font-weight:700;font-size:16px;padding:8px 14px}
+.b1{background:var(--c1)}.b2{background:var(--c2)}.b3{background:var(--c3)}.b4{background:var(--c4)}
+.lead{font-weight:600;background:var(--paper)}
+.muted{color:var(--muted)}
+.wall{border:2px solid var(--wall)}
+.pay{background:var(--c4);color:#fff;border:none}
+footer{display:grid;gap:6px}
+.sources{margin:0;padding-left:18px;font:12px var(--mono);color:var(--muted)}
+/* 좁은 화면: 들여쓴 세로 목록 */
+@media (max-width:760px){
+.map{padding:14px}
+.tree ul{display:block;padding-left:0;margin-left:12px}
+.tree li{display:block;padding:4px 0 4px 18px}
+.tree ul::before{display:none}
+.tree li::before{top:20px;width:14px}
+.tree li::after,.tree li:first-child::after{top:0;bottom:auto;height:100%}
+.tree li:last-child::after{height:20px}
+.tree li:only-child::after{display:block;height:20px}
+.node{display:inline-block;max-width:100%}
+}
+</style></head><body><main class="wrap">
+<header>
+  <p class="eyebrow">문제 → 타겟 → 솔루션 → 결제</p>
+  <h1>쑥쑥용돈</h1>
+  <p class="lede">우리 집 화폐로 배우는 아이 경제 교육</p>
+  <p><span class="pill">결제 없음</span></p>
+</header>
+<section class="cards">
+  <article class="card c1"><h2>문제 정의</h2><p>아이에게 돈의 원리를 말로 설명해도 잘 와닿지 않는다</p></article>
+  <article class="card c2"><h2>타겟</h2><p>초등학생 자녀에게 경제 교육을 하고 싶은 부모</p></article>
+  <article class="card c3"><h2>솔루션</h2><p>부모가 중앙은행이 되어 우리 집 화폐로 용돈·저축·투자를 겪게 한다</p></article>
+</section>
+<section><h2>마인드맵</h2><div class="map"><ul class="tree"><li><div class="node root">쑥쑥용돈<small>우리 집 화폐로 배우는 아이 경제 교육</small></div><ul><li><div class="node branch b1">문제</div><ul><li><div class="node lead ">아이에게 돈의 원리를 말로 설명해도 잘 와닿지 않는다</div><ul><li><div class="node ">용돈을 줘도 금방 써 버리고 끝난다</div></li><li><div class="node ">저축 이자나 복리를 체감할 기회가 없다</div></li><li><div class="node ">투자와 위험을 가르칠 안전한 연습판이 없다</div></li><li><div class="node ">용돈 기록이 흩어져 돌아보기 어렵다</div></li></ul></li></ul></li><li><div class="node branch b2">타겟</div><ul><li><div class="node lead ">초등학생 자녀에게 경제 교육을 하고 싶은 부모</div><ul><li><div class="node ">아이가 용돈을 달라고 조르기 시작할 때</div></li><li><div class="node ">아이가 이자나 주식이 뭐냐고 물을 때</div></li><li><div class="node ">간식·게임 시간을 약속으로 정하고 싶을 때</div></li></ul></li><li><div class="node muted">노리지 않는 사람 · 실제 은행 계좌나 카드가 필요한 가족</div></li></ul></li><li><div class="node branch b3">솔루션</div><ul><li><div class="node lead ">부모가 중앙은행이 되어 우리 집 화폐로 용돈·저축·투자를 겪게 한다</div><ul><li><div class="node ">화폐 이름을 정하고 PIN 잠긴 부모 모드로 지급</div></li><li><div class="node ">간식·게임 시간 가격표를 단 우리집 가게</div></li><li><div class="node ">매주 복리 이자가 붙는 저축통장</div></li><li><div class="node ">하루 한 번 시세가 바뀌는 모의 펀드 3종</div></li><li><div class="node ">10단계 부모 가이드와 자녀 폰 전용 모드</div></li></ul></li></ul></li><li><div class="node branch b4">결제까지</div><ul><li><div class="node lead ">1 발견 · 경제 교육·용돈 관리로 검색해 만난다</div><ul><li><div class="node ">경제공부, 용돈기입장, 어린이은행 같은 검색어</div></li><li><div class="node ">부제: 부모는 중앙은행, 아이는 저축과 투자</div></li><li><div class="node ">소개 웹페이지 운영</div></li></ul></li><li><div class="node lead ">2 스토어 페이지 · 우리 집 화폐로 돈의 원리를 몸으로 배운다</div><ul><li><div class="node ">화폐·가게·저축·투자·시장·배우기 소개</div></li><li><div class="node ">자녀 폰 모드와 가족 기기 동기화</div></li><li><div class="node ">결제 이야기 없음, 완전 무료</div></li></ul></li><li><div class="node lead ">3 첫 실행 · 화폐 이름, 부모 PIN, 가족 등록 세 단계</div><ul><li><div class="node ">화폐 이름 기본값은 코인</div></li><li><div class="node ">숫자 4자리 부모 PIN 두 번 입력</div></li><li><div class="node ">부모·자녀를 각각 한 명 이상 등록</div></li></ul></li><li><div class="node lead ">4 첫 성공 · 아이가 첫 용돈을 받고 가게에서 결제한다</div><ul><li><div class="node ">부모 모드에서 용돈 지급</div></li><li><div class="node ">가게에서 고르거나 바코드를 찍어 결제</div></li><li><div class="node ">장부에 돈의 이동이 바로 남음</div></li></ul></li><li><div class="node lead ">5 다시 찾기 · 매주 이자, 매일 시세 변화를 보러 연다</div><ul><li><div class="node ">저축통장에 매주 복리 이자</div></li><li><div class="node ">모의 펀드 시세가 하루 한 번 바뀜</div></li><li><div class="node ">물가가 주마다 오르는 설정도 가능</div></li></ul></li><li><div class="node lead wall">6 결제 벽 · 아직 결제 장치 없음</div><ul><li><div class="node ">모든 기능이 무료로 열려 있음</div></li><li><div class="node ">막히는 기능이나 횟수 제한 없음</div></li></ul></li><li><div class="node lead pay">7 결제 · 아직 결제 장치 없음</div><ul><li><div class="node ">앱 설정상 수익모델은 무료</div></li><li><div class="node ">광고·인앱 결제 상품 없음</div></li></ul></li></ul></li></ul></li></ul></div></section>
+<section class="cards">
+  <article class="card c4"><h2>결제하는 순간</h2>
+    <dl><dt>방식</dt><dd>결제 없음</dd>
+    <dt>무료로 되는 것</dt><dd>모든 기능 무료</dd>
+    <dt>결제 버튼이 보일 때</dt><dd>결제 화면 없음</dd>
+    <dt>상품</dt><dd><ul><li>상품 없음</li></ul></dd></dl>
+  </article>
+  <article class="card proposal"><h2>제안 <span>확인된 사실 아님</span></h2><ul><li>자녀 두 명 이상이나 위젯을 가족 이용권으로 묶기</li><li>부모 가이드 심화편을 한 번 구매로 열기</li><li>첫 달 이자를 받은 뒤 응원 팁 단추 보여 주기</li></ul></article>
+</section>
+<footer><p class="eyebrow">근거 파일</p><ul class="sources"><li>APPSTORE.md</li><li>README.md</li><li>RELEASE_NOTES.md</li><li>FamilyBank/FamilyBankSpec.swift</li><li>FamilyBank/FamilyBankRoadmap.swift</li><li>FamilyBank/Views/OnboardingView.swift</li><li>FamilyBank/BankEngine.swift</li></ul></footer>
+</main></body></html>

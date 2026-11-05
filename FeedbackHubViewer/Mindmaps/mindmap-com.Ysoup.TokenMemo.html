@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>클립키보드 결제까지 마인드맵</title>
+<style>
+:root{--bg:#f5f5f2;--paper:#fff;--fg:#1b1d1c;--muted:#5f6662;--line:#cfd4d0;
+--c1:#c8463b;--c2:#2f6fcf;--c3:#7a4fc4;--c4:#1f8a5b;--wall:#c98a12;color-scheme:light;
+--font:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo",system-ui,sans-serif;--mono:ui-monospace,Menlo,monospace}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#141716;--paper:#1d211f;--fg:#e8ece9;
+--muted:#a1aaa4;--line:#3a423e;--c1:#f07a6f;--c2:#6ea2ef;--c3:#ad8bef;--c4:#4cc38a;--wall:#e7b24a;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#141716;--paper:#1d211f;--fg:#e8ece9;--muted:#a1aaa4;--line:#3a423e;
+--c1:#f07a6f;--c2:#6ea2ef;--c3:#ad8bef;--c4:#4cc38a;--wall:#e7b24a;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.55 var(--font)}
+.wrap{max-width:1280px;margin:0 auto;padding:32px max(16px,env(safe-area-inset-left)) 64px;display:grid;gap:36px}
+header{display:grid;gap:8px}
+h1{font-size:30px;line-height:1.2;margin:0}
+h2{font-size:18px;margin:0 0 10px}
+p{margin:0}
+.eyebrow{font:12px var(--mono);letter-spacing:.06em;color:var(--muted)}
+.lede{color:var(--muted);font-size:16px;max-width:60ch}
+.pill{display:inline-block;font-size:13px;padding:2px 10px;border-radius:99px;border:1px solid var(--c4);color:var(--c4)}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+.card{background:var(--paper);border:1px solid var(--line);border-top:4px solid var(--c);border-radius:10px;padding:16px}
+.c1{--c:var(--c1)}.c2{--c:var(--c2)}.c3{--c:var(--c3)}.c4{--c:var(--c4)}
+.card ul{margin:0;padding-left:18px;display:grid;gap:4px}
+.proposal{--c:var(--line);border-style:dashed;border-top-style:solid}
+.proposal h2 span{font:12px var(--mono);color:var(--muted);font-weight:400;margin-left:6px}
+dl{margin:0;display:grid;gap:4px}
+dt{font-size:13px;color:var(--muted)}
+dd{margin:0 0 6px}
+.map{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:20px;overflow-x:auto}
+/* 가로 트리: 줄기는 왼쪽, 가지는 오른쪽으로 뻗는다 */
+.tree,.tree ul{list-style:none;margin:0;padding:0}
+.tree ul{display:flex;flex-direction:column;justify-content:center;position:relative;padding-left:24px}
+.tree li{display:flex;align-items:center;position:relative;padding:3px 0 3px 24px}
+.tree>li{padding-left:0}
+.tree ul::before{content:"";position:absolute;left:0;top:50%;width:24px;border-top:2px solid var(--line)}
+.tree li::before{content:"";position:absolute;left:0;top:50%;width:24px;border-top:2px solid var(--line)}
+.tree li::after{content:"";position:absolute;left:0;top:0;bottom:0;border-left:2px solid var(--line)}
+.tree li:first-child::after{top:50%}
+.tree li:last-child::after{bottom:50%}
+.tree li:only-child::after,.tree>li::before,.tree>li::after{display:none}
+.node{flex:none;max-width:280px;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:6px 10px;font-size:14px}
+.root{background:var(--fg);color:var(--bg);border:none;font-size:20px;font-weight:700;max-width:220px;padding:14px 16px}
+.root small{display:block;font-size:13px;font-weight:400;opacity:.8;margin-top:4px}
+.branch{color:#fff;border:none;font-weight:700;font-size:16px;padding:8px 14px}
+.b1{background:var(--c1)}.b2{background:var(--c2)}.b3{background:var(--c3)}.b4{background:var(--c4)}
+.lead{font-weight:600;background:var(--paper)}
+.muted{color:var(--muted)}
+.wall{border:2px solid var(--wall)}
+.pay{background:var(--c4);color:#fff;border:none}
+footer{display:grid;gap:6px}
+.sources{margin:0;padding-left:18px;font:12px var(--mono);color:var(--muted)}
+/* 좁은 화면: 들여쓴 세로 목록 */
+@media (max-width:760px){
+.map{padding:14px}
+.tree ul{display:block;padding-left:0;margin-left:12px}
+.tree li{display:block;padding:4px 0 4px 18px}
+.tree ul::before{display:none}
+.tree li::before{top:20px;width:14px}
+.tree li::after,.tree li:first-child::after{top:0;bottom:auto;height:100%}
+.tree li:last-child::after{height:20px}
+.tree li:only-child::after{display:block;height:20px}
+.node{display:inline-block;max-width:100%}
+}
+</style></head><body><main class="wrap">
+<header>
+  <p class="eyebrow">문제 → 타겟 → 솔루션 → 결제</p>
+  <h1>클립키보드</h1>
+  <p class="lede">늘 치는 말을 키보드에서 탭 한 번에</p>
+  <p><span class="pill">구독</span></p>
+</header>
+<section class="cards">
+  <article class="card c1"><h2>문제 정의</h2><p>적어 둔 계좌번호·주소·답장을 꺼내 오는 길이 번거롭다</p></article>
+  <article class="card c2"><h2>타겟</h2><p>폰으로 같은 문구를 하루에도 여러 번 보내는 사람</p></article>
+  <article class="card c3"><h2>솔루션</h2><p>자주 쓰는 글을 키보드 안에 두고 탭 한 번에 넣는다</p></article>
+</section>
+<section><h2>마인드맵</h2><div class="map"><ul class="tree"><li><div class="node root">클립키보드<small>늘 치는 말을 키보드에서 탭 한 번에</small></div><ul><li><div class="node branch b1">문제</div><ul><li><div class="node lead ">적어 둔 계좌번호·주소·답장을 꺼내 오는 길이 번거롭다</div><ul><li><div class="node ">메모 앱 열고 찾고 복사하고 돌아오는 왕복</div></li><li><div class="node ">앱을 오가다 뭘 하려던 건지 잊어버린다</div></li><li><div class="node ">이름만 다른 답장을 매번 처음부터 친다</div></li><li><div class="node ">계좌번호 한 자리를 틀리게 보낼까 긴장된다</div></li></ul></li></ul></li><li><div class="node branch b2">타겟</div><ul><li><div class="node lead ">폰으로 같은 문구를 하루에도 여러 번 보내는 사람</div><ul><li><div class="node ">카톡으로 &quot;계좌번호 알려 주세요&quot;가 왔을 때</div></li><li><div class="node ">손님 문의에 같은 답장을 또 보낼 때</div></li><li><div class="node ">가입 폼에 이름·전화·주소를 하나씩 넣을 때</div></li><li><div class="node ">아까 복사한 번호가 사라진 걸 알았을 때</div></li></ul></li><li><div class="node muted">노리지 않는 사람 · 같은 말을 거의 다시 칠 일이 없는 사람</div></li></ul></li><li><div class="node branch b3">솔루션</div><ul><li><div class="node lead ">자주 쓰는 글을 키보드 안에 두고 탭 한 번에 넣는다</div><ul><li><div class="node ">단축어: 저장한 문구를 탭 한 번에 입력</div></li><li><div class="node ">템플릿: 이름 같은 바뀌는 칸만 골라 채우기</div></li><li><div class="node ">스택: 여러 값을 순서대로 넣기</div></li><li><div class="node ">보안 단축어: 카드번호는 Face ID로 잠금</div></li><li><div class="node ">스마트 클립보드: 복사한 것을 종류별로 보관</div></li></ul></li></ul></li><li><div class="node branch b4">결제까지</div><ul><li><div class="node lead ">1 발견 · &quot;계좌번호 또 치고 있다면&quot; 공감 글로 알게 된다</div><ul><li><div class="node ">인스타 카드뉴스·스레드·블로그 사용기</div></li><li><div class="node ">레딧, 긱뉴스, 클리앙 등 개발자 직접 소개</div></li><li><div class="node ">스토어 검색: 상용구, 복붙키보드, 빠른답장</div></li></ul></li><li><div class="node lead ">2 스토어 페이지 · &quot;같은 말을 다시 치지 마세요&quot;로 시작한다</div><ul><li><div class="node ">단축어·템플릿·스택·보안·클립보드 소개</div></li><li><div class="node ">내용은 기기에만 저장, 수집 안 함 강조</div></li><li><div class="node ">단축어 100번 넣을 때까지 모두 무료 안내</div></li></ul></li><li><div class="node lead ">3 첫 실행 · 백지 화면에서 그림 한 번, 직접 해 보기</div><ul><li><div class="node ">계좌번호가 복사돼 상자로 들어가는 그림</div></li><li><div class="node ">복사·붙여넣기·보내기를 직접 눌러 본다</div></li><li><div class="node ">단계별 키보드 켜기·전체 접근 허용 안내</div></li></ul></li><li><div class="node lead ">4 첫 성공 · 다른 앱 입력칸에 탭 한 번으로 들어간다</div><ul><li><div class="node ">메모 앱을 안 열고 계좌번호를 보낸다</div></li><li><div class="node ">템플릿으로 이름만 바꿔 답장을 보낸다</div></li><li><div class="node ">가장 이탈이 큰 곳은 전체 접근 허용 단계</div></li></ul></li><li><div class="node lead ">5 다시 찾기 · 쓸수록 단축어가 쌓이고 횟수가 보인다</div><ul><li><div class="node ">설정에 &quot;무료로 쓰는 중 · 100번 중 N번&quot;</div></li><li><div class="node ">50%·80%에 쓴 횟수와 아낀 시간 카드</div></li><li><div class="node ">복사한 것이 키보드 &#x27;최근&#x27; 칸에 남는다</div></li></ul></li><li><div class="node lead wall">6 결제 벽 · 100번을 넘기면 새로 만드는 데만 한도</div><ul><li><div class="node ">만든 것은 계속 쓰고 키보드 입력은 안 막음</div></li><li><div class="node ">새로 만들기: 단축어 10·템플릿 3개까지</div></li><li><div class="node ">백업·Face ID 잠금·동기화는 Pro 기능</div></li></ul></li><li><div class="node lead pay">7 결제 · Plus와 Pro, 각각 연 구독 또는 평생</div><ul><li><div class="node ">Plus: 무제한 쌓기 / Pro: 백업·잠금까지</div></li><li><div class="node ">연 구독은 첫 해 반값으로 처음 골라져 있음</div></li><li><div class="node ">Plus 평생 산 사람은 Pro로 올리는 값만</div></li></ul></li></ul></li></ul></li></ul></div></section>
+<section class="cards">
+  <article class="card c4"><h2>결제하는 순간</h2>
+    <dl><dt>방식</dt><dd>구독</dd>
+    <dt>무료로 되는 것</dt><dd>단축어 100번 넣을 때까지 전부 무료, 이후 새로 만들기만 제한</dd>
+    <dt>결제 버튼이 보일 때</dt><dd>100번째 입력 뒤 앱을 열 때 한 번 영수증과 함께 뜸</dd>
+    <dt>상품</dt><dd><ul><li>Plus 연 구독 · $4.99 (첫 해 $2.49)</li><li>Plus 평생 · $14.99</li><li>Pro 연 구독 · $8.99 (첫 해 $4.49)</li><li>Pro 평생 · $26.99</li><li>Plus 평생에서 Pro로 올리기 · $12.99</li><li>팁 · $0.99 / $2.99 / $9.99</li></ul></dd></dl>
+  </article>
+  <article class="card proposal"><h2>제안 <span>확인된 사실 아님</span></h2><ul><li>100번 영수증 화면에 가장 많이 쓴 단축어를 크게</li><li>전체 접근 허용을 마친 날 첫 해 할인 알려 주기</li><li>가게 사장님용 답장 템플릿 묶음을 Plus 혜택으로</li></ul></article>
+</section>
+<footer><p class="eyebrow">근거 파일</p><ul class="sources"><li>APPSTORE.md</li><li>RELEASE_NOTES.md</li><li>docs/product/process/design-canvas.html</li><li>docs/product/FREE_USE_MODEL.md</li><li>Config/StoreKit/ClipKeyboardProducts.storekit</li><li>ClipKeyboard/Screens/PaywallPlans.swift</li><li>ClipKeyboard/Service/ProFeatureManager.swift</li><li>ClipKeyboard/Screens/BlankStart/BlankStartView.swift</li></ul></footer>
+</main></body></html>

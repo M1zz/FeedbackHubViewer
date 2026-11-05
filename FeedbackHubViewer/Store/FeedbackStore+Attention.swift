@@ -51,6 +51,12 @@ extension FeedbackStore {
         return crashes(for: project).reduce(0) { $0 + (viewed.contains($1.id) ? 0 : 1) }
     }
 
+    /// 아직 안 본 진단의 id.
+    func newCrashIDs(for project: String?) -> Set<String> {
+        guard let viewed = viewedCrashIDs else { return [] }
+        return Set(crashes(for: project).map(\.id)).subtracting(viewed)
+    }
+
     /// 진단 탭을 열었을 때 — 그 앱(nil 이면 전체)의 진단을 확인한 것으로.
     func markCrashesViewed(project: String?) {
         let ids = Set(crashes(for: project).map(\.id))

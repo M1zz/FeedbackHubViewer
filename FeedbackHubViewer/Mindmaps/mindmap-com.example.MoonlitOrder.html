@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>달빛 오락실 결제까지 마인드맵</title>
+<style>
+:root{--bg:#f5f5f2;--paper:#fff;--fg:#1b1d1c;--muted:#5f6662;--line:#cfd4d0;
+--c1:#c8463b;--c2:#2f6fcf;--c3:#7a4fc4;--c4:#1f8a5b;--wall:#c98a12;color-scheme:light;
+--font:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo",system-ui,sans-serif;--mono:ui-monospace,Menlo,monospace}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#141716;--paper:#1d211f;--fg:#e8ece9;
+--muted:#a1aaa4;--line:#3a423e;--c1:#f07a6f;--c2:#6ea2ef;--c3:#ad8bef;--c4:#4cc38a;--wall:#e7b24a;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#141716;--paper:#1d211f;--fg:#e8ece9;--muted:#a1aaa4;--line:#3a423e;
+--c1:#f07a6f;--c2:#6ea2ef;--c3:#ad8bef;--c4:#4cc38a;--wall:#e7b24a;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.55 var(--font)}
+.wrap{max-width:1280px;margin:0 auto;padding:32px max(16px,env(safe-area-inset-left)) 64px;display:grid;gap:36px}
+header{display:grid;gap:8px}
+h1{font-size:30px;line-height:1.2;margin:0}
+h2{font-size:18px;margin:0 0 10px}
+p{margin:0}
+.eyebrow{font:12px var(--mono);letter-spacing:.06em;color:var(--muted)}
+.lede{color:var(--muted);font-size:16px;max-width:60ch}
+.pill{display:inline-block;font-size:13px;padding:2px 10px;border-radius:99px;border:1px solid var(--c4);color:var(--c4)}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+.card{background:var(--paper);border:1px solid var(--line);border-top:4px solid var(--c);border-radius:10px;padding:16px}
+.c1{--c:var(--c1)}.c2{--c:var(--c2)}.c3{--c:var(--c3)}.c4{--c:var(--c4)}
+.card ul{margin:0;padding-left:18px;display:grid;gap:4px}
+.proposal{--c:var(--line);border-style:dashed;border-top-style:solid}
+.proposal h2 span{font:12px var(--mono);color:var(--muted);font-weight:400;margin-left:6px}
+dl{margin:0;display:grid;gap:4px}
+dt{font-size:13px;color:var(--muted)}
+dd{margin:0 0 6px}
+.map{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:20px;overflow-x:auto}
+/* 가로 트리: 줄기는 왼쪽, 가지는 오른쪽으로 뻗는다 */
+.tree,.tree ul{list-style:none;margin:0;padding:0}
+.tree ul{display:flex;flex-direction:column;justify-content:center;position:relative;padding-left:24px}
+.tree li{display:flex;align-items:center;position:relative;padding:3px 0 3px 24px}
+.tree>li{padding-left:0}
+.tree ul::before{content:"";position:absolute;left:0;top:50%;width:24px;border-top:2px solid var(--line)}
+.tree li::before{content:"";position:absolute;left:0;top:50%;width:24px;border-top:2px solid var(--line)}
+.tree li::after{content:"";position:absolute;left:0;top:0;bottom:0;border-left:2px solid var(--line)}
+.tree li:first-child::after{top:50%}
+.tree li:last-child::after{bottom:50%}
+.tree li:only-child::after,.tree>li::before,.tree>li::after{display:none}
+.node{flex:none;max-width:280px;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:6px 10px;font-size:14px}
+.root{background:var(--fg);color:var(--bg);border:none;font-size:20px;font-weight:700;max-width:220px;padding:14px 16px}
+.root small{display:block;font-size:13px;font-weight:400;opacity:.8;margin-top:4px}
+.branch{color:#fff;border:none;font-weight:700;font-size:16px;padding:8px 14px}
+.b1{background:var(--c1)}.b2{background:var(--c2)}.b3{background:var(--c3)}.b4{background:var(--c4)}
+.lead{font-weight:600;background:var(--paper)}
+.muted{color:var(--muted)}
+.wall{border:2px solid var(--wall)}
+.pay{background:var(--c4);color:#fff;border:none}
+footer{display:grid;gap:6px}
+.sources{margin:0;padding-left:18px;font:12px var(--mono);color:var(--muted)}
+/* 좁은 화면: 들여쓴 세로 목록 */
+@media (max-width:760px){
+.map{padding:14px}
+.tree ul{display:block;padding-left:0;margin-left:12px}
+.tree li{display:block;padding:4px 0 4px 18px}
+.tree ul::before{display:none}
+.tree li::before{top:20px;width:14px}
+.tree li::after,.tree li:first-child::after{top:0;bottom:auto;height:100%}
+.tree li:last-child::after{height:20px}
+.tree li:only-child::after{display:block;height:20px}
+.node{display:inline-block;max-width:100%}
+}
+</style></head><body><main class="wrap">
+<header>
+  <p class="eyebrow">문제 → 타겟 → 솔루션 → 결제</p>
+  <h1>달빛 오락실</h1>
+  <p class="lede">인터넷 없이 아이폰끼리 하는 파티게임</p>
+  <p><span class="pill">결제 없음</span></p>
+</header>
+<section class="cards">
+  <article class="card c1"><h2>문제 정의</h2><p>여럿이 모였는데 다 같이 할 게임이 마땅치 않다</p></article>
+  <article class="card c2"><h2>타겟</h2><p>친구·동아리·가족이 서너 명 넘게 모인 자리</p></article>
+  <article class="card c3"><h2>솔루션</h2><p>각자 아이폰을 가까이 연결해 최대 15명이 바로 게임한다</p></article>
+</section>
+<section><h2>마인드맵</h2><div class="map"><ul class="tree"><li><div class="node root">달빛 오락실<small>인터넷 없이 아이폰끼리 하는 파티게임</small></div><ul><li><div class="node branch b1">문제</div><ul><li><div class="node lead ">여럿이 모였는데 다 같이 할 게임이 마땅치 않다</div><ul><li><div class="node ">보드게임은 챙겨 오지 않으면 못 한다</div></li><li><div class="node ">역할 카드 나누고 눈 감기가 번거롭다</div></li><li><div class="node ">MT·수련회 장소는 인터넷이 약하다</div></li><li><div class="node ">규칙 설명하다 분위기가 식는다</div></li></ul></li></ul></li><li><div class="node branch b2">타겟</div><ul><li><div class="node lead ">친구·동아리·가족이 서너 명 넘게 모인 자리</div><ul><li><div class="node ">MT나 수련회에서 밤에 할 게 없을 때</div></li><li><div class="node ">회식이나 모임에서 어색함을 깨고 싶을 때</div></li><li><div class="node ">라이어 게임을 하려는데 제시어 낼 사람이 없을 때</div></li></ul></li><li><div class="node muted">노리지 않는 사람 · 혼자 하거나 온라인으로 멀리서 하려는 사람</div></li></ul></li><li><div class="node branch b3">솔루션</div><ul><li><div class="node lead ">각자 아이폰을 가까이 연결해 최대 15명이 바로 게임한다</div><ul><li><div class="node ">달빛 결사·라이어 게임·달 없는 밤·달빛 화실</div></li><li><div class="node ">역할과 제시어는 내 화면에만 몰래 보임</div></li><li><div class="node ">봇과 함께 해 보는 게임방법 연습</div></li><li><div class="node ">끊겨도 이어서 하기로 그대로 복귀</div></li><li><div class="node ">방장이 멈춘 단계 넘기고 참가자 관리</div></li></ul></li></ul></li><li><div class="node branch b4">결제까지</div><ul><li><div class="node lead ">1 발견 · 라이어게임·MT게임 같은 말로 검색</div><ul><li><div class="node ">키워드: 보드게임, 늑대인간, 수련회, 회식</div></li><li><div class="node ">모인 자리에서 한 명이 깔고 친구에게 권함</div></li><li><div class="node ">준비된 홍보 글이나 카드뉴스는 아직 없음</div></li></ul></li><li><div class="node lead ">2 스토어 페이지 · 인터넷 없이 최대 15명, 네 가지 게임</div><ul><li><div class="node ">부제: 라이어 게임부터 마피아식 추리까지</div></li><li><div class="node ">모든 게임 무료, 계정 없이 시작</div></li><li><div class="node ">24개 언어로 나와 있음</div></li></ul></li><li><div class="node lead ">3 첫 실행 · 네 장 안내 뒤 게임을 고르는 홈 화면</div><ul><li><div class="node ">한 명이 방을 만들고 나머지가 참가</div></li><li><div class="node ">근처 기기 연결 허락을 꼭 눌러 달라고 안내</div></li><li><div class="node ">규칙이 낯설면 봇과 연습부터 권함</div></li></ul></li><li><div class="node lead ">4 첫 성공 · 모두 내 화면에서 몰래 역할을 확인한다</div><ul><li><div class="node ">카드 나누기·눈 감기 없이 바로 시작</div></li><li><div class="node ">투표 마친 사람만 보이고 표는 비밀</div></li><li><div class="node ">혼자서도 봇과 한 판 해 볼 수 있음</div></li></ul></li><li><div class="node lead ">5 다시 찾기 · 다음 모임에서 다시 연다</div><ul><li><div class="node ">끊긴 게임은 홈의 이어서 하기로 복귀</div></li><li><div class="node ">인원·분위기에 맞춰 다른 게임 고르기</div></li><li><div class="node ">다시 부르는 알림이나 위젯은 아직 없음</div></li></ul></li><li><div class="node lead wall">6 결제 벽 · 아직 결제 장치 없음</div><ul><li><div class="node ">네 게임 모두 무료, 인원 제한만 게임별</div></li><li><div class="node ">광고·잠긴 기능 없음</div></li></ul></li><li><div class="node lead pay">7 결제 · 아직 결제 장치 없음</div><ul><li><div class="node ">앱 설정에 무료 앱으로 표시</div></li><li><div class="node ">판매 상품 설정 파일 없음</div></li></ul></li></ul></li></ul></li></ul></div></section>
+<section class="cards">
+  <article class="card c4"><h2>결제하는 순간</h2>
+    <dl><dt>방식</dt><dd>결제 없음</dd>
+    <dt>무료로 되는 것</dt><dd>네 게임 모두 무료, 게임당 최대 15명</dd>
+    <dt>결제 버튼이 보일 때</dt><dd>결제 버튼 없음</dd>
+    <dt>상품</dt><dd><ul><li>상품 없음</li></ul></dd></dl>
+  </article>
+  <article class="card proposal"><h2>제안 <span>확인된 사실 아님</span></h2><ul><li>라이어 게임 제시어 묶음을 테마별로 판매</li><li>방장 한 명만 사면 모두 쓰는 새 게임 이용권</li><li>한 판 끝난 결과 화면에서 팁 받기</li></ul></article>
+</section>
+<footer><p class="eyebrow">근거 파일</p><ul class="sources"><li>APPSTORE.md</li><li>README.md</li><li>RELEASE_NOTES.md</li><li>MoonlitOrder/MoonlitOrderSpec.swift</li><li>MoonlitOrder/MoonlitOrderRoadmap.swift</li><li>MoonlitOrder/Views/OnboardingView.swift</li><li>MoonlitOrder/Views/HomeView.swift</li></ul></footer>
+</main></body></html>

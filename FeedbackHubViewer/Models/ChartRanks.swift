@@ -63,6 +63,19 @@ struct ChartSlot: Codable, Hashable {
         return URL(string: path + "/json")
     }
 
+    /// 같은 차트의 App Store 웹 페이지 — `apps.apple.com/{나라}/iphone/charts/{장르}?chart=top-free`.
+    /// 36 이 전체다. 웹에는 매출 차트가 없어 nil. 열면 **지금의** 차트가 나온다.
+    var webURL: URL? {
+        let chart: String
+        switch kind {
+        case .free: chart = "top-free"
+        case .paid: chart = "top-paid"
+        case .grossing: return nil
+        }
+        let device = platform == .mac ? "mac" : "iphone"
+        return URL(string: "https://apps.apple.com/\(country)/\(device)/charts/\(genreId ?? 36)?chart=\(chart)")
+    }
+
     private var feedName: String {
         switch (kind, platform) {
         case (.free, .iphone): "topfreeapplications"
@@ -82,6 +95,49 @@ struct ChartHit: Codable, Hashable {
     let rank: Int
 }
 
+/// 차트 피드의 한 줄 — 그 자리에 있던 앱.
+struct ChartEntry: Codable, Hashable {
+    let trackId: Int
+    let name: String
+    let developer: String?
+    let iconURL: URL?
+}
+
+/// 그때의 차트 — 내 앱이 든 자리 위아래 몇 칸. 순위의 근거이고, 캡쳐 대신이다.
+/// 피드에 이름 · 아이콘이 이미 들어 있어 따로 받지 않는다. 100칸을 다 적으면 확인마다
+/// 차트 수 × 100 줄이 쌓이는데, 근거로 보려는 것은 "내 앱 옆에 누가 있었나" 다.
+struct ChartSnapshot: Codable, Hashable {
+    let trackId: Int
+    let slot: ChartSlot
+    /// 그 피드를 받은 확인. 못 받아 이어 쓴 칸이면 직전 확인의 시각이 그대로 남는다.
+    let date: Date
+    /// `entries[0]` 의 순위.
+    let firstRank: Int
+    let entries: [ChartEntry]
+    /// 그 피드에 든 앱 수(보통 100).
+    let total: Int
+
+    /// 내 자리 위아래로 남길 칸 수.
+    static let around = 5
+
+    /// `ranked` 는 피드 전체(0번 == 1위), `rank` 는 내 앱의 순위.
+    init(trackId: Int, slot: ChartSlot, date: Date, ranked: [ChartEntry], rank: Int) {
+        let index = rank - 1
+        let lower = max(0, index - Self.around)
+        let upper = min(ranked.count, index + Self.around + 1)
+        self.trackId = trackId
+        self.slot = slot
+        self.date = date
+        self.firstRank = lower + 1
+        self.entries = lower < upper ? Array(ranked[lower..<upper]) : []
+        self.total = ranked.count
+    }
+
+    var rows: [(rank: Int, entry: ChartEntry)] {
+        entries.enumerated().map { (firstRank + $0.offset, $0.element) }
+    }
+}
+
 /// 한 번의 확인.
 struct ChartScan: Codable {
     let date: Date
@@ -90,6 +146,15 @@ struct ChartScan: Codable {
     let hits: [ChartHit]
     /// 받지 못한 피드 수. 0이 아니면 이번 확인의 "없음" 중 일부는 모르는 것이다.
     let failedFeeds: Int
+    /// 받지 못한 차트 칸. 여기 든 칸의 순위는 이번에 본 것이 아니라 직전 확인에서 이어 쓴
+    /// 것이다(`ChartHistory.carryingOver`). 이 칸이 생기기 전 기록은 nil.
+    var failedSlots: [ChartSlot]?
+    /// 내 앱이 든 차트마다 그때의 차트(`ChartSnapshot`). 이 칸이 생기기 전 기록은 nil.
+    var snapshots: [ChartSnapshot]?
+
+    func snapshot(of hit: ChartHit) -> ChartSnapshot? {
+        snapshots?.first { $0.trackId == hit.trackId && $0.slot == hit.slot }
+    }
 }
 
 /// 차트를 고르는 데 필요한 앱의 사실 — 기기, 무료인지, 장르. `iTunes lookup` 이 준다.
@@ -157,6 +222,8 @@ struct ChartHistory: Codable {
         guard scans.count >= 2 else { return .unknown }
         let previous = scans[scans.count - 2]
         guard previous.countries.contains(hit.slot.country) else { return .unknown }
+        // 못 받은 칸을 적지 않던 때의 기록은, 피드를 놓쳤으면 "없었다" 를 믿을 수 없다.
+        guard previous.failedFeeds == 0 || previous.failedSlots != nil else { return .unknown }
         guard let before = previous.hits.first(where: { $0.trackId == hit.trackId && $0.slot == hit.slot }) else {
             return .entered
         }
@@ -164,13 +231,39 @@ struct ChartHistory: Codable {
         return before.rank > hit.rank ? .up(before.rank - hit.rank) : .down(hit.rank - before.rank)
     }
 
-    /// 직전에는 들었는데 이번에 빠진 차트 — 이번에도 그 나라를 봤을 때만.
+    /// 직전에는 들었는데 이번에 빠진 차트 — 이번에도 그 나라를 봤을 때만, 그리고 그 차트를
+    /// 이번에 실제로 받았을 때만. 못 받은 차트는 빠진 게 아니라 모르는 것이다.
     func dropped(for trackId: Int) -> [ChartHit] {
         guard scans.count >= 2, let last = lastScan else { return [] }
         let now = Set(last.hits.filter { $0.trackId == trackId }.map(\.slot))
+        let unknown = Set(last.failedSlots ?? [])
+        // 직전 확인이 피드를 놓치고도 어느 칸인지 적지 않았다면 견줄 수 없다 — 이번 기록이 옛 것이면 마찬가지.
+        guard last.failedFeeds == 0 || last.failedSlots != nil else { return [] }
         return scans[scans.count - 2].hits.filter {
-            $0.trackId == trackId && last.countries.contains($0.slot.country) && !now.contains($0.slot)
+            $0.trackId == trackId && last.countries.contains($0.slot.country)
+                && !now.contains($0.slot) && !unknown.contains($0.slot)
         }
+    }
+
+    /// 이번 확인에서 받지 못한 칸의 순위를 직전 확인에서 이어 쓴다. 못 받은 차트를 "없음" 으로
+    /// 적으면 순위가 다 빠진 것처럼 보이고, 다음 확인에서는 "새로 들어갔다" 가 된다.
+    func carryingOver(failed: [ChartSlot], into hits: [ChartHit]) -> [ChartHit] {
+        guard !failed.isEmpty, let previous = lastScan else { return hits }
+        let failed = Set(failed)
+        return hits + previous.hits.filter { failed.contains($0.slot) }
+    }
+
+    /// 순위를 이어 쓴 칸은 그때의 차트도 직전 것을 이어 쓴다 — 그 시각과 함께.
+    func carryingOver(failed: [ChartSlot], into snapshots: [ChartSnapshot]) -> [ChartSnapshot] {
+        guard !failed.isEmpty, let previous = lastScan?.snapshots else { return snapshots }
+        let failed = Set(failed)
+        return snapshots + previous.filter { failed.contains($0.slot) }
+    }
+
+    /// `date` 에 한 확인(nil 이면 가장 최근)에서 이 순위의 근거.
+    func snapshot(of hit: ChartHit, at date: Date? = nil) -> ChartSnapshot? {
+        let scan = date.map { date in scans.last { $0.date == date } } ?? lastScan
+        return scan?.snapshot(of: hit)
     }
 
     /// 최근 `days` 일 동안 차트 칸마다 가장 높았던 자리와 그날.
@@ -200,7 +293,7 @@ enum ChartStorefronts {
     static let defaults = ["kr", "us", "jp", "tw", "gb", "de"]
 
     /// 고를 수 있는 나라 — App Store 가 있는 나라 전부, 큰 시장부터. Apple 이 차트를 안
-    /// 내는 나라는 피드가 비어 오고(`ChartFeed.rankedIDs`), 그건 "100위 밖" 과 같다.
+    /// 내는 나라는 피드가 비어 오고(`ChartFeed.ranked`), 그건 "100위 밖" 과 같다.
     static let all = [
         "kr", "us", "jp", "cn", "tw", "hk", "sg", "my", "th", "vn", "id", "ph", "in", "au", "nz",
         "gb", "ie", "fr", "de", "at", "ch", "it", "es", "pt", "nl", "be", "lu", "dk", "se", "no", "fi",

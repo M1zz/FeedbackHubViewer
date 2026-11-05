@@ -86,6 +86,11 @@ enum MoneyFormat {
         format(amount, code: "USD", digits: abs(amount) >= 1000 ? 0 : 2)
     }
 
+    /// "₩1,234,567 ($920.15)" — 앱 내 구입 화면의 금액은 늘 달러를 같이 적는다.
+    static func krwWithUSD(krw: Double, usd: Double) -> String {
+        "\(self.krw(krw)) (\(self.usd(usd)))"
+    }
+
     /// 지도 위에 얹을 만큼 짧게: "₩1.2만", "₩35만", "₩1,240만".
     static func shortKRW(_ amount: Double) -> String {
         let value = abs(amount)

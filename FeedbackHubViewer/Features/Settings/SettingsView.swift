@@ -69,6 +69,7 @@ struct SettingsView: View {
 /// 뱃지는 리뷰 → 피드백 → 진단 순으로 선다 — 이 목록의 순서가 그 우선순위다.
 private struct AttentionSettings: View {
     @EnvironmentObject private var store: FeedbackStore
+    @EnvironmentObject private var news: NewsStore
 
     /// 시스템 알림을 띄울 수 있는 것 - 뱃지와 같은 순서.
     private let alertable: [AttentionKind] = [.review, .feedback, .crash]
@@ -109,6 +110,20 @@ private struct AttentionSettings: View {
                     }
                     .padding(.leading, 20)
                 }
+                VStack(alignment: .leading, spacing: 2) {
+                    Toggle(isOn: $news.alertsEnabled) {
+                        Label("내 앱 소식", systemImage: "newspaper")
+                    }
+                    .disabled(!store.notificationsEnabled)
+                    if store.notificationsEnabled && news.alertsEnabled {
+                        Text("아침 9시에 하루 한 번, 일어난 일 가운데 볼 만한 것만 골라 다섯 줄까지 브리핑합니다. 볼 만한 게 없는 날은 울리지 않아요.")
+                            .font(.body)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .padding(.leading, 28)
+                    }
+                }
+                .padding(.leading, 20)
                 Text("사용 통계 · 차트 같은 숫자는 하루에 한 번만 저절로 다시 읽습니다. 바로 보려면 새로고침(⌘R)을 누르세요.")
                     .font(.body)
                     .foregroundStyle(.secondary)

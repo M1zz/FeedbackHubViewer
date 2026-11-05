@@ -32,13 +32,22 @@ import SwiftUI
 final class KeywordStore: ObservableObject {
 
     /// Everything tracked, and everything ever seen.
-    @Published private(set) var history = KeywordHistory()
+    @Published private(set) var history = KeywordHistory() {
+        didSet { standingsCache = [:] }
+    }
+    /// 앱마다 `standings` 를 그날 하루 기억한다. 사이드바 뱃지 · 앱 목록 줄이 그리기마다 앱 수 ×
+    /// 키워드 수만큼 30일 축을 다시 짜서, 켜 두기만 해도 메인 스레드가 쉬지 못했다.
+    /// 기록이 바뀌면(`history` 의 didSet) 비운다. 발행하지 않는 칸이라 그리는 중에 채워도 된다.
+    private var standingsCache: [String?: (day: Date, rows: [KeywordStanding])] = [:]
     @Published private(set) var isChecking = false
     @Published private(set) var progress: CheckProgress?
     @Published var errorMessage: String?
     /// 추천 검색어, 프로젝트마다 마지막으로 돌린 것. 돌리는 데 몇 분 걸려서
     /// 다음 실행까지 디스크에 남긴다(`recommend(for:country:)`).
     @Published private(set) var recommendations: [String: KeywordRecommendation.Report] = [:]
+    /// 스토어 키워드 칸의 기록 — `KeywordField.key(project:locale:)` → 본 값들, 오래된 것부터.
+    /// `syncStoreFields` 만 쓴다(`KeywordStore+StoreField.swift`).
+    @Published var fieldLog: [String: [KeywordFieldSnapshot]] = [:]
 
     /// Storefronts offered when adding a term. Seeded from what is already
     /// tracked so the picker matches the data, and persisted as a plain
@@ -51,6 +60,7 @@ final class KeywordStore: ObservableObject {
     private static let lastCheckDayKey = "keywordLastCheckDay"
     private static let lastListingRefreshDayKey = "keywordLastListingRefreshDay"
     private static let recommendationsFile = "keyword-recommendations"
+    static let fieldLogFile = "keyword-fields"
 
     private let directory = AppStoreDirectory.shared
     private var checkTask: Task<Void, Never>?
@@ -71,10 +81,17 @@ final class KeywordStore: ObservableObject {
         var done: Int
         var total: Int
         var term: String
+        /// 지금 확인 중인 앱의 스토어 이름 — 한 앱씩 끝내므로 "어느 앱 차례인가" 가 곧 진행이다.
+        var app: String? = nil
 
         var fraction: Double { total > 0 ? Double(done) / Double(total) : 0 }
-        var text: String { "\(term) 확인 중… (\(done)/\(total))" }
+        var text: String {
+            (app.map { "\($0) · " } ?? "") + "\(term) 확인 중… (\(done)/\(total))"
+        }
     }
+
+    /// 지금 화면에 띄운 앱. 하루 확인이 이 앱의 말부터 한다 — 도중에 바뀌면 그다음 말부터 바로.
+    @Published var focusProject: String?
 
     init() {
         let saved = UserDefaults.standard.stringArray(forKey: Self.countriesKey)
@@ -99,6 +116,10 @@ final class KeywordStore: ObservableObject {
             if let saved = CacheFile.read([String: KeywordRecommendation.Report].self,
                                           at: CacheFile.url(Self.recommendationsFile)) {
                 self.recommendations = saved
+            }
+            if let saved = CacheFile.read([String: [KeywordFieldSnapshot]].self,
+                                          at: CacheFile.url(Self.fieldLogFile)) {
+                self.fieldLog = saved
             }
             guard let restored = await KeywordCache.shared.load() else { return }
             self.history = restored
@@ -210,13 +231,21 @@ final class KeywordStore: ObservableObject {
         // Deduplicated by `TrackedKeyword.id`, which is (country, normalised
         // term) — the unit a search request actually answers. Two apps tracking
         // the same term in the same storefront cost one request between them.
-        let terms = history.keywords.values.sorted { ($0.country, $0.term) < ($1.country, $1.term) }
-        guard !terms.isEmpty else { return }
-
+        //
+        // 증분으로 돈다. 오늘 이미 확인한 말은 건너뛰고(도중에 껐다 켜도 남은 것만), 다음 말은
+        // 매번 새로 고른다(`nextTerm`) — 한 앱의 말을 다 끝내고 다음 앱으로 가서 끝난 앱부터 순위가
+        // 다 차고, 그사이 화면에서 다른 앱을 열면 그 앱이 바로 다음 차례가 된다. 확인 도중 새로
+        // 추적하게 된 말(스토어 키워드 칸)도 같은 줄에 선다.
+        let today = UsageRollups.dayKey(Date())
+        let order = Dictionary(bundleIds.enumerated().map { ($0.element, $0.offset) }, uniquingKeysWith: min)
+        var skipped: Set<String> = []
+        var done = 0
         var failures = 0
-        for (index, keyword) in terms.enumerated() {
+        while let keyword = nextTerm(today: today, order: order, skipping: skipped) {
             guard !Task.isCancelled else { return }
-            progress = CheckProgress(done: index, total: terms.count, term: keyword.term)
+            let owner = owner(of: keyword, order: order)
+            progress = CheckProgress(done: done, total: done + pendingCount(today: today, skipping: skipped),
+                                     term: keyword.term, app: owner.flatMap { storeApp(for: $0)?.name })
             do {
                 let results = try await directory.search(term: keyword.term, country: keyword.country)
                 history.record(keyword, results: results, mine: mine)
@@ -227,21 +256,60 @@ final class KeywordStore: ObservableObject {
                 // the rest of the pass, or a single throttled request costs a
                 // day of history for everything after it.
                 failures += 1
+                skipped.insert(keyword.id)
                 if errorMessage == nil { errorMessage = error.localizedDescription }
             }
+            done += 1
             // Written as it goes: a check is minutes long at three seconds a
             // term, and quitting halfway should keep what it already learned.
-            if index % 10 == 9 { persist() }
+            if done % 10 == 0 { persist() }
         }
+        guard done > 0 else { return }
 
         history.lastCheckedAt = Date()
-        if failures < terms.count {
-            UserDefaults.standard.set(UsageRollups.dayKey(Date()), forKey: Self.lastCheckDayKey)
+        if failures < done {
+            UserDefaults.standard.set(today, forKey: Self.lastCheckDayKey)
         }
         if failures > 0 {
             errorMessage = "키워드 \(failures)개는 확인하지 못했습니다. " + (errorMessage ?? "")
         }
         persist()
+    }
+
+    // MARK: - 증분 확인의 차례
+
+    /// 오늘 아직 확인하지 않은 말 가운데 다음 차례 — 보고 있는 앱, 그다음 허브의 앱 차례,
+    /// 같은 앱 안에서는 가나다순.
+    private func nextTerm(today: String, order: [String: Int], skipping: Set<String>) -> TrackedKeyword? {
+        history.keywords.values
+            .filter { !skipping.contains($0.id) && history.checks[$0.id]?[today] == nil }
+            .min { lhs, rhs in
+                let (l, r) = (priority(of: lhs, order: order), priority(of: rhs, order: order))
+                return l == r ? (lhs.country, lhs.term) < (rhs.country, rhs.term) : l < r
+            }
+    }
+
+    private func pendingCount(today: String, skipping: Set<String>) -> Int {
+        history.keywords.values.filter { !skipping.contains($0.id) && history.checks[$0.id]?[today] == nil }.count
+    }
+
+    /// 이 말을 추적하는 앱 가운데 가장 앞 차례의 앱.
+    private func owner(of keyword: TrackedKeyword, order: [String: Int]) -> String? {
+        keyword.projects.min { rank($0, order: order) < rank($1, order: order) }
+    }
+
+    private func priority(of keyword: TrackedKeyword, order: [String: Int]) -> Int {
+        keyword.projects.map { rank($0, order: order) }.min() ?? .max
+    }
+
+    private func rank(_ project: String, order: [String: Int]) -> Int {
+        project == focusProject ? -1 : order[project] ?? .max - 1
+    }
+
+    /// 이 앱의 말 가운데 오늘 아직 확인하지 않은 수. 0 이면 이 앱은 오늘 확인이 끝났다.
+    func pendingToday(for project: String?) -> Int {
+        let today = UsageRollups.dayKey(Date())
+        return history.keywords(for: project).filter { history.checks[$0.id]?[today] == nil }.count
     }
 
     /// Resolve whatever the hub knows about and the links do not — now, and
@@ -305,7 +373,7 @@ final class KeywordStore: ObservableObject {
             askedLinks.formUnion(unlinked)
             for app in apps {
                 guard let bundleId = app.bundleId else { continue }
-                history.links[bundleId] = app.id
+                history.links[Self.hubKey(for: bundleId, among: unlinked)] = app.id
                 history.apps[String(app.id)] = app
             }
         } catch {
@@ -324,13 +392,42 @@ final class KeywordStore: ObservableObject {
                 self.askedLinks.formUnion(bundleIds)
                 for app in apps {
                     guard let bundleId = app.bundleId else { continue }
-                    self.history.links[bundleId] = app.id
+                    self.history.links[Self.hubKey(for: bundleId, among: bundleIds)] = app.id
                     self.history.apps[String(app.id)] = app
                 }
                 self.persist()
             } catch {
                 self.errorMessage = error.localizedDescription
             }
+        }
+    }
+
+    /// 스토어가 돌려준 번들 ID 를 허브의 키로. 스토어는 대소문자를 가리지 않고 찾아 주지만
+    /// 돌려줄 때는 제 표기로 준다(`com.ysoup.…` 로 물으면 `com.Ysoup.…`). 그대로 키로 쓰면
+    /// 허브의 앱과 이어지지 않아 "스토어에 없음" 이 된다.
+    private static func hubKey(for bundleId: String, among asked: [String]) -> String {
+        asked.first { $0.caseInsensitiveCompare(bundleId) == .orderedSame } ?? bundleId
+    }
+
+    /// 스토어 링크(또는 id 숫자)로 손수 잇는다 — 번들 ID 가 스토어의 것과 달라 저절로는
+    /// 못 찾는 앱. 리포의 번들 ID 를 바꿨는데 스토어에는 옛 ID 로 나가 있는 경우가 그렇다
+    /// (팔랑북: 허브 com.devkoan.RotoscopeiPad · 스토어 com.leeo.RotoscopeiPad).
+    /// 실패하면 까닭을 돌려준다.
+    func link(project: String, storeLink: String) async -> String? {
+        let digits = storeLink.range(of: #"id(\d+)"#, options: .regularExpression)
+            .map { String(storeLink[$0].dropFirst(2)) } ?? storeLink.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let id = Int(digits) else { return "링크에서 App Store id(id 뒤의 숫자)를 찾지 못했습니다." }
+        do {
+            let apps = try await directory.lookup(ids: [id], country: countries.first ?? "kr")
+            guard let app = apps.first(where: { $0.id == id }) ?? apps.first else {
+                return "App Store 가 이 id 의 앱을 모른다고 합니다."
+            }
+            history.links[project] = app.id
+            history.apps[String(app.id)] = app
+            persist()
+            return nil
+        } catch {
+            return error.localizedDescription
         }
     }
 
@@ -634,8 +731,10 @@ final class KeywordStore: ObservableObject {
     /// One app's keyword rows, ranked ones first — the ones with a number are
     /// what you came to look at, and the unranked ones are the work list.
     func standings(for project: String?) -> [KeywordStanding] {
+        let today = Calendar.current.startOfDay(for: Date())
+        if let cached = standingsCache[project], cached.day == today { return cached.rows }
         let trackId = trackId(for: project)
-        return history.keywords(for: project)
+        let rows = history.keywords(for: project)
             .map { history.standing($0, trackId: trackId) }
             .sorted { lhs, rhs in
                 switch (lhs.rank, rhs.rank) {
@@ -645,6 +744,8 @@ final class KeywordStore: ObservableObject {
                 default:           return lhs.keyword.term < rhs.keyword.term
                 }
             }
+        standingsCache[project] = (today, rows)
+        return rows
     }
 
     /// The terms this app is nearest to owning, nearest first.

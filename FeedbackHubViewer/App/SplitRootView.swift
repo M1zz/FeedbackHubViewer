@@ -186,7 +186,10 @@ struct SplitRootView: View {
             .help("1분마다 자동으로 새로고침합니다")
             .toggleStyle(.button)
 
+            // 이름까지 보인다 — 화면마다 받는 것이 달라서 "리뷰 새로고침" · "차트 순위 새로고침"
+            // 처럼 무엇을 받는지가 단추에 적혀 있어야 한다. 전부는 ⇧⌘R · 데이터 상태 칸.
             RefreshButton()
+                .labelStyle(.titleAndIcon)
         }
     }
     #endif

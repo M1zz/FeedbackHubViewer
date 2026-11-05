@@ -23,8 +23,8 @@ struct AttentionButton: View {
         Button {
             isOpen.toggle()
         } label: {
-            Label("새 소식", systemImage: total > 0 ? "bell.badge.fill" : "bell")
-                .symbolRenderingMode(total > 0 ? .multicolor : .monochrome)
+            // 수 뱃지가 있으니 종에 점은 따로 달지 않는다 — 둘이 겹쳐 보였다.
+            Label("새 소식", systemImage: total > 0 ? "bell.fill" : "bell")
                 .overlay(alignment: .topTrailing) {
                     if total > 0 {
                         Text(total > 99 ? "99+" : "\(total)")
@@ -33,7 +33,8 @@ struct AttentionButton: View {
                             .padding(.horizontal, 4)
                             .padding(.vertical, 1)
                             .background(Color.red, in: Capsule())
-                            .offset(x: 8, y: -6)
+                            // 단추의 동그라미 안에 들어오게 — 더 밀면 동그라미에 잘린다.
+                            .offset(x: 5, y: -3)
                             .allowsHitTesting(false)
                     }
                 }

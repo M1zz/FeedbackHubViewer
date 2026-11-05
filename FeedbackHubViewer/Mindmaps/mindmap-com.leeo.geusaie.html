@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>그사이에 결제까지 마인드맵</title>
+<style>
+:root{--bg:#f5f5f2;--paper:#fff;--fg:#1b1d1c;--muted:#5f6662;--line:#cfd4d0;
+--c1:#c8463b;--c2:#2f6fcf;--c3:#7a4fc4;--c4:#1f8a5b;--wall:#c98a12;color-scheme:light;
+--font:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo",system-ui,sans-serif;--mono:ui-monospace,Menlo,monospace}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#141716;--paper:#1d211f;--fg:#e8ece9;
+--muted:#a1aaa4;--line:#3a423e;--c1:#f07a6f;--c2:#6ea2ef;--c3:#ad8bef;--c4:#4cc38a;--wall:#e7b24a;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#141716;--paper:#1d211f;--fg:#e8ece9;--muted:#a1aaa4;--line:#3a423e;
+--c1:#f07a6f;--c2:#6ea2ef;--c3:#ad8bef;--c4:#4cc38a;--wall:#e7b24a;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.55 var(--font)}
+.wrap{max-width:1280px;margin:0 auto;padding:32px max(16px,env(safe-area-inset-left)) 64px;display:grid;gap:36px}
+header{display:grid;gap:8px}
+h1{font-size:30px;line-height:1.2;margin:0}
+h2{font-size:18px;margin:0 0 10px}
+p{margin:0}
+.eyebrow{font:12px var(--mono);letter-spacing:.06em;color:var(--muted)}
+.lede{color:var(--muted);font-size:16px;max-width:60ch}
+.pill{display:inline-block;font-size:13px;padding:2px 10px;border-radius:99px;border:1px solid var(--c4);color:var(--c4)}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+.card{background:var(--paper);border:1px solid var(--line);border-top:4px solid var(--c);border-radius:10px;padding:16px}
+.c1{--c:var(--c1)}.c2{--c:var(--c2)}.c3{--c:var(--c3)}.c4{--c:var(--c4)}
+.card ul{margin:0;padding-left:18px;display:grid;gap:4px}
+.proposal{--c:var(--line);border-style:dashed;border-top-style:solid}
+.proposal h2 span{font:12px var(--mono);color:var(--muted);font-weight:400;margin-left:6px}
+dl{margin:0;display:grid;gap:4px}
+dt{font-size:13px;color:var(--muted)}
+dd{margin:0 0 6px}
+.map{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:20px;overflow-x:auto}
+/* 가로 트리: 줄기는 왼쪽, 가지는 오른쪽으로 뻗는다 */
+.tree,.tree ul{list-style:none;margin:0;padding:0}
+.tree ul{display:flex;flex-direction:column;justify-content:center;position:relative;padding-left:24px}
+.tree li{display:flex;align-items:center;position:relative;padding:3px 0 3px 24px}
+.tree>li{padding-left:0}
+.tree ul::before{content:"";position:absolute;left:0;top:50%;width:24px;border-top:2px solid var(--line)}
+.tree li::before{content:"";position:absolute;left:0;top:50%;width:24px;border-top:2px solid var(--line)}
+.tree li::after{content:"";position:absolute;left:0;top:0;bottom:0;border-left:2px solid var(--line)}
+.tree li:first-child::after{top:50%}
+.tree li:last-child::after{bottom:50%}
+.tree li:only-child::after,.tree>li::before,.tree>li::after{display:none}
+.node{flex:none;max-width:280px;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:6px 10px;font-size:14px}
+.root{background:var(--fg);color:var(--bg);border:none;font-size:20px;font-weight:700;max-width:220px;padding:14px 16px}
+.root small{display:block;font-size:13px;font-weight:400;opacity:.8;margin-top:4px}
+.branch{color:#fff;border:none;font-weight:700;font-size:16px;padding:8px 14px}
+.b1{background:var(--c1)}.b2{background:var(--c2)}.b3{background:var(--c3)}.b4{background:var(--c4)}
+.lead{font-weight:600;background:var(--paper)}
+.muted{color:var(--muted)}
+.wall{border:2px solid var(--wall)}
+.pay{background:var(--c4);color:#fff;border:none}
+footer{display:grid;gap:6px}
+.sources{margin:0;padding-left:18px;font:12px var(--mono);color:var(--muted)}
+/* 좁은 화면: 들여쓴 세로 목록 */
+@media (max-width:760px){
+.map{padding:14px}
+.tree ul{display:block;padding-left:0;margin-left:12px}
+.tree li{display:block;padding:4px 0 4px 18px}
+.tree ul::before{display:none}
+.tree li::before{top:20px;width:14px}
+.tree li::after,.tree li:first-child::after{top:0;bottom:auto;height:100%}
+.tree li:last-child::after{height:20px}
+.tree li:only-child::after{display:block;height:20px}
+.node{display:inline-block;max-width:100%}
+}
+</style></head><body><main class="wrap">
+<header>
+  <p class="eyebrow">문제 → 타겟 → 솔루션 → 결제</p>
+  <h1>그사이에</h1>
+  <p class="lede">면 삶는 그사이에 소스까지 끝내는 요리 타이머</p>
+  <p><span class="pill">결제 없음</span></p>
+</header>
+<section class="cards">
+  <article class="card c1"><h2>문제 정의</h2><p>파스타를 하면 면과 소스 중 하나가 꼭 먼저 끝난다</p></article>
+  <article class="card c2"><h2>타겟</h2><p>집에서 파스타를 해 보는 요리 초보·자취생</p></article>
+  <article class="card c3"><h2>솔루션</h2><p>지금 할 일 하나만 크게, 냄비마다 시간은 따로 세 준다</p></article>
+</section>
+<section><h2>마인드맵</h2><div class="map"><ul class="tree"><li><div class="node root">그사이에<small>면 삶는 그사이에 소스까지 끝내는 요리 타이머</small></div><ul><li><div class="node branch b1">문제</div><ul><li><div class="node lead ">파스타를 하면 면과 소스 중 하나가 꼭 먼저 끝난다</div><ul><li><div class="node ">소스 볶다 보면 면이 이미 퍼져 있다</div></li><li><div class="node ">냄비 두 개의 시간이 따로 흘러 헷갈린다</div></li><li><div class="node ">레시피는 한 줄인데 부엌 일은 동시에 돈다</div></li><li><div class="node ">젖은 손으로 화면을 만지기 싫다</div></li></ul></li></ul></li><li><div class="node branch b2">타겟</div><ul><li><div class="node lead ">집에서 파스타를 해 보는 요리 초보·자취생</div><ul><li><div class="node ">면은 불고 소스는 덜 된 경험 직후</div></li><li><div class="node ">알리오 올리오를 처음 해 보려 할 때</div></li><li><div class="node ">저녁 메뉴로 파스타를 고른 순간</div></li></ul></li><li><div class="node muted">노리지 않는 사람 · 파스타 말고 다양한 레시피를 원하는 사람 (지금 2가지)</div></li></ul></li><li><div class="node branch b3">솔루션</div><ul><li><div class="node lead ">지금 할 일 하나만 크게, 냄비마다 시간은 따로 세 준다</div><ul><li><div class="node ">지금 손이 할 일 하나와 급한 정도를 색으로</div></li><li><div class="node ">면 냄비·소스 팬 남은 시간 따로 표시</div></li><li><div class="node ">늦어지면 뒤 순서가 함께 밀림</div></li><li><div class="node ">&#x27;다음&#x27;이라고 말하면 다음 단계로</div></li><li><div class="node ">냄비 시간이 끝나면 다음 할 일과 알림</div></li></ul></li></ul></li><li><div class="node branch b4">결제까지</div><ul><li><div class="node lead ">1 발견 · &#x27;파스타가 어려운 건 손이 느려서가 아니에요&#x27;</div><ul><li><div class="node ">인스타·스레드에서 집밥·자취요리 독자 겨냥</div></li><li><div class="node ">쇼츠: 냄비 두 개 사이에서 허둥대는 장면</div></li><li><div class="node ">네이버 블로그 알리오 올리오 글</div></li><li><div class="node ">앱스토어에서 알리오올리오·키친타이머 검색</div></li></ul></li><li><div class="node lead ">2 스토어 페이지 · 부제 &#x27;면 삶는 동안 소스까지 한 번에&#x27;</div><ul><li><div class="node ">시간이 한 줄이 아니라서 어렵다는 설명</div></li><li><div class="node ">담긴 레시피: 알리오 올리오, 토마토 크림</div></li><li><div class="node ">아이폰·아이패드, 계정 없이 시작</div></li></ul></li><li><div class="node lead ">3 첫 실행 · 세 장짜리 짧은 안내</div><ul><li><div class="node ">냄비 두 개를 한 화면에</div></li><li><div class="node ">색이 곧 급한 정도</div></li><li><div class="node ">다 했으면 &#x27;다음&#x27;이라고 말하기</div></li></ul></li><li><div class="node lead ">4 첫 성공 · 면이 나올 때 소스도 딱 맞게 끝남</div><ul><li><div class="node ">요리 시작을 누르면 냄비 시계가 돎</div></li><li><div class="node ">소스는 면 건지는 시각에 맞춰 시작</div></li><li><div class="node ">다른 앱을 봐도 알림으로 놓치지 않음</div></li></ul></li><li><div class="node lead ">5 다시 찾기 · 파스타를 할 때마다 다시 켬</div><ul><li><div class="node ">단축어와 시리로 바로 요리 열기</div></li><li><div class="node ">글자 크기 4단계로 조리대에 세워 두고 봄</div></li><li><div class="node ">레시피가 2개뿐이라 다시 올 이유가 적음</div></li></ul></li><li><div class="node lead wall">6 결제 벽 · 아직 결제 장치 없음</div><ul><li><div class="node ">레시피 2개와 모든 기능이 무료</div></li></ul></li><li><div class="node lead pay">7 결제 · 아직 결제 장치 없음</div><ul><li><div class="node ">앱 설정에 무료 앱으로 지정되어 있음</div></li><li><div class="node ">판매 상품 없음</div></li></ul></li></ul></li></ul></li></ul></div></section>
+<section class="cards">
+  <article class="card c4"><h2>결제하는 순간</h2>
+    <dl><dt>방식</dt><dd>결제 없음</dd>
+    <dt>무료로 되는 것</dt><dd>레시피 2개와 모든 기능 무료</dd>
+    <dt>결제 버튼이 보일 때</dt><dd>결제 화면 없음</dd>
+    <dt>상품</dt><dd><ul><li>상품 없음</li></ul></dd></dl>
+  </article>
+  <article class="card proposal"><h2>제안 <span>확인된 사실 아님</span></h2><ul><li>레시피 2개는 무료, 까르보나라·봉골레 묶음을 평생 이용권으로</li><li>요리를 끝낸 직후 &#x27;다음 메뉴 열기&#x27; 화면에서 안내</li><li>파스타 외 두 냄비 요리(볶음밥+국) 확장 묶음 판매</li></ul></article>
+</section>
+<footer><p class="eyebrow">근거 파일</p><ul class="sources"><li>APPSTORE.md</li><li>RELEASE_NOTES.md</li><li>Geusaie/GeusaieSpec.swift</li><li>Geusaie/OnboardingView.swift</li><li>Geusaie/RecipeListView.swift</li><li>Geusaie/GeusaieRoadmap.swift</li><li>deploy.env</li></ul></footer>
+</main></body></html>

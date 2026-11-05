@@ -195,6 +195,16 @@ struct ReferralProfile {
 
 /// 한 앱의 최근 `days`일 출처별 셈.
 struct ReferralReport {
+    /// 캠페인 이름이 담기는 칸. 리포트 판에 따라 이름이 조금 다를 수 있어 둘 다 본다.
+    static let campaignColumns = ["Campaign", "Campaign Name"]
+
+    static func campaign(_ row: [String: String]) -> String? {
+        for column in campaignColumns {
+            if let value = row[column]?.trimmingCharacters(in: .whitespaces), !value.isEmpty { return value }
+        }
+        return nil
+    }
+
     struct Tally {
         /// 날짜 → 그날 첫 다운로드.
         var downloadsByDate: [String: Int] = [:]
@@ -221,6 +231,12 @@ struct ReferralReport {
     var hiddenWebDownloads = 0
     /// 읽은 리포트 인스턴스 수. 0이면 상세 리포트가 아직 안 쌓였다.
     var instances = 0
+    /// 캠페인 토큰(`ct`) → 셈. Apple 캠페인 링크(`pt` · `ct` 가 붙은 스토어 링크)로 들어온 것만
+    /// 상세 리포트의 `Campaign` 칸에 이름이 남는다. 마케팅 활동마다 토큰을 달아 두면 어느 글이
+    /// 사람을 데려왔는지 여기서 갈린다(`MarketingItem.campaignToken`).
+    var campaigns: [String: Tally] = [:]
+    /// 리포트에 캠페인 칸이 있었나. 없으면 "0건" 이 아니라 "모름" 이다.
+    var hasCampaignColumn = false
 
     init(days: Int) { self.days = days }
 
@@ -228,10 +244,16 @@ struct ReferralReport {
     init(days: Int, downloads: AnalyticsRows, engagement: AnalyticsRows) {
         self.days = days
         instances = downloads.instances + engagement.instances
+        hasCampaignColumn = (downloads.byDate.values.first?.first ?? engagement.byDate.values.first?.first)?
+            .keys.contains { Self.campaignColumns.contains($0) } ?? false
         for (date, rows) in downloads.byDate {
             for row in rows where row["Download Type"] == "First-time download" {
                 let count = Int(row["Counts"] ?? "") ?? 0
                 guard count > 0 else { continue }
+                if let campaign = Self.campaign(row) {
+                    campaigns[campaign, default: .init()].downloadsByDate[date, default: 0] += count
+                    campaigns[campaign, default: .init()].seenDates.insert(date)
+                }
                 guard let source = ReferralSource(sourceType: row["Source Type"], sourceInfo: row["Source Info"]) else {
                     if row["Source Type"] == "Web referrer" { hiddenWebDownloads += count }
                     continue
@@ -245,6 +267,10 @@ struct ReferralReport {
         }
         for (date, rows) in engagement.byDate {
             for row in rows where row["Event"] == "Page view" {
+                if let campaign = Self.campaign(row) {
+                    campaigns[campaign, default: .init()].pageViews += Int(row["Unique Counts"] ?? "") ?? Int(row["Counts"] ?? "") ?? 0
+                    campaigns[campaign, default: .init()].seenDates.insert(date)
+                }
                 guard let source = ReferralSource(sourceType: row["Source Type"], sourceInfo: row["Source Info"]) else { continue }
                 sources[source, default: .init()].pageViews += Int(row["Unique Counts"] ?? "") ?? Int(row["Counts"] ?? "") ?? 0
                 sources[source, default: .init()].seenDates.insert(date)

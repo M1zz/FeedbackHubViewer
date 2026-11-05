@@ -20,12 +20,23 @@ struct AppListView: View {
     @EnvironmentObject private var purchases: AppStoreConnectStore
     @EnvironmentObject private var design: DesignDocsStore
     @EnvironmentObject private var charts: ChartStore
+    @EnvironmentObject private var news: NewsStore
+    /// 본 뒤 바뀐 앱의 "새" 뱃지가 따라 움직이게.
+    @ObservedObject private var changes = SectionChanges.shared
+    /// 마케팅 칸의 "올렸나요?" 뱃지.
+    @ObservedObject private var marketing = MarketingStore.shared
+    /// 질문 찾기 칸의 새 질문 뱃지.
+    @ObservedObject private var leadStore = LeadStore.shared
+    /// 맥 전용 앱처럼 키워드 칸이 못 찾은 앱의 아이콘.
+    @ObservedObject private var icons = StoreIcons.shared
+    /// App Store 와 손수 이을 앱(오른쪽 클릭 메뉴).
+    @State private var linking: String?
     let section: FeedbackStore.ProjectSection
     /// 아이폰은 고르면 민다. 맥 · 아이패드는 `store.selectedProject` 만 바꾼다.
     var pushes = false
 
     var body: some View {
-        let metrics = SectionMetrics(store: store, keywords: keywords, purchases: purchases, design: design, charts: charts)
+        let metrics = SectionMetrics(store: store, keywords: keywords, purchases: purchases, design: design, charts: charts, news: news)
         let traffic = section == .stats ? store.trafficByProject : [:]
         // 릴리즈는 빨강이 먼저 와야 그 기능의 목록이다. 나머지는 MAU 순 그대로 — 기능을
         // 바꿔도 앱 자리가 그대로여야 눈이 앱을 다시 찾지 않는다.
@@ -61,6 +72,12 @@ struct AppListView: View {
         }
         .hubSidebarListStyle()
         .modifier(PushedTitle(title: section.rawValue, isPushed: pushes))
+        .task(id: entries.count) { await icons.resolve(entries.map(\.key), keywords: keywords) }
+        .sheet(item: Binding(get: { linking.map(LinkTarget.init) }, set: { linking = $0?.id })) { target in
+            StoreLinkSheet(project: target.id) { linking = nil }
+                .environmentObject(store)
+                .environmentObject(keywords)
+        }
     }
 
     // MARK: - Rows
@@ -70,14 +87,14 @@ struct AppListView: View {
         let isSelected = !pushes && store.selectedProject == project
         let content = AppRow(
             name: project.map(store.displayName(for:)) ?? "전체 앱",
-            iconURL: project.flatMap { keywords.storeApp(for: $0)?.iconURL },
+            iconURL: project.flatMap { icons.url(for: $0, keywords: keywords) },
             systemImage: project == nil ? "square.grid.2x2"
                 : project == Feedback.unclassifiedProject ? "questionmark.folder" : "app.dashed",
             tint: project == nil ? .purple
                 : project == Feedback.unclassifiedProject ? .secondary : .accentColor,
             detail: metrics.label(section, project: project),
             isAlarming: metrics.isAlarming(section, project: project),
-            badge: metrics.badge(section, project: project),
+            badge: metrics.badge(section, project: project) ?? visitBadge(project),
             release: section == .release ? project.flatMap(store.releaseLevel(for:)) : nil,
             stats: section == .stats ? StatsGlance(traffic: traffic, cycle: project.flatMap(store.usageCycle(for:))) : nil,
             isSelected: isSelected)
@@ -91,6 +108,13 @@ struct AppListView: View {
         }
     }
 
+    /// 이 칸을 열자마자 본 것으로 넘어간 바뀜 — 사이드바 뱃지는 사라져도 여기 줄에는 남는다.
+    private func visitBadge(_ project: String?) -> SectionMetrics.Badge? {
+        let count = changes.visitedCount(section, project: project)
+        guard count > 0 else { return nil }
+        return SectionMetrics.Badge(count: count, systemImage: "sparkles", tint: .red, name: "본 뒤 바뀐 것")
+    }
+
     @ViewBuilder
     private func menu(for project: String) -> some View {
         if section == .feedback {
@@ -99,6 +123,12 @@ struct AppListView: View {
             } label: {
                 Label("모두 읽음으로 표시", systemImage: "envelope.open")
             }
+        }
+        Button {
+            linking = project
+        } label: {
+            Label(keywords.trackId(for: project) == nil ? "App Store 링크로 잇기…" : "App Store 링크 바꾸기…",
+                  systemImage: "link")
         }
         Button {
             store.hideProject(project)
@@ -189,24 +219,27 @@ private struct AppRow: View {
     let isSelected: Bool
 
     var body: some View {
-        HStack(spacing: 10) {
-            AppIcon(url: iconURL, symbol: systemImage, tint: tint, size: 26)
+        HStack(spacing: 12) {
+            AppIcon(url: iconURL, symbol: systemImage, tint: tint, size: 36)
 
-            VStack(alignment: .leading, spacing: 2) {
-                HStack(spacing: 6) {
-                    Text(name)
-                        .font(.body)
-                        .fontWeight(isSelected ? .semibold : .regular)
-                        .lineLimit(1)
+            // 자르지 않는다 — 길면 줄을 넘긴다.
+            VStack(alignment: .leading, spacing: 3) {
+                Text(name)
+                    .font(.body.weight(isSelected ? .semibold : .medium))
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+                HStack(spacing: 5) {
                     ReleaseDot(level: release)
+                    Text(detail)
+                        .font(.subheadline.monospacedDigit())
+                        .foregroundStyle(isAlarming ? Color.red : Color.secondary)
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
-                Text(detail)
-                    .font(.subheadline.monospacedDigit())
-                    .foregroundStyle(isAlarming ? Color.red : Color.secondary)
-                    .lineLimit(1)
             }
+            .layoutPriority(1)
 
-            Spacer(minLength: 4)
+            Spacer(minLength: 8)
 
             if let badge {
                 CountBadge(count: badge.count, systemImage: badge.systemImage,
@@ -224,9 +257,14 @@ private struct AppRow: View {
                 }
             }
         }
-        .padding(.vertical, 3)
+        .padding(.vertical, 6)
         .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(isSelected ? [.isSelected] : [])
     }
+}
+
+/// 시트에 넘길 앱 키.
+private struct LinkTarget: Identifiable {
+    let id: String
 }

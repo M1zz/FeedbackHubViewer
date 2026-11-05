@@ -24,6 +24,8 @@ struct FeedbackHubViewerApp: App {
     @StateObject private var designDocs = DesignDocsStore()
     /// 새 피드백 · 리뷰 알림(`AlertWatcher`).
     @StateObject private var watcher = AlertWatcher()
+    /// 내 앱 소식 — 다른 가게들이 받아 둔 것에서 사건을 찾아 알린다(`NewsStore`).
+    @StateObject private var news = NewsStore()
     #if os(iOS)
     @UIApplicationDelegateAdaptor(HubAppDelegate.self) private var appDelegate
     #else
@@ -39,6 +41,7 @@ struct FeedbackHubViewerApp: App {
                 .environmentObject(purchases)
                 .environmentObject(designDocs)
                 .environmentObject(charts)
+                .environmentObject(news)
                 .task {
                     // Paint the cached hub, then check CloudKit for changes on
                     // a task the store owns — the window never waits for it.
@@ -55,6 +58,7 @@ struct FeedbackHubViewerApp: App {
                     await store.awaitRestore()
                     keywords.start(bundleIds: store.allProjectKeys)
                     startChartsIfDue()
+                    news.start(store: store, keywords: keywords, charts: charts, purchases: purchases)
                 }
                 // 그리고 그 뒤로도. 위의 목록은 캐시가 그려진 순간의 것이고,
                 // 앱이 처음 리포트를 보내면 그 앱은 **새로고침이 끝난 뒤에야**
@@ -73,11 +77,16 @@ struct FeedbackHubViewerApp: App {
                 .onReceive(keywords.$history) { history in
                     store.storeAppNames = history.storeNames
                     startChartsIfDue(links: history.links)
+                    syncKeywordFieldsIfDue()
                 }
                 // 다른 기기에서 넣은 App Store Connect 키는 iCloud 키체인이 언제 내려 줄지
                 // 모른다. 앱이 앞으로 올 때마다 키가 없으면 다시 본다.
                 .onChange(of: scenePhase) { _, phase in
-                    if phase == .active { purchases.reloadCredentialsIfMissing() }
+                    if phase == .active {
+                        purchases.reloadCredentialsIfMissing()
+                        news.collect()
+                        syncKeywordFieldsIfDue()
+                    }
                     #if os(iOS)
                     // 뒤로 가면 리뷰를 볼 다음 차례를 iOS 에 부탁해 둔다.
                     if phase == .background { AlertWatcher.scheduleAppRefresh() }
@@ -91,16 +100,26 @@ struct FeedbackHubViewerApp: App {
         #if os(iOS)
         .backgroundTask(.appRefresh(AlertWatcher.refreshTaskID)) {
             await watcher.backgroundCheck(store: store, purchases: purchases)
+            news.start(store: store, keywords: keywords, charts: charts, purchases: purchases)
+            news.collect()
         }
         #endif
         #if os(macOS)
         .windowToolbarStyle(.unified)
         .commands {
             CommandGroup(after: .toolbar) {
+                // ⌘R 은 지금 보는 화면의 것만(`SectionRefresh`), ⇧⌘R 은 전부.
+                Button("이 화면 새로고침") {
+                    Task {
+                        await SectionRefresh(store: store, connect: purchases, keywords: keywords,
+                                             charts: charts, news: news, design: designDocs).run()
+                    }
+                }
+                .keyboardShortcut("r", modifiers: .command)
                 Button("모두 새로고침") {
                     Task { await HubRefresh.now(store, purchases) }
                 }
-                .keyboardShortcut("r", modifiers: .command)
+                .keyboardShortcut("r", modifiers: [.command, .shift])
             }
         }
         #endif
@@ -111,6 +130,7 @@ struct FeedbackHubViewerApp: App {
             SettingsView()
                 .environmentObject(store)
                 .environmentObject(purchases)
+                .environmentObject(news)
         }
         #endif
     }
@@ -118,6 +138,12 @@ struct FeedbackHubViewerApp: App {
     /// 차트는 스토어와 이어진 내 앱만 본다. 앱 목록이 생길 때(복원 뒤) · 이음이 새로 생길 때
     /// 불리고, 볼 때가 아니면 그냥 돌아온다 — 저절로는 12시간에 한 번(`ChartStore.startIfDue`).
     /// `links` 는 `$history` 가 울린 순간의 새 값(그때 `keywords.history` 는 아직 옛것이다).
+    /// 스토어에 걸린 키워드 칸을 하루 한 번 들인다(`KeywordStore+StoreField.swift`). 앱이 스토어에
+    /// 이어진 뒤라야 읽을 것이 있어, 링크가 바뀔 때마다 불러 두고 하루 한 번만 실제로 돈다.
+    private func syncKeywordFieldsIfDue() {
+        Task { await keywords.syncStoreFieldsIfDue(connect: purchases, projects: store.allProjectKeys) }
+    }
+
     private func startChartsIfDue(links: [String: Int]? = nil) {
         let links = links ?? keywords.history.links
         charts.startIfDue(trackIds: Set(store.allProjectKeys.compactMap { links[$0] }))

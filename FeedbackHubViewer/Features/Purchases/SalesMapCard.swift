@@ -71,13 +71,16 @@ struct SalesMapCard: View {
             if let total {
                 Text("≈ \(MoneyFormat.krw(total.krw))")
                     .font(.title2.weight(.bold).monospacedDigit())
+                Text("≈ \(MoneyFormat.usd(total.usd))")
+                    .font(.title3.weight(.semibold).monospacedDigit())
+                    .foregroundStyle(.secondary)
                 Text("\(countries)개 나라 · 결제 \(AppFormat.count(totals.purchases))건")
                     .font(.body.monospacedDigit())
                     .foregroundStyle(.secondary)
             } else {
                 Text(totals.proceedsLabel)
                     .font(.title3.weight(.semibold).monospacedDigit())
-                Text("환율을 받으면 원화 합계와 지도가 나옵니다.")
+                Text("환율을 받으면 원화 · 달러 합계와 지도가 나옵니다.")
                     .font(.body)
                     .foregroundStyle(.secondary)
             }
@@ -86,26 +89,14 @@ struct SalesMapCard: View {
 
     private func map(_ places: [Place]) -> some View {
         let plotted = places.filter { $0.usd > 0 && CountryCentroids.coordinate($0.code) != nil }
-        let peak = plotted.map(\.usd).max() ?? 1
         return WorldSnapshot { project in
-            ForEach(plotted) { place in
-                if let coordinate = CountryCentroids.coordinate(place.code), let point = project(coordinate) {
-                    bubble(place, peak: peak)
-                        .position(point)
-                }
-            }
+            MapBubbles(items: plotted, value: \.usd,
+                       point: { CountryCentroids.coordinate($0.code).flatMap(project) },
+                       label: { "\(ChartStorefronts.flag($0.code)) \(MoneyFormat.usd($0.usd))" },
+                       help: { "\(ChartStorefronts.flag($0.code)) \(ChartStorefronts.name($0.code)) · \($0.money?.label ?? $0.rawLabel)" },
+                       tint: .orange)
         }
         .accessibilityLabel("수익 지도. 나라별 금액은 아래 목록에 있습니다.")
-    }
-
-    /// 넓이가 금액에 비례하는 원. 가장 작아도 눈에 보이게 10pt.
-    private func bubble(_ place: Place, peak: Double) -> some View {
-        let diameter = max(10, 56 * sqrt(place.usd / peak))
-        return Circle()
-            .fill(Color.orange.opacity(0.45))
-            .overlay(Circle().stroke(Color.orange, lineWidth: 1.5))
-            .frame(width: diameter, height: diameter)
-            .help("\(ChartStorefronts.flag(place.code)) \(ChartStorefronts.name(place.code)) · \(place.money?.label ?? place.rawLabel)")
     }
 
     private func list(_ places: [Place]) -> some View {
@@ -121,7 +112,7 @@ struct SalesMapCard: View {
                             .lineLimit(1)
                         if place.purchases > 0 {
                             Text("결제 \(place.purchases)건")
-                                .font(.caption)
+                                .font(.body)
                                 .foregroundStyle(.secondary)
                         }
                         Spacer(minLength: 8)
@@ -129,6 +120,9 @@ struct SalesMapCard: View {
                             if let money = place.money {
                                 Text(MoneyFormat.krw(money.krw))
                                     .font(.body.monospacedDigit().weight(.semibold))
+                                Text(MoneyFormat.usd(money.usd))
+                                    .font(.body.monospacedDigit())
+                                    .foregroundStyle(.secondary)
                             } else {
                                 Text(place.rawLabel)
                                     .font(.body.monospacedDigit())
@@ -154,14 +148,14 @@ struct SalesMapCard: View {
     @ViewBuilder
     private func footnote(_ total: Money?) -> some View {
         VStack(alignment: .leading, spacing: 2) {
-            Text("개발자 수익금(Apple 수수료 · 세금 뺀 금액)을 \(total.map { AppFormat.relative($0.ratesDate) } ?? "오늘") 환율로 바꾼 어림값입니다. 실제 지급액은 지급일 환율을 따릅니다.")
+            Text("개발자 수익금(Apple 수수료 · 세금 뺀 금액)을 \(total.map { AppFormat.relative($0.ratesDate) } ?? "오늘") 환율로 원화 · 달러로 바꾼 어림값입니다. 실제 지급액은 지급일 환율을 따릅니다.")
             if let missing = total?.unconverted, !missing.isEmpty {
                 Text("환율이 없어 합계에서 빠진 통화: \(missing.joined(separator: ", "))")
                     .foregroundStyle(.orange)
             }
             Link(ExchangeRates.attribution, destination: ExchangeRates.attributionURL)
         }
-        .font(.caption)
+        .font(.body)
         .foregroundStyle(.secondary)
         .fixedSize(horizontal: false, vertical: true)
     }
@@ -176,7 +170,7 @@ struct SalesMapCard: View {
 ///
 /// 원의 자리는 스냅샷이 말해 주는 대로 놓는다(`Snapshot.point(for:)`). 맥에서는 그 점이
 /// 그림의 **왼쪽 아래**를 원점으로 하므로(AppKit 좌표) 위아래를 뒤집는다.
-private struct WorldSnapshot<Overlay: View>: View {
+struct WorldSnapshot<Overlay: View>: View {
     /// 좌표 → 판 위의 점. 판 크기에 맞춰 부른다.
     @ViewBuilder let overlay: (_ project: @escaping (CLLocationCoordinate2D) -> CGPoint?) -> Overlay
 

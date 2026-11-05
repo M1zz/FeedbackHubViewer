@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>세끼 결제까지 마인드맵</title>
+<style>
+:root{--bg:#f5f5f2;--paper:#fff;--fg:#1b1d1c;--muted:#5f6662;--line:#cfd4d0;
+--c1:#c8463b;--c2:#2f6fcf;--c3:#7a4fc4;--c4:#1f8a5b;--wall:#c98a12;color-scheme:light;
+--font:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo",system-ui,sans-serif;--mono:ui-monospace,Menlo,monospace}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#141716;--paper:#1d211f;--fg:#e8ece9;
+--muted:#a1aaa4;--line:#3a423e;--c1:#f07a6f;--c2:#6ea2ef;--c3:#ad8bef;--c4:#4cc38a;--wall:#e7b24a;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#141716;--paper:#1d211f;--fg:#e8ece9;--muted:#a1aaa4;--line:#3a423e;
+--c1:#f07a6f;--c2:#6ea2ef;--c3:#ad8bef;--c4:#4cc38a;--wall:#e7b24a;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.55 var(--font)}
+.wrap{max-width:1280px;margin:0 auto;padding:32px max(16px,env(safe-area-inset-left)) 64px;display:grid;gap:36px}
+header{display:grid;gap:8px}
+h1{font-size:30px;line-height:1.2;margin:0}
+h2{font-size:18px;margin:0 0 10px}
+p{margin:0}
+.eyebrow{font:12px var(--mono);letter-spacing:.06em;color:var(--muted)}
+.lede{color:var(--muted);font-size:16px;max-width:60ch}
+.pill{display:inline-block;font-size:13px;padding:2px 10px;border-radius:99px;border:1px solid var(--c4);color:var(--c4)}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+.card{background:var(--paper);border:1px solid var(--line);border-top:4px solid var(--c);border-radius:10px;padding:16px}
+.c1{--c:var(--c1)}.c2{--c:var(--c2)}.c3{--c:var(--c3)}.c4{--c:var(--c4)}
+.card ul{margin:0;padding-left:18px;display:grid;gap:4px}
+.proposal{--c:var(--line);border-style:dashed;border-top-style:solid}
+.proposal h2 span{font:12px var(--mono);color:var(--muted);font-weight:400;margin-left:6px}
+dl{margin:0;display:grid;gap:4px}
+dt{font-size:13px;color:var(--muted)}
+dd{margin:0 0 6px}
+.map{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:20px;overflow-x:auto}
+/* 가로 트리: 줄기는 왼쪽, 가지는 오른쪽으로 뻗는다 */
+.tree,.tree ul{list-style:none;margin:0;padding:0}
+.tree ul{display:flex;flex-direction:column;justify-content:center;position:relative;padding-left:24px}
+.tree li{display:flex;align-items:center;position:relative;padding:3px 0 3px 24px}
+.tree>li{padding-left:0}
+.tree ul::before{content:"";position:absolute;left:0;top:50%;width:24px;border-top:2px solid var(--line)}
+.tree li::before{content:"";position:absolute;left:0;top:50%;width:24px;border-top:2px solid var(--line)}
+.tree li::after{content:"";position:absolute;left:0;top:0;bottom:0;border-left:2px solid var(--line)}
+.tree li:first-child::after{top:50%}
+.tree li:last-child::after{bottom:50%}
+.tree li:only-child::after,.tree>li::before,.tree>li::after{display:none}
+.node{flex:none;max-width:280px;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:6px 10px;font-size:14px}
+.root{background:var(--fg);color:var(--bg);border:none;font-size:20px;font-weight:700;max-width:220px;padding:14px 16px}
+.root small{display:block;font-size:13px;font-weight:400;opacity:.8;margin-top:4px}
+.branch{color:#fff;border:none;font-weight:700;font-size:16px;padding:8px 14px}
+.b1{background:var(--c1)}.b2{background:var(--c2)}.b3{background:var(--c3)}.b4{background:var(--c4)}
+.lead{font-weight:600;background:var(--paper)}
+.muted{color:var(--muted)}
+.wall{border:2px solid var(--wall)}
+.pay{background:var(--c4);color:#fff;border:none}
+footer{display:grid;gap:6px}
+.sources{margin:0;padding-left:18px;font:12px var(--mono);color:var(--muted)}
+/* 좁은 화면: 들여쓴 세로 목록 */
+@media (max-width:760px){
+.map{padding:14px}
+.tree ul{display:block;padding-left:0;margin-left:12px}
+.tree li{display:block;padding:4px 0 4px 18px}
+.tree ul::before{display:none}
+.tree li::before{top:20px;width:14px}
+.tree li::after,.tree li:first-child::after{top:0;bottom:auto;height:100%}
+.tree li:last-child::after{height:20px}
+.tree li:only-child::after{display:block;height:20px}
+.node{display:inline-block;max-width:100%}
+}
+</style></head><body><main class="wrap">
+<header>
+  <p class="eyebrow">문제 → 타겟 → 솔루션 → 결제</p>
+  <h1>세끼</h1>
+  <p class="lede">먹기 전 사진 한 장으로 끝나는 식사 일기</p>
+  <p><span class="pill">구독</span></p>
+</header>
+<section class="cards">
+  <article class="card c1"><h2>문제 정의</h2><p>식단 기록이 귀찮고 하루 놓치면 그만두게 된다</p></article>
+  <article class="card c2"><h2>타겟</h2><p>식단 앱을 깔았다가 사흘 만에 지운 다이어트 시작자</p></article>
+  <article class="card c3"><h2>솔루션</h2><p>사진 한 장으로 기록하고, 놓쳐도 줄지 않게 한다</p></article>
+</section>
+<section><h2>마인드맵</h2><div class="map"><ul class="tree"><li><div class="node root">세끼<small>먹기 전 사진 한 장으로 끝나는 식사 일기</small></div><ul><li><div class="node branch b1">문제</div><ul><li><div class="node lead ">식단 기록이 귀찮고 하루 놓치면 그만두게 된다</div><ul><li><div class="node ">음식 이름 찾고 양 고르는 게 번거로움</div></li><li><div class="node ">하루 빠지면 연속 기록이 0으로 돌아감</div></li><li><div class="node ">달성률이 낮게 나오면 의욕이 꺾임</div></li><li><div class="node ">혼자 하면 사흘을 못 넘김</div></li></ul></li></ul></li><li><div class="node branch b2">타겟</div><ul><li><div class="node lead ">식단 앱을 깔았다가 사흘 만에 지운 다이어트 시작자</div><ul><li><div class="node ">다이어트를 다시 결심했을 때</div></li><li><div class="node ">식판, 도시락을 앞에 두고 찍을 때</div></li><li><div class="node ">친구, 가족과 식단을 같이 챙기고 싶을 때</div></li><li><div class="node ">운동 기록도 함께 남기고 싶을 때</div></li></ul></li><li><div class="node muted">노리지 않는 사람 · 칼로리, 영양소를 정밀하게 재려는 사람</div></li></ul></li><li><div class="node branch b3">솔루션</div><ul><li><div class="node lead ">사진 한 장으로 기록하고, 놓쳐도 줄지 않게 한다</div><ul><li><div class="node ">찍은 시각으로 아침, 점심, 저녁 자동 분류</div></li><li><div class="node ">알림, 액션 버튼, Siri로 앱 안 열고 식후 기록</div></li><li><div class="node ">한 끼만 남겨도 이어지는 연속 기록</div></li><li><div class="node ">친구 코드로 서로 기록 보고 응원</div></li><li><div class="node ">기기 안에서 무료로 음식 분석</div></li></ul></li></ul></li><li><div class="node branch b4">결제까지</div><ul><li><div class="node lead ">1 발견 · 식단 기록 실패 경험에서 들어온다</div><ul><li><div class="node ">인스타 카드뉴스: 식단 기록, 사흘 넘겨 봤어요?</div></li><li><div class="node ">쇼츠: 식단 기록이 3초에 끝나는 법</div></li><li><div class="node ">블로그: 사흘 만에 포기하던 내가 매일 남긴 법</div></li><li><div class="node ">스토어 검색어: 식단일기, 오운완, 다이어트</div></li></ul></li><li><div class="node lead ">2 스토어 페이지 · 아침 점심 저녁을 한 장으로 남겨요</div><ul><li><div class="node ">이름: 세끼: 사진 식단 일기</div></li><li><div class="node ">놓쳐도 줄지 않는 기록을 앞세움</div></li><li><div class="node ">설명 끝에 세끼 프로와 무료 범위를 밝힘</div></li></ul></li><li><div class="node lead ">3 첫 실행 · 챙길 식사를 고르는 질문이 뜬다</div><ul><li><div class="node ">알림 받을 식사만 직접 고름</div></li><li><div class="node ">닉네임은 기본값 사용자, 설정에서 바꿈</div></li><li><div class="node ">기록 버튼에 무엇으로 남을지 미리 보임</div></li></ul></li><li><div class="node lead ">4 첫 성공 · 사진 한 장이 점심 칸에 알아서 들어간다</div><ul><li><div class="node ">식전 사진을 찍으면 식후 알림이 옴</div></li><li><div class="node ">알림에서 톡 누르면 다 먹음 기록 끝</div></li></ul></li><li><div class="node lead ">5 다시 찾기 · 끼니 알림과 친구 응원이 다시 부른다</div><ul><li><div class="node ">고른 식사 시간에 알림</div></li><li><div class="node ">친구 기록 알림, 이모지와 댓글 응원</div></li><li><div class="node ">위젯에서 오늘 기록 확인, 업적 모으기</div></li></ul></li><li><div class="node lead wall">6 결제 벽 · 더 깊은 통계, 그룹, 잠금을 원할 때</div><ul><li><div class="node ">통계의 식사 전후 비교 버튼에 자물쇠</div></li><li><div class="node ">자주 먹은 음식 카드가 잠겨 있음</div></li><li><div class="node ">그룹은 하나까지 무료, 두 번째 만들 때</div></li><li><div class="node ">설정에서 Face ID 잠금을 켤 때</div></li></ul></li><li><div class="node lead pay">7 결제 · 세끼 프로 연간, 월간, 평생 중 고른다</div><ul><li><div class="node ">연간 14.99달러가 기본 선택</div></li><li><div class="node ">월간 1.99달러, 평생 39.99달러</div></li><li><div class="node ">가격은 테스트 설정(미국) 값, 원화 미확인</div></li><li><div class="node ">무료 체험 설정 없음, 구독 관리 버튼 있음</div></li></ul></li></ul></li></ul></li></ul></div></section>
+<section class="cards">
+  <article class="card c4"><h2>결제하는 순간</h2>
+    <dl><dt>방식</dt><dd>구독</dd>
+    <dt>무료로 되는 것</dt><dd>기록, 위젯, 친구 공유, 그룹 참여 무료, 그룹 생성 1개</dd>
+    <dt>결제 버튼이 보일 때</dt><dd>전후 비교, 자주 먹은 음식, 그룹 2개째, Face ID</dd>
+    <dt>상품</dt><dd><ul><li>세끼 프로 연간 · 14.99달러(테스트 설정 값)</li><li>세끼 프로 월간 · 1.99달러(테스트 설정 값)</li><li>세끼 프로 평생 · 39.99달러(테스트 설정 값)</li></ul></dd></dl>
+  </article>
+  <article class="card proposal"><h2>제안 <span>확인된 사실 아님</span></h2><ul><li>연간 상품에 일주일 무료 체험을 붙여 보기</li><li>30일 누적 기록 달성 순간에 전후 비교 미리보기</li><li>그룹 친구가 늘 때 그룹 여러 개 혜택을 안내</li></ul></article>
+</section>
+<footer><p class="eyebrow">근거 파일</p><ul class="sources"><li>APPSTORE.md</li><li>FEATURES.md</li><li>Config/SekkiPro.storekit</li><li>RoutineCamera/RoutineCameraSpec.swift</li><li>RoutineCamera/Service/SubscriptionManager.swift</li><li>RoutineCamera/StatisticsView.swift</li><li>RoutineCamera/View/GroupsView.swift</li><li>RoutineCamera/View/SettingsView.swift</li></ul></footer>
+</main></body></html>

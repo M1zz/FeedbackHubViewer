@@ -186,6 +186,10 @@ enum ReleaseHealth {
         let coreActionInstalls: Int?
         /// 불안정 이벤트를 보낸 설치. 모르면 nil (머리말).
         let unstableInstalls: Int?
+        /// 불안정 이벤트를 갈래(`launch_incomplete:first-frame` 같은 원래 이름)마다 보낸 설치 수.
+        /// 한 설치가 여러 갈래를 보내면 갈래마다 센다. 갈래가 앞 버전에 없던 것이면
+        /// 앱이 그 갈래를 새로 보내기 시작했을 수 있다(셈 범위가 바뀐 것이지 나빠진 것이 아닐 수 있다).
+        let unstableBySlice: [String: Int]
         /// 창 안에서 이 버전에 붙은 MetricKit 진단 중 크래시 건수.
         let crashReports: Int
         /// 이 버전에서 처음 본 지문. 최신 버전에만 채운다.
@@ -353,12 +357,16 @@ enum ReleaseHealth {
             var installs: Set<String> = []
             var core: Set<String> = []
             var unstable: Set<String> = []
+            var unstableSlices: [String: Set<String>] = [:]
             for event in group {
                 guard let install = event.installID, !install.isEmpty else { continue }
                 installs.insert(install)
                 let base = event.baseName
                 if coreNames?.contains(base) == true { core.insert(install) }
-                if stabilityNames.contains(base) { unstable.insert(install) }
+                if stabilityNames.contains(base) {
+                    unstable.insert(install)
+                    unstableSlices[event.name, default: []].insert(install)
+                }
             }
 
             let onVersion = crashVersion.filter { $0.version == version }
@@ -392,6 +400,7 @@ enum ReleaseHealth {
                 activeInstalls: installs.count,
                 coreActionInstalls: coreNames == nil ? nil : core.count,
                 unstableInstalls: stabilityKnown ? unstable.count : nil,
+                unstableBySlice: unstableSlices.mapValues(\.count),
                 crashReports: crashesInWindow,
                 newSignatures: fresh,
                 feedback: notes.count,

@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>여울 결제까지 마인드맵</title>
+<style>
+:root{--bg:#f5f5f2;--paper:#fff;--fg:#1b1d1c;--muted:#5f6662;--line:#cfd4d0;
+--c1:#c8463b;--c2:#2f6fcf;--c3:#7a4fc4;--c4:#1f8a5b;--wall:#c98a12;color-scheme:light;
+--font:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo",system-ui,sans-serif;--mono:ui-monospace,Menlo,monospace}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#141716;--paper:#1d211f;--fg:#e8ece9;
+--muted:#a1aaa4;--line:#3a423e;--c1:#f07a6f;--c2:#6ea2ef;--c3:#ad8bef;--c4:#4cc38a;--wall:#e7b24a;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#141716;--paper:#1d211f;--fg:#e8ece9;--muted:#a1aaa4;--line:#3a423e;
+--c1:#f07a6f;--c2:#6ea2ef;--c3:#ad8bef;--c4:#4cc38a;--wall:#e7b24a;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.55 var(--font)}
+.wrap{max-width:1280px;margin:0 auto;padding:32px max(16px,env(safe-area-inset-left)) 64px;display:grid;gap:36px}
+header{display:grid;gap:8px}
+h1{font-size:30px;line-height:1.2;margin:0}
+h2{font-size:18px;margin:0 0 10px}
+p{margin:0}
+.eyebrow{font:12px var(--mono);letter-spacing:.06em;color:var(--muted)}
+.lede{color:var(--muted);font-size:16px;max-width:60ch}
+.pill{display:inline-block;font-size:13px;padding:2px 10px;border-radius:99px;border:1px solid var(--c4);color:var(--c4)}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+.card{background:var(--paper);border:1px solid var(--line);border-top:4px solid var(--c);border-radius:10px;padding:16px}
+.c1{--c:var(--c1)}.c2{--c:var(--c2)}.c3{--c:var(--c3)}.c4{--c:var(--c4)}
+.card ul{margin:0;padding-left:18px;display:grid;gap:4px}
+.proposal{--c:var(--line);border-style:dashed;border-top-style:solid}
+.proposal h2 span{font:12px var(--mono);color:var(--muted);font-weight:400;margin-left:6px}
+dl{margin:0;display:grid;gap:4px}
+dt{font-size:13px;color:var(--muted)}
+dd{margin:0 0 6px}
+.map{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:20px;overflow-x:auto}
+/* 가로 트리: 줄기는 왼쪽, 가지는 오른쪽으로 뻗는다 */
+.tree,.tree ul{list-style:none;margin:0;padding:0}
+.tree ul{display:flex;flex-direction:column;justify-content:center;position:relative;padding-left:24px}
+.tree li{display:flex;align-items:center;position:relative;padding:3px 0 3px 24px}
+.tree>li{padding-left:0}
+.tree ul::before{content:"";position:absolute;left:0;top:50%;width:24px;border-top:2px solid var(--line)}
+.tree li::before{content:"";position:absolute;left:0;top:50%;width:24px;border-top:2px solid var(--line)}
+.tree li::after{content:"";position:absolute;left:0;top:0;bottom:0;border-left:2px solid var(--line)}
+.tree li:first-child::after{top:50%}
+.tree li:last-child::after{bottom:50%}
+.tree li:only-child::after,.tree>li::before,.tree>li::after{display:none}
+.node{flex:none;max-width:280px;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:6px 10px;font-size:14px}
+.root{background:var(--fg);color:var(--bg);border:none;font-size:20px;font-weight:700;max-width:220px;padding:14px 16px}
+.root small{display:block;font-size:13px;font-weight:400;opacity:.8;margin-top:4px}
+.branch{color:#fff;border:none;font-weight:700;font-size:16px;padding:8px 14px}
+.b1{background:var(--c1)}.b2{background:var(--c2)}.b3{background:var(--c3)}.b4{background:var(--c4)}
+.lead{font-weight:600;background:var(--paper)}
+.muted{color:var(--muted)}
+.wall{border:2px solid var(--wall)}
+.pay{background:var(--c4);color:#fff;border:none}
+footer{display:grid;gap:6px}
+.sources{margin:0;padding-left:18px;font:12px var(--mono);color:var(--muted)}
+/* 좁은 화면: 들여쓴 세로 목록 */
+@media (max-width:760px){
+.map{padding:14px}
+.tree ul{display:block;padding-left:0;margin-left:12px}
+.tree li{display:block;padding:4px 0 4px 18px}
+.tree ul::before{display:none}
+.tree li::before{top:20px;width:14px}
+.tree li::after,.tree li:first-child::after{top:0;bottom:auto;height:100%}
+.tree li:last-child::after{height:20px}
+.tree li:only-child::after{display:block;height:20px}
+.node{display:inline-block;max-width:100%}
+}
+</style></head><body><main class="wrap">
+<header>
+  <p class="eyebrow">문제 → 타겟 → 솔루션 → 결제</p>
+  <h1>여울</h1>
+  <p class="lede">시간이 흐른 만큼 벌어지는 사진 연표</p>
+  <p><span class="pill">결제 없음</span></p>
+</header>
+<section class="cards">
+  <article class="card c1"><h2>문제 정의</h2><p>일기와 앨범은 일이 얼마나 떨어져 있었는지 보여 주지 않는다</p></article>
+  <article class="card c2"><h2>타겟</h2><p>아이의 성장, 연애, 이직처럼 삶의 흐름을 남기고 싶은 사람</p></article>
+  <article class="card c3"><h2>솔루션</h2><p>사건 사이 간격을 실제 흐른 시간만큼 벌린 세로 타임라인에 사진을 붙인다</p></article>
+</section>
+<section><h2>마인드맵</h2><div class="map"><ul class="tree"><li><div class="node root">여울<small>시간이 흐른 만큼 벌어지는 사진 연표</small></div><ul><li><div class="node branch b1">문제</div><ul><li><div class="node lead ">일기와 앨범은 일이 얼마나 떨어져 있었는지 보여 주지 않는다</div><ul><li><div class="node ">사흘 차이와 2년 차이가 똑같은 칸으로 보인다</div></li><li><div class="node ">그날 사진을 찾아 붙이기가 번거롭다</div></li><li><div class="node ">주제가 다른 기록이 한데 섞여 흐름이 안 보인다</div></li><li><div class="node ">흩어진 같은 주제를 다시 모아 볼 수 없다</div></li></ul></li></ul></li><li><div class="node branch b2">타겟</div><ul><li><div class="node lead ">아이의 성장, 연애, 이직처럼 삶의 흐름을 남기고 싶은 사람</div><ul><li><div class="node ">아이의 첫 해를 돌아보고 싶을 때</div></li><li><div class="node ">연애나 결혼 기념일을 앞두고 추억을 정리할 때</div></li><li><div class="node ">이직·졸업 같은 인생 사건을 되짚을 때</div></li></ul></li><li><div class="node muted">노리지 않는 사람 · 매일 긴 글을 쓰는 일기장을 찾는 사람</div></li></ul></li><li><div class="node branch b3">솔루션</div><ul><li><div class="node lead ">사건 사이 간격을 실제 흐른 시간만큼 벌린 세로 타임라인에 사진을 붙인다</div><ul><li><div class="node ">3일과 5일은 3대 5, 긴 공백은 점선으로 접기</div></li><li><div class="node ">날짜를 정하면 그날 찍은 사진을 찾아 줌</div></li><li><div class="node ">주제마다 이름과 색이 다른 타임라인</div></li><li><div class="node ">해시태그로 흩어진 사건을 새 타임라인으로</div></li><li><div class="node ">카드 디자인 4가지, 기기 간 동기화</div></li></ul></li></ul></li><li><div class="node branch b4">결제까지</div><ul><li><div class="node lead ">1 발견 · 인생 기록·육아일기·연애 같은 말로 검색해 만난다</div><ul><li><div class="node ">성장기록, 인생그래프, 커플 같은 검색어</div></li><li><div class="node ">부제: 사진과 함께 남기는 나만의 타임라인</div></li><li><div class="node ">24개 언어로 출시</div></li></ul></li><li><div class="node lead ">2 스토어 페이지 · 시간의 리듬이 보이는 연표라는 점이 눈에 띈다</div><ul><li><div class="node ">사흘과 닷새는 3대 5, 2년은 점선</div></li><li><div class="node ">그날 사진 자동 찾기, 해시태그 엮기</div></li><li><div class="node ">결제 이야기 없음, 완전 무료</div></li></ul></li><li><div class="node lead ">3 첫 실행 · 세 장 안내 뒤 빈 화면에서 첫 타임라인을 만든다</div><ul><li><div class="node ">흐른 시간, 그날 사진, 태그로 엮기 소개</div></li><li><div class="node ">아이의 첫 해, 여행 같은 예시 문구</div></li><li><div class="node ">안내는 설정에서 다시 볼 수 있음</div></li></ul></li><li><div class="node lead ">4 첫 성공 · 사건 두세 개가 실제 간격대로 벌어지는 걸 본다</div><ul><li><div class="node ">날짜를 고르면 그날 사진이 바로 뜸</div></li><li><div class="node ">사건을 누르면 사진과 글이 펼쳐짐</div></li><li><div class="node ">긴 공백은 2년 4개월처럼 적힘</div></li></ul></li><li><div class="node lead ">5 다시 찾기 · 새 사건이 생길 때마다 한 줄씩 더한다</div><ul><li><div class="node ">단축어 앱에서 바로 사건 기록</div></li><li><div class="node ">태그로 모은 타임라인을 저장해 두기</div></li><li><div class="node ">아이폰·아이패드에서 같은 기록</div></li></ul></li><li><div class="node lead wall">6 결제 벽 · 아직 결제 장치 없음</div><ul><li><div class="node ">타임라인 개수·사진 수 제한 없음</div></li><li><div class="node ">카드 디자인 4가지 모두 무료</div></li></ul></li><li><div class="node lead pay">7 결제 · 아직 결제 장치 없음</div><ul><li><div class="node ">앱 설정상 수익모델은 무료</div></li><li><div class="node ">광고·인앱 결제 상품 없음</div></li></ul></li></ul></li></ul></li></ul></div></section>
+<section class="cards">
+  <article class="card c4"><h2>결제하는 순간</h2>
+    <dl><dt>방식</dt><dd>결제 없음</dd>
+    <dt>무료로 되는 것</dt><dd>모든 기능 무료</dd>
+    <dt>결제 버튼이 보일 때</dt><dd>결제 화면 없음</dd>
+    <dt>상품</dt><dd><ul><li>상품 없음</li></ul></dd></dl>
+  </article>
+  <article class="card proposal"><h2>제안 <span>확인된 사실 아님</span></h2><ul><li>추가 카드 디자인과 연표 이미지 내보내기를 평생 이용권으로</li><li>타임라인 세 개까지 무료, 그 이상은 한 번 결제</li><li>기념일에 연표를 한 장 그림으로 공유하며 앱 알리기</li></ul></article>
+</section>
+<footer><p class="eyebrow">근거 파일</p><ul class="sources"><li>APPSTORE.md</li><li>README.md</li><li>RELEASE_NOTES.md</li><li>todo.md</li><li>Gyeol/YeoulSpec.swift</li><li>Gyeol/Views/YeoulOnboardingView.swift</li><li>Gyeol/Views/TimelineListView.swift</li></ul></footer>
+</main></body></html>

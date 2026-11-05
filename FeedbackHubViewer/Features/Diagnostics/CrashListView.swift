@@ -247,6 +247,8 @@ struct CrashRow: View {
     /// Off when the rows are already grouped under a version header.
     var showsVersion = true
     @State private var showsStack = false
+    /// 이 화면을 열 때 안 본 진단 — 뱃지가 센 것.
+    @Environment(\.freshItemIDs) private var fresh
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
@@ -258,6 +260,9 @@ struct CrashRow: View {
                     Text("v\(report.appVersion)")
                         .font(.caption)
                         .foregroundStyle(.secondary)
+                }
+                if fresh.contains(report.id) {
+                    Tag(text: "새 진단", systemImage: "circle.fill", tint: .red, font: .body)
                 }
                 Spacer(minLength: 4)
                 if let receivedAt = report.receivedAt {

@@ -98,8 +98,8 @@ struct TrendFigure: View {
     }
 }
 
-/// 손봐야 할 것이 몇 개 있다는 표시. 숫자만 있는 동그라미는 무엇의 3인지 말하지
-/// 않으므로, 아이콘을 함께 두고 음성 안내에는 온전한 문장을 준다.
+/// 손봐야 할 것이 몇 개 있다는 표시. 빨간 바탕에 숫자만 둔다 — 무엇의 3인지는 줄의 이름과
+/// 열었을 때의 화면이 말하고, 음성 안내 · 툴팁에는 온전한 문장을 준다.
 struct CountBadge: View {
     let count: Int
     let systemImage: String
@@ -107,18 +107,16 @@ struct CountBadge: View {
     /// "안 읽은 피드백" — 음성 안내와 툴팁이 읽는 이름.
     let name: String
 
+    /// `systemImage` · `tint` 는 부르는 쪽 호환을 위해 받기만 한다.
     var body: some View {
         if count > 0 {
-            HStack(spacing: 3) {
-                Image(systemName: systemImage)
-                    .font(.system(size: 10, weight: .bold))
-                Text("\(count)")
-                    .font(.caption.monospacedDigit().weight(.semibold))
-            }
-            .foregroundStyle(.white)
-            .padding(.horizontal, 6)
-            .padding(.vertical, 3)
-            .background(tint, in: Capsule())
+            Text(count > 99 ? "99+" : "\(count)")
+                .font(.callout.monospacedDigit().weight(.semibold))
+                .foregroundStyle(.white)
+                .padding(.horizontal, 7)
+                .padding(.vertical, 2)
+                .frame(minWidth: 22)
+                .background(Color.red, in: Capsule())
             .help("\(name) \(count)건")
             .accessibilityElement(children: .ignore)
             .accessibilityLabel("\(name) \(count)건")

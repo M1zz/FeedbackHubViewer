@@ -41,6 +41,9 @@ final class FeedbackStore: ObservableObject {
         /// 전체 프로젝트에만 있는 칸 — 모든 앱의 답 안 한 리뷰 · 처리 안 한 버그 리포트 ·
         /// 피드백(`InboxView`). 전체 프로젝트를 고르면 이 칸으로 연다.
         case inbox = "할 일"
+        /// 전체 프로젝트의 소식 — 차트 진입 · 링크 · 출시 · 이정표처럼 한 번 일어난 일
+        /// (`NewsView`, `AppNews.swift`). 할 일처럼 처음부터 모든 앱을 한 목록에 둔다.
+        case news = "소식"
         case feedback = "피드백"
         /// App Store 리뷰와 개발자 응답. 피드백 바로 옆에 둔다 — 앱 안에서 온 목소리와
         /// 스토어에 남긴 목소리는 나란히 봐야 한다. 허브가 아니라 App Store Connect 를
@@ -69,18 +72,27 @@ final class FeedbackStore: ObservableObject {
         /// 왜 이렇게 만들었나 - 앱 리포의 설계 문서(HTML)를 지켜보다가 연다
         /// (`DesignDocsStore`). 맥의 디스크를 읽는 유일한 칸.
         case design = "설계"
+        /// 내가 할 마케팅 — 기획 · 자료(카드뉴스 · 영상 · 글) · 올렸는지 확인(`MarketingStore`).
+        /// 다른 칸은 일어난 일을 읽지만 이 칸은 내가 쓴다.
+        case marketing = "마케팅"
+        /// 레딧에서 "이런 앱 없나요?" 를 묻는 질문(`LeadsView`, `RedditLead`). 답은 사람이 직접.
+        case leads = "질문 찾기"
+        /// 앱이 사용자에게 줘야 하는 경험과 사용자가 꿈꿀 수 있는 모습(`ExperienceView`).
+        /// 숫자를 보다가 이 앱이 원래 무엇을 하려던 것인지 다시 붙잡는 자리.
+        case experience = "경험"
         var id: String { rawValue }
         /// 할 일은 처음부터 모든 앱을 앱별로 묶어 보여 주는 칸이라 앱 목록을 거치지 않는다.
-        var usesAppList: Bool { self != .inbox }
+        var usesAppList: Bool { self != .inbox && self != .news }
         /// 기능 목록에서 이 칸이 놓이는 무리.
         var group: Group {
             switch self {
-            case .inbox: .today
+            case .inbox, .news: .today
             case .feedback, .reviews: .voice
             case .crashes, .release: .quality
             case .stats, .acquisition, .keywords, .charts, .storeAnalytics: .growth
             case .purchases: .revenue
-            case .design: .build
+            case .marketing, .leads: .marketing
+            case .design, .experience: .build
             }
         }
         /// 기능 목록의 무리. 열한 칸을 한 줄로 늘어놓으면 무엇이 어디 있는지 읽히지 않는다 —
@@ -91,6 +103,7 @@ final class FeedbackStore: ObservableObject {
             case quality = "품질"
             case growth = "성장"
             case revenue = "수익"
+            case marketing = "마케팅"
             case build = "만들기"
             var id: String { rawValue }
             var sections: [ProjectSection] { ProjectSection.allCases.filter { $0.group == self } }
@@ -120,6 +133,7 @@ final class FeedbackStore: ObservableObject {
                 case .quality: "checkmark.shield"
                 case .growth: "chart.line.uptrend.xyaxis"
                 case .revenue: "creditcard"
+                case .marketing: "megaphone"
                 case .build: "pencil.and.ruler"
                 }
             }
@@ -129,6 +143,7 @@ final class FeedbackStore: ObservableObject {
         var systemImage: String {
             switch self {
             case .inbox: return "tray.full"
+            case .news: return "newspaper"
             case .feedback: return "text.bubble"
             case .stats: return "chart.bar"
             case .release: return "stethoscope"
@@ -140,6 +155,9 @@ final class FeedbackStore: ObservableObject {
             case .purchases: return "creditcard"
             case .reviews: return "star.bubble"
             case .design: return "pencil.and.ruler"
+            case .marketing: return "megaphone"
+            case .leads: return "questionmark.bubble"
+            case .experience: return "sparkles"
             }
         }
     }
@@ -476,6 +494,19 @@ final class FeedbackStore: ObservableObject {
         case incremental
     }
 
+    /// 허브에서 무엇을 읽을지. 화면마다 새로고침이 제 것만 읽게(`SectionRefresh`) — 피드백
+    /// 화면에서 누른 새로고침이 몇 분 걸리는 사용 현황까지 기다리게 하지 않는다.
+    struct CloudParts: OptionSet {
+        let rawValue: Int
+        /// 피드백 레코드.
+        static let feedback = CloudParts(rawValue: 1 << 0)
+        /// 숫자의 재료 — 사용 현황 · 이벤트.
+        static let numbers = CloudParts(rawValue: 1 << 1)
+        /// 진단(크래시 · 행 리포트).
+        static let crashes = CloudParts(rawValue: 1 << 2)
+        static let all: CloudParts = [.feedback, .numbers, .crashes]
+    }
+
     /// How far along a refresh is.
     ///
     /// There is no percentage to show: CloudKit answers a query by handing back
@@ -632,6 +663,11 @@ final class FeedbackStore: ObservableObject {
         await load(mode: .full)
     }
 
+    /// 손으로 누른 새로고침이되 `parts` 만 — 화면마다의 새로고침 단추가 부른다.
+    func load(_ parts: CloudParts) async {
+        await load(mode: .full, parts: parts)
+    }
+
     /// 사용 현황 · 이벤트를 저절로 다시 읽는 간격. 숫자는 하루에 한 번 보면 된다.
     static let numbersInterval: TimeInterval = 24 * 60 * 60
 
@@ -646,7 +682,7 @@ final class FeedbackStore: ObservableObject {
         numbersReadAt.map { Date().timeIntervalSince($0) >= Self.numbersInterval } ?? true
     }
 
-    func load(mode: RefreshMode) async {
+    func load(mode: RefreshMode, parts: CloudParts = .all) async {
         guard !isRefreshing else { return }
         isRefreshing = true
         errorMessage = nil
@@ -678,7 +714,7 @@ final class FeedbackStore: ObservableObject {
 
         refreshProgress = Self.progressStep(for: Self.feedbackSyncKey)
 
-        do {
+        if parts.contains(.feedback) { do {
             let startedAt = Date()
             let outcome = try await service.fetchFeedback(modifiedSince: since(Self.feedbackSyncKey),
                                                           knownRecordType: resolvedRecordType,
@@ -705,7 +741,7 @@ final class FeedbackStore: ObservableObject {
                     + "\n\n등록할 내 CloudKit User Record Name:\n\(name)\n\n"
                     + "CloudKit Console → 컨테이너 → Security Roles에서 admin 역할에 이 값을 추가하고 피드백 레코드 타입에 read 권한을 준 뒤, Production으로 배포하세요."
             }
-        }
+        } }
 
 
         refreshProgress = Self.progressStep(for: CloudKitService.eventRecordType)
@@ -739,10 +775,11 @@ final class FeedbackStore: ObservableObject {
         // 사용 현황 · 이벤트는 숫자의 재료이고, 숫자는 하루 단위로 움직인다. 1분마다 도는
         // 자동 갱신 · 알림 감시가 매번 읽을 까닭이 없다 - 손으로 누른 새로고침이거나 마지막으로
         // 읽은 지 하루가 지났을 때만 읽는다. 진단은 알림거리라 늘 읽는다.
-        let readsNumbers = mode == .full || numbersAreStale
-        let usageTypes: Set<String> = readsNumbers
-            ? [CloudKitService.snapshotRecordType, CloudKitService.eventRecordType, CloudKitService.crashRecordType]
-            : [CloudKitService.crashRecordType]
+        let readsNumbers = parts.contains(.numbers) && (mode == .full || numbersAreStale)
+        var usageTypes: Set<String> = readsNumbers
+            ? [CloudKitService.snapshotRecordType, CloudKitService.eventRecordType]
+            : []
+        if parts.contains(.crashes) { usageTypes.insert(CloudKitService.crashRecordType) }
         var usageKnown: [String: Set<String>] = [:]
         if watermarks[CloudKitService.eventRecordType] != nil {
             usageKnown[CloudKitService.eventRecordType] = rollups.knownEventIDs()
@@ -750,6 +787,8 @@ final class FeedbackStore: ObservableObject {
         if isIncremental, watermarks[CloudKitService.crashRecordType] != nil {
             usageKnown[CloudKitService.crashRecordType] = Set(fetchedCrashes.map(\.id))
         }
+        // 피드백만 읽는 새로고침이면 사용 기록은 건드리지 않는다.
+        if !usageTypes.isEmpty {
         let usage = await service.fetchUsage(modifiedSince: usageSince, known: usageKnown,
                                              types: usageTypes) { [weak self] partial in
             // What has arrived so far, while the read is still running. Merged
@@ -769,6 +808,7 @@ final class FeedbackStore: ObservableObject {
         }
         changed = apply(usage, incremental: isIncremental) || changed
         usageNotice = usage.notice
+        }
 
         // Only after both fetches: a notification should reflect the whole
         // refresh, and the badge the unread count it leaves behind.
@@ -1611,9 +1651,21 @@ final class FeedbackStore: ObservableObject {
     func displayName(for key: String) -> String {
         if key == Feedback.unclassifiedProject { return key }
         if let override = appNameOverrides[key], !override.isEmpty { return override }
-        if let store = storeAppNames[key], !store.isEmpty { return store }
-        if let learned = learnedAppNames[key], !learned.isEmpty { return learned }
+        if let store = storeAppNames[key], !store.isEmpty { return Self.shortName(store) }
+        if let learned = learnedAppNames[key], !learned.isEmpty { return Self.shortName(learned) }
         return key
+    }
+
+    /// 스토어 이름은 부제까지 달고 온다("두번알림 - 발표·수업 타이머", "KORA: 한국 지하철").
+    /// 목록마다 그 꼬리가 잘려 "…" 로 끝났다 — 앱을 알아보는 데는 앞 이름이면 된다.
+    static func shortName(_ name: String) -> String {
+        for separator in [":", " - ", " – ", " — ", " | "] {
+            if let range = name.range(of: separator) {
+                let head = name[..<range.lowerBound].trimmingCharacters(in: .whitespaces)
+                if !head.isEmpty { return head }
+            }
+        }
+        return name
     }
 
     // MARK: - Auto refresh

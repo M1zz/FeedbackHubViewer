@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>무지개 공방 결제까지 마인드맵</title>
+<style>
+:root{--bg:#f5f5f2;--paper:#fff;--fg:#1b1d1c;--muted:#5f6662;--line:#cfd4d0;
+--c1:#c8463b;--c2:#2f6fcf;--c3:#7a4fc4;--c4:#1f8a5b;--wall:#c98a12;color-scheme:light;
+--font:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo",system-ui,sans-serif;--mono:ui-monospace,Menlo,monospace}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#141716;--paper:#1d211f;--fg:#e8ece9;
+--muted:#a1aaa4;--line:#3a423e;--c1:#f07a6f;--c2:#6ea2ef;--c3:#ad8bef;--c4:#4cc38a;--wall:#e7b24a;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#141716;--paper:#1d211f;--fg:#e8ece9;--muted:#a1aaa4;--line:#3a423e;
+--c1:#f07a6f;--c2:#6ea2ef;--c3:#ad8bef;--c4:#4cc38a;--wall:#e7b24a;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.55 var(--font)}
+.wrap{max-width:1280px;margin:0 auto;padding:32px max(16px,env(safe-area-inset-left)) 64px;display:grid;gap:36px}
+header{display:grid;gap:8px}
+h1{font-size:30px;line-height:1.2;margin:0}
+h2{font-size:18px;margin:0 0 10px}
+p{margin:0}
+.eyebrow{font:12px var(--mono);letter-spacing:.06em;color:var(--muted)}
+.lede{color:var(--muted);font-size:16px;max-width:60ch}
+.pill{display:inline-block;font-size:13px;padding:2px 10px;border-radius:99px;border:1px solid var(--c4);color:var(--c4)}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+.card{background:var(--paper);border:1px solid var(--line);border-top:4px solid var(--c);border-radius:10px;padding:16px}
+.c1{--c:var(--c1)}.c2{--c:var(--c2)}.c3{--c:var(--c3)}.c4{--c:var(--c4)}
+.card ul{margin:0;padding-left:18px;display:grid;gap:4px}
+.proposal{--c:var(--line);border-style:dashed;border-top-style:solid}
+.proposal h2 span{font:12px var(--mono);color:var(--muted);font-weight:400;margin-left:6px}
+dl{margin:0;display:grid;gap:4px}
+dt{font-size:13px;color:var(--muted)}
+dd{margin:0 0 6px}
+.map{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:20px;overflow-x:auto}
+/* 가로 트리: 줄기는 왼쪽, 가지는 오른쪽으로 뻗는다 */
+.tree,.tree ul{list-style:none;margin:0;padding:0}
+.tree ul{display:flex;flex-direction:column;justify-content:center;position:relative;padding-left:24px}
+.tree li{display:flex;align-items:center;position:relative;padding:3px 0 3px 24px}
+.tree>li{padding-left:0}
+.tree ul::before{content:"";position:absolute;left:0;top:50%;width:24px;border-top:2px solid var(--line)}
+.tree li::before{content:"";position:absolute;left:0;top:50%;width:24px;border-top:2px solid var(--line)}
+.tree li::after{content:"";position:absolute;left:0;top:0;bottom:0;border-left:2px solid var(--line)}
+.tree li:first-child::after{top:50%}
+.tree li:last-child::after{bottom:50%}
+.tree li:only-child::after,.tree>li::before,.tree>li::after{display:none}
+.node{flex:none;max-width:280px;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:6px 10px;font-size:14px}
+.root{background:var(--fg);color:var(--bg);border:none;font-size:20px;font-weight:700;max-width:220px;padding:14px 16px}
+.root small{display:block;font-size:13px;font-weight:400;opacity:.8;margin-top:4px}
+.branch{color:#fff;border:none;font-weight:700;font-size:16px;padding:8px 14px}
+.b1{background:var(--c1)}.b2{background:var(--c2)}.b3{background:var(--c3)}.b4{background:var(--c4)}
+.lead{font-weight:600;background:var(--paper)}
+.muted{color:var(--muted)}
+.wall{border:2px solid var(--wall)}
+.pay{background:var(--c4);color:#fff;border:none}
+footer{display:grid;gap:6px}
+.sources{margin:0;padding-left:18px;font:12px var(--mono);color:var(--muted)}
+/* 좁은 화면: 들여쓴 세로 목록 */
+@media (max-width:760px){
+.map{padding:14px}
+.tree ul{display:block;padding-left:0;margin-left:12px}
+.tree li{display:block;padding:4px 0 4px 18px}
+.tree ul::before{display:none}
+.tree li::before{top:20px;width:14px}
+.tree li::after,.tree li:first-child::after{top:0;bottom:auto;height:100%}
+.tree li:last-child::after{height:20px}
+.tree li:only-child::after{display:block;height:20px}
+.node{display:inline-block;max-width:100%}
+}
+</style></head><body><main class="wrap">
+<header>
+  <p class="eyebrow">문제 → 타겟 → 솔루션 → 결제</p>
+  <h1>무지개 공방</h1>
+  <p class="lede">고정 시간을 먼저 깔고 남은 시간에 짜는 맥 주간 계획표</p>
+  <p><span class="pill">구독</span></p>
+</header>
+<section class="cards">
+  <article class="card c1"><h2>문제 정의</h2><p>할 일 목록만 보고 약속했다가 한 주에 다 안 들어가 허덕인다.</p></article>
+  <article class="card c2"><h2>타겟</h2><p>맥에서 한 주를 미리 짜려는 직장인·학생</p></article>
+  <article class="card c3"><h2>솔루션</h2><p>168시간에서 고정 루틴을 빼고 남은 칸에 할 일을 끌어다 놓기</p></article>
+</section>
+<section><h2>마인드맵</h2><div class="map"><ul class="tree"><li><div class="node root">무지개 공방<small>고정 시간을 먼저 깔고 남은 시간에 짜는 맥 주간 계획표</small></div><ul><li><div class="node branch b1">문제</div><ul><li><div class="node lead ">할 일 목록만 보고 약속했다가 한 주에 다 안 들어가 허덕인다.</div><ul><li><div class="node ">할 일이 이번 주에 다 들어가는지 모른다</div></li><li><div class="node ">잠·끼니·회사를 빼면 남는 시간이 생각보다 적다</div></li><li><div class="node ">회의와 계획을 두 번 적어야 한다</div></li><li><div class="node ">지난주를 돌아보지 않아 같은 실수를 한다</div></li></ul></li></ul></li><li><div class="node branch b2">타겟</div><ul><li><div class="node lead ">맥에서 한 주를 미리 짜려는 직장인·학생</div><ul><li><div class="node ">주말 밤 다음 주를 짤 때</div></li><li><div class="node ">새 약속을 받기 전 들어갈 자리가 있는지 볼 때</div></li><li><div class="node ">생활계획표·시간표를 만들고 싶을 때</div></li></ul></li><li><div class="node muted">노리지 않는 사람 · 아이폰에서만 일정을 보는 사람</div></li></ul></li><li><div class="node branch b3">솔루션</div><ul><li><div class="node lead ">168시간에서 고정 루틴을 빼고 남은 칸에 할 일을 끌어다 놓기</div><ul><li><div class="node ">고정 루틴을 깔면 남은 시간이 숫자로</div></li><li><div class="node ">할 일을 빈 요일로 끌어다 놓으면 계획</div></li><li><div class="node ">하루를 24시간 자 위에서 빈틈·겹침 보기</div></li><li><div class="node ">맥 캘린더 일정을 두 번 안 적고 가져오기</div></li><li><div class="node ">주간 회고 카드로 다음 주 짜기</div></li></ul></li></ul></li><li><div class="node branch b4">결제까지</div><ul><li><div class="node lead ">1 발견 · &quot;168시간에서 진짜 남는 시간&quot; 숫자 한 줄</div><ul><li><div class="node ">인스타·쇼츠·스레드·블로그 주간 계획 글</div></li><li><div class="node ">레딧 r/macapps, r/SideProject</div></li><li><div class="node ">아이폰 욕망의 무지개 설정의 함께 쓰는 앱</div></li></ul></li><li><div class="node lead ">2 스토어 페이지 · 타임블록으로 짜는 일주일 루틴</div><ul><li><div class="node ">약속 전에 무엇이 들어가는지 본다</div></li><li><div class="node ">계정·서버 없음, 아이폰과 오감</div></li><li><div class="node ">검색어: 생활계획표, 시간표만들기, 갓생</div></li></ul></li><li><div class="node lead ">3 첫 실행 · 세 걸음 안내</div><ul><li><div class="node ">한 주는 168시간이라는 막대</div></li><li><div class="node ">빼놓을 수 없는 시간 고르기(미리 안 깖)</div></li><li><div class="node ">적고, 끌어다 놓고, 자를 보는 법</div></li></ul></li><li><div class="node lead ">4 첫 성공 · 이번 주 실제로 남은 시간이 숫자로 보임</div><ul><li><div class="node ">할 일을 요일로 끌어 계획 블록 만들기</div></li><li><div class="node ">요일 무지개가 그날 할 일 수를 보여 줌</div></li></ul></li><li><div class="node lead ">5 다시 찾기 · 주마다 짜고 주말에 회고</div><ul><li><div class="node ">시작 시각에 진행 중, 끝나면 끝냈는지 물음</div></li><li><div class="node ">지금 타이머 위젯</div></li><li><div class="node ">아이폰에서 적은 할 일이 맥으로 옴</div></li></ul></li><li><div class="node lead wall">6 결제 벽 · 지난 주들이 쌓여 돌아보고 싶을 때</div><ul><li><div class="node ">회고 추세는 2주까지 무료, 그 앞은 잠김</div></li><li><div class="node ">다른 주 계획 가져오기에서 결제 화면</div></li><li><div class="node ">내 일정 공유 링크를 만들 때</div></li></ul></li><li><div class="node lead pay">7 결제 · Plus·Pro 두 칸, 칸마다 연 구독과 평생</div><ul><li><div class="node ">Plus 연 $2.99, 첫해 $1.49 · 평생 $8.99</div></li><li><div class="node ">Pro 연 $5.99, 첫해 $2.99 · 평생 $17.99</div></li><li><div class="node ">Plus 평생에서 Pro로 올리기 $8.99</div></li><li><div class="node ">산 칸은 아이폰 욕망의 무지개도 엶</div></li></ul></li></ul></li></ul></li></ul></div></section>
+<section class="cards">
+  <article class="card c4"><h2>결제하는 순간</h2>
+    <dl><dt>방식</dt><dd>구독</dd>
+    <dt>무료로 되는 것</dt><dd>계획·루틴·이번 주 회고·타이머·캘린더·아이폰 연동 무료</dd>
+    <dt>결제 버튼이 보일 때</dt><dd>회고 추세 2주 넘김, 다른 주 가져오기, 일정 공유 누를 때</dd>
+    <dt>상품</dt><dd><ul><li>무지개 공방 Plus 연간 · $2.99 (첫해 $1.49)</li><li>무지개 공방 Plus 평생 · $8.99</li><li>무지개 공방 Pro 연간 · $5.99 (첫해 $2.99)</li><li>무지개 공방 Pro 평생 · $17.99</li><li>Pro로 올리기 · $8.99</li><li>구독자용 Pro 평생 · $12.99</li></ul></dd></dl>
+  </article>
+  <article class="card proposal"><h2>제안 <span>확인된 사실 아님</span></h2><ul><li>회고를 세 주째 마친 날 지난 추세를 살짝 보여 주기</li><li>다음 주 짜기 시작할 때 지난주 가져오기 단추를 앞에 두기</li><li>아이폰에서 이미 산 칸이 열린다는 말을 첫 실행에 넣기</li></ul></article>
+</section>
+<footer><p class="eyebrow">근거 파일</p><ul class="sources"><li>APPSTORE.md</li><li>WeekBlocks.storekit</li><li>WeekBlocks/WeekBlocksSpec.swift</li><li>WeekBlocks/MacEntitlement.swift</li><li>WeekBlocks/OnboardingView.swift</li><li>WeekBlocks/ReflectionTrendsView.swift</li><li>WeekBlocks/WeekCopyView.swift</li><li>WeekBlocks/SharedScheduleSection.swift</li></ul></footer>
+</main></body></html>

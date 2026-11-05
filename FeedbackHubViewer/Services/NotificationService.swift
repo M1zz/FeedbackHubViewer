@@ -92,6 +92,24 @@ enum NotificationService {
         }
     }
 
+    // MARK: - 앱 소식
+
+    /// 아침 브리핑 — 볼 만한 것만 골라 번호를 붙인다. 미리 예약해 두어 앱이 꺼져 있어도
+    /// 울린다. 같은 id 로 다시 걸면 앞의 예약을 바꾸고, 줄이 없으면 예약을 지운다.
+    static func scheduleBriefing(id: String, at date: Date, lines: [String], more: Int) {
+        let center = UNUserNotificationCenter.current()
+        center.removePendingNotificationRequests(withIdentifiers: [id])
+        guard !lines.isEmpty else { return }
+        let content = UNMutableNotificationContent()
+        content.title = "오늘 내 앱 소식 · 볼 만한 것 \(lines.count + more)개"
+        content.body = lines.enumerated().map { "\($0.offset + 1). \($0.element)" }.joined(separator: "\n")
+            + (more > 0 ? "\n외 \(more)개는 소식 칸에" : "")
+        content.sound = .default
+        let parts = Calendar.current.dateComponents([.year, .month, .day, .hour, .minute], from: date)
+        let trigger = UNCalendarNotificationTrigger(dateMatching: parts, repeats: false)
+        center.add(UNNotificationRequest(identifier: id, content: content, trigger: trigger))
+    }
+
     private static func post(id: String, title: String, body: String) {
         let content = UNMutableNotificationContent()
         content.title = title

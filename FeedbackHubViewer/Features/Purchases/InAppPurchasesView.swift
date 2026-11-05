@@ -17,6 +17,7 @@ import SwiftUI
 struct InAppPurchasesView: View {
     @EnvironmentObject private var store: FeedbackStore
     @EnvironmentObject private var purchases: AppStoreConnectStore
+    @EnvironmentObject private var design: DesignDocsStore
     /// nil == 전체 프로젝트.
     let project: String?
 
@@ -32,6 +33,14 @@ struct InAppPurchasesView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
+                // 판정이 먼저 — 비즈니스 모델 신호등과 페이월은 app-portfolio 를 읽어
+                // App Store Connect 키가 없어도 보인다(키가 있으면 최근 30일 판매로 판정한다).
+                if let project {
+                    BusinessModelCard(project: project)
+                    PaywallCard(project: project)
+                } else {
+                    BusinessOverviewCard()
+                }
                 if !purchases.isConfigured {
                     Card(title: "App Store Connect 연결 안 됨", systemImage: "key") {
                         Text("설정에서 App Store Connect API 키(Issuer ID · Key ID · .p8)를 넣으면 상품과 판매가 여기 나옵니다. 키는 iCloud 키체인에 저장되어 다른 기기에도 들어갑니다.")
@@ -52,6 +61,9 @@ struct InAppPurchasesView: View {
                 }
             }
             .padding(contentPadding)
+        }
+        .task(id: design.workspace) {
+            await PortfolioStore.shared.load(workspace: design.workspace)
         }
         .task(id: project) {
             guard purchases.isConfigured else { return }
@@ -124,7 +136,7 @@ private struct ProjectPurchases: View {
                      unit: "건", systemImage: "gift", tint: .pink)
             // 통화가 섞인 금액을 원 하나로. 환율이 없으면 통화별 그대로.
             if let money = totals?.money(purchases.rates) {
-                StatTile(title: "최근 30일 수익금 (원화 환산)", value: money.label,
+                StatTile(title: "최근 30일 수익금 (원화 · 달러 환산)", value: money.label,
                          systemImage: "wonsign.circle", tint: .orange)
             } else {
                 StatTile(title: "최근 30일 수익금", value: totals?.proceedsLabel ?? "—",
@@ -158,7 +170,7 @@ private struct ProjectPurchases: View {
                         if index < products.count - 1 { Divider() }
                     }
                 }
-                Text("결제는 고객이 돈을 낸 것만 셉니다. 오퍼 · 프로모션 코드로 0원에 받은 것은 \"코드\"로 따로 적어요. 수익금은 Apple 수수료와 세금을 뺀 개발자 몫을 오늘 환율로 원화로 바꿔 더한 어림값입니다. 환불은 음수로 들어와 건수에서 빠져요.")
+                Text("결제는 고객이 돈을 낸 것만 셉니다. 오퍼 · 프로모션 코드로 0원에 받은 것은 \"코드\"로 따로 적어요. 수익금은 Apple 수수료와 세금을 뺀 개발자 몫을 오늘 환율로 원화 · 달러로 바꿔 더한 어림값입니다. 환불은 음수로 들어와 건수에서 빠져요.")
                     .font(.body)
                     .foregroundStyle(.tertiary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -174,6 +186,14 @@ private struct ProjectPurchases: View {
         return "≈ \(MoneyFormat.krw(krw))"
     }
 
+    /// 가격의 달러 어림값. 달러 가격이면 nil(그대로 보인다).
+    private func priceInUSD(_ product: StoreProduct) -> String? {
+        guard let amount = product.priceAmount, let currency = product.priceCurrency,
+              currency.uppercased() != "USD",
+              let usd = purchases.rates?.usd(amount, currency: currency) else { return nil }
+        return "≈ \(MoneyFormat.usd(usd))"
+    }
+
     private func productRow(_ product: StoreProduct) -> some View {
         let sold = purchases.sales?.totals(for: product.id)
         return VStack(alignment: .leading, spacing: 4) {
@@ -187,10 +207,12 @@ private struct ProjectPurchases: View {
                     Text(priceInKRW(product) ?? product.price ?? "가격 모름")
                         .font(.body.monospacedDigit().weight(.semibold))
                         .foregroundStyle(product.price == nil ? .secondary : .primary)
-                    // 원화가 아닌 가격을 어림했으면 원래 가격을 작게 같이 둔다.
-                    if priceInKRW(product) != nil, let original = product.price {
-                        Text(original)
-                            .font(.caption.monospacedDigit())
+                    // 아래 줄: 원화가 아닌 가격을 어림했으면 원래 가격, 그리고 달러 어림값.
+                    let original = priceInKRW(product) != nil ? product.price : nil
+                    let second = [original, priceInUSD(product)].compactMap { $0 }.joined(separator: " · ")
+                    if !second.isEmpty {
+                        Text(second)
+                            .font(.body.monospacedDigit())
                             .foregroundStyle(.secondary)
                     }
                 }
@@ -325,7 +347,7 @@ private struct PurchaseComparison: View {
                                     .frame(minWidth: 22, alignment: .trailing)
                                 Text(entry.0.name)
                                     .font(.body.weight(index == 0 ? .semibold : .regular))
-                                    .lineLimit(1)
+                                    .lineLimit(2)
                                 Spacer(minLength: 8)
                                 Text(entry.1.text)
                                     .font(.body.monospacedDigit().weight(.semibold))

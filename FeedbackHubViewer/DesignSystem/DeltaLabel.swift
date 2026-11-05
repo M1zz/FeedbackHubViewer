@@ -49,3 +49,32 @@ struct DeltaLabel: View {
         .accessibilityLabel("지난주 대비 \(AppFormat.signed(value))")
     }
 }
+
+// MARK: - 순위
+
+/// 순위의 오르내림 — 한국 주식처럼 오르면 빨강 ▲, 내리면 파랑 ▼.
+///
+/// 순위는 숫자가 작아질수록 좋아서 "−18" 을 초록으로 칠해 왔는데, 숫자를 한 번 뒤집어 읽어야
+/// 했다. 순위만큼은 시세판처럼 읽히게 한다: 오른 계단 수와 방향, 색 셋이 한 뜻을 말한다.
+/// (다른 숫자의 좋고 나쁨 — 크래시 · 사용 건수 — 은 그대로 `DeltaLabel` 의 초록 · 빨강이다.)
+enum RankTrend {
+    static let up = Color.red
+    static let down = Color.blue
+
+    /// 오른 계단 수(양수 = 올라감)의 색.
+    static func color(_ climbed: Int) -> Color {
+        climbed > 0 ? up : climbed < 0 ? down : .secondary
+    }
+}
+
+struct RankMoveLabel: View {
+    /// 오른 계단 수. 30위 → 12위면 +18, 12위 → 30위면 −18.
+    let climbed: Int
+
+    var body: some View {
+        Text(climbed > 0 ? "▲\(climbed)" : climbed < 0 ? "▼\(-climbed)" : "–")
+            .font(.body.monospacedDigit().weight(.semibold))
+            .foregroundStyle(RankTrend.color(climbed))
+            .accessibilityLabel(climbed > 0 ? "\(climbed)계단 오름" : climbed < 0 ? "\(-climbed)계단 내림" : "그대로")
+    }
+}

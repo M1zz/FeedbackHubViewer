@@ -32,7 +32,10 @@ struct KeywordsView: View {
     var body: some View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 14) {
+                if project == nil { KeywordRefreshOverviewCard() }
                 if let app = linkedApp { linkedAppCard(app) } else { unlinkedCard }
+                // 칸을 다시 짤 때가 됐나 — 이 화면에서 가장 먼저 할 결정이라 앱 카드 바로 아래.
+                if let project, linkedApp != nil { KeywordRefreshCard(project: project) }
                 if linkedApp != nil && standings.isEmpty { startCard }
                 // 무엇을 추적할지 고르는 카드라 추가 칸보다 먼저 온다.
                 if let project, linkedApp != nil {
@@ -59,6 +62,8 @@ struct KeywordsView: View {
             .padding(16)
         }
         .task { addCountries = Set(keywords.countries.prefix(1)) }
+        // 하루 확인이 이 앱의 말부터 하게 — 보고 있는 것이 먼저 차야 한다.
+        .onChange(of: project, initial: true) { _, project in keywords.focusProject = project }
         .overlay(alignment: .top) { checkBanner }
     }
 
@@ -229,6 +234,7 @@ struct KeywordsView: View {
     private var rankCard: some View {
         Card(title: "키워드 순위", systemImage: "list.number") {
             VStack(alignment: .leading, spacing: 0) {
+                todayStatus
                 if standings.contains(where: { $0.blockers != nil }) {
                     Text("순위순입니다. 각 줄의 **‘N개 앞섬’** 은 위에 있는 앱 중 내 앱보다 리뷰가 많은 것의 수 — 18위인데 위 17개 중 7개가 나보다 작으면 실제로는 10개 뒤입니다. 순위가 낮아도 앞선 앱이 적으면 그쪽이 더 가깝습니다.")
                         .font(.caption).foregroundStyle(.secondary)
@@ -292,7 +298,7 @@ struct KeywordsView: View {
 
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 4) {
-                    Text(competitor.app.name).font(.callout.weight(.medium)).lineLimit(1)
+                    Text(competitor.app.name).font(.callout.weight(.medium)).lineLimit(2)
                     if let rating = competitor.app.averageRating, competitor.app.ratingCount > 0 {
                         Text(String(format: "★%.1f (%@)", rating,
                                     AppFormat.count(competitor.app.ratingCount)))
@@ -301,7 +307,7 @@ struct KeywordsView: View {
                 }
                 Text(competitor.terms.prefix(4).joined(separator: " · ")
                      + (competitor.terms.count > 4 ? " 외 \(competitor.terms.count - 4)" : ""))
-                    .font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                    .font(.caption).foregroundStyle(.secondary).lineLimit(2)
             }
             Spacer()
             VStack(alignment: .trailing, spacing: 2) {
@@ -382,6 +388,22 @@ struct KeywordsView: View {
             Text(detail).font(.caption2).foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// 이 앱의 오늘 확인이 어디까지 왔나. 하루 확인은 앱 하나씩 끝내고, 보고 있는 앱부터 한다.
+    @ViewBuilder
+    private var todayStatus: some View {
+        let pending = keywords.pendingToday(for: project)
+        if pending == 0 {
+            Label("오늘 확인 끝", systemImage: "checkmark.circle")
+                .font(.caption).foregroundStyle(.secondary)
+                .padding(.bottom, 10)
+        } else if keywords.isChecking {
+            Label(project == nil ? "오늘 확인 \(pending)개 남음"
+                                 : "오늘 확인 \(pending)개 남음 — 이 앱부터 하는 중", systemImage: "hourglass")
+                .font(.caption).foregroundStyle(.secondary)
+                .padding(.bottom, 10)
+        }
     }
 
     // MARK: - Progress
@@ -486,17 +508,15 @@ private struct KeywordRow: View {
         .frame(width: 56, alignment: .trailing)
     }
 
-    /// Down is up. A rank that fell from 30 to 12 is −18 and green, which takes
-    /// one glance to learn and then reads faster than any arrow would.
+    /// 시세판처럼 — 30위에서 12위로 오르면 빨강 ▲18, 내리면 파랑 ▼(`RankMoveLabel`).
+    /// `delta` 는 순위 숫자의 차이라 오르면 음수다.
     @ViewBuilder
     private var deltaLabel: some View {
         if let delta = standing.delta, delta != 0 {
-            Text(AppFormat.signed(delta))
-                .font(.caption.weight(.semibold).monospacedDigit())
-                .foregroundStyle(DeltaPolarity.lowerIsBetter.tint(for: delta))
-                .frame(width: 36, alignment: .trailing)
+            RankMoveLabel(climbed: -delta)
+                .frame(width: 44, alignment: .trailing)
         } else {
-            Color.clear.frame(width: 36, height: 1)
+            Color.clear.frame(width: 44, height: 1)
         }
     }
 
@@ -526,7 +546,7 @@ private struct KeywordRow: View {
                         Text(history.apps[String(id)]?.name ?? "앱 \(id)")
                             .font(.caption)
                             .fontWeight(isMine ? .bold : .regular)
-                            .lineLimit(1)
+                            .lineLimit(2)
                         Spacer()
                     }
                     .padding(.vertical, 1)

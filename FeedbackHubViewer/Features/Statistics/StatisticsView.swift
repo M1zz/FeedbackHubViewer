@@ -96,6 +96,7 @@ struct StatisticsDashboard: View {
                         summaryCard
                         threeQuestionsCard
                         DailyInstallsCard(project: scope, audience: audience)
+                        if audience == .all { InstallMapCard(project: scope) }
 
                         // 카드마다 묻는 것과 답이 위에 있고, 숫자는 "자세히" 아래로 접힌다.
                         // 규모가 작으면 DAU 계열이 바깥 일에 흔들리므로 코호트 잔존이 먼저다.

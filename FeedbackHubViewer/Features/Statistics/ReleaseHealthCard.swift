@@ -111,6 +111,7 @@ struct ReleaseHealthCard: View {
                 guard let rate = metrics.crashFreeRate else { return "설치 없음" }
                 return "\(ReleaseHealth.percent(rate)) (불안정 \(metrics.unstableInstalls ?? 0)대)"
             }
+            row("불안정 갈래별 설치") { sliceText($0) }
         }
         row("크래시 보고") { "\($0.crashReports)건" }
         row("피드백") { metrics in
@@ -131,6 +132,12 @@ struct ReleaseHealthCard: View {
         lines.append("## 판정 기준")
         let thresholds = report.spec.thresholds
         lines.append("- 불안정 이벤트: \(report.spec.stabilityEvents.joined(separator: ", ")) — 이걸 보낸 설치를 불안정으로 셉니다.")
+        if let previous, report.stabilityKnown {
+            let fresh = newSlices(latest: latest, previous: previous)
+            if !fresh.isEmpty {
+                lines.append("- 앞 버전에 없던 불안정 갈래: \(fresh.joined(separator: ", ")). 앱이 이 갈래를 새로 보내기 시작했다면 두 버전의 크래시 없는 설치는 같은 잣대가 아닙니다.")
+            }
+        }
         lines.append("- 크래시 없는 설치 \(ReleaseHealth.percent(thresholds.crashFreeInstallsMin)) 미만이면 빨강, 핵심 행동률이 앞 버전보다 \(ReleaseHealth.percent(thresholds.coreActionDropMax)) 넘게 떨어지고 그 차이가 우연으로 설명되지 않으면 빨강(표본이 작아 흔들림 안이면 노랑), 활성 설치 \(thresholds.minInstallsForVerdict)대 미만이면 비율로 판정하지 않습니다.")
         if !report.hasReleaseSpec {
             lines.append("- 앱 리포의 docs/usage-spec.json 에 release 절이 없어 기본값으로 판정했습니다.")
@@ -194,6 +201,9 @@ struct ReleaseHealthCard: View {
 
             if report.stabilityKnown {
                 row("크래시 없는 설치", crashFreeText(latest), previous.map(crashFreeText))
+                if !latest.unstableBySlice.isEmpty || !(previous?.unstableBySlice.isEmpty ?? true) {
+                    row("불안정 갈래", Self.sliceText(latest), previous.map(Self.sliceText))
+                }
             } else {
                 GridRow {
                     Text("크래시 없는 설치").font(.body)
@@ -237,6 +247,28 @@ struct ReleaseHealthCard: View {
     private func crashFreeText(_ metrics: ReleaseHealth.VersionMetrics) -> String {
         guard let rate = metrics.crashFreeRate, let unstable = metrics.unstableInstalls else { return "설치 없음" }
         return "\(ReleaseHealth.percent(rate)) (불안정 \(unstable)대)"
+    }
+
+    /// 불안정 이벤트를 갈래마다. 많은 것부터, 기본형 이름은 떼고 갈래만 적는다.
+    private static func sliceText(_ metrics: ReleaseHealth.VersionMetrics) -> String {
+        guard !metrics.unstableBySlice.isEmpty else { return "없음" }
+        return metrics.unstableBySlice
+            .sorted { $0.value == $1.value ? $0.key < $1.key : $0.value > $1.value }
+            .map { "\(sliceLabel($0.key)) \($0.value)대" }
+            .joined(separator: " · ")
+    }
+
+    private static func sliceLabel(_ name: String) -> String {
+        let parts = name.split(separator: ":", maxSplits: 1)
+        return parts.count == 2 ? String(parts[1]) : "(갈래 없음)"
+    }
+
+    /// 최신 버전에만 있는 불안정 갈래.
+    private static func newSlices(latest: ReleaseHealth.VersionMetrics,
+                           previous: ReleaseHealth.VersionMetrics) -> [String] {
+        latest.unstableBySlice.keys
+            .filter { previous.unstableBySlice[$0] == nil }
+            .sorted()
     }
 
     private func feedbackText(_ metrics: ReleaseHealth.VersionMetrics) -> String {

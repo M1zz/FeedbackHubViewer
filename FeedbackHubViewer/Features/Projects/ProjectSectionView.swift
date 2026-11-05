@@ -16,6 +16,7 @@ struct ProjectSectionView: View {
     @EnvironmentObject private var purchases: AppStoreConnectStore
     @EnvironmentObject private var design: DesignDocsStore
     @EnvironmentObject private var charts: ChartStore
+    @EnvironmentObject private var news: NewsStore
     /// nil == 전체 앱.
     let project: String?
     /// 어느 기능의 화면인가. 아이폰은 탭마다 다른 기능이 열려 있으므로 가게의 "지금 기능"
@@ -23,6 +24,8 @@ struct ProjectSectionView: View {
     let section: FeedbackStore.ProjectSection
     /// The Mac's inspector follows this; a phone pushes the detail instead.
     @Binding var selection: Feedback.ID?
+    /// 이 화면을 열 때 새것이던 진단 · 리뷰 — "앱|칸" 과 함께. 줄마다 "새" 를 남긴다.
+    @State private var fresh: (key: String, ids: Set<String>) = ("", [])
 
     init(project: String?, section: FeedbackStore.ProjectSection,
          selection: Binding<Feedback.ID?> = .constant(nil)) {
@@ -33,7 +36,15 @@ struct ProjectSectionView: View {
 
     var body: some View {
         content
+            .environment(\.freshItemIDs, fresh.key == freshKey ? fresh.ids : [])
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+            // 뱃지를 눌러 들어왔으면 무엇이 바뀌었는지가 맨 위에.
+            .safeAreaInset(edge: .top, spacing: 0) {
+                SectionChangesBanner(section: section, project: project)
+            }
+            // 띠를 얹은 화면은 "띠 + 내용" 높이를 우겨 맥 창보다 커졌고, 넘친 만큼 위아래로
+            // 삐져 띠 윗부분이 툴바 밑에 깔렸다. 높이는 창이 주는 만큼만 — 띠 아래 내용이 준다.
+            .frame(minHeight: 0, maxHeight: .infinity)
             // Everything downstream reads the scope off the store, so the pushed
             // screen and the store can never disagree about which project this is.
             // 다시 보일 때마다(아이폰 탭을 오갈 때도) 맞춘다 — 다른 탭이 가게를 바꿔 놓았을 수 있다.
@@ -42,6 +53,17 @@ struct ProjectSectionView: View {
             .onChange(of: project) { syncStore() }
             // 진단 · 리뷰는 열면 확인한 것으로 — 보고 있는 동안 새로 들어온 것도.
             .task(id: viewedKey) { markViewed() }
+            // 통계 · 차트 같은 칸은 열어 본 지금의 말을 본 것으로 — 보는 동안 바뀐 것도.
+            .onChange(of: seenSignatures, initial: true) { _, signatures in
+                // 릴리즈는 지우기 전에 센다 — 사이드바에서 본 수가 줄에 그대로 남게.
+                let alerts = section == .release ? SectionChanges.shared.releaseAlerts(metrics: metrics) : [:]
+                SectionChanges.shared.markSeen(section, signatures: signatures, visiting: true)
+                // 릴리즈 칸을 열어 봤으면 빨강인 앱도 알아본 것으로 — 뱃지만 지우고 판정은 남는다.
+                if section == .release {
+                    SectionChanges.shared.noteVisited(section, counts: alerts.filter { project == nil || $0.key == project })
+                    SectionChanges.shared.acknowledgeRed(project.map { [$0] } ?? store.projectCounts.map(\.key), store: store)
+                }
+            }
             .navigationTitle(title)
             .hubNavigationSubtitle(metrics.subtitle(section, project: project))
     }
@@ -61,12 +83,26 @@ struct ProjectSectionView: View {
         return "\(project ?? "")|\(section.rawValue)|\(fresh)"
     }
 
+    private var seenSignatures: [String: String] {
+        guard SectionChanges.tracked.contains(section) else { return [:] }
+        return SectionChanges.signatures(section, project: project, metrics: metrics)
+    }
+
+    private var freshKey: String { "\(project ?? "")|\(section.rawValue)" }
+
+    /// 확인한 것으로 넘기기 전에 새것이던 것을 적어 둔다 — 보고 있는 동안 새로 들어온 것도 더한다.
     private func markViewed() {
+        var ids = fresh.key == freshKey ? fresh.ids : []
         switch section {
-        case .crashes: store.markCrashesViewed(project: project)
-        case .reviews: purchases.markReviewsViewed(bundleID: project)
+        case .crashes:
+            ids.formUnion(store.newCrashIDs(for: project))
+            store.markCrashesViewed(project: project)
+        case .reviews:
+            ids.formUnion(purchases.newReviewIDs(for: project))
+            purchases.markReviewsViewed(bundleID: project)
         default: break
         }
+        fresh = (freshKey, ids)
     }
 
     private var title: String {
@@ -76,7 +112,7 @@ struct ProjectSectionView: View {
     }
 
     private var metrics: SectionMetrics {
-        SectionMetrics(store: store, keywords: keywords, purchases: purchases, design: design, charts: charts)
+        SectionMetrics(store: store, keywords: keywords, purchases: purchases, design: design, charts: charts, news: news)
     }
 
     @ViewBuilder
@@ -84,6 +120,8 @@ struct ProjectSectionView: View {
         switch section {
         case .inbox:
             InboxView(selection: $selection)
+        case .news:
+            NewsView()
         case .feedback:
             FeedbackListView(selection: $selection)
         case .stats:
@@ -106,6 +144,12 @@ struct ProjectSectionView: View {
             DesignDocsView(project: project)
         case .storeAnalytics:
             StoreAnalyticsView(project: project)
+        case .marketing:
+            MarketingView(project: project)
+        case .experience:
+            ExperienceView(project: project)
+        case .leads:
+            LeadsView(project: project)
         }
     }
 }

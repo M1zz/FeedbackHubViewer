@@ -1,0 +1,120 @@
+{
+  "project": "com.leeo.HandsFreeMetronome",
+  "name": "낫마템포",
+  "tagline": "연주하면서 말로 바꾸는 메트로놈",
+  "problem": {
+    "statement": "연습 중 템포를 바꾸려면 악기에서 손을 떼야 해서 흐름이 끊긴다",
+    "pains": [
+      "템포 하나 바꾸려고 손을 뗀다",
+      "다시 자세 잡는 사이 감이 사라진다",
+      "조금씩 빨리 올리는 연습이 번거롭다"
+    ]
+  },
+  "target": {
+    "who": "기타·피아노·드럼처럼 두 손이 바쁜 연주자",
+    "moments": [
+      "템포를 조금씩 올리며 연습할 때",
+      "드럼 앞이라 폰에 손이 안 닿을 때",
+      "연습용 메트로놈 앱을 비교할 때"
+    ],
+    "notFor": "영어 단어 명령이 불편한 사람"
+  },
+  "solution": {
+    "core": "start, faster, tempo 120처럼 말하면 메트로놈이 따라온다",
+    "features": [
+      "설정 없이 기기 안에서 알아듣는 음성 명령",
+      "박자·박 나누기·탭 템포 기본기 무료",
+      "help라고 하면 말할 수 있는 말 보기",
+      "Pro: 자동으로 빨라지는 연습 모드",
+      "Pro: 악센트 편집과 튜너"
+    ]
+  },
+  "journey": [
+    {
+      "step": "발견",
+      "what": "기타 치며 메트로놈에게 말 거는 영상",
+      "details": [
+        "'템포 바꾸려고 손 떼는 순간' 공감 글",
+        "알아듣는 말 목록 카드",
+        "레딧 악기 커뮤니티 질문 글"
+      ]
+    },
+    {
+      "step": "스토어 페이지",
+      "what": "'연주하면서 말로 바꾸는 박자'",
+      "details": [
+        "기본 기능과 음성 제어는 무료라고 명시",
+        "Pro 기능 세 가지와 구독·평생 안내",
+        "명령은 영어 단어라고 숨기지 않음"
+      ]
+    },
+    {
+      "step": "첫 실행",
+      "what": "안내 3장 후 마이크 허락",
+      "details": [
+        "'말을 거는 메트로놈' 소개",
+        "'명령은 영어 단어예요' 안내",
+        "다음은 마이크 허락 화면"
+      ]
+    },
+    {
+      "step": "첫 성공",
+      "what": "손 안 대고 'faster'로 템포가 바뀐다",
+      "details": [
+        "start로 바로 시작",
+        "tempo 120처럼 숫자로 맞추기",
+        "연주 중 화면이 꺼지지 않음"
+      ]
+    },
+    {
+      "step": "다시 찾기",
+      "what": "매일 연습 때 켜 두는 메트로놈",
+      "details": [
+        "마지막 템포와 박자를 기억",
+        "세 가지 박 화면과 타이밍 체크",
+        "잠긴 Pro 버튼에 자물쇠 표시"
+      ]
+    },
+    {
+      "step": "결제 벽",
+      "what": "연습 모드·악센트 편집·튜너를 열 때",
+      "details": [
+        "버튼·음성·두 번 누르기 어디서든 같은 막힘",
+        "누른 기능을 맨 위에 두고 안내",
+        "무료 기능은 계속 무료라고 안심시킴"
+      ]
+    },
+    {
+      "step": "결제",
+      "what": "연 구독(1주 무료 체험) 또는 평생 이용권",
+      "details": [
+        "Pro 연 구독 · 2.99 (1주 무료 체험)",
+        "Pro 평생 소장 · 9.99",
+        "가격은 테스트 설정 값, 통화 미표기"
+      ]
+    }
+  ],
+  "payment": {
+    "model": "구독",
+    "products": [
+      "Pro 연 구독 · 2.99 (1주 무료 체험, 테스트 설정 값)",
+      "Pro 평생 소장 · 9.99 (테스트 설정 값)"
+    ],
+    "freeLimit": "메트로놈 전부와 음성 제어는 무료, Pro 3가지만 잠김",
+    "trigger": "연습 모드·악센트 편집·튜너를 처음 열려 할 때 Pro 화면"
+  },
+  "proposals": [
+    "연습 모드 1회를 맛보기로 열어 준 뒤 Pro 안내",
+    "일주일 연속 연습한 날 평생 이용권 제안",
+    "Pro 화면에 연 구독의 월 환산 가격 표시"
+  ],
+  "sources": [
+    "APPSTORE.md",
+    "HandsFreeMetronome/Products.storekit",
+    "HandsFreeMetronome/ProStore.swift",
+    "HandsFreeMetronome/PaywallView.swift",
+    "HandsFreeMetronome/ContentView.swift",
+    "HandsFreeMetronome/OnboardingView.swift",
+    "HandsFreeMetronome/HandsFreeMetronomeSpec.swift"
+  ]
+}

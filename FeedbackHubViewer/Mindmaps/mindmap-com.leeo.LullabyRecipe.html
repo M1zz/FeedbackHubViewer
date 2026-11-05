@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>달빛 결제까지 마인드맵</title>
+<style>
+:root{--bg:#f5f5f2;--paper:#fff;--fg:#1b1d1c;--muted:#5f6662;--line:#cfd4d0;
+--c1:#c8463b;--c2:#2f6fcf;--c3:#7a4fc4;--c4:#1f8a5b;--wall:#c98a12;color-scheme:light;
+--font:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo",system-ui,sans-serif;--mono:ui-monospace,Menlo,monospace}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#141716;--paper:#1d211f;--fg:#e8ece9;
+--muted:#a1aaa4;--line:#3a423e;--c1:#f07a6f;--c2:#6ea2ef;--c3:#ad8bef;--c4:#4cc38a;--wall:#e7b24a;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#141716;--paper:#1d211f;--fg:#e8ece9;--muted:#a1aaa4;--line:#3a423e;
+--c1:#f07a6f;--c2:#6ea2ef;--c3:#ad8bef;--c4:#4cc38a;--wall:#e7b24a;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.55 var(--font)}
+.wrap{max-width:1280px;margin:0 auto;padding:32px max(16px,env(safe-area-inset-left)) 64px;display:grid;gap:36px}
+header{display:grid;gap:8px}
+h1{font-size:30px;line-height:1.2;margin:0}
+h2{font-size:18px;margin:0 0 10px}
+p{margin:0}
+.eyebrow{font:12px var(--mono);letter-spacing:.06em;color:var(--muted)}
+.lede{color:var(--muted);font-size:16px;max-width:60ch}
+.pill{display:inline-block;font-size:13px;padding:2px 10px;border-radius:99px;border:1px solid var(--c4);color:var(--c4)}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+.card{background:var(--paper);border:1px solid var(--line);border-top:4px solid var(--c);border-radius:10px;padding:16px}
+.c1{--c:var(--c1)}.c2{--c:var(--c2)}.c3{--c:var(--c3)}.c4{--c:var(--c4)}
+.card ul{margin:0;padding-left:18px;display:grid;gap:4px}
+.proposal{--c:var(--line);border-style:dashed;border-top-style:solid}
+.proposal h2 span{font:12px var(--mono);color:var(--muted);font-weight:400;margin-left:6px}
+dl{margin:0;display:grid;gap:4px}
+dt{font-size:13px;color:var(--muted)}
+dd{margin:0 0 6px}
+.map{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:20px;overflow-x:auto}
+/* 가로 트리: 줄기는 왼쪽, 가지는 오른쪽으로 뻗는다 */
+.tree,.tree ul{list-style:none;margin:0;padding:0}
+.tree ul{display:flex;flex-direction:column;justify-content:center;position:relative;padding-left:24px}
+.tree li{display:flex;align-items:center;position:relative;padding:3px 0 3px 24px}
+.tree>li{padding-left:0}
+.tree ul::before{content:"";position:absolute;left:0;top:50%;width:24px;border-top:2px solid var(--line)}
+.tree li::before{content:"";position:absolute;left:0;top:50%;width:24px;border-top:2px solid var(--line)}
+.tree li::after{content:"";position:absolute;left:0;top:0;bottom:0;border-left:2px solid var(--line)}
+.tree li:first-child::after{top:50%}
+.tree li:last-child::after{bottom:50%}
+.tree li:only-child::after,.tree>li::before,.tree>li::after{display:none}
+.node{flex:none;max-width:280px;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:6px 10px;font-size:14px}
+.root{background:var(--fg);color:var(--bg);border:none;font-size:20px;font-weight:700;max-width:220px;padding:14px 16px}
+.root small{display:block;font-size:13px;font-weight:400;opacity:.8;margin-top:4px}
+.branch{color:#fff;border:none;font-weight:700;font-size:16px;padding:8px 14px}
+.b1{background:var(--c1)}.b2{background:var(--c2)}.b3{background:var(--c3)}.b4{background:var(--c4)}
+.lead{font-weight:600;background:var(--paper)}
+.muted{color:var(--muted)}
+.wall{border:2px solid var(--wall)}
+.pay{background:var(--c4);color:#fff;border:none}
+footer{display:grid;gap:6px}
+.sources{margin:0;padding-left:18px;font:12px var(--mono);color:var(--muted)}
+/* 좁은 화면: 들여쓴 세로 목록 */
+@media (max-width:760px){
+.map{padding:14px}
+.tree ul{display:block;padding-left:0;margin-left:12px}
+.tree li{display:block;padding:4px 0 4px 18px}
+.tree ul::before{display:none}
+.tree li::before{top:20px;width:14px}
+.tree li::after,.tree li:first-child::after{top:0;bottom:auto;height:100%}
+.tree li:last-child::after{height:20px}
+.tree li:only-child::after{display:block;height:20px}
+.node{display:inline-block;max-width:100%}
+}
+</style></head><body><main class="wrap">
+<header>
+  <p class="eyebrow">문제 → 타겟 → 솔루션 → 결제</p>
+  <h1>달빛</h1>
+  <p class="lede">빗소리를 겹쳐 만드는 나만의 잠 소리</p>
+  <p><span class="pill">구독</span></p>
+</header>
+<section class="cards">
+  <article class="card c1"><h2>문제 정의</h2><p>잠들 소리를 찾다가 오히려 잠이 깨고, 원하는 대로 조절도 못 한다</p></article>
+  <article class="card c2"><h2>타겟</h2><p>잠들 때 빗소리·백색소음을 틀어 두는 사람</p></article>
+  <article class="card c3"><h2>솔루션</h2><p>소리를 겹쳐 내 잠 소리로 저장하고, 달 한 번 눌러 튼다</p></article>
+</section>
+<section><h2>마인드맵</h2><div class="map"><ul class="tree"><li><div class="node root">달빛<small>빗소리를 겹쳐 만드는 나만의 잠 소리</small></div><ul><li><div class="node branch b1">문제</div><ul><li><div class="node lead ">잠들 소리를 찾다가 오히려 잠이 깨고, 원하는 대로 조절도 못 한다</div><ul><li><div class="node ">소리 영상을 고르다 한 시간이 간다</div></li><li><div class="node ">중간 광고나 마음에 안 드는 소리</div></li><li><div class="node ">타이머가 뚝 끊겨 잠이 깬다</div></li></ul></li></ul></li><li><div class="node branch b2">타겟</div><ul><li><div class="node lead ">잠들 때 빗소리·백색소음을 틀어 두는 사람</div><ul><li><div class="node ">유튜브에서 수면 소리를 찾다 지칠 때</div></li><li><div class="node ">잠이 잘 안 오는 밤</div></li><li><div class="node ">수면 앱을 비교해 볼 때</div></li></ul></li><li><div class="node muted">노리지 않는 사람 · 의학적 불면 치료를 찾는 사람</div></li></ul></li><li><div class="node branch b3">솔루션</div><ul><li><div class="node lead ">소리를 겹쳐 내 잠 소리로 저장하고, 달 한 번 눌러 튼다</div><ul><li><div class="node ">빗소리·물방울·새소리·싱잉볼 겹치기</div></li><li><div class="node ">소리마다 볼륨·간격·자리 조절</div></li><li><div class="node ">서서히 줄어드는 수면 타이머</div></li><li><div class="node ">달을 누르고 미는 한 화면 조작</div></li><li><div class="node ">부드러운 아침 알람</div></li></ul></li></ul></li><li><div class="node branch b4">결제까지</div><ul><li><div class="node lead ">1 발견 · &#x27;잠들 소리 찾다가 한 시간&#x27; 공감 글</div><ul><li><div class="node ">어두운 밤하늘과 달이 담긴 영상</div></li><li><div class="node ">백색소음·수면 앱 검색 블로그</div></li><li><div class="node ">레딧 수면 커뮤니티 질문 글</div></li></ul></li><li><div class="node lead ">2 스토어 페이지 · &#x27;빗소리를 겹쳐 만드는 나만의 잠&#x27;</div><ul><li><div class="node ">모든 소리 무료, 내 소리 3개 저장</div></li><li><div class="node ">프리미엄은 개수 제한 없이</div></li><li><div class="node ">처음 1주 무료 체험 안내</div></li></ul></li><li><div class="node lead ">3 첫 실행 · 안내 4장 후 달 조작 연습</div><ul><li><div class="node ">&#x27;소리를 찾다가 밤을 보내지 않도록&#x27;</div></li><li><div class="node ">겹쳐서 내 소리로, 잠든 뒤를 생각</div></li><li><div class="node ">달을 누르고 미는 법을 이어서 안내</div></li></ul></li><li><div class="node lead ">4 첫 성공 · 달을 누르자 내 취향 소리가 흐른다</div><ul><li><div class="node ">옆으로 밀어 다른 소리</div></li><li><div class="node ">위로 밀어 수면 타이머</div></li><li><div class="node ">소리가 서서히 줄며 잠듦</div></li></ul></li><li><div class="node lead ">5 다시 찾기 · 저장한 소리를 매일 밤 한 번에</div><ul><li><div class="node ">아래로 밀면 내 소리 보관함</div></li><li><div class="node ">아침 알람으로 하루 시작</div></li><li><div class="node ">만든 소리에 이름 붙여 저장</div></li></ul></li><li><div class="node lead wall">6 결제 벽 · 내 소리를 4개째 만들려 할 때</div><ul><li><div class="node ">무료는 직접 만든 소리 3개까지</div></li><li><div class="node ">보관함 위에 &#x27;프리미엄으로 업그레이드&#x27; 띠</div></li><li><div class="node ">무료/프리미엄 비교표로 안내</div></li></ul></li><li><div class="node lead pay">7 결제 · 월 구독 하나, 무료 체험 후 결제</div><ul><li><div class="node ">프리미엄 월 구독 · 0.99</div></li><li><div class="node ">무료 체험: 문구는 1주, 테스트 설정은 1개월</div></li><li><div class="node ">무료 사용 코드로 한 달 열기도 가능</div></li></ul></li></ul></li></ul></li></ul></div></section>
+<section class="cards">
+  <article class="card c4"><h2>결제하는 순간</h2>
+    <dl><dt>방식</dt><dd>구독</dd>
+    <dt>무료로 되는 것</dt><dd>모든 소리 듣기 무료, 직접 만든 소리는 3개까지 저장</dd>
+    <dt>결제 버튼이 보일 때</dt><dd>보관함에서 4번째 소리를 만들 때, 또는 보관함 위 업그레이드 띠</dd>
+    <dt>상품</dt><dd><ul><li>프리미엄 월 구독 · 0.99 (테스트 설정 값, 무료 체험 포함)</li></ul></dd></dl>
+  </article>
+  <article class="card proposal"><h2>제안 <span>확인된 사실 아님</span></h2><ul><li>체험 기간을 문구(1주)와 설정이 같게 맞추기</li><li>3번째 소리 저장 때 &#x27;하나 남았어요&#x27; 미리 알리기</li><li>연 구독이나 평생 이용권을 함께 두어 고르게 하기</li></ul></article>
+</section>
+<footer><p class="eyebrow">근거 파일</p><ul class="sources"><li>APPSTORE.md</li><li>Products.storekit</li><li>Dalbit/App/Bootstrap/DalbitSpec.swift</li><li>Dalbit/App/Features/Subscription/SubscriptionManager.swift</li><li>Dalbit/App/Features/Subscription/SubscriptionView.swift</li><li>Dalbit/App/Features/Player/SavedSoundsListView.swift</li><li>Dalbit/App/Features/Onboarding/OnboardingView.swift</li></ul></footer>
+</main></body></html>

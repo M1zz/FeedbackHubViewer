@@ -12,7 +12,8 @@
 
 import SwiftUI
 
-/// 손으로 누른 새로고침. 툴바 단추 · ⌘R · 당겨서 새로고침이 모두 이것을 부른다.
+/// 손으로 누른 모두 새로고침. 데이터 상태 칸의 단추와 ⇧⌘R 이 부른다. 화면마다의 새로고침은
+/// `SectionRefresh`.
 ///
 /// 자동 갱신(1분)은 CloudKit 만 읽는다 — App Store Connect 리포트를 1분마다 받을
 /// 까닭이 없고, 시간당 한도도 있다.
@@ -27,8 +28,8 @@ enum HubRefresh {
     }
 }
 
-/// 지금 새로고침. CloudKit 을 읽는 중에는 막는다.
-struct RefreshButton: View {
+/// 모두 새로고침. CloudKit 을 읽는 중에는 막는다.
+struct RefreshAllButton: View {
     @EnvironmentObject private var store: FeedbackStore
     @EnvironmentObject private var connect: AppStoreConnectStore
 
@@ -36,10 +37,10 @@ struct RefreshButton: View {
         Button {
             Task { await HubRefresh.now(store, connect) }
         } label: {
-            Label("새로고침", systemImage: "arrow.clockwise")
+            Label("모두 새로고침", systemImage: "arrow.clockwise")
         }
         .disabled(store.isRefreshing)
-        .help("피드백 · 사용 통계 · 리뷰 · 판매 · 유입을 모두 새로 받습니다 (⌘R)")
+        .help("피드백 · 사용 통계 · 리뷰 · 판매 · 유입을 모두 새로 받습니다 (⇧⌘R)")
     }
 }
 
@@ -64,7 +65,7 @@ struct DataSourcesPanel: View {
                         .foregroundStyle(.secondary)
                 }
                 Spacer(minLength: 12)
-                RefreshButton()
+                RefreshAllButton()
                     .labelStyle(.titleAndIcon)
                     .buttonStyle(.borderedProminent)
             }

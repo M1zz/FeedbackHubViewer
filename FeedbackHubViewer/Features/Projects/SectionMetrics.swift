@@ -18,6 +18,20 @@ struct SectionMetrics {
     let purchases: AppStoreConnectStore
     let design: DesignDocsStore
     let charts: ChartStore
+    let news: NewsStore
+    /// 한 번 그리는 동안의 셈. 사이드바는 한 몸통에서 같은 칸의 뱃지를 네댓 번 묻고(확인할 것 ·
+    /// 줄 · 모두 읽음 · 애니메이션), 그때마다 앱 수만큼 말을 다시 지었다. 몸통마다 새로 만드는
+    /// 값이라 낡을 일이 없다.
+    let memo = Memo()
+
+    final class Memo {
+        var badges: [String: Badge?] = [:]
+        var signatures: [String: [String: String]] = [:]
+    }
+
+    static func memoKey(_ section: FeedbackStore.ProjectSection, _ project: String?) -> String {
+        "\(section.rawValue)|\(project ?? "\u{1}")"
+    }
 
     /// 기능 이름 옆에 붙는 "손볼 것" 표시 하나. 숫자 칸과 같은 활자로 적으면 읽을 것과
     /// 구경할 것이 같은 무게로 보여서 따로 뱃지로 뺀다.
@@ -33,10 +47,32 @@ struct SectionMetrics {
     /// 우선순위: 안 읽은 피드백 → 새 진단 → 새 리뷰 → 답 안 한 리뷰.
     /// 설정 → 알림에서 끈 종류는 뱃지를 달지 않는다(기본: 진단은 안 단다).
     func badge(_ section: FeedbackStore.ProjectSection, project: String?) -> Badge? {
+        let key = Self.memoKey(section, project)
+        if let cached = memo.badges[key] { return cached }
+        let value = itemBadge(section, project: project) ?? changedBadge(section, project: project)
+        memo.badges[key] = value
+        return value
+    }
+
+    /// 마지막으로 이 칸을 본 뒤 바뀐 것의 수(`SectionChanges`). 무엇이 바뀌었는지는 칸을
+    /// 열면 맨 위 띠가 말한다.
+    private func changedBadge(_ section: FeedbackStore.ProjectSection, project: String?) -> Badge? {
+        let count = SectionChanges.shared.changedCount(section, project: project, metrics: self)
+        guard count > 0 else { return nil }
+        return Badge(count: count, systemImage: "sparkles", tint: .red, name: "본 뒤 바뀐 것")
+    }
+
+    private func itemBadge(_ section: FeedbackStore.ProjectSection, project: String?) -> Badge? {
         switch section {
         case .inbox:
             let count = inboxCount
             return count > 0 ? Badge(count: count, systemImage: "tray.full.fill", tint: .orange, name: "남은 일") : nil
+        case .news:
+            let count = news.unreadCount(for: project)
+            return count > 0 ? Badge(count: count, systemImage: "newspaper.fill", tint: .purple, name: "새 소식") : nil
+        case .leads:
+            let count = LeadStore.shared.unseenCount(for: project)
+            return count > 0 ? Badge(count: count, systemImage: "questionmark.bubble.fill", tint: .red, name: "새 레딧 질문") : nil
         case .feedback:
             guard store.showsBadge(.feedback) else { return nil }
             let unread = store.unreadCount(for: project)
@@ -54,10 +90,12 @@ struct SectionMetrics {
             let unanswered = unansweredReviews(project)
             return unanswered > 0 ? Badge(count: unanswered, systemImage: "bubble.left.fill", tint: .orange, name: "답 안 한 리뷰") : nil
         case .release:
-            let red = releaseRedCount(project)
-            // 한 앱이면 빨강이라는 사실은 점이 말한다. 뱃지는 전체에서 "몇 개가 빨강" 일 때만.
-            guard project == nil, red > 0 else { return nil }
-            return Badge(count: red, systemImage: "stethoscope", tint: .red, name: "빨강인 앱")
+            // 판정이 바뀐 앱과 아직 안 본 빨강을 같이 센다 — 열었을 때 줄의 뱃지 합과 같다.
+            // 읽음으로 넘긴 빨강(같은 버전)은 세지 않는다.
+            let alerts = SectionChanges.shared.releaseAlerts(metrics: self)
+            let count = project.map { alerts[$0] ?? 0 } ?? alerts.values.reduce(0, +)
+            guard count > 0 else { return nil }
+            return Badge(count: count, systemImage: "stethoscope", tint: .red, name: "바뀌었거나 빨강인 앱")
         default:
             return nil
         }
@@ -68,6 +106,7 @@ struct SectionMetrics {
     func count(_ section: FeedbackStore.ProjectSection, project: String?) -> Int {
         switch section {
         case .inbox: return inboxCount
+        case .news: return news.items.filter { project == nil || $0.project == project }.count
         case .feedback: return store.feedback(for: project).count
         case .stats: return store.usage(for: project).installs
         // 빨강인 앱 수. 한 앱이면 0 아니면 1.
@@ -88,6 +127,13 @@ struct SectionMetrics {
         case .purchases: return project.flatMap { purchases.products(for: $0)?.count } ?? 0
         case .reviews: return reviewCount(project)
         case .design: return design.docs(for: project).count
+        case .marketing: return MarketingStore.shared.items(for: project).count
+        case .leads: return LeadStore.shared.open(for: project).count
+        case .experience:
+            guard let project else {
+                return store.projectCounts.filter { AppExperience.of($0.key) != nil }.count
+            }
+            return AppExperience.of(project)?.promises.count ?? 0
         case .storeAnalytics:
             guard let project else { return purchases.analyticsCoverage?.value?.missing.count ?? 0 }
             guard case .ready(let analytics)? = purchases.storeAnalytics[project]?.value else { return 0 }
@@ -101,6 +147,8 @@ struct SectionMetrics {
         switch section {
         case .inbox:
             return count > 0 ? "\(AppFormat.count(count))건" : "없음"
+        case .news:
+            return count > 0 ? "\(AppFormat.count(count))건" : "아직 없음"
         case .feedback:
             // 안 읽은 수는 뱃지가 말한다 — 여기서 또 적으면 같은 사실이 한 줄에 두 번 있다.
             return "\(count)건"
@@ -151,6 +199,14 @@ struct SectionMetrics {
                 ?? "설계도 \(DesignBlueprints.webURLs.count)개"
             guard DesignDocsStore.isSupported, design.workspace != nil, count > 0 else { return blueprint }
             return "\(blueprint) · 문서 \(count)장"
+        case .marketing:
+            return count > 0 ? "자료 \(count)개" : "자료 없음"
+        case .leads:
+            if let project, LeadStore.shared.queries(for: project) == nil { return "검색어 없음" }
+            return count > 0 ? "답할 질문 \(count)개" : "질문 없음"
+        case .experience:
+            guard let project else { return "그려 둔 앱 \(count)개" }
+            return AppExperience.of(project) == nil ? "아직 안 그림" : "경험 \(count)가지"
         }
     }
 
@@ -172,6 +228,9 @@ struct SectionMetrics {
         case .inbox:
             let count = inboxCount
             return count > 0 ? "모든 앱에서 남은 일 \(AppFormat.count(count))건" : "남은 일 없음"
+        case .news:
+            let fresh = news.unreadCount
+            return fresh > 0 ? "새 소식 \(AppFormat.count(fresh))건" : "차트 · 링크 · 출시 · 이정표"
         case .feedback:
             let shown = store.filteredFeedback.count
             let total = store.scopedFeedback.count
@@ -255,6 +314,13 @@ struct SectionMetrics {
             return text
         case .design:
             return "화면 설계도 · 문제 정의부터 솔루션까지 · 리포의 \(DesignDocsStore.folder)"
+        case .marketing:
+            return "카드뉴스 · 영상 · 글 자료"
+        case .leads:
+            return "레딧에서 이런 앱을 찾는 질문 — 답은 직접"
+        case .experience:
+            guard let project else { return "앱마다 사용자가 꿈꿀 수 있는 모습" }
+            return AppExperience.of(project)?.dream ?? "사용자가 꿈꿀 수 있는 모습 · 줘야 하는 경험"
         case .storeAnalytics:
             guard purchases.isConfigured else { return "App Store Connect 키를 넣으면 Apple 이 모은 분석 리포트가 나옵니다" }
             guard let project else {
