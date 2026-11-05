@@ -228,7 +228,7 @@ private struct SourceRowView: View {
                 if let note = row.note {
                     Text(note)
                         .font(.body)
-                        .foregroundStyle(.tertiary)
+                        .foregroundStyle(HierarchicalShapeStyle.hubFaint)
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }

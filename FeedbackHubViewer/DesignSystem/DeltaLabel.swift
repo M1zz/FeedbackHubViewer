@@ -42,7 +42,7 @@ struct DeltaLabel: View {
             Image(systemName: symbol)
                 .font(.system(size: 10, weight: .bold))
             Text(AppFormat.signed(value))
-                .font(.caption.monospacedDigit())
+                .font(.hubCaption.monospacedDigit())
         }
         .foregroundStyle(polarity.tint(for: value))
         .accessibilityElement(children: .ignore)

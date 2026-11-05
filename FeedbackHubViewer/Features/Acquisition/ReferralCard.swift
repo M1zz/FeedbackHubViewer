@@ -104,7 +104,7 @@ struct ReferralCard: View {
 
     private func note(_ text: String) -> some View {
         Text(text)
-            .font(.callout)
+            .font(.hubCallout)
             .foregroundStyle(.secondary)
             .fixedSize(horizontal: false, vertical: true)
     }
@@ -124,17 +124,17 @@ struct ReferralRow: View {
                     Text(item.profile.name)
                         .font(.headline)
                     Text(item.profile.category.rawValue)
-                        .font(.caption)
+                        .font(.hubCaption)
                         .foregroundStyle(.secondary)
                 }
                 if item.profile.name != item.source.info {
                     Text(item.source.info)
-                        .font(.caption.monospaced())
+                        .font(.hubCaption.monospaced())
                         .foregroundStyle(.secondary)
                         .textSelection(.enabled)
                 }
                 Text(detail)
-                    .font(.callout)
+                    .font(.hubCallout)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
                 if let site = siteURL, let search = searchURL {
@@ -144,7 +144,7 @@ struct ReferralRow: View {
                         }
                         Link("이 사이트에서 \(appName) 찾아보기", destination: search)
                     }
-                    .font(.callout)
+                    .font(.hubCallout)
                 }
             }
             Spacer(minLength: 8)
@@ -152,7 +152,7 @@ struct ReferralRow: View {
                 Text(AppFormat.count(item.tally.firstDownloads))
                     .font(.figure(.title3))
                 Text("첫 다운로드")
-                    .font(.caption)
+                    .font(.hubCaption)
                     .foregroundStyle(.secondary)
             }
         }
@@ -193,7 +193,7 @@ private struct ReferralStatusChip: View {
 
     var body: some View {
         Text(status.label)
-            .font(.caption.weight(.semibold))
+            .font(.hubCaption.weight(.semibold))
             .padding(.horizontal, 8)
             .padding(.vertical, 3)
             .foregroundStyle(status.isAlert ? Color.white : Color.secondary)

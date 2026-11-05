@@ -78,7 +78,7 @@ struct AnalyticsCoverageCard: View {
                 Text(entry.app.name).font(.body)
                 Spacer(minLength: 8)
                 Text(entry.hasRequest ? "쌓는 중" : "요청 없음")
-                    .font(.callout)
+                    .font(.hubCallout)
                     .foregroundStyle(.secondary)
             }
             .contentShape(Rectangle())

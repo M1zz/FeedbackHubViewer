@@ -91,20 +91,20 @@ struct CrashReportListView: View {
                                 } label: {
                                     HStack {
                                         Text(entry.displayName)
-                                            .font(.callout)
+                                            .font(.hubCallout)
                                             .fixedSize(horizontal: false, vertical: true)
                                         Spacer(minLength: 8)
                                         if entry.last7Days > 0 {
                                             Text("7일 \(entry.last7Days)")
-                                                .font(.caption.monospacedDigit())
+                                                .font(.hubCaption.monospacedDigit())
                                                 .foregroundStyle(.red)
                                         }
                                         Text("\(entry.total)건")
-                                            .font(.callout.monospacedDigit())
+                                            .font(.hubCallout.monospacedDigit())
                                             .foregroundStyle(.secondary)
                                         Image(systemName: "chevron.right")
-                                            .font(.caption2.weight(.semibold))
-                                            .foregroundStyle(.tertiary)
+                                            .font(.hubCaption2.weight(.semibold))
+                                            .foregroundStyle(HierarchicalShapeStyle.hubFaint)
                                     }
                                     .contentShape(Rectangle())
                                 }
@@ -130,11 +130,11 @@ struct CrashReportListView: View {
                                 Spacer(minLength: 4)
                                 if group.last7Days > 0 {
                                     Text("최근 7일 \(group.last7Days)건")
-                                        .font(.subheadline.weight(.semibold))
+                                        .font(.hubSubheadline.weight(.semibold))
                                         .foregroundStyle(.red)
                                 }
                                 Text("\(group.reports.count)건")
-                                    .font(.subheadline.monospacedDigit())
+                                    .font(.hubSubheadline.monospacedDigit())
                                     .foregroundStyle(.secondary)
                             }
                             .textCase(nil)
@@ -143,7 +143,7 @@ struct CrashReportListView: View {
 
                     Section {
                         Text("버전별로 묶고, 각 묶음은 최신순입니다. 시각은 허브에 도착한 때이고, 콜스택·앱 버전·OS만 담깁니다.")
-                            .font(.footnote)
+                            .font(.hubFootnote)
                             .foregroundStyle(.secondary)
                     }
                 }
@@ -218,7 +218,7 @@ struct CrashReportListView: View {
                 Platform.copyToPasteboard(Self.copyText(of: store.crashReports(for: project, kind: kind.isEmpty ? nil : kind)))
             } label: {
                 Label("전체 복사", systemImage: "doc.on.doc")
-                    .font(.callout)
+                    .font(.hubCallout)
             }
             .buttonStyle(.borderless)
             .help("보이는 진단을 텍스트로 모두 복사")
@@ -254,11 +254,11 @@ struct CrashRow: View {
         VStack(alignment: .leading, spacing: 4) {
             HStack(spacing: 6) {
                 Text(report.kindLabel)
-                    .font(.callout.weight(.semibold))
+                    .font(.hubCallout.weight(.semibold))
                     .foregroundStyle(report.kind == "crash" ? Color.red : Color.orange)
                 if showsVersion {
                     Text("v\(report.appVersion)")
-                        .font(.caption)
+                        .font(.hubCaption)
                         .foregroundStyle(.secondary)
                 }
                 if fresh.contains(report.id) {
@@ -267,14 +267,14 @@ struct CrashRow: View {
                 Spacer(minLength: 4)
                 if let receivedAt = report.receivedAt {
                     Text(AppFormat.relative(receivedAt))
-                        .font(.caption2)
-                        .foregroundStyle(.tertiary)
+                        .font(.hubCaption2)
+                        .foregroundStyle(HierarchicalShapeStyle.hubFaint)
                 }
                 Button {
                     Platform.copyToPasteboard(report.copyText)
                 } label: {
                     Image(systemName: "doc.on.doc")
-                        .font(.caption)
+                        .font(.hubCaption)
                 }
                 .buttonStyle(.borderless)
                 .help("이 진단을 텍스트로 복사")
@@ -282,16 +282,16 @@ struct CrashRow: View {
 
             HStack(spacing: 6) {
                 if let projectLabel {
-                    Tag(text: projectLabel, font: .caption2, isCompact: true)
+                    Tag(text: projectLabel, font: .hubCaption2, isCompact: true)
                 }
                 Text("\(report.deviceType) · OS \(report.osVersion)")
-                    .font(.caption2)
+                    .font(.hubCaption2)
                     .foregroundStyle(.secondary)
             }
 
             if report.hasDetail {
                 Text(report.detail)
-                    .font(.caption)
+                    .font(.hubCaption)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -300,13 +300,13 @@ struct CrashRow: View {
                 DisclosureGroup("콜스택", isExpanded: $showsStack) {
                     ScrollView(.horizontal) {
                         Text(report.stack)
-                            .font(.caption2.monospaced())
+                            .font(.hubCaption2.monospaced())
                             .textSelection(.enabled)
                             .padding(.vertical, 4)
                     }
                     .frame(maxHeight: 220)
                 }
-                .font(.caption)
+                .font(.hubCaption)
             }
         }
         .padding(.vertical, 6)

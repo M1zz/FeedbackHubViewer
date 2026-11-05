@@ -67,6 +67,13 @@ struct UsageDayBucket: Codable {
     }
 }
 
+/// 한 버전을 쓴 설치와 그중 불안정 이벤트를 보낸 설치. 원본 이벤트는 허브 전체에서 5,000건만
+/// 남아 지난 버전까지 못 덮으므로, 버전별 숫자는 접을 때 여기에 쌓는다.
+struct UsageVersionTally: Codable, Equatable {
+    var installs: Set<String> = []
+    var unstable: Set<String> = []
+}
+
 /// One project-period above the day — a week, a month or a year — held as the
 /// sum of the days inside it.
 ///
@@ -138,6 +145,10 @@ struct UsageRollups: Codable {
     var projects: [String: [String: UsageDayBucket]] = [:]
     /// project key → event name → all-time total.
     var eventTotals: [String: [String: UsageNameTotal]] = [:]
+    /// project key → 버전 → 그 버전의 설치. 앱마다 최근 `versionTallyLimit` 개만 남긴다.
+    var versionTallies: [String: [String: UsageVersionTally]] = [:]
+
+    static let versionTallyLimit = 12
 
     // MARK: The ladder above the day
 
@@ -193,6 +204,7 @@ struct UsageRollups: Codable {
             ?? TimeZone.current.identifier
         projects = try c.decodeIfPresent([String: [String: UsageDayBucket]].self, forKey: .projects) ?? [:]
         eventTotals = try c.decodeIfPresent([String: [String: UsageNameTotal]].self, forKey: .eventTotals) ?? [:]
+        versionTallies = try c.decodeIfPresent([String: [String: UsageVersionTally]].self, forKey: .versionTallies) ?? [:]
         weeks = try c.decodeIfPresent([String: [String: UsagePeriodBucket]].self, forKey: .weeks) ?? [:]
         months = try c.decodeIfPresent([String: [String: UsagePeriodBucket]].self, forKey: .months) ?? [:]
         years = try c.decodeIfPresent([String: [String: UsagePeriodBucket]].self, forKey: .years) ?? [:]
@@ -302,6 +314,7 @@ struct UsageRollups: Codable {
             guard ids.insert(event.id).inserted else { continue }
             bucket.foldedIDs = ids
 
+            noteVersion(of: event)
             bucket.events += 1
             bucket.byEvent[event.name, default: 0] += 1
             if let install = event.installID {
@@ -542,6 +555,19 @@ struct UsageRollups: Codable {
             eventTotals[project] = totals
         }
 
+        for (project, otherVersions) in other.versionTallies {
+            var versions = versionTallies[project] ?? [:]
+            for (version, incoming) in otherVersions {
+                var mine = versions[version] ?? UsageVersionTally()
+                let before = mine
+                mine.installs.formUnion(incoming.installs)
+                mine.unstable.formUnion(incoming.unstable)
+                if mine != before { changed = true }
+                versions[version] = mine
+            }
+            versionTallies[project] = versions
+        }
+
         return changed
     }
 
@@ -562,6 +588,10 @@ struct UsageRollups: Codable {
                 touched = true
             }
             if touched { projects[project] = updated }
+        }
+        for (project, versions) in versionTallies where versions.count > Self.versionTallyLimit {
+            let newest = versions.keys.sorted { ReleaseHealth.isOlder($1, than: $0) }.prefix(Self.versionTallyLimit)
+            versionTallies[project] = versions.filter { newest.contains($0.key) }
         }
     }
 
@@ -725,6 +755,7 @@ extension UsageRollups {
     mutating func backfillEventInstalls(_ events: [UsageEvent], calendar: Calendar = .current) -> Bool {
         var changed = false
         for event in events {
+            if noteVersion(of: event) { changed = true }
             guard let install = event.installID else { continue }
             let key = Self.dayKey(event.occurredAt, calendar: calendar)
             guard var bucket = projects[event.projectKey]?[key] else { continue }
@@ -735,5 +766,22 @@ extension UsageRollups {
             changed = true
         }
         return changed
+    }
+
+    /// 이벤트를 그 버전의 설치로 센다. 집합이라 몇 번을 불러도 같다.
+    ///
+    /// - Returns: 무엇이든 바뀌었는가.
+    @discardableResult
+    mutating func noteVersion(of event: UsageEvent) -> Bool {
+        let version = event.appVersion.trimmingCharacters(in: .whitespaces)
+        guard let install = event.installID, !install.isEmpty, ReleaseHealth.isRealVersion(version) else { return false }
+        var tally = versionTallies[event.projectKey]?[version] ?? UsageVersionTally()
+        var changed = tally.installs.insert(install).inserted
+        if ReleaseSpec.defaultStabilityEvents.contains(event.baseName), tally.unstable.insert(install).inserted {
+            changed = true
+        }
+        guard changed else { return false }
+        versionTallies[event.projectKey, default: [:]][version] = tally
+        return true
     }
 }

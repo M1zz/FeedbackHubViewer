@@ -172,7 +172,7 @@ private struct ProjectPurchases: View {
                 }
                 Text("결제는 고객이 돈을 낸 것만 셉니다. 오퍼 · 프로모션 코드로 0원에 받은 것은 \"코드\"로 따로 적어요. 수익금은 Apple 수수료와 세금을 뺀 개발자 몫을 오늘 환율로 원화 · 달러로 바꿔 더한 어림값입니다. 환불은 음수로 들어와 건수에서 빠져요.")
                     .font(.body)
-                    .foregroundStyle(.tertiary)
+                    .foregroundStyle(HierarchicalShapeStyle.hubFaint)
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
@@ -304,7 +304,7 @@ private struct PurchaseComparison: View {
                         .fixedSize(horizontal: false, vertical: true)
                     Text("번들 ID로 찾았는데 없거나, 읽다가 실패한 프로젝트입니다. 스토어에 아직 안 낸 앱이면 정상이에요. 프로젝트 하나를 열면 이유가 나옵니다.")
                         .font(.body)
-                        .foregroundStyle(.tertiary)
+                        .foregroundStyle(HierarchicalShapeStyle.hubFaint)
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
@@ -388,7 +388,7 @@ private struct SalesStatus: View {
                     .fixedSize(horizontal: false, vertical: true)
                 Text("판매 리포트는 키 역할이 Admin · Finance · Sales 중 하나여야 읽힙니다.")
                     .font(.body)
-                    .foregroundStyle(.tertiary)
+                    .foregroundStyle(HierarchicalShapeStyle.hubFaint)
             }
         } else if purchases.isLoadingSales {
             ProgressView("최근 \(AppStoreConnectStore.salesDays)일 판매 리포트를 받는 중…")

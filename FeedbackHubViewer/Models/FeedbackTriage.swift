@@ -85,6 +85,7 @@ enum FeedbackStatusFilter: String, CaseIterable, Identifiable {
     case handled
     case applied
     case dismissed
+    case replied
     case all
 
     var id: String { rawValue }
@@ -95,6 +96,7 @@ enum FeedbackStatusFilter: String, CaseIterable, Identifiable {
         case .handled: return "처리 완료"
         case .applied: return FeedbackStatus.applied.label
         case .dismissed: return FeedbackStatus.dismissed.label
+        case .replied: return "답변함"
         case .all: return "전체"
         }
     }
@@ -106,16 +108,19 @@ enum FeedbackStatusFilter: String, CaseIterable, Identifiable {
         case .handled: return "checkmark.circle"
         case .applied: return FeedbackStatus.applied.systemImage
         case .dismissed: return FeedbackStatus.dismissed.systemImage
+        case .replied: return "arrowshape.turn.up.left.fill"
         }
     }
 
-    func accepts(_ status: FeedbackStatus) -> Bool {
+    /// 답장을 보낸 피드백도 처리한 것이다 — 확인 필요에서 빠진다.
+    func accepts(_ status: FeedbackStatus, replied: Bool) -> Bool {
         switch self {
         case .all: return true
-        case .pending: return status == .pending
-        case .handled: return status.isHandled
+        case .pending: return status == .pending && !replied
+        case .handled: return status.isHandled || replied
         case .applied: return status == .applied
         case .dismissed: return status == .dismissed
+        case .replied: return replied
         }
     }
 }

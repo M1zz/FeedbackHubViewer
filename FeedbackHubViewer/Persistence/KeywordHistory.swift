@@ -40,7 +40,7 @@ struct TrackedKeyword: Codable, Hashable, Identifiable {
 }
 
 /// What one search returned, on one day.
-struct KeywordCheck: Codable {
+struct KeywordCheck: Codable, Equatable {
     var checkedAt: Date
     /// trackId (as a string, so the JSON stays readable) → 1-based position in
     /// the results. An app missing from this map was not in the window that was
@@ -119,7 +119,7 @@ struct KeywordStanding {
 
 /// Every check, per keyword, per day. Its own file — it has nothing to do with
 /// the CloudKit hub and must not be thrown away when that cache is.
-struct KeywordHistory: Codable {
+struct KeywordHistory: Codable, Equatable {
 
     static let currentVersion = 1
 
@@ -143,6 +143,10 @@ struct KeywordHistory: Codable {
     var links: [String: Int] = [:]
     /// When a full check last finished.
     var lastCheckedAt: Date?
+    /// 추적 키워드를 더하고 뺀 기록 — `KeywordEdit.key` → 마지막으로 한 일. 기기 사이에서
+    /// 합칠 때 다른 기기가 뺀 키워드가 이 기기 사본에서 되살아나지 않게(`merged(with:)`).
+    /// 이 칸이 생기기 전 파일에는 없다.
+    var edits: [String: KeywordEdit]?
 
     var isEmpty: Bool { keywords.isEmpty }
 
@@ -152,6 +156,7 @@ struct KeywordHistory: Codable {
         let trimmed = term.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
         var keyword = TrackedKeyword(term: trimmed, country: country)
+        note(keyword.id, project: project, added: true)
         if var existing = keywords[keyword.id] {
             if let project { existing.projects.insert(project) }
             keywords[keyword.id] = existing
@@ -165,6 +170,7 @@ struct KeywordHistory: Codable {
     /// along with the history nothing is left to show.
     mutating func remove(_ keyword: TrackedKeyword, from project: String?) {
         guard var existing = keywords[keyword.id] else { return }
+        note(keyword.id, project: project, added: false)
         if let project { existing.projects.remove(project) }
         if project == nil || existing.projects.isEmpty {
             keywords[keyword.id] = nil
@@ -246,6 +252,12 @@ struct KeywordHistory: Codable {
             for check in days.values { referenced.formUnion(check.top) }
         }
         apps = apps.filter { referenced.contains(Int($0.key) ?? -1) }
+
+        // 더하고 뺀 기록도 기록만큼만 — 그보다 오래된 사본이 돌아올 일은 없다.
+        if let edits, let oldest = calendar.date(byAdding: .day, value: -Self.retentionDays, to: now) {
+            let kept = edits.filter { $0.value.at >= oldest }
+            self.edits = kept.isEmpty ? nil : kept
+        }
     }
 
     // MARK: - Reading
@@ -407,5 +419,90 @@ extension KeywordHistory {
         links.reduce(into: [:]) { names, link in
             if let name = apps[String(link.value)]?.name { names[link.key] = name }
         }
+    }
+}
+
+// MARK: - 기기 사이에서 합치기
+
+/// 추적 키워드 하나를 한 앱(또는 통째로)에서 더하거나 뺀 일.
+struct KeywordEdit: Codable, Equatable {
+    var added: Bool
+    var at: Date
+
+    /// 키워드 id 와 앱. 앱이 nil 이면 키워드 통째로("*").
+    static func key(_ id: String, project: String?) -> String { "\(id)\n\(project ?? "*")" }
+}
+
+extension KeywordHistory {
+
+    fileprivate mutating func note(_ id: String, project: String?, added: Bool, at: Date = Date()) {
+        var all = edits ?? [:]
+        all[KeywordEdit.key(id, project: project)] = KeywordEdit(added: added, at: at)
+        edits = all
+    }
+
+    /// 두 기기의 기록을 하나로. 어느 쪽에서 합쳐도 같은 것이 나온다.
+    ///
+    ///  · 더하고 뺀 일은 키(키워드 · 앱)마다 늦은 쪽.
+    ///  · 키워드는 양쪽을 다 모은 뒤 그 일들을 다시 적용한다 — 저쪽 사본에 남아 있던 것도
+    ///    이쪽에서 뺀 뒤라면 빠진다. 통째로 뺀 뒤에 다시 더한 앱만 남는다.
+    ///  · 날마다 본 순위는 날짜마다 늦게 본 쪽. 앱 정보 · 이음은 빈 칸만 채운다.
+    func merged(with other: KeywordHistory) -> KeywordHistory {
+        var result = self
+
+        var allEdits = edits ?? [:]
+        for (key, edit) in other.edits ?? [:] where (allEdits[key]?.at ?? .distantPast) < edit.at {
+            allEdits[key] = edit
+        }
+        result.edits = allEdits.isEmpty ? nil : allEdits
+
+        for (id, keyword) in other.keywords {
+            if var mine = result.keywords[id] {
+                mine.projects.formUnion(keyword.projects)
+                result.keywords[id] = mine
+            } else {
+                result.keywords[id] = keyword
+            }
+        }
+
+        for (id, keyword) in result.keywords {
+            let whole = allEdits[KeywordEdit.key(id, project: nil)]
+            var projects = keyword.projects
+            if let whole, !whole.added {
+                // 통째로 뺀 뒤에 다시 더한 앱만.
+                projects = projects.filter { project in
+                    guard let edit = allEdits[KeywordEdit.key(id, project: project)] else { return false }
+                    return edit.added && edit.at > whole.at
+                }
+                if projects.isEmpty {
+                    result.keywords[id] = nil
+                    continue
+                }
+            } else {
+                projects = projects.filter { allEdits[KeywordEdit.key(id, project: $0)]?.added != false }
+                if projects.isEmpty && !keyword.projects.isEmpty {
+                    result.keywords[id] = nil
+                    continue
+                }
+            }
+            result.keywords[id]?.projects = projects
+        }
+
+        for (id, days) in other.checks where result.keywords[id] != nil {
+            var mine = result.checks[id] ?? [:]
+            for (day, check) in days where (mine[day]?.checkedAt ?? .distantPast) < check.checkedAt {
+                mine[day] = check
+            }
+            result.checks[id] = mine
+        }
+        result.checks = result.checks.filter { result.keywords[$0.key] != nil }
+
+        for (id, app) in other.apps where result.apps[id] == nil { result.apps[id] = app }
+        for (project, trackId) in other.links where result.links[project] == nil { result.links[project] = trackId }
+        if let theirs = other.lastCheckedAt, (result.lastCheckedAt ?? .distantPast) < theirs {
+            result.lastCheckedAt = theirs
+        }
+        result.prune()
+        return result
     }
 }

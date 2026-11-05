@@ -2,13 +2,12 @@
 //  PhoneRootView.swift
 //  FeedbackHubViewer
 //
-//  The iPhone layout: 하단 탭 하나가 기능 무리 하나다 — 할 일 · 목소리 · 품질 · 성장 · 수익.
-//  맥의 기능 사이드바와 같은 무리를 엄지 닿는 자리로 옮긴 것이라, 두 기기에서 무엇이
-//  어디 있는지가 같다.
+//  The iPhone layout: 하단 탭 다섯 — 현황 · 할 일 · 목소리 · 앱 상태 · 마케팅(`FeedbackStore.PhoneTab`).
+//  현황은 모든 기능의 지금을 한 장에 둔 첫 화면이다(`PhoneOverviewView`).
 //
-//  무리 안에 기능이 여럿이면(목소리 = 피드백 · 리뷰) 탭 맨 위의 세그먼트로 고르고, 그 아래가
-//  그 기능으로 본 앱 목록이다. 앱을 누르면 그 앱의 화면 → 피드백 상세로 민다. 할 일은 이미
-//  모든 앱을 앱별로 묶은 화면이라 앱 목록 없이 바로 연다.
+//  탭마다 맨 앞은 맥 사이드바 같은 기능 목록이다(줄마다 한마디와 뱃지). 기능을 누르면 그
+//  기능으로 본 앱 목록을 밀고, 앱을 누르면 그 앱의 화면 → 피드백 상세로 민다. 할 일 · 소식은
+//  이미 모든 앱을 한 목록에 둔 화면이라 앱 목록 없이 바로 연다.
 //
 //  탭마다 스택이 따로라(`FeedbackStore.phonePaths`) 탭을 오가도 보던 자리가 남는다.
 //
@@ -33,9 +32,9 @@ struct PhoneRootView: View {
         let metrics = SectionMetrics(store: store, keywords: keywords, purchases: purchases, design: design, charts: charts, news: news)
 
         TabView(selection: tabSelection(metrics)) {
-            ForEach(FeedbackStore.ProjectSection.Group.phoneTabs) { tab in
+            ForEach(FeedbackStore.PhoneTab.allCases) { tab in
                 PhoneTab(tab: tab)
-                    .tabItem { Label(tab.tabTitle, systemImage: tab.systemImage) }
+                    .tabItem { Label(tab.rawValue, systemImage: tab.systemImage) }
                     .badge(badgeCount(tab, metrics: metrics))
                     .tag(tab)
             }
@@ -46,25 +45,17 @@ struct PhoneRootView: View {
     }
 
     /// 지금 열린 탭을 다시 누르면 그 탭의 맨 앞으로 — 아이폰 앱들이 다 그렇게 한다.
-    /// 다른 탭으로 옮길 때, 지금 고른 기능에는 뱃지가 없고 다른 기능에 있으면 그 기능을 연다 —
-    /// 탭 뱃지를 보고 들어왔는데 뱃지 없는 화면이 열려 길을 잃지 않게.
-    private func tabSelection(_ metrics: SectionMetrics) -> Binding<FeedbackStore.ProjectSection.Group> {
+    private func tabSelection(_ metrics: SectionMetrics) -> Binding<FeedbackStore.PhoneTab> {
         Binding(get: { store.phoneTab },
                 set: { tab in
-                    if tab == store.phoneTab {
-                        store.phonePaths[tab] = NavigationPath()
-                    } else if metrics.badge(store.phoneSection(for: tab), project: nil) == nil,
-                              let flagged = tab.phoneSections.first(where: { metrics.badge($0, project: nil) != nil }) {
-                        store.phoneSections[tab] = flagged
-                        store.phonePaths[tab] = NavigationPath()
-                    }
+                    if tab == store.phoneTab { store.phonePaths[tab] = NavigationPath() }
                     store.phoneTab = tab
                 })
     }
 
     /// 탭 뱃지 = 그 무리 기능들의 "손볼 것" 합. 숫자가 없으면 뱃지도 없다(0은 안 뜬다).
-    private func badgeCount(_ tab: FeedbackStore.ProjectSection.Group, metrics: SectionMetrics) -> Int {
-        tab.phoneSections.reduce(0) { $0 + (metrics.badge($1, project: nil)?.count ?? 0) }
+    private func badgeCount(_ tab: FeedbackStore.PhoneTab, metrics: SectionMetrics) -> Int {
+        tab.sections.reduce(0) { $0 + (metrics.badge($1, project: nil)?.count ?? 0) }
     }
 }
 
@@ -79,7 +70,7 @@ private struct PhoneTab: View {
     @ObservedObject private var changes = SectionChanges.shared
     @ObservedObject private var marketing = MarketingStore.shared
     @ObservedObject private var leadStore = LeadStore.shared
-    let tab: FeedbackStore.ProjectSection.Group
+    let tab: FeedbackStore.PhoneTab
 
     var body: some View {
         NavigationStack(path: path) {
@@ -90,9 +81,13 @@ private struct PhoneTab: View {
                     ToolbarItem(placement: .topBarLeading) { EnvironmentBadge() }
                 }
                 .hubToolbar()
+                .navigationDestination(for: FeedbackStore.SectionRoute.self) { route in
+                    appList(route.section)
+                        .hubToolbar()
+                }
                 .navigationDestination(for: FeedbackStore.ProjectRoute.self) { route in
                     ProjectSectionView(project: route.project,
-                                       section: route.section ?? store.phoneSection(for: tab))
+                                       section: route.section ?? tab.sections.first ?? .inbox)
                         .hubToolbar()
                 }
                 .navigationDestination(for: Feedback.self) { feedback in
@@ -107,54 +102,59 @@ private struct PhoneTab: View {
                 set: { store.phonePaths[tab] = $0 })
     }
 
+    private var metrics: SectionMetrics {
+        SectionMetrics(store: store, keywords: keywords, purchases: purchases, design: design, charts: charts, news: news)
+    }
+
+    /// 맨 앞 — 현황 탭은 한 장짜리 현황, 나머지는 기능 목록.
     @ViewBuilder
     private var root: some View {
-        let section = store.phoneSection(for: tab)
-        if section.usesAppList {
-            AppListView(section: section, pushes: true)
-                .safeAreaInset(edge: .top, spacing: 0) { header(current: section) }
-                .onAppear { store.projectSection = section }
-                .onChange(of: section) { _, new in store.projectSection = new }
+        if tab == .overview {
+            PhoneOverviewView()
         } else {
-            ProjectSectionView(project: nil, section: section)
-                .safeAreaInset(edge: .top, spacing: 0) { header(current: section) }
-                .onAppear { store.projectSection = section }
-                .onChange(of: section) { _, new in store.projectSection = new }
+            sectionList
         }
     }
 
-    /// 무리 안의 기능 고르기 + 개발 빌드 띠. 기능이 하나뿐이면 세그먼트는 없다.
-    @ViewBuilder
-    private func header(current: FeedbackStore.ProjectSection) -> some View {
-        let sections = tab.phoneSections
-        if sections.count > 1 || CloudKitEnvironment.current == .development {
-            VStack(spacing: 8) {
-                DevelopmentBanner()
-                if sections.count > 1 {
-                    Picker("기능", selection: Binding(get: { current },
-                                                     set: { store.phoneSections[tab] = $0 })) {
-                        // 탭 뱃지가 어느 기능 것인지 — 세그먼트에 수를 붙인다.
-                        let metrics = SectionMetrics(store: store, keywords: keywords, purchases: purchases,
-                                                     design: design, charts: charts, news: news)
-                        ForEach(sections) { section in
-                            let count = metrics.badge(section, project: nil)?.count ?? 0
-                            Text(count > 0 ? "\(section.rawValue) ● \(count > 99 ? "99+" : "\(count)")" : section.rawValue)
-                                .tag(section)
+    /// 한 기능으로 본 앱 목록. 목록을 봤으면 그 기능의 뱃지는 지운다 — 어느 앱이 바뀌었는지는 줄에 남는다.
+    private func appList(_ section: FeedbackStore.ProjectSection) -> some View {
+        AppListView(section: section, pushes: true)
+            .onAppear { store.projectSection = section }
+            .onChange(of: section) { _, new in store.projectSection = new }
+            .modifier(SectionVisitTracker(section: section, project: nil, metrics: metrics,
+                                          isActive: store.phoneTab == tab))
+    }
+
+    /// 맥 사이드바처럼 무리별 기능 목록. 줄에 그 기능의 한마디와 뱃지. 무리가 하나면 머리글은 없다.
+    private var sectionList: some View {
+        let metrics = metrics
+        return List {
+            ForEach(tab.groups) { group in
+                Section {
+                    ForEach(group.phoneSections) { section in
+                        link(section) {
+                            FeatureRow(section: section,
+                                       detail: metrics.label(section, project: nil),
+                                       badge: metrics.badge(section, project: nil),
+                                       isSelected: false)
                         }
                     }
-                    .pickerStyle(.segmented)
-                    .labelsHidden()
+                } header: {
+                    if tab.groups.count > 1 { Text(group.rawValue) }
                 }
             }
-            .hubHeaderBar(horizontalPadding: 16, verticalPadding: 8)
         }
+        .navigationTitle(tab.rawValue)
     }
 
+    /// 앱 목록을 거치는 기능은 앱 목록으로, 할 일 · 소식은 그 화면으로.
     @ViewBuilder
-    private var banner: some View {
-        if CloudKitEnvironment.current == .development {
-            DevelopmentBanner()
-                .hubHeaderBar(horizontalPadding: 16, verticalPadding: 8)
+    private func link(_ section: FeedbackStore.ProjectSection,
+                      @ViewBuilder label: () -> some View) -> some View {
+        if section.usesAppList {
+            NavigationLink(value: FeedbackStore.SectionRoute(section: section), label: label)
+        } else {
+            NavigationLink(value: FeedbackStore.ProjectRoute(project: nil, section: section), label: label)
         }
     }
 }

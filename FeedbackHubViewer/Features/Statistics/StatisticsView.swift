@@ -305,10 +305,10 @@ struct StatisticsDashboard: View {
         ForEach(ProjectStatsSpecCatalog.failures) { failure in
             Card(title: "스펙을 못 읽었습니다", systemImage: "exclamationmark.triangle") {
                 Text(failure.file)
-                    .font(.callout.monospaced())
+                    .font(.hubCallout.monospaced())
                     .frame(maxWidth: .infinity, alignment: .leading)
                 Text(failure.reason)
-                    .font(.caption)
+                    .font(.hubCaption)
                     .foregroundStyle(.orange)
                     .fixedSize(horizontal: false, vertical: true)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -438,12 +438,12 @@ struct StatisticsDashboard: View {
                 Card(title: "스펙에 없는 지표", systemImage: "questionmark.circle") {
                     if !metrics.isEmpty {
                         Text("지표: " + metrics.joined(separator: ", "))
-                            .font(.callout.monospaced())
+                            .font(.hubCallout.monospaced())
                             .fixedSize(horizontal: false, vertical: true)
                     }
                     if !events.isEmpty {
                         Text("이벤트: " + events.joined(separator: ", "))
-                            .font(.callout.monospaced())
+                            .font(.hubCallout.monospaced())
                             .fixedSize(horizontal: false, vertical: true)
                     }
                     footnote("이 앱이 보내기 시작했는데 스펙에는 아직 이름이 없는 값이에요. 값은 위 카드에 키 원문 그대로 나옵니다. \(spec.appName ?? spec.appId) 리포의 docs/usage-spec.json에 라벨을 적고 scripts/sync-stats-specs.sh를 돌리면 사라져요.")
@@ -454,14 +454,14 @@ struct StatisticsDashboard: View {
 
     private func footnote(_ text: String) -> some View {
         Text(text)
-            .font(.caption2)
-            .foregroundStyle(.tertiary)
+            .font(.hubCaption2)
+            .foregroundStyle(HierarchicalShapeStyle.hubFaint)
             .fixedSize(horizontal: false, vertical: true)
     }
 
     private func usageNotice(_ text: String) -> some View {
         Label(text, systemImage: "exclamationmark.triangle")
-            .font(.caption)
+            .font(.hubCaption)
             .foregroundStyle(.secondary)
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(10)
@@ -471,7 +471,7 @@ struct StatisticsDashboard: View {
     private var noUsageCard: some View {
         Card(title: "사용 통계", systemImage: "chart.bar.xaxis") {
             Text("이 프로젝트는 아직 UsageSnapshot / UsageEvent 를 보내지 않았습니다. 앱이 LeeoKit의 사용 통계 전송을 켜고 스키마가 이 환경에 배포되면 여기에 그대로 표시됩니다.")
-                .font(.callout)
+                .font(.hubCallout)
                 .foregroundStyle(.secondary)
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
@@ -534,7 +534,7 @@ struct StatisticsDashboard: View {
     private func purchaseMenu(_ installs: FeedbackStore.AudienceInstalls) -> some View {
         HStack(spacing: 8) {
             Text("산 것으로")
-                .font(.caption)
+                .font(.hubCaption)
                 .foregroundStyle(.secondary)
             Menu {
                 ForEach(installs.cells, id: \.mask) { cell in
@@ -553,12 +553,12 @@ struct StatisticsDashboard: View {
                 }
             } label: {
                 Text(audience.axis == .purchase ? audience.label : "고르기")
-                    .font(.caption.weight(.medium))
+                    .font(.hubCaption.weight(.medium))
             }
             .fixedSize()
             if audience.axis == .purchase {
                 Button("해제") { audience = .all }
-                    .font(.caption)
+                    .font(.hubCaption)
                     .buttonStyle(.borderless)
             }
         }
@@ -568,7 +568,7 @@ struct StatisticsDashboard: View {
     private func regionMenu(_ installs: FeedbackStore.AudienceInstalls) -> some View {
         HStack(spacing: 8) {
             Text("나라로")
-                .font(.caption)
+                .font(.hubCaption)
                 .foregroundStyle(.secondary)
             Menu {
                 ForEach(installs.regionOrder, id: \.self) { code in
@@ -587,12 +587,12 @@ struct StatisticsDashboard: View {
                 }
             } label: {
                 Text(audience.axis == .region ? audience.label : "고르기")
-                    .font(.caption.weight(.medium))
+                    .font(.hubCaption.weight(.medium))
             }
             .fixedSize()
             if audience.axis == .region {
                 Button("해제") { audience = .all }
-                    .font(.caption)
+                    .font(.hubCaption)
                     .buttonStyle(.borderless)
             }
         }
@@ -714,10 +714,10 @@ struct StatisticsDashboard: View {
             VStack(alignment: .leading, spacing: 3) {
                 HStack(alignment: .firstTextBaseline) {
                     Text("고착도 (평균 DAU ÷ MAU)")
-                        .font(.callout)
+                        .font(.hubCallout)
                     Spacer(minLength: 8)
                     Text(String(format: "%.0f%%", (ratio * 100).rounded()))
-                        .font(.callout.monospacedDigit().weight(.semibold))
+                        .font(.hubCallout.monospacedDigit().weight(.semibold))
                 }
                 MeterBar(ratio: ratio, height: 5)
                 footnote("최근 30일에 한 번이라도 쓴 사람이 30일 중 평균 \(String(format: "%.1f", ratio * 30))일 씁니다. 매일 여는 도구는 높고, 필요할 때만 여는 도구는 낮아요 — 낮다고 나쁜 게 아니라 앱의 성격입니다. 분자는 오늘이 아니라 지나간 날들의 하루 평균이라, 아직 끝나지 않은 오늘 때문에 아침마다 0으로 떨어지지 않아요.")
@@ -1306,8 +1306,8 @@ struct StatisticsDashboard: View {
 
                 Text("발생 시각(occurredAt) 기준입니다. 키보드처럼 나중에 소급 전송된 활동도 실제 사용일에 표시됩니다."
                      + (usage.hasEventCounts ? "" : " 사용 건수 계열은 \(audience.label) 사용자만 골라 셀 수 없어 빠져 있고, 사람·설치 수 두 계열만 그립니다."))
-                    .font(.caption2)
-                    .foregroundStyle(.tertiary)
+                    .font(.hubCaption2)
+                    .foregroundStyle(HierarchicalShapeStyle.hubFaint)
             }
         }
     }
@@ -1387,25 +1387,25 @@ struct StatisticsDashboard: View {
                             // after the colon is the interesting half, so
                             // cutting the middle loses the answer.
                             Text(spec?.label(forEvent: event.name) ?? event.name)
-                                .font(.callout)
+                                .font(.hubCallout)
                                 .fixedSize(horizontal: false, vertical: true)
                             HStack(spacing: 8) {
                                 // 건수가 없는 동안은 사람 수가 그 자리의 큰 숫자다.
                                 if let count = event.count {
                                     Text("\(count)건")
-                                        .font(.callout.monospacedDigit().weight(.semibold))
+                                        .font(.hubCallout.monospacedDigit().weight(.semibold))
                                     Text("\(event.installs)명")
-                                        .font(.caption.monospacedDigit())
+                                        .font(.hubCaption.monospacedDigit())
                                         .foregroundStyle(.secondary)
                                 } else {
                                     Text("\(event.installs)명")
-                                        .font(.callout.monospacedDigit().weight(.semibold))
+                                        .font(.hubCallout.monospacedDigit().weight(.semibold))
                                 }
                                 Spacer(minLength: 4)
                                 if let last = event.lastAt {
                                     Text("마지막 \(AppFormat.relative(last))")
-                                        .font(.caption2)
-                                        .foregroundStyle(.tertiary)
+                                        .font(.hubCaption2)
+                                        .foregroundStyle(HierarchicalShapeStyle.hubFaint)
                                 }
                             }
                         }
@@ -1417,8 +1417,8 @@ struct StatisticsDashboard: View {
                 Text(usage.hasEventCounts
                      ? "왼쪽 큰 수는 몇 번 일어났는지(건), 그 옆은 몇 사람이 했는지(명)입니다. 이름은 앱이 보낸 그대로이고, 콜론 뒤는 슬라이스(예: paywall_view:memo)."
                      : "\(audience.label) 사용자 중 몇 사람이 했는지(명)입니다. 건수는 무리별로 가를 수 없어 빠졌고, 그래서 목록도 사람 수 순입니다. 이름은 앱이 보낸 그대로예요.")
-                    .font(.caption2)
-                    .foregroundStyle(.tertiary)
+                    .font(.hubCaption2)
+                    .foregroundStyle(HierarchicalShapeStyle.hubFaint)
             }
         }
     }
@@ -1437,7 +1437,7 @@ struct StatisticsDashboard: View {
                 Text(usage.hasEventCounts
                      ? "최근 7일 \(usage.events7)건 · 전체 \(all.count)건"
                      : "\(audience.label) 사용자 \(all.count)건 (이 기기가 들고 있는 최근 기록)")
-                    .font(.callout.monospacedDigit())
+                    .font(.hubCallout.monospacedDigit())
                     .foregroundStyle(.secondary)
 
                 VStack(spacing: 0) {
@@ -1452,7 +1452,7 @@ struct StatisticsDashboard: View {
                         eventLogLimit += 50
                     } label: {
                         Label("더 보기 (남은 \(all.count - shown.count)건)", systemImage: "chevron.down")
-                            .font(.callout)
+                            .font(.hubCallout)
                     }
                     .buttonStyle(.borderless)
                 } else if eventLogLimit > 20 {
@@ -1460,15 +1460,15 @@ struct StatisticsDashboard: View {
                         eventLogLimit = 20
                     } label: {
                         Label("접기", systemImage: "chevron.up")
-                            .font(.callout)
+                            .font(.hubCallout)
                     }
                     .buttonStyle(.borderless)
                 }
 
                 Text("발생 시각(occurredAt) 기준 최신순입니다. 설치 ID는 앱이 보낸 익명 식별자의 앞부분이라, 같은 값이면 같은 기기입니다."
                      + (usage.hasEventCounts ? "" : " 여기는 한 줄이 곧 한 설치의 행동이라 \(audience.label) 사용자만 정확히 골라 낼 수 있어요 — 접힌 건수와 달리 원본에는 설치 ID가 붙어 있습니다."))
-                    .font(.caption2)
-                    .foregroundStyle(.tertiary)
+                    .font(.hubCaption2)
+                    .foregroundStyle(HierarchicalShapeStyle.hubFaint)
             }
         }
     }
@@ -1477,21 +1477,21 @@ struct StatisticsDashboard: View {
         VStack(alignment: .leading, spacing: 2) {
             HStack(alignment: .firstTextBaseline, spacing: 8) {
                 Text(spec?.label(forEvent: event.name) ?? event.name)
-                    .font(.callout)
+                    .font(.hubCallout)
                     .fixedSize(horizontal: false, vertical: true)
                 Spacer(minLength: 4)
                 Text(AppFormat.dateTime(event.occurredAt))
-                    .font(.caption.monospacedDigit())
+                    .font(.hubCaption.monospacedDigit())
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
             }
             HStack(spacing: 6) {
                 if scope == nil {
-                    Tag(text: store.displayName(for: event.projectKey), font: .caption2)
+                    Tag(text: store.displayName(for: event.projectKey), font: .hubCaption2)
                 }
                 Text("설치 \(Self.shortInstall(event.installID)) · v\(event.appVersion) · \(event.platform)")
-                    .font(.caption2.monospacedDigit())
-                    .foregroundStyle(.tertiary)
+                    .font(.hubCaption2.monospacedDigit())
+                    .foregroundStyle(HierarchicalShapeStyle.hubFaint)
                     .lineLimit(1)
             }
         }
@@ -1516,13 +1516,13 @@ struct StatisticsDashboard: View {
                     ForEach(Array(metrics.enumerated()), id: \.element.id) { index, metric in
                         HStack(alignment: .firstTextBaseline, spacing: 8) {
                             Text(spec?.label(forMetric: metric.key) ?? metric.key)
-                                .font(.callout)
+                                .font(.hubCallout)
                                 .fixedSize(horizontal: false, vertical: true)
                             Spacer(minLength: 4)
                             Text(Self.format(metric.average))
-                                .font(.callout.monospacedDigit().weight(.semibold))
+                                .font(.hubCallout.monospacedDigit().weight(.semibold))
                             Text("합계 \(Self.format(metric.total))")
-                                .font(.caption2.monospacedDigit())
+                                .font(.hubCaption2.monospacedDigit())
                                 .foregroundStyle(.secondary)
                                 .layoutPriority(-1)
                         }
@@ -1531,8 +1531,8 @@ struct StatisticsDashboard: View {
                     }
                 }
                 Text("앱이 스냅샷의 metrics 로 보낸 값 그대로입니다 (그 값을 보낸 설치 기준 평균).")
-                    .font(.caption2)
-                    .foregroundStyle(.tertiary)
+                    .font(.hubCaption2)
+                    .foregroundStyle(HierarchicalShapeStyle.hubFaint)
             }
         }
     }
@@ -1548,11 +1548,11 @@ struct StatisticsDashboard: View {
                         VStack(alignment: .leading, spacing: 3) {
                             HStack(alignment: .firstTextBaseline) {
                                 Text(spec?.label(forMetric: share.key) ?? share.key)
-                                    .font(.callout)
+                                    .font(.hubCallout)
                                     .fixedSize(horizontal: false, vertical: true)
                                 Spacer(minLength: 8)
                                 Text("\(Int((share.ratio * 100).rounded()))% (\(share.count))")
-                                    .font(.callout.monospacedDigit().weight(.semibold))
+                                    .font(.hubCallout.monospacedDigit().weight(.semibold))
                             }
                             MeterBar(ratio: share.ratio, height: 5)
                         }
@@ -1597,11 +1597,11 @@ struct StatisticsDashboard: View {
                 ForEach(buckets.prefix(12)) { bucket in
                     HStack(alignment: .firstTextBaseline) {
                         Text(bucket.key)
-                            .font(.callout)
+                            .font(.hubCallout)
                             .fixedSize(horizontal: false, vertical: true)
                         Spacer(minLength: 8)
                         Text("\(bucket.count)")
-                            .font(.callout.monospacedDigit())
+                            .font(.hubCallout.monospacedDigit())
                             .foregroundStyle(.secondary)
                     }
                 }
@@ -1645,7 +1645,7 @@ struct StatisticsDashboard: View {
                             y: .value("별점", "\(entry.rating)★"))
                         .foregroundStyle(.yellow.gradient)
                         .annotation(position: .trailing) {
-                            Text("\(entry.count)").font(.caption2).foregroundStyle(.secondary)
+                            Text("\(entry.count)").font(.hubCaption2).foregroundStyle(.secondary)
                         }
                 }
                 .chartXAxis(.hidden)
@@ -1661,7 +1661,7 @@ struct StatisticsDashboard: View {
                             y: .value("유형", entry.type))
                         .foregroundStyle(Color.teal.gradient)
                         .annotation(position: .trailing) {
-                            Text("\(entry.count)").font(.caption2).foregroundStyle(.secondary)
+                            Text("\(entry.count)").font(.hubCaption2).foregroundStyle(.secondary)
                         }
                 }
                 .chartXAxis(.hidden)
@@ -1677,7 +1677,7 @@ struct StatisticsDashboard: View {
 
     private func emptyNote(_ text: String) -> some View {
         Text(text)
-            .font(.callout)
+            .font(.hubCallout)
             .foregroundStyle(.secondary)
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.vertical, 8)
@@ -1798,7 +1798,7 @@ private struct SpecTile: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 3) {
             Text(label)
-                .font(.caption)
+                .font(.hubCaption)
                 .foregroundStyle(.secondary)
                 .lineLimit(2)
                 .fixedSize(horizontal: false, vertical: true)
@@ -1808,8 +1808,8 @@ private struct SpecTile: View {
                 .minimumScaleFactor(0.7)
             if let hint {
                 Text(hint)
-                    .font(.caption2)
-                    .foregroundStyle(.tertiary)
+                    .font(.hubCaption2)
+                    .foregroundStyle(HierarchicalShapeStyle.hubFaint)
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
@@ -1835,7 +1835,7 @@ struct SpecBar<Trailing: View>: View {
         VStack(alignment: .leading, spacing: 3) {
             HStack(alignment: .firstTextBaseline) {
                 Text(label)
-                    .font(.callout)
+                    .font(.hubCallout)
                     .foregroundStyle(isMuted ? AnyShapeStyle(.secondary) : AnyShapeStyle(.primary))
                     .fixedSize(horizontal: false, vertical: true)
                 Spacer(minLength: 8)
@@ -1844,8 +1844,8 @@ struct SpecBar<Trailing: View>: View {
             MeterBar(ratio: ratio, tint: tint)
             if let hint {
                 Text(hint)
-                    .font(.caption2)
-                    .foregroundStyle(.tertiary)
+                    .font(.hubCaption2)
+                    .foregroundStyle(HierarchicalShapeStyle.hubFaint)
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
@@ -1858,7 +1858,7 @@ extension SpecBar where Trailing == Text {
     init(label: String, value: String, ratio: Double, hint: String? = nil,
          tint: Color = .accentColor, isMuted: Bool = false) {
         self.init(label: label, ratio: ratio, hint: hint, tint: tint, isMuted: isMuted) {
-            Text(value).font(.callout.monospacedDigit().weight(.semibold))
+            Text(value).font(.hubCallout.monospacedDigit().weight(.semibold))
         }
     }
 }

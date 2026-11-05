@@ -33,6 +33,11 @@ struct FeedbackHubViewerApp: App {
     #endif
     @Environment(\.scenePhase) private var scenePhase
 
+    init() {
+        // 가게들이 `UserDefaults` 를 읽기 전에 iCloud 의 설정 · 확인 상태를 내려 둔다.
+        SyncedDefaults.start()
+    }
+
     var body: some Scene {
         WindowGroup {
             rootView
@@ -84,6 +89,10 @@ struct FeedbackHubViewerApp: App {
                 .onChange(of: scenePhase) { _, phase in
                     if phase == .active {
                         purchases.reloadCredentialsIfMissing()
+                        // 다른 기기가 쌓은 키워드 · 차트 기록과 확인한 리뷰(`SyncedBlob`).
+                        keywords.pullFromCloud()
+                        charts.pullFromCloud()
+                        Task { await purchases.viewedReviewsCloud.pull(minimumInterval: 60) }
                         news.collect()
                         syncKeywordFieldsIfDue()
                     }

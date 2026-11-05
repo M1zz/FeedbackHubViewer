@@ -108,6 +108,12 @@ final class NewsStore: ObservableObject {
             items = saved.items
             lastReadAt = saved.lastReadAt
         }
+        adoptSyncedRead()
+        readObserver = NotificationCenter.default.addObserver(forName: SyncedDefaults.changed, object: nil,
+                                                              queue: .main) { [weak self] note in
+            guard note.touches(Self.lastReadKey) else { return }
+            Task { @MainActor in self?.adoptSyncedRead() }
+        }
         loop = Task { [weak self] in
             while !Task.isCancelled {
                 self?.collect()
@@ -206,6 +212,19 @@ final class NewsStore: ObservableObject {
     func markAllRead() {
         lastReadAt = Date()
         memory.lastReadAt = lastReadAt
+        save()
+        SyncedDefaults.set(lastReadAt, forKey: Self.lastReadKey)
+    }
+
+    /// 다른 기기에서 소식을 읽은 시각(`SyncedDefaults`). 늦은 쪽이 이긴다.
+    private static let lastReadKey = "newsLastReadAt"
+    private var readObserver: NSObjectProtocol?
+
+    private func adoptSyncedRead() {
+        guard let synced = UserDefaults.standard.object(forKey: Self.lastReadKey) as? Date,
+              synced > lastReadAt else { return }
+        lastReadAt = synced
+        memory.lastReadAt = synced
         save()
     }
 

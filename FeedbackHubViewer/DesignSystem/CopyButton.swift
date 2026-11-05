@@ -28,14 +28,14 @@ struct CopyButton: View {
             let label = Label(copied ? "복사됨" : title,
                               systemImage: copied ? "checkmark" : "doc.on.doc")
             if isCompact {
-                label.labelStyle(.iconOnly).font(.caption)
+                label.labelStyle(.iconOnly).font(.hubCaption)
             } else {
                 label
             }
         }
         .buttonStyle(.borderless)
         .disabled(text.isEmpty)
-        .help(copied ? "복사했습니다" : "클립보드로 복사")
+        .help(copied ? "복사했습니다" : title == "복사" ? "클립보드로 복사" : title)
         // Tied to `copied` rather than started inside the action: leaving the
         // view mid-countdown cancels the sleep instead of writing to state
         // that is already gone.
@@ -45,5 +45,16 @@ struct CopyButton: View {
             guard !Task.isCancelled else { return }
             copied = false
         }
+    }
+}
+
+/// 신호등 줄 끝의 작은 복사 단추 — 앱 리포에서 연 Claude 에 붙여넣을 글.
+struct ClaudeCopyIcon: View {
+    let text: String
+
+    var body: some View {
+        CopyButton(text: text, title: "Claude에게 맡길 글 복사", isCompact: true)
+            .font(.body)
+            .frame(minWidth: 32, minHeight: 32)
     }
 }

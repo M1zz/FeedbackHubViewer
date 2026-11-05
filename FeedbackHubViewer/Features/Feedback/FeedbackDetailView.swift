@@ -77,11 +77,11 @@ struct FeedbackDetailView: View {
                         ForEach(Array(feedback.allFields.enumerated()), id: \.offset) { index, field in
                             HStack(alignment: .top, spacing: 12) {
                                 Text(field.key)
-                                    .font(.callout.monospaced())
+                                    .font(.hubCallout.monospaced())
                                     .foregroundStyle(.secondary)
                                     .frame(width: fieldKeyWidth, alignment: .leading)
                                 Text(field.value.isEmpty ? "—" : field.value)
-                                    .font(.callout)
+                                    .font(.hubCallout)
                                     .textSelection(.enabled)
                                     .frame(maxWidth: .infinity, alignment: .leading)
                             }
@@ -176,7 +176,7 @@ struct FeedbackDetailView: View {
                 Spacer(minLength: 8)
                 if let decided = store.decidedAt(for: feedback) {
                     Text("\(AppFormat.dateTime(decided)) 처리")
-                        .font(.caption)
+                        .font(.hubCaption)
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
                 }
@@ -199,7 +199,7 @@ struct FeedbackDetailView: View {
             Text(status.isHandled
                  ? "처리한 피드백은 목록에서 숨겨집니다. 목록 아래 '처리한 피드백 보기'로 다시 볼 수 있어요. 이 \(Platform.deviceNoun)에만 저장되고 CloudKit 레코드는 그대로입니다."
                  : "반영했거나 반영하지 않기로 했다면 위에서 표시해 두세요. 표시하면 목록에서 자동으로 빠집니다.")
-                .font(.caption)
+                .font(.hubCaption)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
         }
@@ -315,7 +315,7 @@ struct FeedbackDetailView: View {
             ForEach(items, id: \.0) { label, value in
                 VStack(alignment: .leading, spacing: 2) {
                     Text(label)
-                        .font(.subheadline)
+                        .font(.hubSubheadline)
                         .foregroundStyle(.secondary)
                     // Record IDs and device names are long; wrapping keeps the
                     // whole value readable and copyable.

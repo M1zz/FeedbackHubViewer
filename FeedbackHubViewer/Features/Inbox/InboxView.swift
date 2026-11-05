@@ -59,7 +59,7 @@ struct InboxView: View {
     /// 처리하지 않은 피드백 전부, 새것부터. 버그와 나머지로 나눈다.
     private var pending: (bugs: [Feedback], others: [Feedback]) {
         let items = store.feedback(for: nil)
-            .filter { !store.status(of: $0).isHandled }
+            .filter { !store.isHandled($0) }
             .sorted { ($0.createdAt ?? .distantPast) > ($1.createdAt ?? .distantPast) }
         return (items.filter(\.isBugReport), items.filter { !$0.isBugReport })
     }
@@ -192,11 +192,12 @@ struct InboxView: View {
 
         if reviews != nil, !purchases.isConfigured {
             Section {
-                HStack {
+                // 아이폰에서는 말 아래에 버튼 — 옆에 두면 버튼이 두 줄로 꺾인다.
+                VStack(alignment: .leading, spacing: 8) {
                     Text("App Store Connect 키를 넣으면 모든 앱의 리뷰가 여기에 모입니다.")
                         .font(.body)
                         .foregroundStyle(.secondary)
-                    Spacer(minLength: 8)
+                        .fixedSize(horizontal: false, vertical: true)
                     OpenSettingsButton(title: "설정 열기")
                         .font(.body)
                 }
@@ -344,7 +345,7 @@ struct InboxView: View {
                     }
                 }
             }
-            .font(.callout)
+            .font(.hubCallout)
             .padding(.horizontal, 16)
             .padding(.vertical, 10)
             .background(.bar)
@@ -361,7 +362,8 @@ struct InboxView: View {
                         projectLabel: store.displayName(for: feedback.projectKey),
                         isUnread: store.isUnread(feedback),
                         status: store.status(of: feedback),
-                        note: store.note(for: feedback))
+                        note: store.note(for: feedback),
+                        showsProject: false)
                 #if os(iOS)
                 .contentShape(Rectangle())
                 .onTapGesture { store.push(feedback) }
@@ -374,9 +376,10 @@ struct InboxView: View {
                     Image(systemName: "circle")
                         .font(.title2)
                     Text("반영함")
-                        .font(.body)
+                        .font(.hubFootnote)
                 }
-                .foregroundStyle(.secondary)
+                // 단추 안의 .secondary 는 강조색이 옅어진 색이라 잘 안 읽힌다.
+                .foregroundStyle(Color.secondary)
                 .frame(minWidth: 54, minHeight: 54)
                 .contentShape(Rectangle())
             }

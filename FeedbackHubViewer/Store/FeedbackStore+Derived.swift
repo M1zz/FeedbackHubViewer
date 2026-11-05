@@ -78,6 +78,7 @@ extension FeedbackStore {
         var carryingCapacity: [CapacityKey: CarryingCapacity?] = [:]
         // 릴리즈 건강. nil 도 결과다("창 안에 버전을 가를 이벤트가 없다").
         var releaseHealth: [String: ReleaseHealth.Report?] = [:]
+        var stabilization: [StabilizationKey: Stabilization.Report?] = [:]
     }
 
     // MARK: - Reading through the cache
@@ -154,6 +155,7 @@ extension FeedbackStore {
         derived.trend = [:]
         derived.carryingCapacity = [:]
         derived.releaseHealth = [:]
+        derived.stabilization = [:]
     }
 
     // MARK: - The visible records

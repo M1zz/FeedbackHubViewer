@@ -203,7 +203,7 @@ struct ProjectComparisonView: View {
             }
             Text(note)
                 .font(.body)
-                .foregroundStyle(.tertiary)
+                .foregroundStyle(HierarchicalShapeStyle.hubFaint)
                 .fixedSize(horizontal: false, vertical: true)
         }
     }

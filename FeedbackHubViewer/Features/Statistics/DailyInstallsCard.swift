@@ -76,7 +76,7 @@ struct DailyInstallsCard: View {
 
             if days.isEmpty {
                 Text("설치일(installDate)을 보낸 스냅샷이 아직 없습니다. 앱이 스냅샷을 보내기 시작하면 하루하루 새로 들어온 설치가 여기 막대로 쌓여요.")
-                    .font(.callout)
+                    .font(.hubCallout)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             } else {
@@ -85,8 +85,8 @@ struct DailyInstallsCard: View {
                 Text((bands.isEmpty ? "" : "막대 하나가 그날 모든 앱에 새로 들어온 설치이고, 색이 앱입니다. 들어온 수가 많은 \(Self.maxBands)개 앱 밖은 '\(Self.othersName)'로 묶었어요. ")
                      + "스냅샷의 설치일(installDate)로 셉니다. 앱을 지웠다 다시 깔면 새 설치로 한 번 더 들어가요. 맨 오른쪽 오늘 막대는 아직 끝나지 않은 하루라 흐리게 그리고, 하루 평균에서도 뺐습니다."
                      + (days.count >= 30 ? " 선은 앞 7일의 평균이라 요일 들쭉날쭉을 걸러 방향만 보여 줍니다." : ""))
-                    .font(.caption2)
-                    .foregroundStyle(.tertiary)
+                    .font(.hubCaption2)
+                    .foregroundStyle(HierarchicalShapeStyle.hubFaint)
                     .fixedSize(horizontal: false, vertical: true)
             }
         }

@@ -209,7 +209,7 @@ private struct ProjectReviewsView: View {
                 ProgressView().controlSize(.small)
             } else if let fetched = feed.fetchedAt {
                 Text("\(AppFormat.relative(fetched)) 받음")
-                    .font(.caption)
+                    .font(.hubCaption)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
                     .help("마지막으로 App Store Connect 에서 리뷰를 받은 때. 툴바의 새로고침이 다시 받습니다.")
@@ -235,7 +235,7 @@ private struct ProjectReviewsView: View {
                             .fixedSize(horizontal: false, vertical: true)
                         Text("리뷰는 키 역할이 Admin · App Manager · Customer Support · Developer · Marketing 중 하나면 읽힙니다. 스토어에 아직 안 낸 앱이면 App Store Connect 에서 못 찾아요.")
                             .font(.body)
-                            .foregroundStyle(.tertiary)
+                            .foregroundStyle(HierarchicalShapeStyle.hubFaint)
                             .fixedSize(horizontal: false, vertical: true)
                     }
                     .padding(ReviewLayout.padding)
@@ -251,7 +251,7 @@ private struct ProjectReviewsView: View {
                     controls
                     if let error = feed.error {
                         Label("새로 받지 못해 저장해 둔 리뷰를 보여 줍니다 — \(error)", systemImage: "exclamationmark.triangle")
-                            .font(.callout)
+                            .font(.hubCallout)
                             .foregroundStyle(.orange)
                             .fixedSize(horizontal: false, vertical: true)
                     }
@@ -264,7 +264,7 @@ private struct ProjectReviewsView: View {
                             .padding(.vertical, 40)
                     } else {
                         Text(shown.count == feed.reviews.count ? "\(shown.count)건" : "\(shown.count)건 표시 / 전체 \(feed.reviews.count)건")
-                            .font(.caption)
+                            .font(.hubCaption)
                             .foregroundStyle(.secondary)
                         ForEach(shown) { review in
                             ReviewCard(review: review,
@@ -282,8 +282,7 @@ private struct ProjectReviewsView: View {
     private var summary: some View {
         FlowLayout(spacing: 6, lineSpacing: 6) {
             if let version = purchases.versions[project] {
-                Tag(text: "v\(version.version) · \(version.stateLabel)", systemImage: "shippingbox",
-                    tint: version.tone == .live ? .green : (version.tone == .blocked ? .red : .orange))
+                StoreVersionTag(status: version, font: .hubSubheadline)
             }
             if let average = feed.average {
                 Tag(text: String(format: "평균 %.2f", average), systemImage: "star.fill", tint: .yellow)
@@ -396,7 +395,7 @@ private struct AllReviewsView: View {
                                 .padding(.vertical, 40)
                         } else {
                             Text(shown.count == all.count ? "\(shown.count)건" : "\(shown.count)건 표시 / 전체 \(all.count)건")
-                                .font(.caption)
+                                .font(.hubCaption)
                                 .foregroundStyle(.secondary)
                             ForEach(shown) { item in
                                 ReviewCard(review: item.review,
@@ -515,16 +514,16 @@ struct ReviewCard: View {
                         withAnimation(.easeOut(duration: 0.15)) { isExpanded.toggle() }
                     }
                     .buttonStyle(.borderless)
-                    .font(.caption)
+                    .font(.hubCaption)
                 }
             }
 
             TranslateToKoreanView(text: review.fullText)
-                .font(.callout)
+                .font(.hubCallout)
 
             if let nickname = review.reviewerNickname, !nickname.isEmpty {
                 Text("— \(nickname)")
-                    .font(.caption)
+                    .font(.hubCaption)
                     .foregroundStyle(.secondary)
             }
 
@@ -558,7 +557,7 @@ struct ReviewCard: View {
                 Tag(text: "답 필요", systemImage: "exclamationmark.bubble", tint: .orange, isCompact: true)
             }
             Text(AppFormat.dateTime(review.createdDate))
-                .font(.caption)
+                .font(.hubCaption)
                 .foregroundStyle(.secondary)
         }
     }
@@ -567,12 +566,12 @@ struct ReviewCard: View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 6) {
                 Label("개발자 응답", systemImage: "arrowshape.turn.up.left.fill")
-                    .font(.subheadline.weight(.semibold))
+                    .font(.hubSubheadline.weight(.semibold))
                     .foregroundStyle(Color.accentColor)
                 Tag(text: response.stateLabel, tint: response.isPublished ? .green : .orange, isCompact: true)
                 Spacer(minLength: 4)
                 Text(AppFormat.dateTime(response.lastModifiedDate))
-                    .font(.caption)
+                    .font(.hubCaption)
                     .foregroundStyle(.secondary)
             }
             Text(response.responseBody)
@@ -583,7 +582,7 @@ struct ReviewCard: View {
             HStack {
                 Spacer()
                 CopyButton(text: response.responseBody, title: "응답 복사")
-                    .font(.caption)
+                    .font(.hubCaption)
             }
         }
         .padding(10)
@@ -594,7 +593,7 @@ struct ReviewCard: View {
     private var actions: some View {
         HStack(spacing: 12) {
             CopyButton(text: review.fullText, title: "리뷰 복사")
-                .font(.caption)
+                .font(.hubCaption)
             Spacer(minLength: 8)
             if review.response != nil {
                 Button(role: .destructive, action: onDelete) {

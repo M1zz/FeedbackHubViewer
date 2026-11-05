@@ -99,7 +99,7 @@ struct ChartLegend: View {
                     selection.showAll()
                 } label: {
                     Text("전체 보기")
-                        .font(.caption2.weight(.semibold))
+                        .font(.hubCaption2.weight(.semibold))
                         .foregroundStyle(Color.accentColor)
                         .padding(.horizontal, 8)
                         .padding(.vertical, 3)
@@ -120,7 +120,7 @@ struct ChartLegend: View {
         return HStack(spacing: 4) {
             marker(item, isOn: isOn)
             Text(item.label)
-                .font(.caption2)
+                .font(.hubCaption2)
                 .foregroundStyle(isOn ? AnyShapeStyle(.secondary) : AnyShapeStyle(.tertiary))
         }
         .padding(.horizontal, 6)

@@ -319,22 +319,34 @@ actor AppStoreConnect {
 
     func send(_ url: URL, accept: String = "application/json") async throws -> (Data, Int) {
         var request = URLRequest(url: url)
-        request.setValue("Bearer \(try bearer())", forHTTPHeaderField: "Authorization")
         request.setValue(accept, forHTTPHeaderField: "Accept")
-        let (data, response) = try await URLSession.shared.data(for: request)
-        let status = (response as? HTTPURLResponse)?.statusCode ?? 0
-        return (data, status)
+        return try await perform(request)
+    }
+
+    /// 요청 한도(429)에 걸리면 기다렸다가 다시 — 2 · 4 · 8 · 16 · 32초. 시간당 한도라 서두르면 더 막힌다.
+    private func perform(_ base: URLRequest) async throws -> (Data, Int) {
+        var wait: UInt64 = 2
+        for attempt in 0... {
+            var request = base
+            request.setValue("Bearer \(try bearer())", forHTTPHeaderField: "Authorization")
+            let (data, response) = try await URLSession.shared.data(for: request)
+            let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+            guard status == 429, attempt < 5 else { return (data, status) }
+            let retryAfter = (response as? HTTPURLResponse)?.value(forHTTPHeaderField: "Retry-After").flatMap(UInt64.init)
+            try await Task.sleep(nanoseconds: (retryAfter ?? wait) * 1_000_000_000)
+            wait *= 2
+        }
+        fatalError("unreachable")
     }
 
     /// 본문이 있는 요청(PATCH · POST). 바꾸는 요청은 이것 하나로만 나간다.
     func write(_ method: String, _ path: String, body: [String: Any]) async throws -> Data {
         var request = URLRequest(url: url(path))
         request.httpMethod = method
-        request.setValue("Bearer \(try bearer())", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
-        let (data, response) = try await URLSession.shared.data(for: request)
-        try check(data, (response as? HTTPURLResponse)?.statusCode ?? 0)
+        let (data, status) = try await perform(request)
+        try check(data, status)
         return data
     }
 

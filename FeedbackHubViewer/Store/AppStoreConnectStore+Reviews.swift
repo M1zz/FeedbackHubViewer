@@ -58,6 +58,13 @@ extension AppStoreConnectStore {
                 alertedReviewIDs[bundleID] = Set(reviewFeeds[bundleID]?.reviews.map(\.id) ?? [])
             }
         }
+        Task { await viewedReviewsCloud.pull() }
+    }
+
+    /// 다른 기기에서 확인한 것까지 합친 것을 들인다(`viewedReviewsCloud`).
+    func adoptViewedReviews(_ merged: [String: Set<String>]) {
+        viewedReviewIDs = merged
+        CacheFile.write(merged, to: Self.viewedFile)
     }
 
     /// 키를 바꾸거나 지우면 — 다른 계정의 리뷰가 남아 있으면 안 된다.
@@ -111,7 +118,10 @@ extension AppStoreConnectStore {
             viewedReviewIDs[key] = viewed.union(ids)
             changed = true
         }
-        if changed { CacheFile.write(viewedReviewIDs, to: Self.viewedFile) }
+        if changed {
+            CacheFile.write(viewedReviewIDs, to: Self.viewedFile)
+            viewedReviewsCloud.schedulePush(after: 3)
+        }
     }
 
     /// 한 앱의 리뷰를 처음 받았으면 그때 있던 것은 새것으로 치지 않는다 — 처음 켠 날

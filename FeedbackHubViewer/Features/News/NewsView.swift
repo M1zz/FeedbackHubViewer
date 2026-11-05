@@ -93,11 +93,11 @@ struct NewsView: View {
             }
             if briefing.more > 0 {
                 Text("외 \(briefing.more)개는 아래 기록에 있어요.")
-                    .font(.callout)
+                    .font(.hubCallout)
                     .foregroundStyle(.secondary)
             } else if !briefing.isEmpty {
                 Text("그 밖에는 조용했어요.")
-                    .font(.callout)
+                    .font(.hubCallout)
                     .foregroundStyle(.secondary)
             }
         }
@@ -183,7 +183,7 @@ struct NewsView: View {
                     Spacer(minLength: 4)
                     Text(item.date, format: .relative(presentation: .named))
                 }
-                .font(.caption)
+                .font(.hubCaption)
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
                 Text(item.title)
@@ -198,7 +198,7 @@ struct NewsView: View {
                 }
                 if let url = item.url {
                     Label(url.host() ?? url.absoluteString, systemImage: "arrow.up.right.square")
-                        .font(.caption)
+                        .font(.hubCaption)
                         .foregroundStyle(Color.accentColor)
                         .lineLimit(1)
                 }

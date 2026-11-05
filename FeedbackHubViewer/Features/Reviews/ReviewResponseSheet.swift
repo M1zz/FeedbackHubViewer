@@ -36,7 +36,7 @@ struct ReviewResponseSheet: View {
                 VStack(alignment: .leading, spacing: 16) {
                     if let errorText {
                         Label(errorText, systemImage: "exclamationmark.triangle.fill")
-                            .font(.callout)
+                            .font(.hubCallout)
                             .foregroundStyle(.red)
                             .fixedSize(horizontal: false, vertical: true)
                             .padding(10)
@@ -84,7 +84,7 @@ struct ReviewResponseSheet: View {
                 Tag(text: review.territoryName, isCompact: true)
                 Spacer(minLength: 4)
                 Text(AppFormat.dateTime(review.createdDate))
-                    .font(.caption)
+                    .font(.hubCaption)
                     .foregroundStyle(.secondary)
                 CopyButton(text: review.fullText, isCompact: true)
             }
@@ -98,11 +98,11 @@ struct ReviewResponseSheet: View {
             }
             if let nickname = review.reviewerNickname, !nickname.isEmpty {
                 Text("— \(nickname)")
-                    .font(.caption)
+                    .font(.hubCaption)
                     .foregroundStyle(.secondary)
             }
             TranslateToKoreanView(text: review.fullText)
-                .font(.callout)
+                .font(.hubCallout)
         }
         .textSelection(.enabled)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -113,7 +113,7 @@ struct ReviewResponseSheet: View {
     private var editor: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text("응답")
-                .font(.subheadline.weight(.semibold))
+                .font(.hubSubheadline.weight(.semibold))
             TextEditor(text: $text)
                 .font(.body)
                 .focused($isEditorFocused)
@@ -129,12 +129,12 @@ struct ReviewResponseSheet: View {
                 )
             HStack {
                 Text("리뷰를 쓴 사람의 언어로 답하는 것이 좋아요. 보내면 Apple 확인을 거쳐 App Store 에 올라갑니다.")
-                    .font(.caption)
-                    .foregroundStyle(.tertiary)
+                    .font(.hubCaption)
+                    .foregroundStyle(HierarchicalShapeStyle.hubFaint)
                     .fixedSize(horizontal: false, vertical: true)
                 Spacer(minLength: 8)
                 Text("\(text.count) / \(Self.limit)")
-                    .font(.caption.monospacedDigit())
+                    .font(.hubCaption.monospacedDigit())
                     .foregroundStyle(text.count > Self.limit ? .red : .secondary)
             }
         }

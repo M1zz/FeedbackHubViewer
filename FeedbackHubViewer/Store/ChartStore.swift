@@ -34,7 +34,10 @@ final class ChartStore: ObservableObject {
 
     /// 볼 나라. 기기마다 따로 — 화면 고르기이지 기록의 일부가 아니다.
     @Published var countries: [String] {
-        didSet { UserDefaults.standard.set(countries, forKey: Self.countriesKey) }
+        didSet {
+            guard countries != oldValue else { return }
+            SyncedDefaults.set(countries, forKey: Self.countriesKey)
+        }
     }
 
     private static let countriesKey = "chartCountries"
@@ -49,7 +52,19 @@ final class ChartStore: ObservableObject {
     init() {
         let saved = UserDefaults.standard.stringArray(forKey: Self.countriesKey)
         countries = saved?.isEmpty == false ? saved! : ChartStorefronts.defaults
+        // 다른 기기에서 고른 나라(`SyncedDefaults`).
+        countriesObserver = NotificationCenter.default.addObserver(forName: SyncedDefaults.changed, object: nil,
+                                                                   queue: .main) { [weak self] note in
+            guard note.touches(Self.countriesKey) else { return }
+            Task { @MainActor in
+                guard let self, let saved = UserDefaults.standard.stringArray(forKey: Self.countriesKey),
+                      !saved.isEmpty, saved != self.countries else { return }
+                self.countries = saved
+            }
+        }
     }
+
+    private var countriesObserver: NSObjectProtocol?
 
     // MARK: - Lifecycle
 
@@ -61,6 +76,7 @@ final class ChartStore: ObservableObject {
         if let saved = CacheFile.read(ChartHistory.self, at: CacheFile.url(Self.fileName)) {
             history = saved
         }
+        Task { await cloud.pull() }
     }
 
     /// 볼 때가 됐으면 본다 — 마지막 확인이 12시간 넘었거나, 처음 보는 앱이 생겼을 때.
@@ -157,6 +173,24 @@ final class ChartStore: ObservableObject {
                                  failedFeeds: failed, failedSlots: failedSlots,
                                  snapshots: history.carryingOver(failed: failedSlots, into: snapshots)))
         CacheFile.write(history, to: CacheFile.url(Self.fileName))
+        cloud.schedulePush(after: 2)
+    }
+
+    // MARK: - 기기 사이
+
+    /// 차트 기록을 iCloud 비공개 DB 로 기기 사이에서 하나로(`SyncedBlob`).
+    private(set) lazy var cloud = SyncedBlob<ChartHistory>(
+        name: "charts",
+        current: { [weak self] in self?.history },
+        adopt: { [weak self] merged in
+            guard let self else { return }
+            self.history = merged
+            CacheFile.write(merged, to: CacheFile.url(Self.fileName))
+        },
+        merge: { local, remote in local.merged(with: remote) })
+
+    func pullFromCloud() {
+        Task { await cloud.pull(minimumInterval: 60) }
     }
 
     // MARK: - Reading

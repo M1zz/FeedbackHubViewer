@@ -7,7 +7,7 @@
 //  제 탭을 갖는다.
 //
 //  읽는 차례대로 놓는다.
-//   1. 판정(초록 · 노랑 · 빨강)과 그 이유 한 줄
+//   1. 판정(초록 · 노랑 · 빨강)과 그 이유 한 줄, 초록이 아니면 초록까지 할 일(고칠 것 · 기다릴 것)
 //   2. 최신 버전과 앞 버전을 나란히 (활성 설치 · 핵심 행동률 · 크래시 없는 설치 · 크래시 · 피드백)
 //   3. 채택: 지금 쓰는 사람 중 몇이 새 버전인가
 //   4. 처음 본 크래시, 이 앱이 지키기로 한 약속
@@ -27,9 +27,8 @@ struct ReleaseHealthCard: View {
         VStack(alignment: .leading, spacing: 12) {
             if let report = store.releaseHealth(for: project) {
                 header(report.verdict)
-                if report.verdict.level != .green {
-                    copyForClaude(report)
-                }
+                if !report.verdict.steps.isEmpty { toGreen(report.verdict.steps) }
+                copyForClaude(report)
                 comparison(report)
                 adoption(report)
                 if report.verdict.reasons.count > 1 { reasons(report.verdict) }
@@ -70,14 +69,15 @@ struct ReleaseHealthCard: View {
         }
     }
 
-    /// 적신호를 Claude 에게 그대로 넘길 글. 판정 · 숫자 · 새 크래시 · 스펙을 한 덩어리로
+    /// 신호를 Claude 에게 그대로 넘길 글. 판정 · 숫자 · 새 크래시 · 스펙을 한 덩어리로
     /// 담아, 받는 쪽이 이 화면을 못 봐도 무엇을 고쳐야 하는지 알게 한다.
     private func copyForClaude(_ report: ReleaseHealth.Report) -> some View {
         HStack(spacing: 8) {
             CopyButton(text: Self.claudePrompt(report, appName: store.displayName(for: project), project: project),
                        title: "Claude에게 맡길 글 복사")
                 .buttonStyle(.bordered)
-            Text("앱 리포에서 연 Claude 에 붙여넣으면 원인을 찾아 고칩니다.")
+            Text(report.verdict.level == .green ? "앱 리포에서 연 Claude 에 붙여넣으면 놓친 위험을 점검합니다."
+                                                : "앱 리포에서 연 Claude 에 붙여넣으면 원인을 찾아 고칩니다.")
                 .font(.body)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -88,10 +88,19 @@ struct ReleaseHealthCard: View {
         let latest = report.latest
         let previous = report.previous
         var lines: [String] = []
-        lines.append("\(appName) (\(project)) 의 릴리즈 건강이 \(report.verdict.level.label)입니다. 원인을 찾아 고쳐 주세요.")
+        let isGreen = report.verdict.level == .green
+        lines.append("\(appName) (\(project)) 의 릴리즈 건강이 \(report.verdict.level.label)입니다. "
+                     + (isGreen ? "숫자가 놓친 위험이 있는지 점검해 주세요." : "원인을 찾아 고쳐 주세요."))
         lines.append("")
         lines.append("## 판정")
         for reason in report.verdict.reasons { lines.append("- \(reason)") }
+        if !report.verdict.steps.isEmpty {
+            lines.append("")
+            lines.append("## 초록이 되려면")
+            for step in report.verdict.steps {
+                lines.append("- [\(step.kind == .fix ? "고칠 것" : "기다릴 것")] \(step.text)")
+            }
+        }
         lines.append("")
         lines.append("## 버전 비교 (최근 \(ReleaseHealth.windowDays)일)")
         lines.append("| 항목 | 최신 \(latest.version) |" + (previous.map { " 앞 버전 \($0.version) |" } ?? ""))
@@ -151,12 +160,40 @@ struct ReleaseHealthCard: View {
         }
         lines.append("")
         lines.append("## 부탁")
-        lines.append("1. \(previous.map { "\($0.version) → " } ?? "")\(latest.version) 사이의 변경(git log · diff)에서 위 신호의 원인을 찾아 주세요.")
+        lines.append("1. \(previous.map { "\($0.version) → " } ?? "")\(latest.version) 사이의 변경(git log · diff)에서 "
+                     + (isGreen ? "아직 숫자에 안 잡힌 위험이 있는지 봐 주세요." : "위 신호의 원인을 찾아 주세요."))
         lines.append("2. 크래시라면 지문 · 제목으로 코드 위치를 짚고, 불안정 이벤트(\(report.spec.stabilityEvents.joined(separator: ", ")))가 늘었다면 그 이벤트를 보내는 경로를 확인해 주세요.")
         lines.append("3. 원인과 고친 방법을 설명하고, 고칠 수 있으면 고쳐 주세요. 숫자만으로 확실하지 않으면 무엇을 더 봐야 하는지 알려 주세요.")
         lines.append("")
         lines.append("참고: 크래시 보고는 MetricKit 이 하루쯤 늦게 일부만 보냅니다. 숫자는 FeedbackHub 사용 이벤트 기준입니다.")
         return lines.joined(separator: "\n")
+    }
+
+    /// 초록까지 남은 일. 고칠 것과 기다릴 것을 나눠, 지금 손댈 수 있는 것이 무엇인지 바로 보이게 한다.
+    private func toGreen(_ steps: [ReleaseHealth.Step]) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("초록이 되려면")
+                .font(.body.weight(.semibold))
+            ForEach([ReleaseHealth.Step.Kind.fix, .wait], id: \.self) { kind in
+                let group = steps.filter { $0.kind == kind }
+                if !group.isEmpty {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(kind == .fix ? "고칠 것" : "기다릴 것")
+                            .font(.body)
+                            .foregroundStyle(.secondary)
+                        ForEach(group) { step in
+                            Label(step.text, systemImage: kind == .fix ? "wrench.and.screwdriver" : "hourglass")
+                                .font(.body)
+                                .foregroundStyle(kind == .fix ? Color.primary : Color.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(12)
+        .background(.quaternary.opacity(0.5), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
     }
 
     private func reasons(_ verdict: ReleaseHealth.Verdict) -> some View {

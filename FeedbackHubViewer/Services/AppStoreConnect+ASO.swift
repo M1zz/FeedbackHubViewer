@@ -88,6 +88,8 @@ struct StoreFunnel {
     let daily: [String: Counts]
     /// 받은 리포트 인스턴스 수 — 0이면 아직 리포트가 안 만들어졌다.
     let instances: Int
+    /// 날짜 → 나라 → 둘러보기 노출. 어디에 걸렸는지 짐작하는 데 쓴다(`StoreExposure`).
+    var browse: [String: [String: Int]] = [:]
 
     struct Counts {
         var impressions = 0
@@ -228,6 +230,7 @@ extension AppStoreConnect {
 
         var sources: [String: StoreFunnel.Counts] = [:]
         var daily: [String: StoreFunnel.Counts] = [:]
+        var browse: [String: [String: Int]] = [:]
         func add(_ counts: StoreFunnel.Counts, source: String, date: String) {
             sources[source, default: .init()].add(counts)
             // 날짜별 추이는 검색 노출과 (모든 경로의) 첫 다운로드만 그린다.
@@ -241,7 +244,11 @@ extension AppStoreConnect {
                 let unique = Int(row["Unique Counts"] ?? "") ?? Int(row["Counts"] ?? "") ?? 0
                 var counts = StoreFunnel.Counts()
                 switch row["Event"] {
-                case "Impression": counts.impressions = unique
+                case "Impression":
+                    counts.impressions = unique
+                    if row["Source Type"] == "App Store browse", let territory = row["Territory"] {
+                        browse[date, default: [:]][territory, default: 0] += unique
+                    }
                 case "Page view": counts.pageViews = unique
                 default: continue
                 }
@@ -256,6 +263,6 @@ extension AppStoreConnect {
             }
         }
         return StoreFunnel(days: days, sources: sources, daily: daily,
-                           instances: engagement.instances + downloads.instances)
+                           instances: engagement.instances + downloads.instances, browse: browse)
     }
 }

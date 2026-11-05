@@ -69,6 +69,9 @@ final class FeedbackStore: ObservableObject {
         /// App Store Connect에 걸린 상품과 판매 — 키워드처럼 허브 밖을 읽는다
         /// (`AppStoreConnectStore`).
         case purchases = "앱 내 구입"
+        /// Pro 선물용 App Store 오퍼 코드 묶음 — 앱마다 남은 장 · 나간 장 · 예비, 코드 파일 넣기
+        /// (`GiftCodePool`, LeeoKit `LeeoOfferCodePool`). 허브가 iCloud 공개 DB 에 쓰는 칸.
+        case giftCodes = "선물 코드"
         /// 왜 이렇게 만들었나 - 앱 리포의 설계 문서(HTML)를 지켜보다가 연다
         /// (`DesignDocsStore`). 맥의 디스크를 읽는 유일한 칸.
         case design = "설계"
@@ -90,7 +93,7 @@ final class FeedbackStore: ObservableObject {
             case .feedback, .reviews: .voice
             case .crashes, .release: .quality
             case .stats, .acquisition, .keywords, .charts, .storeAnalytics: .growth
-            case .purchases: .revenue
+            case .purchases, .giftCodes: .revenue
             case .marketing, .leads: .marketing
             case .design, .experience: .build
             }
@@ -107,7 +110,7 @@ final class FeedbackStore: ObservableObject {
             case build = "만들기"
             var id: String { rawValue }
             var sections: [ProjectSection] { ProjectSection.allCases.filter { $0.group == self } }
-            /// 아이폰 탭에 담을 기능. 설계는 맥의 디스크를 읽는 칸이라(`DesignDocsStore.isSupported`)
+            /// 아이폰에서 여는 기능. 설계는 맥의 디스크를 읽는 칸이라(`DesignDocsStore.isSupported`)
             /// 아이폰에는 없다.
             var phoneSections: [ProjectSection] {
                 #if os(macOS)
@@ -115,16 +118,6 @@ final class FeedbackStore: ObservableObject {
                 #else
                 sections.filter { $0 != .design }
                 #endif
-            }
-            /// 아이폰 하단 탭 — 담을 기능이 있는 무리만.
-            static var phoneTabs: [Group] { allCases.filter { !$0.phoneSections.isEmpty } }
-            /// 탭 바에 들어갈 짧은 이름.
-            var tabTitle: String {
-                switch self {
-                case .today: "할 일"
-                case .voice: "목소리"
-                default: rawValue
-                }
             }
             var systemImage: String {
                 switch self {
@@ -153,6 +146,7 @@ final class FeedbackStore: ObservableObject {
             case .keywords: return "magnifyingglass"
             case .charts: return "list.number"
             case .purchases: return "creditcard"
+            case .giftCodes: return "gift"
             case .reviews: return "star.bubble"
             case .design: return "pencil.and.ruler"
             case .marketing: return "megaphone"
@@ -299,28 +293,66 @@ final class FeedbackStore: ObservableObject {
     /// 세운다 (`HubSummary.swift` 머리말의 예외).
     private var summaryOverwrites = false
 
+    /// 아이폰 하단 탭. 맥의 기능 무리(일곱)를 그대로 옮기면 탭이 넘쳐 "더 보기" 로 숨었다.
+    /// 숫자를 읽는 칸은 모두 "앱 상태" 한 탭으로 모은다. 탭마다 맨 앞은 기능 목록이고,
+    /// 기능을 누르면 그 기능의 화면을 민다.
+    enum PhoneTab: String, CaseIterable, Identifiable {
+        /// 첫 탭 — 모든 기능의 지금을 한 장에(`PhoneOverviewView`). 담는 무리는 없다.
+        case overview = "현황"
+        case today = "할 일"
+        case voice = "목소리"
+        case status = "앱 상태"
+        case marketing = "마케팅"
+        var id: String { rawValue }
+
+        /// 이 탭에 담는 무리. 차례가 곧 기능 목록의 차례다.
+        var groups: [ProjectSection.Group] {
+            switch self {
+            case .overview: []
+            case .today: [.today]
+            case .voice: [.voice]
+            case .status: [.quality, .growth, .revenue, .build]
+            case .marketing: [.marketing]
+            }
+        }
+
+        var sections: [ProjectSection] { groups.flatMap(\.phoneSections) }
+
+        var systemImage: String {
+            switch self {
+            case .overview: "square.grid.2x2"
+            case .today: "tray.full"
+            case .voice: "bubble.left.and.bubble.right"
+            case .status: "waveform.path.ecg"
+            case .marketing: "megaphone"
+            }
+        }
+
+        static func containing(_ section: ProjectSection) -> PhoneTab {
+            allCases.first { $0.sections.contains(section) } ?? .status
+        }
+    }
+
+    /// 탭의 기능 목록에서 기능 하나를 골라 민 그 기능의 앱 목록.
+    struct SectionRoute: Hashable {
+        let section: ProjectSection
+    }
+
     // Navigation
 
     /// 지금 고른 기능. 화면의 첫 단계다 — 앱은 그 안에서 고른다.
     @Published var projectSection: ProjectSection = .inbox
     /// 맥 · 아이패드에서 앱 화면 위에 밀려 들어온 것(아이패드의 피드백 상세).
     @Published var path = NavigationPath()
-    /// 아이폰의 하단 탭 — 기능 무리 하나가 탭 하나다.
-    @Published var phoneTab: ProjectSection.Group = .today
+    /// 아이폰의 하단 탭.
+    @Published var phoneTab: PhoneTab = .overview
     /// 아이폰 탭마다 따로 쌓인 화면. 탭을 오가도 각자 보던 자리가 남는다.
-    @Published var phonePaths: [ProjectSection.Group: NavigationPath] = [:]
-    /// 아이폰 탭마다 위쪽 세그먼트에서 고른 기능.
-    @Published var phoneSections: [ProjectSection.Group: ProjectSection] = [:]
+    @Published var phonePaths: [PhoneTab: NavigationPath] = [:]
     /// True on the layout where the app screen is *pushed* (iPhone) rather
     /// than shown beside the app list (Mac, iPad). Set by the root view;
     /// `open(project:section:)` needs it to know whether to push or to swap
     /// what the content column is scoped to.
     var usesStackNavigation = false
-
-    /// 아이폰 탭 하나에서 지금 고른 기능. 고른 적이 없으면 그 무리의 첫 기능.
-    func phoneSection(for tab: ProjectSection.Group) -> ProjectSection {
-        phoneSections[tab] ?? tab.phoneSections.first ?? .inbox
-    }
 
     /// 지금 보이는 스택에 한 화면을 민다 — 아이폰이면 열린 탭의 스택, 아니면 `path`.
     func push(_ value: some Hashable) {
@@ -343,11 +375,13 @@ final class FeedbackStore: ObservableObject {
         }
         if usesStackNavigation {
             // 그 기능이 사는 탭으로 옮겨 가서 민다. 뒤로 가면 그 탭의 앱 목록이 나온다.
-            let tab = projectSection.group
+            let tab = PhoneTab.containing(projectSection)
             phoneTab = tab
-            if projectSection.usesAppList { phoneSections[tab] = projectSection }
-            phonePaths[tab, default: NavigationPath()]
-                .append(ProjectRoute(project: project, section: projectSection))
+            // 기능 목록 → 앱 목록 → 앱 차례라, 뒤로 가면 그 기능의 앱 목록이 나오게.
+            var path = NavigationPath()
+            if projectSection.usesAppList { path.append(SectionRoute(section: projectSection)) }
+            path.append(ProjectRoute(project: project, section: projectSection))
+            phonePaths[tab] = path
         }
     }
 
@@ -394,7 +428,7 @@ final class FeedbackStore: ObservableObject {
     @Published var badgeKinds = AttentionKind.defaultBadgeKinds {
         didSet {
             guard badgeKinds != oldValue else { return }
-            defaults.set(badgeKinds.map(\.rawValue), forKey: Self.badgeKindsKey)
+            SyncedDefaults.set(badgeKinds.map(\.rawValue).sorted(), forKey: Self.badgeKindsKey)
             refreshBadge()
         }
     }
@@ -403,7 +437,7 @@ final class FeedbackStore: ObservableObject {
         didSet {
             guard activityOverrides != oldValue else { return }
             if let data = try? JSONEncoder().encode(activityOverrides) {
-                defaults.set(data, forKey: Self.activityOverridesKey)
+                SyncedDefaults.set(data, forKey: Self.activityOverridesKey)
             }
             derived.habit = [:]
         }
@@ -412,7 +446,7 @@ final class FeedbackStore: ObservableObject {
     @Published var alertKinds = AttentionKind.defaultAlertKinds {
         didSet {
             guard alertKinds != oldValue else { return }
-            defaults.set(alertKinds.map(\.rawValue), forKey: Self.alertKindsKey)
+            SyncedDefaults.set(alertKinds.map(\.rawValue).sorted(), forKey: Self.alertKindsKey)
             syncPushSubscriptions()
         }
     }
@@ -431,6 +465,7 @@ final class FeedbackStore: ObservableObject {
     /// 올린다 — 규칙은 `HubSummary.swift` 머리말에.
     private let summarySync = HubSummarySync()
     private var autoRefreshTask: Task<Void, Never>?
+    private var settingsObserver: NSObjectProtocol?
     private let defaults: UserDefaults
 
     init(defaults: UserDefaults = .standard) {
@@ -445,8 +480,11 @@ final class FeedbackStore: ObservableObject {
         }
         readIDs = Set(defaults.stringArray(forKey: Self.readIDsKey) ?? [])
         triage = Self.decodeTriage(defaults.data(forKey: Self.triageKey))
+        repliedIDs = Set(defaults.stringArray(forKey: Self.repliedIDsKey) ?? [])
         reviewsDone = defaults.data(forKey: Self.reviewsDoneKey)
             .flatMap { try? JSONDecoder().decode([String: ReviewDoneEntry].self, from: $0) } ?? [:]
+        releaseHypotheses = defaults.data(forKey: Self.releaseHypothesesKey)
+            .flatMap { try? JSONDecoder().decode([String: Stabilization.Hypothesis].self, from: $0) } ?? [:]
         statusFilter = defaults.string(forKey: Self.statusFilterKey)
             .flatMap(FeedbackStatusFilter.init(rawValue:)) ?? .pending
         hiddenProjects = Set(defaults.stringArray(forKey: Self.hiddenProjectsKey) ?? [])
@@ -474,6 +512,7 @@ final class FeedbackStore: ObservableObject {
         if notificationsEnabled {
             Task { notificationsAuthorized = await NotificationService.isAuthorized() }
         }
+        observeSyncedSettings()
     }
 
     /// Which half of the container this build reads. Fixed at build time by the
@@ -814,6 +853,7 @@ final class FeedbackStore: ObservableObject {
         // refresh, and the badge the unread count it leaves behind.
         announceNewRecords()
         refreshBadge()
+        await checkReplies()
         // An incremental check that found nothing has nothing to write, and the
         // auto-refresh runs every minute — no point rewriting megabytes of JSON
         // to say the same thing. `hasUnsavedChanges` covers the other end: the
@@ -1371,12 +1411,40 @@ final class FeedbackStore: ObservableObject {
 
     // MARK: - Replies (written to the hub, read by the sender's app)
 
+    /// 답장을 보낸 피드백. 답장하면 반영함과 같이 "처리한 것"이 되어 확인 필요 목록에서 빠진다.
+    /// 답장은 허브에 남으니(`FeedbackReply`) 다른 기기에서 보낸 것도 `checkReplies` 가 찾아온다.
+    @Published private(set) var repliedIDs: Set<String> = [] { didSet { invalidateReadState() } }
+    private static let repliedIDsKey = "repliedFeedbackIDs"
+    private var lastReplyCheck: Date?
+
+    func isReplied(_ feedback: Feedback) -> Bool { repliedIDs.contains(feedback.id) }
+
     func reply(for feedback: Feedback) async -> String? {
-        await service.fetchReply(forFeedback: feedback.id)
+        let message = await service.fetchReply(forFeedback: feedback.id)
+        if message != nil { markReplied([feedback.id]) }
+        return message
     }
 
     func sendReply(_ message: String, for feedback: Feedback) async throws {
         try await service.saveReply(message, forFeedback: feedback.id, appId: feedback.appId)
+        markReplied([feedback.id])
+        markRead(feedback)
+    }
+
+    /// 아직 답장을 모르는 피드백에 답장이 달렸는지 허브에서 확인한다. 답장은 이 앱에서만
+    /// 쓰므로 자주 볼 까닭이 없다 — 새로고침이 잦아도 10분에 한 번.
+    private func checkReplies() async {
+        if let last = lastReplyCheck, Date().timeIntervalSince(last) < 600 { return }
+        lastReplyCheck = Date()
+        let unknown = allFeedback.map(\.id).filter { !repliedIDs.contains($0) }
+        guard !unknown.isEmpty else { return }
+        markReplied(await service.repliedFeedbackIDs(among: unknown))
+    }
+
+    private func markReplied(_ ids: Set<String>) {
+        guard !ids.isSubset(of: repliedIDs) else { return }
+        repliedIDs.formUnion(ids)
+        defaults.set(Array(repliedIDs), forKey: Self.repliedIDsKey)
     }
 
     func note(for feedback: Feedback) -> String {
@@ -1388,7 +1456,10 @@ final class FeedbackStore: ObservableObject {
         return entry.decidedAt
     }
 
-    func isHandled(_ feedback: Feedback) -> Bool { status(of: feedback).isHandled }
+    /// 손을 뗀 것: 반영함 · 반영 안 함으로 정했거나 답장을 보냈다.
+    func isHandled(_ feedback: Feedback) -> Bool {
+        status(of: feedback).isHandled || repliedIDs.contains(feedback.id)
+    }
 
     /// Record the decision. Deciding also counts as having read the feedback —
     /// leaving it bold in the list after acting on it would be nonsense.
@@ -1444,7 +1515,7 @@ final class FeedbackStore: ObservableObject {
     var scopedHandledCount: Int { scopedFeedback.count - scopedPendingCount }
 
     func countPending(in items: [Feedback]) -> Int {
-        items.reduce(0) { $0 + (triage[$1.id]?.status.isHandled == true ? 0 : 1) }
+        items.reduce(0) { $0 + (isHandled($1) ? 0 : 1) }
     }
 
     private func persistTriage() {
@@ -1478,6 +1549,24 @@ final class FeedbackStore: ObservableObject {
         defaults.set(data, forKey: Self.reviewsDoneKey)
     }
 
+    // MARK: - 릴리즈 가설 (안정화)
+
+    /// "앱|버전" → 그 릴리즈의 가설과 종료 조건. 읽음 · 처리와 같은 길로 기기 사이에 오간다.
+    @Published private(set) var releaseHypotheses: [String: Stabilization.Hypothesis] = [:]
+    private static let releaseHypothesesKey = "releaseHypotheses"
+
+    func setReleaseHypothesis(_ hypothesis: String, exitCondition: String, project: String, version: String) {
+        releaseHypotheses[Stabilization.Hypothesis.key(project: project, version: version)] =
+            Stabilization.Hypothesis(hypothesis: hypothesis, exitCondition: exitCondition, updatedAt: Date())
+        persistReleaseHypothesesLocally()
+        pushReviewState()
+    }
+
+    private func persistReleaseHypothesesLocally() {
+        guard let data = try? JSONEncoder().encode(releaseHypotheses) else { return }
+        defaults.set(data, forKey: Self.releaseHypothesesKey)
+    }
+
     // MARK: - 기기 사이 동기화
 
     /// 읽음·처리를 iCloud 키·값 저장소와 맞추기 시작한다. 저장소를 못 쓰면
@@ -1494,7 +1583,7 @@ final class FeedbackStore: ObservableObject {
 
     /// 지금 이 기기가 들고 있는 판단.
     private var currentReviewState: ReviewState {
-        ReviewState(readIDs: readIDs, triage: triage, reviewsDone: reviewsDone)
+        ReviewState(readIDs: readIDs, triage: triage, reviewsDone: reviewsDone, hypotheses: releaseHypotheses)
     }
 
     /// 이 기기의 판단을 저장소에 올리고, 합쳐져 돌아온 것을 다시 받는다.
@@ -1520,6 +1609,10 @@ final class FeedbackStore: ObservableObject {
         if state.reviewsDone != reviewsDone {
             reviewsDone = state.reviewsDone
             persistReviewsDoneLocally()
+        }
+        if state.hypotheses != releaseHypotheses {
+            releaseHypotheses = state.hypotheses
+            persistReleaseHypothesesLocally()
         }
     }
 
@@ -1592,7 +1685,46 @@ final class FeedbackStore: ObservableObject {
     }
 
     private func persistHiddenProjects() {
-        defaults.set(Array(hiddenProjects), forKey: Self.hiddenProjectsKey)
+        SyncedDefaults.set(Array(hiddenProjects).sorted(), forKey: Self.hiddenProjectsKey)
+    }
+
+    // MARK: - 다른 기기에서 고친 설정
+
+    /// 숨긴 앱 · 활동 정의 · 뱃지 · 알림 종류를 다른 기기가 바꿨으면 다시 읽는다(`SyncedDefaults`).
+    func observeSyncedSettings() {
+        guard settingsObserver == nil else { return }
+        settingsObserver = NotificationCenter.default.addObserver(forName: SyncedDefaults.changed, object: nil,
+                                                                  queue: .main) { [weak self] note in
+            guard note.touches(Self.hiddenProjectsKey, Self.activityOverridesKey,
+                               Self.badgeKindsKey, Self.alertKindsKey) else { return }
+            Task { @MainActor in self?.reloadSyncedSettings() }
+        }
+    }
+
+    private func reloadSyncedSettings() {
+        let hidden = Set(defaults.stringArray(forKey: Self.hiddenProjectsKey) ?? [])
+        if hidden != hiddenProjects {
+            hiddenProjects = hidden
+            if let selectedProject, hidden.contains(selectedProject) {
+                self.selectedProject = nil
+                path = NavigationPath()
+                phonePaths = [:]
+            }
+            refreshBadge()
+        }
+        if let data = defaults.data(forKey: Self.activityOverridesKey),
+           let saved = try? JSONDecoder().decode([String: ActivityDefinition].self, from: data),
+           saved != activityOverrides {
+            activityOverrides = saved
+        }
+        if let saved = defaults.stringArray(forKey: Self.badgeKindsKey) {
+            let kinds = Set(saved.compactMap(AttentionKind.init(rawValue:)))
+            if kinds != badgeKinds { badgeKinds = kinds }
+        }
+        if let saved = defaults.stringArray(forKey: Self.alertKindsKey) {
+            let kinds = Set(saved.compactMap(AttentionKind.init(rawValue:)))
+            if kinds != alertKinds { alertKinds = kinds }
+        }
     }
 
     // MARK: - Project name resolution

@@ -3,7 +3,7 @@
 //  FeedbackHubViewer
 //
 //  The 피드백 section of a project screen: a searchable, sortable list of
-//  feedback rows. Decided feedback (반영함 / 반영 안 함) folds out of the way
+//  feedback rows. Decided feedback (반영함 / 반영 안 함, 답장 보냄) folds out of the way
 //  here — see `FeedbackTriage.swift` and `FeedbackStore.triage`. The screen's
 //  title and scope belong to `ProjectSectionView`; this view owns only the list
 //  and its own controls.
@@ -294,7 +294,7 @@ struct FeedbackListView: View {
                              : "확인 필요만 보기 (\(store.scopedPendingCount)건)")
                         Spacer(minLength: 0)
                     }
-                    .font(.callout)
+                    .font(.hubCallout)
                     .foregroundStyle(.secondary)
                     .contentShape(Rectangle())
                 }
@@ -349,13 +349,13 @@ struct FeedbackListView: View {
             Section {
                 Label(error, systemImage: "exclamationmark.triangle.fill")
                     .foregroundStyle(.red)
-                    .font(.callout)
+                    .font(.hubCallout)
             }
         } else if store.filteredFeedback.isEmpty && !store.isLoading {
             Section {
                 Text(emptyMessage)
                     .foregroundStyle(.secondary)
-                    .font(.callout)
+                    .font(.hubCallout)
             }
         }
     }
@@ -378,6 +378,7 @@ struct FeedbackListView: View {
                         projectLabel: store.displayName(for: feedback.projectKey),
                         isUnread: store.isUnread(feedback),
                         status: status,
+                        isReplied: store.isReplied(feedback),
                         note: store.note(for: feedback))
                 #if os(iOS)
                 // A plain tap target rather than a `NavigationLink`: a link
@@ -389,8 +390,8 @@ struct FeedbackListView: View {
 
             #if os(iOS)
             Image(systemName: "chevron.right")
-                .font(.footnote.weight(.semibold))
-                .foregroundStyle(.tertiary)
+                .font(.hubFootnote.weight(.semibold))
+                .foregroundStyle(HierarchicalShapeStyle.hubFaint)
             #endif
 
             decideButton(for: feedback, status: status)
@@ -412,7 +413,7 @@ struct FeedbackListView: View {
                 // 된다 — 음성 안내는 아래 `accessibilityLabel`이 온전히 읽는다.
                 if !typeSize.isAccessibilitySize {
                     Text(status.isHandled ? status.label : "반영함")
-                        .font(.caption2)
+                        .font(.hubCaption2)
                 }
             }
             .foregroundStyle(status.isHandled ? status.tint : Color.secondary)
@@ -447,7 +448,11 @@ struct FeedbackRow: View {
     let projectLabel: String
     let isUnread: Bool
     let status: FeedbackStatus
+    /// 답장을 보냈다 — 반영 여부와 따로 보인다.
+    var isReplied = false
     let note: String
+    /// 앱별로 묶인 목록(할 일)에서는 머리글이 이미 앱 이름을 말한다.
+    var showsProject = true
 
     // A phone row has no detail column beside it, so it carries a little more
     // of the body text and every badge the record has.
@@ -471,14 +476,20 @@ struct FeedbackRow: View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(alignment: .center, spacing: 8) {
                 UnreadDot(isUnread: isUnread)
-                Tag(text: projectLabel, systemImage: "square.grid.2x2")
+                if showsProject {
+                    Tag(text: projectLabel, systemImage: "square.grid.2x2")
+                }
                 if let rating = feedback.rating {
                     StarRatingView(rating: rating)
                 }
                 StatusChip(status: status)
+                if isReplied {
+                    Tag(text: "답변함", systemImage: "arrowshape.turn.up.left.fill", tint: .blue,
+                        font: .hubCaption2.weight(.medium))
+                }
                 Spacer(minLength: 4)
                 Text(dateLabel)
-                    .font(.footnote)
+                    .font(.hubFootnote)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
             }
@@ -489,33 +500,51 @@ struct FeedbackRow: View {
                 .lineLimit(snippetLineLimit)
                 // Decided feedback steps back visually so what is left to do
                 // stands out in a long list.
-                .foregroundStyle(status.isHandled ? .secondary : .primary)
+                .foregroundStyle(status.isHandled || isReplied ? .secondary : .primary)
 
             if !note.isEmpty {
                 Label(note, systemImage: "text.bubble")
-                    .font(.footnote)
+                    .font(.hubFootnote)
                     .foregroundStyle(.secondary)
                     .lineLimit(2)
             }
 
-            // Wraps instead of dropping badges off the right edge: on a phone
-            // an email plus a device name never fits on one line.
-            FlowLayout(spacing: 6, lineSpacing: 4) {
-                if let type = feedback.feedbackType, !type.isEmpty {
-                    Tag(text: type, systemImage: "tag")
-                }
-                if let version = feedback.appVersion, !version.isEmpty {
-                    Tag(text: "v\(version)", systemImage: "app.badge")
-                }
-                if let device = feedback.deviceModel, !device.isEmpty {
-                    Tag(text: device, systemImage: "iphone")
-                }
-                if let email = feedback.contactEmail, !email.isEmpty {
-                    Tag(text: email, systemImage: "envelope")
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
+            metadata
         }
         .padding(.vertical, 8)
+    }
+
+    /// 맥은 칩으로, 아이폰은 한 줄 글로. 좁은 줄에서 칩은 접히며 본문보다 큰 자리를 차지한다.
+    /// 전체 값은 상세 화면에 있다.
+    @ViewBuilder
+    private var metadata: some View {
+        #if os(iOS)
+        let parts = [feedback.feedbackType, feedback.appVersion.map { "v\($0)" },
+                     feedback.deviceModel, feedback.contactEmail]
+            .compactMap { $0 }
+            .filter { !$0.isEmpty && $0 != "v" }
+        if !parts.isEmpty {
+            Text(parts.joined(separator: " · "))
+                .font(.hubFootnote)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+        }
+        #else
+        FlowLayout(spacing: 6, lineSpacing: 4) {
+            if let type = feedback.feedbackType, !type.isEmpty {
+                Tag(text: type, systemImage: "tag")
+            }
+            if let version = feedback.appVersion, !version.isEmpty {
+                Tag(text: "v\(version)", systemImage: "app.badge")
+            }
+            if let device = feedback.deviceModel, !device.isEmpty {
+                Tag(text: device, systemImage: "iphone")
+            }
+            if let email = feedback.contactEmail, !email.isEmpty {
+                Tag(text: email, systemImage: "envelope")
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        #endif
     }
 }

@@ -114,7 +114,7 @@ struct MarketingRow: View {
                     .font(.body)
                     .foregroundStyle(.green)
             }
-            Image(systemName: "chevron.right").foregroundStyle(.tertiary)
+            Image(systemName: "chevron.right").foregroundStyle(HierarchicalShapeStyle.hubFaint)
         }
         .padding(.vertical, 6)
         .contentShape(Rectangle())

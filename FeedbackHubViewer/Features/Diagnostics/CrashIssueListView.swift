@@ -117,7 +117,7 @@ struct CrashIssueListView: View {
     private func legacyNote(_ all: [CrashIssue]) -> some View {
         if let legacy = all.first(where: \.isLegacy) {
             Text("옛 형식 \(legacy.count)건은 콜스택이 JSON 중간에서 잘려 올라와 묶을 수 없습니다. 보내는 쪽을 고친 뒤 새로 쌓이는 것부터 분석됩니다.")
-                .font(.footnote)
+                .font(.hubFootnote)
                 .foregroundStyle(.secondary)
         }
     }
@@ -140,11 +140,11 @@ struct CrashIssueRow: View {
         VStack(alignment: .leading, spacing: 5) {
             HStack(spacing: 6) {
                 Text(issue.title)
-                    .font(.callout.weight(.semibold))
+                    .font(.hubCallout.weight(.semibold))
                     .lineLimit(2)
                     .truncationMode(.middle)
                 if issue.isNew {
-                    Tag(text: "새로 생김", tint: .orange, font: .caption2)
+                    Tag(text: "새로 생김", tint: .orange, font: .hubCaption2)
                 }
                 let unseen = fresh.isEmpty ? 0 : issue.reports.filter { fresh.contains($0.id) }.count
                 if unseen > 0 {
@@ -152,37 +152,37 @@ struct CrashIssueRow: View {
                 }
                 Spacer(minLength: 4)
                 Text("\(issue.count)건")
-                    .font(.callout.monospacedDigit().weight(.semibold))
+                    .font(.hubCallout.monospacedDigit().weight(.semibold))
                 Image(systemName: "chevron.right")
-                    .font(.caption2.weight(.semibold))
-                    .foregroundStyle(.tertiary)
+                    .font(.hubCaption2.weight(.semibold))
+                    .foregroundStyle(HierarchicalShapeStyle.hubFaint)
             }
 
             Text(issue.shape)
-                .font(.caption2.monospaced())
+                .font(.hubCaption2.monospaced())
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
                 .truncationMode(.middle)
 
             HStack(spacing: 6) {
                 if let projectLabel {
-                    Tag(text: projectLabel, tint: .secondary, font: .caption2)
+                    Tag(text: projectLabel, tint: .secondary, font: .hubCaption2)
                 }
                 Tag(text: issue.cause.label,
-                    tint: issue.cause.isWatchdog ? .orange : .red, font: .caption2)
+                    tint: issue.cause.isWatchdog ? .orange : .red, font: .hubCaption2)
 
                 if issue.last7Days > 0 {
                     Text("최근 7일 \(issue.last7Days)")
-                        .font(.caption.monospacedDigit())
+                        .font(.hubCaption.monospacedDigit())
                         .foregroundStyle(.red)
                     if issue.previous7Days > 0 {
                         Text(AppFormat.signed(issue.delta))
-                            .font(.caption2.monospacedDigit())
+                            .font(.hubCaption2.monospacedDigit())
                             .foregroundStyle(DeltaPolarity.lowerIsBetter.tint(for: issue.delta))
                     }
                 } else {
                     Text("최근 7일 없음")
-                        .font(.caption)
+                        .font(.hubCaption)
                         .foregroundStyle(.green)
                 }
 
@@ -190,8 +190,8 @@ struct CrashIssueRow: View {
 
                 if let lastSeen = issue.lastSeen {
                     Text(AppFormat.relative(lastSeen))
-                        .font(.caption2)
-                        .foregroundStyle(.tertiary)
+                        .font(.hubCaption2)
+                        .foregroundStyle(HierarchicalShapeStyle.hubFaint)
                 }
             }
 
@@ -199,8 +199,8 @@ struct CrashIssueRow: View {
                 Text(issue.versions.count == 1
                      ? "v\(first.version) 에서만"
                      : "v\(first.version) 등 \(issue.versions.count)개 버전 · 기기 \(issue.devices.count)종")
-                    .font(.caption2)
-                    .foregroundStyle(.tertiary)
+                    .font(.hubCaption2)
+                    .foregroundStyle(HierarchicalShapeStyle.hubFaint)
             }
         }
         .padding(.vertical, 6)

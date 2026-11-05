@@ -59,7 +59,7 @@ struct EnvironmentBadge: View {
         Label(environment.shortLabel, systemImage: symbol)
             // 툴바 안에서는 Label 이 아이콘만 남기는데, 이 배지는 글자가 요점이다.
             .labelStyle(.titleAndIcon)
-            .font(.caption.weight(.bold))
+            .font(.hubCaption.weight(.bold))
             .padding(.horizontal, 8)
             .padding(.vertical, 3)
             // 배지는 줄어들지 않는다. 좁은 헤더에서 먼저 짜부라져 "PROD" 가 한 글자씩
@@ -74,13 +74,12 @@ struct EnvironmentBadge: View {
 }
 
 /// 개발 빌드에서만 뜨는 한 줄짜리 띠. 운영 빌드에서는 아무것도 그리지 않는다.
-/// 짧게 둔다 — 맥 사이드바는 좁고 아이폰은 탭마다 붙는다. 배지와 주황 강조색이 이미 같은
-/// 말을 하고 있어서 띠는 "지금 개발 쪽" 이라는 것만 외치면 된다.
+/// 짧게 둔다 — 맥 사이드바는 좁다. 아이폰은 자리가 모자라 띠 없이 배지와 주황 강조색만 쓴다.
 struct DevelopmentBanner: View {
     var body: some View {
         if CloudKitEnvironment.current == .development {
             Label("개발 환경 데이터", systemImage: "hammer.fill")
-                .font(.footnote.weight(.semibold))
+                .font(.hubFootnote.weight(.semibold))
                 .lineLimit(1)
                 .foregroundStyle(.white)
                 .padding(.horizontal, 12)

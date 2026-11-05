@@ -149,7 +149,7 @@ struct ReviewStatsView: View {
             .chartYAxis { AxisMarks(position: .leading) }
             .frame(height: 180)
             Text(unitCaption + " 막대 색은 그 칸의 평균 평점입니다 — 초록이 5점, 빨강이 1점 쪽.")
-                .font(.caption)
+                .font(.hubCaption)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
         }
@@ -182,7 +182,7 @@ struct ReviewStatsView: View {
             }
             if grouped.count > top.count {
                 Text("그 밖의 \(grouped.count - top.count)개 나라는 줄였습니다.")
-                    .font(.caption)
+                    .font(.hubCaption)
                     .foregroundStyle(.secondary)
             }
         }
@@ -210,7 +210,7 @@ struct ReviewStatsView: View {
                          systemImage: "clock", tint: .purple)
             }
             Text("별점마다 답한 비율")
-                .font(.subheadline)
+                .font(.hubSubheadline)
                 .foregroundStyle(.secondary)
                 .padding(.top, 4)
             VStack(spacing: 8) {
@@ -225,8 +225,8 @@ struct ReviewStatsView: View {
                 }
             }
             Text("응답 시간은 응답을 마지막으로 고친 때로 잽니다. 나중에 고친 응답은 실제보다 늦게 잡혀요.")
-                .font(.caption)
-                .foregroundStyle(.tertiary)
+                .font(.hubCaption)
+                .foregroundStyle(HierarchicalShapeStyle.hubFaint)
                 .fixedSize(horizontal: false, vertical: true)
         }
     }
@@ -236,12 +236,12 @@ struct ReviewStatsView: View {
     private func barRow(label: String, ratio: Double, value: String, tint: Color) -> some View {
         HStack(spacing: 8) {
             Text(label)
-                .font(.subheadline)
+                .font(.hubSubheadline)
                 .lineLimit(1)
                 .frame(width: 84, alignment: .leading)
             MeterBar(ratio: ratio, height: 8, tint: tint)
             Text(value)
-                .font(.caption.monospacedDigit())
+                .font(.hubCaption.monospacedDigit())
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
                 .frame(minWidth: 96, alignment: .trailing)

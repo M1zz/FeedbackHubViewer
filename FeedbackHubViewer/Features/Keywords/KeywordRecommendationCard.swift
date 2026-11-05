@@ -29,7 +29,7 @@ struct KeywordRecommendationCard: View {
                 content(report)
             } else {
                 Text("자동완성에 얼마나 빨리 뜨는지로 **많이 검색되는 말**을 고르고, 그 말에서 지금 몇 위인지로 **올라갈 수 있는 말**을 가려 순위를 매깁니다.")
-                    .font(.callout)
+                    .font(.hubCallout)
                     .fixedSize(horizontal: false, vertical: true)
             }
             runButton
@@ -79,7 +79,7 @@ struct KeywordRecommendationCard: View {
     private var uploadBar: some View {
         if let blocker = uploadBlocker {
             Text(blocker)
-                .font(.caption)
+                .font(.hubCaption)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
         } else {
@@ -93,7 +93,7 @@ struct KeywordRecommendationCard: View {
                 .buttonStyle(.borderedProminent)
                 .disabled(picked.isEmpty)
                 Text("바뀌는 것을 확인한 뒤 저장하면 다음 버전 심사와 함께 나갑니다.")
-                    .font(.caption2)
+                    .font(.hubCaption2)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -106,7 +106,7 @@ struct KeywordRecommendationCard: View {
     private func content(_ report: KeywordRecommendation.Report) -> some View {
         if report.items.isEmpty {
             Text("검색이 많이 되면서 이 앱과 관련 있는 말을 찾지 못했습니다.")
-                .font(.callout)
+                .font(.hubCallout)
                 .foregroundStyle(.secondary)
         } else {
             let shown = showsAll ? report.items : Array(report.items.prefix(Self.collapsedCount))
@@ -121,7 +121,7 @@ struct KeywordRecommendationCard: View {
                 Button(showsAll ? "접기" : "\(report.items.count - Self.collapsedCount)개 더 보기") {
                     showsAll.toggle()
                 }
-                .font(.caption)
+                .font(.hubCaption)
             }
         }
 
@@ -129,12 +129,12 @@ struct KeywordRecommendationCard: View {
             let listed = report.dropped.prefix(12).joined(separator: ", ")
             let more = report.dropped.count > 12 ? " 외 \(report.dropped.count - 12)개" : ""
             Text("많이 찾지만 이 앱을 찾는 사람의 말이 아니라서 뺀 것: " + listed + more)
-                .font(.caption)
+                .font(.hubCaption)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
         }
         Text("\(Storefront.name(for: report.country)) · \(AppFormat.relative(report.measuredAt)) 기준. 인기는 검색량이 아니라 자동완성에 뜨는 빠르기로 잰 차례입니다. Apple 은 검색량을 공개하지 않습니다.")
-            .font(.caption2)
+            .font(.hubCaption2)
             .foregroundStyle(.secondary)
             .fixedSize(horizontal: false, vertical: true)
     }
@@ -166,12 +166,12 @@ struct KeywordRecommendationCard: View {
                     Tag(text: verdict.label, tint: Self.tint(verdict), isCompact: true)
                     Spacer(minLength: 4)
                     Text("인기 \(item.popularity)")
-                        .font(.caption.monospacedDigit())
+                        .font(.hubCaption.monospacedDigit())
                         .foregroundStyle(.secondary)
                 }
                 MeterBar(ratio: Double(item.popularity) / 100, tint: Self.tint(verdict))
                 Text(KeywordRecommendation.reason(item))
-                    .font(.caption)
+                    .font(.hubCaption)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -209,7 +209,7 @@ struct KeywordRecommendationCard: View {
             .buttonStyle(.bordered)
             .disabled(keywords.isChecking)
             Text("후보 서른 개쯤을 하나씩 확인해 2~3분 걸립니다.")
-                .font(.caption2)
+                .font(.hubCaption2)
                 .foregroundStyle(.secondary)
         }
     }

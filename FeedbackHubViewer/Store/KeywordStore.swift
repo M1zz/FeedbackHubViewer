@@ -53,7 +53,10 @@ final class KeywordStore: ObservableObject {
     /// tracked so the picker matches the data, and persisted as a plain
     /// preference — it is a UI choice, not part of the history.
     @Published var countries: [String] {
-        didSet { UserDefaults.standard.set(countries, forKey: Self.countriesKey) }
+        didSet {
+            guard countries != oldValue else { return }
+            SyncedDefaults.set(countries, forKey: Self.countriesKey)
+        }
     }
 
     private static let countriesKey = "keywordCountries"
@@ -96,7 +99,19 @@ final class KeywordStore: ObservableObject {
     init() {
         let saved = UserDefaults.standard.stringArray(forKey: Self.countriesKey)
         countries = saved?.isEmpty == false ? saved! : ["kr"]
+        // 다른 기기에서 고른 나라(`SyncedDefaults`).
+        countriesObserver = NotificationCenter.default.addObserver(forName: SyncedDefaults.changed, object: nil,
+                                                                   queue: .main) { [weak self] note in
+            guard note.touches(Self.countriesKey) else { return }
+            Task { @MainActor in
+                guard let self, let saved = UserDefaults.standard.stringArray(forKey: Self.countriesKey),
+                      !saved.isEmpty, saved != self.countries else { return }
+                self.countries = saved
+            }
+        }
     }
+
+    private var countriesObserver: NSObjectProtocol?
 
     // MARK: - Lifecycle
 
@@ -121,8 +136,12 @@ final class KeywordStore: ObservableObject {
                                           at: CacheFile.url(Self.fieldLogFile)) {
                 self.fieldLog = saved
             }
-            guard let restored = await KeywordCache.shared.load() else { return }
+            guard let restored = await KeywordCache.shared.load() else {
+                await self.cloud.pull()
+                return
+            }
             self.history = restored
+            defer { Task { await self.cloud.pull() } }
             var countries = self.countries
             for country in restored.countriesInUse where !countries.contains(country) {
                 countries.append(country)
@@ -808,6 +827,26 @@ final class KeywordStore: ObservableObject {
         history.prune()
         let snapshot = history
         Task { await KeywordCache.shared.save(snapshot) }
+        cloud.schedulePush()
+    }
+
+    // MARK: - 기기 사이
+
+    /// 추적 키워드와 순위 기록을 iCloud 비공개 DB 로 기기 사이에서 하나로(`SyncedBlob`).
+    /// 맥에서 더한 키워드가 아이폰에도 뜨고, 어느 기기가 본 순위든 양쪽 추이에 남는다.
+    private(set) lazy var cloud = SyncedBlob<KeywordHistory>(
+        name: "keywords",
+        current: { [weak self] in self?.history },
+        adopt: { [weak self] merged in
+            guard let self else { return }
+            self.history = merged
+            Task { await KeywordCache.shared.save(merged) }
+        },
+        merge: { local, remote in local.merged(with: remote) })
+
+    /// 앞으로 올 때마다 — 너무 자주는 말고.
+    func pullFromCloud() {
+        Task { await cloud.pull(minimumInterval: 60) }
     }
 
     /// Write on the way out, on the spot — the same reason `FeedbackStore`

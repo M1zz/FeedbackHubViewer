@@ -31,6 +31,8 @@ struct AppListView: View {
     @ObservedObject private var icons = StoreIcons.shared
     /// App Store 와 손수 이을 앱(오른쪽 클릭 메뉴).
     @State private var linking: String?
+    /// 뱃지가 선 채로 눌러 고른 앱. 뱃지가 사라져도 떠날 때까지 그 자리에 둔다.
+    @State private var held: String?
     let section: FeedbackStore.ProjectSection
     /// 아이폰은 고르면 민다. 맥 · 아이패드는 `store.selectedProject` 만 바꾼다.
     var pushes = false
@@ -38,11 +40,15 @@ struct AppListView: View {
     var body: some View {
         let metrics = SectionMetrics(store: store, keywords: keywords, purchases: purchases, design: design, charts: charts, news: news)
         let traffic = section == .stats ? store.trafficByProject : [:]
-        // 릴리즈는 빨강이 먼저 와야 그 기능의 목록이다. 나머지는 MAU 순 그대로 — 기능을
-        // 바꿔도 앱 자리가 그대로여야 눈이 앱을 다시 찾지 않는다.
-        let entries = section == .release
+        // 뱃지가 선 앱이 언제나 맨 위 — 볼 것을 찾아다니지 않게. 그 안과 나머지는 MAU 순
+        // 그대로(릴리즈는 빨강 먼저). 눌러 고른 앱은 뱃지가 사라져도 떠날 때까지 자리를 지킨다.
+        let base = section == .release
             ? store.redFirst(store.projectCounts, key: { $0.key })
             : store.projectCounts
+        let flagged = Set(base.map(\.key).filter {
+            (metrics.badge(section, project: $0) ?? visitBadge($0)) != nil || ($0 == held && $0 == store.selectedProject)
+        })
+        let entries = base.filter { flagged.contains($0.key) } + base.filter { !flagged.contains($0.key) }
 
         List {
             Section {
@@ -70,6 +76,8 @@ struct AppListView: View {
                 hiddenSection
             }
         }
+        .animation(.default, value: entries.map(\.key))
+        .onChange(of: section) { held = nil }
         .hubSidebarListStyle()
         .modifier(PushedTitle(title: section.rawValue, isPushed: pushes))
         .task(id: entries.count) { await icons.resolve(entries.map(\.key), keywords: keywords) }
@@ -102,7 +110,11 @@ struct AppListView: View {
         if pushes {
             NavigationLink(value: FeedbackStore.ProjectRoute(project: project, section: section)) { content }
         } else {
-            Button { store.selectedProject = project } label: { content }
+            Button {
+                let hasBadge = project.flatMap { metrics.badge(section, project: $0) ?? visitBadge($0) } != nil
+                held = hasBadge ? project : nil
+                store.selectedProject = project
+            } label: { content }
                 .buttonStyle(.plain)
                 .listRowBackground(Rectangle().fill(isSelected ? AnyShapeStyle(.tint.opacity(0.14)) : AnyShapeStyle(.clear)))
         }
@@ -148,16 +160,16 @@ struct AppListView: View {
                     Spacer()
                     Button("다시 보기") { store.showProject(entry.key) }
                         .buttonStyle(.borderless)
-                        .font(.caption)
+                        .font(.hubCaption)
                 }
-                .font(.callout)
+                .font(.hubCallout)
             }
             if store.hiddenProjectEntries.count > 1 {
                 Button {
                     store.showAllProjects()
                 } label: {
                     Label("모두 다시 보기", systemImage: "eye")
-                        .font(.callout)
+                        .font(.hubCallout)
                 }
                 .buttonStyle(.borderless)
             }
@@ -165,7 +177,7 @@ struct AppListView: View {
             Text("숨긴 앱")
         } footer: {
             Text("이 기기에서만 가려집니다. 허브의 레코드는 그대로입니다.")
-                .font(.caption)
+                .font(.hubCaption)
         }
     }
 }
@@ -231,7 +243,7 @@ private struct AppRow: View {
                 HStack(spacing: 5) {
                     ReleaseDot(level: release)
                     Text(detail)
-                        .font(.subheadline.monospacedDigit())
+                        .font(.hubSubheadline.monospacedDigit())
                         .foregroundStyle(isAlarming ? Color.red : Color.secondary)
                         .lineLimit(2)
                         .fixedSize(horizontal: false, vertical: true)
@@ -248,7 +260,7 @@ private struct AppRow: View {
             if let stats, stats.traffic.hasUsageData {
                 VStack(alignment: .trailing, spacing: 3) {
                     Text("\(stats.metric.name) \(AppFormat.count(stats.metric.value))")
-                        .font(.callout.monospacedDigit().weight(.semibold))
+                        .font(.hubCallout.monospacedDigit().weight(.semibold))
                         .foregroundStyle(stats.metric.value > 0 ? .primary : .secondary)
                     if stats.traffic.totalEvents > 0 {
                         Sparkline(points: stats.traffic.sparkline)

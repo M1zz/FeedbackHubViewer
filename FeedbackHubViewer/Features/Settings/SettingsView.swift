@@ -224,13 +224,13 @@ struct ConnectKeyForm: View {
                     .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.secondary.opacity(0.3)))
                 Text("키는 만들 때 한 번만 내려받을 수 있습니다. 잃어버렸으면 새로 만들어야 해요.")
                     .font(.body)
-                    .foregroundStyle(.tertiary)
+                    .foregroundStyle(HierarchicalShapeStyle.hubFaint)
             }
 
             field("판매자 번호 (선택)", text: $vendorNumber, prompt: "8xxxxxxx")
             Text("판매 리포트용입니다. \"판매 및 추세\" 화면 왼쪽 위에 있어요. 판매 리포트까지 읽으려면 키 역할이 Admin 또는 Finance여야 합니다.")
                 .font(.body)
-                .foregroundStyle(.tertiary)
+                .foregroundStyle(HierarchicalShapeStyle.hubFaint)
                 .fixedSize(horizontal: false, vertical: true)
 
             if let error {
@@ -257,12 +257,12 @@ struct ConnectKeyForm: View {
                 // 다른 기기로 가는지 — 안 간다면 왜인지와 무엇을 켜면 되는지.
                 if purchases.isKeySynced {
                     Label("iCloud 키체인에 저장됨 · 다른 기기에도 들어갑니다", systemImage: "checkmark.icloud")
-                        .font(.callout)
+                        .font(.hubCallout)
                         .foregroundStyle(.green)
                 } else {
                     Label("이 기기에만 저장됨 · 설정 → Apple 계정 → iCloud → 암호 및 키체인을 켜고 다시 저장하면 다른 기기로 갑니다",
                           systemImage: "icloud.slash")
-                        .font(.callout)
+                        .font(.hubCallout)
                         .foregroundStyle(.orange)
                         .fixedSize(horizontal: false, vertical: true)
                 }

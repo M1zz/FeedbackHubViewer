@@ -59,7 +59,7 @@ struct LeadsView: View {
                 }
                 Text("허브는 질문을 찾아 모으기만 해요. 자동으로 답글을 달면 레딧 정책(스팸)에 걸려 계정과 앱 링크가 막힐 수 있어서, 답은 직접 달아요.")
                     .font(.body)
-                    .foregroundStyle(.tertiary)
+                    .foregroundStyle(HierarchicalShapeStyle.hubFaint)
                     .fixedSize(horizontal: false, vertical: true)
             }
             .padding(Platform.cardPadding)

@@ -139,7 +139,7 @@ struct ChartSnapshot: Codable, Hashable {
 }
 
 /// 한 번의 확인.
-struct ChartScan: Codable {
+struct ChartScan: Codable, Equatable {
     let date: Date
     /// 이번에 본 나라. 여기 없는 나라의 "없음" 은 100위 밖이 아니라 안 본 것이다.
     let countries: [String]
@@ -180,7 +180,7 @@ enum ChartMove: Hashable {
     case unknown
 }
 
-struct ChartHistory: Codable {
+struct ChartHistory: Codable, Equatable {
     var apps: [Int: ChartApp] = [:]
     /// 오래된 것부터.
     var scans: [ChartScan] = []
@@ -283,6 +283,20 @@ struct ChartHistory: Codable {
         scans.append(scan)
         let cutoff = Calendar.current.date(byAdding: .day, value: -Self.keepDays, to: .now) ?? .distantPast
         scans.removeAll { $0.date < cutoff }
+    }
+
+    /// 두 기기의 기록을 하나로 — 확인은 시각으로 모으고(같은 시각이면 하나), 앱 정보는 빈 칸만
+    /// 채운다. 어느 기기가 확인했든 양쪽 추이에 남는다.
+    func merged(with other: ChartHistory) -> ChartHistory {
+        var result = self
+        for (id, app) in other.apps where result.apps[id] == nil { result.apps[id] = app }
+        let known = Set(scans.map(\.date))
+        let incoming = other.scans.filter { !known.contains($0.date) }
+        guard !incoming.isEmpty else { return result }
+        result.scans = (scans + incoming).sorted { $0.date < $1.date }
+        let cutoff = Calendar.current.date(byAdding: .day, value: -Self.keepDays, to: .now) ?? .distantPast
+        result.scans.removeAll { $0.date < cutoff }
+        return result
     }
 }
 

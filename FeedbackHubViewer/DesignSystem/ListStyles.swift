@@ -16,12 +16,10 @@ extension View {
         #if os(macOS)
         self.navigationSubtitle(subtitle)
         #else
-        if #available(iOS 26.0, *) {
-            self.navigationSubtitle(subtitle)
-        } else {
-            self.safeAreaInset(edge: .top, spacing: 0) {
-                SubtitleBar(text: subtitle)
-            }
+        // 아이폰의 내비게이션 막대 부제는 한 줄이라 "…" 로 잘린다. 그 줄이 화면의 요약이므로
+        // 막대 밑에 따로 두고 다 보이게 한다(넘치면 줄을 넘긴다).
+        self.safeAreaInset(edge: .top, spacing: 0) {
+            SubtitleBar(text: subtitle)
         }
         #endif
     }
@@ -69,10 +67,9 @@ private struct SubtitleBar: View {
     var body: some View {
         HStack {
             Text(text)
-                .font(.footnote)
+                .font(.hubFootnote)
                 .foregroundStyle(.secondary)
-                .lineLimit(1)
-                .minimumScaleFactor(0.8)
+                .fixedSize(horizontal: false, vertical: true)
             Spacer(minLength: 0)
         }
         .padding(.horizontal, 16)

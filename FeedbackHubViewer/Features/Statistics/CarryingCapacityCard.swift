@@ -57,7 +57,7 @@ struct CarryingCapacityCard: View {
                 footnote(result)
             } else {
                 Text("아직 활동 기록이 없어 상한을 잴 수 없습니다. 이벤트가 두 \(period.unit) 이상 쌓이면 계산됩니다.")
-                    .font(.callout)
+                    .font(.hubCallout)
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
@@ -73,10 +73,10 @@ struct CarryingCapacityCard: View {
                 Text(result.capacity.map { Self.count($0) } ?? "—")
                     .font(.figure(.largeTitle))
                     .foregroundStyle(result.capacity == nil ? Color.secondary : .accentColor)
-                if result.capacity != nil { Text("명").font(.caption).foregroundStyle(.secondary) }
+                if result.capacity != nil { Text("명").font(.hubCaption).foregroundStyle(.secondary) }
                 Spacer(minLength: 8)
                 Text(subtitle(result))
-                    .font(.caption)
+                    .font(.hubCaption)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.trailing)
             }
@@ -130,7 +130,7 @@ struct CarryingCapacityCard: View {
 
         if done.count < 2 {
             Text("아직 그릴 만한 과거가 없습니다.")
-                .font(.caption)
+                .font(.hubCaption)
                 .foregroundStyle(.secondary)
         } else {
             Chart {
@@ -164,7 +164,7 @@ struct CarryingCapacityCard: View {
                         .lineStyle(StrokeStyle(lineWidth: 1, dash: [3, 3]))
                         .annotation(position: .top, alignment: .leading) {
                             Text("상한 \(Self.count(capacity))명")
-                                .font(.caption2)
+                                .font(.hubCaption2)
                                 .foregroundStyle(.orange)
                         }
                 }
@@ -267,7 +267,7 @@ struct CarryingCapacityCard: View {
             VStack(alignment: .leading, spacing: 4) {
                 ForEach(result.caveats, id: \.self) { note in
                     Label(note, systemImage: "exclamationmark.triangle")
-                        .font(.caption2)
+                        .font(.hubCaption2)
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -284,8 +284,8 @@ struct CarryingCapacityCard: View {
             Text("선 위를 가리키면 그 \(result.period.unit)의 정확한 값(활동 사용자·이탈률·신규)이 나옵니다. 범례를 누르면 계열이 켜지고 꺼져요. 최근 \(result.sampleCount)\(result.period.unit)치(진행 중인 \(result.period.unit) 제외)의 평균입니다. 활동 사용자 = 그 기간에 이벤트를 보낸 설치, 신규 = 이 허브에서 처음 활동한 설치, 이탈 = 지난 기간에 활동했는데 이번 기간에 아무것도 보내지 않은 설치.")
             Text("앱이 주요 행동만 보내므로, 열어만 보고 아무것도 하지 않은 설치는 활동에 들어오지 않습니다. 스토어 다운로드 수와도 다른 숫자입니다.")
         }
-        .font(.caption2)
-        .foregroundStyle(.tertiary)
+        .font(.hubCaption2)
+        .foregroundStyle(HierarchicalShapeStyle.hubFaint)
         .fixedSize(horizontal: false, vertical: true)
     }
 
