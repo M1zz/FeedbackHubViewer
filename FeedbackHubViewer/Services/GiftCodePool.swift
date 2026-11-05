@@ -13,6 +13,7 @@
 //   · `offercode-<번들>-<UUID>`        LeeoOfferCode       bundleId · code          여기서 만들고 지운다
 //   · `offerclaim-<묶음 레코드 이름>`   LeeoOfferCodeClaim  transactionId · bundleId  앱이 가져간 표시
 //   · `offerissue-<번들>-<결제 번호>`    LeeoOfferCodeClaim  code · transactionId · bundleId · poolRecord
+//   · `offerrefund-<번들>-<결제 번호>`   LeeoOfferCodeClaim  code · transactionId · bundleId  보낸 사람이 환불받음
 //
 //  ⚠️ 두 타입의 `bundleId` 는 Dashboard 에서 Queryable 이어야 한다(앱도 이것으로 묶음을 찾는다).
 //
@@ -26,6 +27,8 @@ struct GiftPoolStatus: Equatable {
     var left = 0
     /// 지금까지 선물로 나간 장(발급 기록 수).
     var issued = 0
+    /// 나간 장 중 보낸 사람이 환불받은 것. 코드는 되돌릴 수 없어 세기만 한다.
+    var refunded = 0
     /// 가장 최근에 나간 때.
     var lastIssuedAt: Date?
     /// 이 기기에만 둔 예비 코드. 묶음이 줄면 여기서 100장까지 채운다.
@@ -130,7 +133,7 @@ final class GiftCodePool: ObservableObject {
         // 예비로 두었다가 묶음이 줄면 채운다.
         let need = Self.targetSize - left - reserve(bundleID).count
         if need > 0 {
-            let batch = try await client.makeGiftCodes(appID: app.id, count: need, sandbox: Self.usesSandboxCodes)
+            let batch = try await client.makeGiftCodes(appID: app.id, bundleID: bundleID, count: need, sandbox: Self.usesSandboxCodes)
             // 먼저 예비에 둔다 — iCloud 에 올리다 실패해도 만든 코드를 잃지 않는다.
             setReserve(reserve(bundleID) + batch.codes, bundleID)
             var map = expiries(bundleID)
@@ -188,6 +191,7 @@ final class GiftCodePool: ObservableObject {
         let claims = try await query(Self.claimRecordType, bundleID: bundleID)
         let claimNames = Set(claims.map(\.recordID.recordName))
         let issues = claims.filter { $0.recordID.recordName.hasPrefix("offerissue-") }
+        let refunds = claims.filter { $0.recordID.recordName.hasPrefix("offerrefund-") }
 
         // 가져간 장은 지운다 — 남은 장만 묶음에 두어야 앱이 빨리 찾는다.
         // 곧 만료되는 장도 — 받은 사람 손에서 끝나면 안 된다.
@@ -217,6 +221,7 @@ final class GiftCodePool: ObservableObject {
         statuses[bundleID] = GiftPoolStatus(
             left: left,
             issued: issues.count,
+            refunded: refunds.count,
             lastIssuedAt: issues.compactMap(\.creationDate).max(),
             reserve: spare.count)
     }

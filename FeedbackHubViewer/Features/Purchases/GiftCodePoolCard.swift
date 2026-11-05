@@ -61,6 +61,9 @@ struct GiftCodePoolCard: View {
                 figure("\(status.left)", "남은 코드", alarm: status.left < GiftCodePool.lowMark && !status.isEmptyEverywhere)
                 figure("\(status.issued)", "선물로 나감")
                 figure("\(status.reserve)", "이 맥의 예비")
+                if status.refunded > 0 {
+                    figure("\(status.refunded)", "환불됨", alarm: true)
+                }
                 if let last = status.lastIssuedAt {
                     figure(AppFormat.relative(last), "최근 나감")
                 }
@@ -151,6 +154,7 @@ struct GiftCodePoolCard: View {
 
     private func detailLine(_ status: GiftPoolStatus) -> String {
         var parts = ["나감 \(status.issued)"]
+        if status.refunded > 0 { parts.append("환불 \(status.refunded)") }
         if let last = status.lastIssuedAt { parts.append("최근 \(AppFormat.relative(last))") }
         parts.append("예비 \(status.reserve)장")
         return parts.joined(separator: " · ")

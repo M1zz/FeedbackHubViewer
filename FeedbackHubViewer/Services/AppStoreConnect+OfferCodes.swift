@@ -29,6 +29,7 @@ extension AppStoreConnect {
 
     enum OfferCodeFailure: LocalizedError {
         case noProProduct
+        case ambiguousPro([String])
         case noFreePrice
         case noTerritories
         case valuesNotReady
@@ -37,6 +38,8 @@ extension AppStoreConnect {
             switch self {
             case .noProProduct:
                 return "비소모성 Pro 상품이 없어 건너뜁니다(구독만 있는 앱)."
+            case .ambiguousPro(let ids):
+                return "Pro 상품이 여럿이라 고르지 않았습니다: \(ids.joined(separator: ", ")). App Store Connect 에서 선물이 열 상품에 \"\(AppStoreConnect.giftOfferName)\" 이라는 무료 오퍼 코드를 한 번 만들면, 그다음부터는 그 상품으로 채웁니다."
             case .noFreePrice:
                 return "무료 가격점을 찾지 못했습니다. App Store Connect 에서 Pro 상품에 \"\(AppStoreConnect.giftOfferName)\" 이라는 무료 오퍼 코드를 한 번 직접 만들면, 그다음부터는 여기서 채웁니다."
             case .noTerritories:
@@ -58,8 +61,8 @@ extension AppStoreConnect {
     /// Pro 상품에 일회용 오퍼 코드를 적어도 `count` 장 만들어 값까지 받는다(Apple 묶음 크기로 올림 —
     /// 500장 아래는 못 만든다).
     /// `sandbox` 면 샌드박스 코드(개발 빌드 · TestFlight 에서 쓰는 것).
-    func makeGiftCodes(appID: String, count: Int, sandbox: Bool) async throws -> GiftCodeBatch {
-        let pro = try await proProduct(appID: appID)
+    func makeGiftCodes(appID: String, bundleID: String, count: Int, sandbox: Bool) async throws -> GiftCodeBatch {
+        let pro = try await proProduct(appID: appID, bundleID: bundleID)
         let offerID = try await giftOffer(productID: pro.id)
 
         let expires = Calendar(identifier: .gregorian)
@@ -96,37 +99,45 @@ extension AppStoreConnect {
 
     // MARK: - 안쪽
 
-    /// Pro 비소모성 — 하나면 그것, 여럿이면 판매 중이고 이름에 pro · lifetime 이 든 것.
-    private func proProduct(appID: String) async throws -> (id: String, productID: String) {
+    /// 선물이 여는 Pro 비소모성. 이름으로 짐작하지 않는다 — 틀린 상품에 코드를 걸면 받은 사람이 엉뚱한 것을 받는다.
+    ///  1. 이미 "LeeoKit Gift" 오퍼가 걸린 상품 (한 번 정해지면 그대로)
+    ///  2. `<번들>.pro` 상품
+    ///  3. 판매 중인 비소모성이 하나뿐이면 그것
+    ///  그 밖에는 고르지 않고 묻는다(`ambiguousPro`).
+    private func proProduct(appID: String, bundleID: String) async throws -> (id: String, productID: String) {
         let doc = try await list("v1/apps/\(appID)/inAppPurchasesV2", [
             "fields[inAppPurchases]": "productId,inAppPurchaseType,state",
             "limit": "200"
         ])
         let candidates = doc.data.filter {
-            $0.string("inAppPurchaseType") == StoreProduct.Kind.nonConsumable.rawValue
-                && !($0.string("productId") ?? "").lowercased().contains("gift")
-                && !($0.string("productId") ?? "").lowercased().contains("tip")
+            let id = ($0.string("productId") ?? "").lowercased()
+            return $0.string("inAppPurchaseType") == StoreProduct.Kind.nonConsumable.rawValue
+                && $0.string("state") != "DEVELOPER_REMOVED_FROM_SALE"
+                && !id.contains("gift") && !id.contains("tip")
         }
-        func score(_ item: ASCResource) -> Int {
-            let id = (item.string("productId") ?? "").lowercased()
-            var value = 0
-            if item.string("state") == "APPROVED" { value += 4 }
-            if id.contains("pro") || id.contains("lifetime") || id.contains("premium") || id.contains("unlock") { value += 2 }
-            return value
+        func pick(_ item: ASCResource) -> (id: String, productID: String) { (item.id, item.string("productId") ?? item.id) }
+
+        for item in candidates {
+            if try await existingGiftOffer(productID: item.id) != nil { return pick(item) }
         }
-        guard let best = candidates.max(by: { score($0) < score($1) }) else { throw OfferCodeFailure.noProProduct }
-        return (best.id, best.string("productId") ?? best.id)
+        if let exact = candidates.first(where: { $0.string("productId") == "\(bundleID).pro" }) { return pick(exact) }
+        if candidates.count == 1 { return pick(candidates[0]) }
+        if candidates.isEmpty { throw OfferCodeFailure.noProProduct }
+        throw OfferCodeFailure.ambiguousPro(candidates.compactMap { $0.string("productId") }.sorted())
     }
 
-    /// "LeeoKit Gift" 오퍼 코드 id — 있으면 그것, 없으면 무료로 만든다.
-    private func giftOffer(productID id: String) async throws -> String {
+    /// 상품에 걸린 "LeeoKit Gift" 오퍼 코드 id.
+    private func existingGiftOffer(productID id: String) async throws -> String? {
         let existing = try await list("v2/inAppPurchases/\(id)/offerCodes", [
             "fields[inAppPurchaseOfferCodes]": "name,active",
             "limit": "200"
         ])
-        if let found = existing.data.first(where: { $0.string("name") == Self.giftOfferName && $0.bool("active") != false }) {
-            return found.id
-        }
+        return existing.data.first { $0.string("name") == Self.giftOfferName && $0.bool("active") != false }?.id
+    }
+
+    /// "LeeoKit Gift" 오퍼 코드 id — 있으면 그것, 없으면 무료로 만든다.
+    private func giftOffer(productID id: String) async throws -> String {
+        if let found = try await existingGiftOffer(productID: id) { return found }
 
         let territories = try await availableTerritories(productID: id)
         guard !territories.isEmpty else { throw OfferCodeFailure.noTerritories }
