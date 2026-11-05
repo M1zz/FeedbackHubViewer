@@ -125,6 +125,11 @@ struct SectionMetrics {
             }
             return keywords.trackId(for: project).map(charts.history.countriesRanked(for:)) ?? 0
         case .purchases: return project.flatMap { purchases.products(for: $0)?.count } ?? 0
+        case .giftCodes:
+            // 한 앱이면 남은 장, 전체면 묶음이 있는 앱 수.
+            let pool = GiftCodePool.shared.statuses
+            guard let project else { return pool.values.filter { !$0.isEmptyEverywhere }.count }
+            return pool[project]?.left ?? 0
         case .reviews: return reviewCount(project)
         case .design: return design.docs(for: project).count
         case .marketing: return MarketingStore.shared.items(for: project).count
@@ -186,6 +191,10 @@ struct SectionMetrics {
         case .reviews:
             guard purchases.isConfigured else { return "연결 안 됨" }
             return count > 0 ? "\(AppFormat.count(count))건" : "리뷰 없음"
+        case .giftCodes:
+            guard let project else { return count > 0 ? "묶음 \(count)개" : "묶음 없음" }
+            guard let status = GiftCodePool.shared.statuses[project], !status.isEmptyEverywhere else { return "비어 있음" }
+            return "남음 \(status.left) · 나감 \(status.issued)"
         case .storeAnalytics:
             guard purchases.isConfigured else { return "연결 안 됨" }
             guard let project else {
@@ -216,6 +225,9 @@ struct SectionMetrics {
         case .crashes: return store.crashSummary(for: project).last7Days > 0
         case .release: return project.map { store.releaseLevel(for: $0) == .red } ?? false
         case .storeAnalytics: return project != nil && count(section, project: project) > 0
+        case .giftCodes:
+            guard let project, let status = GiftCodePool.shared.statuses[project], !status.isEmptyEverywhere else { return false }
+            return status.left < GiftCodePool.lowMark
         default: return false
         }
     }
@@ -312,6 +324,14 @@ struct SectionMetrics {
             if let average = feed.average { text += String(format: " · 평균 %.2f", average) }
             text += feed.unanswered > 0 ? " · 답 안 함 \(feed.unanswered)건" : " · 모두 답함"
             return text
+        case .giftCodes:
+            guard let project else {
+                return "Pro 선물용 App Store 오퍼 코드 · 앱마다 \(GiftCodePool.targetSize)장까지 iCloud 에 두고 채운다"
+            }
+            guard let status = GiftCodePool.shared.statuses[project], !status.isEmptyEverywhere else {
+                return "비어 있음 · App Store Connect 로 채우기를 누르면 100장이 생긴다"
+            }
+            return "남음 \(status.left) / \(GiftCodePool.targetSize) · 나감 \(status.issued) · 예비 \(status.reserve)장"
         case .design:
             return "화면 설계도 · 문제 정의부터 솔루션까지 · 리포의 \(DesignDocsStore.folder)"
         case .marketing:

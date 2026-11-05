@@ -1,5 +1,18 @@
 # todo
 
+## 선물 코드 묶음 현황 (2026-11-05)
+- [x] 사이드바 수익 무리에 "선물 코드" 칸(`ProjectSection.giftCodes`, `GiftCodesView`) — 인앱 구입 화면 안의 카드에서 옮김. 앱 목록 줄에 "남음 · 나감", 20장 아래면 빨강. 새로고침 단추가 묶음을 다시 읽고 채움
+- [x] App Store Connect API 로 채우기(`AppStoreConnect+OfferCodes.swift`) — Pro 비소모성에 "LeeoKit Gift" 무료 오퍼 코드를 찾거나 만들고(팔리는 나라마다 0원 가격점), 일회용 코드를 만들어 100장까지 올림. 전체 앱에서 "전부 채우기". 한 번 채운 앱은 50장 아래면 열 때 저절로 다시 채움. 개발 빌드는 SANDBOX, 출시 빌드는 PRODUCTION 코드. 코드는 170일, 끝나기 2주 전 묶음에서 뺌(`expiresAt`)
+- [x] 일회용 코드는 Apple 이 500장 단위로만 만든다(409) — 500장 만들어 100장은 묶음, 400장은 예비. 곧 끝나는 예비는 버림
+- [x] 요청 한도(429): 나라마다 0원 가격점을 묻다 걸림 → 429 면 2·4·8·16·32초 기다려 다시, 동시 요청 8 → 2. 이름 같은 앱 둘이면 번들 ID 를 함께 보임
+- [x] CloudKit 스키마: cktool 로 개발 환경에 LeeoOfferCode · LeeoOfferCodeClaim(bundleId QUERYABLE) 올림. 운영 배포는 Console 에서
+- [ ] 실제로 눌러 보기 — 0원 가격점이 IAP 가격점 목록에 있는지, API 키 역할(App Manager 이상)이 오퍼 코드를 만들 수 있는지 확인. 안 되면 ASC 에서 "LeeoKit Gift" 오퍼를 한 번 손으로 만들면 그다음은 허브가 코드만 만든다
+- [x] 묶음 카드(`GiftCodePoolCard`, `GiftCodePool`): 앱마다 남음 / 100 · 나감 · 최근 나간 때 · 예비. 전체 앱은 남은 장이 적은 앱부터
+- [x] 코드 파일 넣기: App Store Connect 일회용 코드 CSV 에서 코드만 골라, 이미 아는 코드는 버리고 100장까지 공개 DB 에 올리고 나머지는 이 기기 예비. 열 때마다 가져간 장은 지우고 예비로 다시 100장
+- [ ] 예비는 이 기기(UserDefaults)에만 있다 — 다른 기기에서 채우려면 파일을 그 기기에서 다시 넣기
+- [ ] CloudKit 에 두 타입이 생기기 전에는 "아직 묶음이 없습니다" 가 뜬다. Dashboard 에서 bundleId Queryable · Production 배포
+- [ ] 묶음 키는 허브의 앱 키(appIdentifier)다. 앱의 실제 번들 ID 와 다른 앱(예: WeekBlocks 의 appIdentifier)은 맞춰야 함
+
 ## 아이폰 — 현황을 한 눈에, 자르지 않기 (2026-11-03)
 - [x] 첫 탭 "현황"(`PhoneOverviewView`): 한 줄 판정(볼 곳 N군데 / 모두 조용) → 지금 볼 것(뱃지 선 기능, 많은 것부터) → 숫자 타일 두 칸씩(통계 · 릴리즈 · 진단 · 피드백 · 리뷰 · 차트 · 키워드 · 소식) → 앱별 카드(MAU · 설치 · 신호등, 할 말 있는 것만 칩, 6개 뒤 "더 보기"). 아래로 당겨 새로고침
 - [x] 하단 탭 다섯: 현황 · 할 일 · 목소리 · 앱 상태 · 마케팅. 켜면 현황부터

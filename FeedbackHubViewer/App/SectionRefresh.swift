@@ -49,6 +49,7 @@ struct SectionRefresh {
         case .keywords: "키워드 순위 확인"
         case .charts: "차트 순위 새로고침"
         case .purchases: "앱 내 구입 새로고침"
+        case .giftCodes: "선물 코드 묶음 새로고침"
         case .design: "설계 문서 다시 읽기"
         case .marketing: "마케팅 기록 맞추기"
         case .experience: "앱 소개 다시 읽기"
@@ -72,6 +73,7 @@ struct SectionRefresh {
         case .keywords: "오늘 아직 확인 안 한 키워드 순위"
         case .charts: "나라마다 인기 차트 순위"
         case .purchases: project == nil ? "판매 · 모든 앱의 상품" : "판매 · 상품 · 노출 · 전환"
+        case .giftCodes: "\(scope)선물 코드 묶음(iCloud) · 나간 장은 지우고 예비로 100장까지 채움"
         case .design: "리포의 설계 문서 목록"
         case .marketing: "마케팅 자료(iCloud)"
         case .experience: "app-portfolio 의 앱 소개 · vision"
@@ -108,6 +110,8 @@ struct SectionRefresh {
             return connect.isLoadingSales || project.map(connect.isCatalogLoading) == true
         case .leads:
             return !LeadStore.shared.searching.isEmpty
+        case .giftCodes:
+            return !GiftCodePool.shared.working.isEmpty
         case .design, .marketing, .experience:
             return PortfolioStore.shared.isLoading && section == .experience
         }
@@ -195,6 +199,8 @@ struct SectionRefresh {
             await LeadStore.shared.searchIfStale(keys, force: true)
         case .marketing:
             MarketingStore.shared.pullFromCloud()
+        case .giftCodes:
+            for key in project.map({ [$0] }) ?? appKeys { await GiftCodePool.shared.refresh(key, connect: connect) }
         }
     }
 }

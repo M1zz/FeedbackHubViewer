@@ -123,6 +123,8 @@ struct ProjectSectionView: View {
             ChartRanksView(project: project)
         case .purchases:
             InAppPurchasesView(project: project)
+        case .giftCodes:
+            GiftCodesView(project: project)
         case .reviews:
             ReviewsView(project: project)
         case .design:

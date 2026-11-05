@@ -69,6 +69,9 @@ final class FeedbackStore: ObservableObject {
         /// App Store Connect에 걸린 상품과 판매 — 키워드처럼 허브 밖을 읽는다
         /// (`AppStoreConnectStore`).
         case purchases = "앱 내 구입"
+        /// Pro 선물용 App Store 오퍼 코드 묶음 — 앱마다 남은 장 · 나간 장 · 예비, 코드 파일 넣기
+        /// (`GiftCodePool`, LeeoKit `LeeoOfferCodePool`). 허브가 iCloud 공개 DB 에 쓰는 칸.
+        case giftCodes = "선물 코드"
         /// 왜 이렇게 만들었나 - 앱 리포의 설계 문서(HTML)를 지켜보다가 연다
         /// (`DesignDocsStore`). 맥의 디스크를 읽는 유일한 칸.
         case design = "설계"
@@ -90,7 +93,7 @@ final class FeedbackStore: ObservableObject {
             case .feedback, .reviews: .voice
             case .crashes, .release: .quality
             case .stats, .acquisition, .keywords, .charts, .storeAnalytics: .growth
-            case .purchases: .revenue
+            case .purchases, .giftCodes: .revenue
             case .marketing, .leads: .marketing
             case .design, .experience: .build
             }
@@ -143,6 +146,7 @@ final class FeedbackStore: ObservableObject {
             case .keywords: return "magnifyingglass"
             case .charts: return "list.number"
             case .purchases: return "creditcard"
+            case .giftCodes: return "gift"
             case .reviews: return "star.bubble"
             case .design: return "pencil.and.ruler"
             case .marketing: return "megaphone"
