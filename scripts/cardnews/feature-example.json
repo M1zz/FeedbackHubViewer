@@ -1,0 +1,52 @@
+{
+ "name": "장표스냅",
+ "icon": "/Users/hyunholee/Documents/workspace/Auto/장표스냅/SlideSnap/Assets.xcassets/AppIcon.appiconset/AppIcon.png",
+ "accent": "2F6BEA",
+ "kicker": "장표스냅으로 되는 것 5가지",
+ "cover": "강의 장표,\n아직도 사진첩에\n찍어 둬요?",
+ "features": [
+  {
+   "label": "찍으면 반듯하게",
+   "headline": "비스듬히 찍어도\n정면처럼",
+   "text": "네 모서리를 찾아 펴고 배경은 잘라 내요.\n셔터 소리도 나지 않아요.",
+   "before": "/Users/hyunholee/Documents/workspace/Auto/장표스냅/docs/screenshots/raw/ko/before.jpg",
+   "after": "<그 장표만 잘라 낸 반듯한 그림>"
+  },
+  {
+   "label": "발표별로 정리",
+   "headline": "이어 찍은 장표는\n발표 하나로",
+   "text": "셀카와 영수증 사이에 흩어지지 않게\n발표마다 알아서 묶어 둬요.",
+   "screen": "/Users/hyunholee/Documents/workspace/Auto/장표스냅/docs/screenshots/raw/ko/02-list.png"
+  },
+  {
+   "label": "장표마다 메모",
+   "headline": "교수님이 한 말,\n그 장표에 붙여 두기",
+   "text": "녹음해 두면 그때 한 말을 받아써\n장표마다 붙여 줘요.",
+   "screen": "/Users/hyunholee/Documents/workspace/Auto/장표스냅/docs/screenshots/raw/ko/06-memo.png",
+   "top": 0.3
+  },
+  {
+   "label": "글자까지 검색",
+   "headline": "기억나는 단어\n하나로 찾기",
+   "text": "장표 속 글자까지 읽어 둬서\n몇 주 전 강의도 바로 나와요.",
+   "screen": "/Users/hyunholee/Documents/workspace/Auto/장표스냅/docs/screenshots/raw/ko/05-search.png"
+  },
+  {
+   "label": "사진 앱에서 가져오기",
+   "headline": "이미 찍은 사진도\n한 번에 정리",
+   "text": "여러 장 골라 공유하면\n찍은 순서대로 펴서 묶어 줘요.",
+   "screen": "/Users/hyunholee/Documents/workspace/Auto/장표스냅/docs/screenshots/raw/ko/01-share.png"
+  }
+ ],
+ "outro": "다음 강의 전에\n깔아 두세요",
+ "points": [
+  "셔터 소리 없이 촬영",
+  "계정 · 로그인 없이 바로",
+  "모든 처리는 기기 안에서"
+ ],
+ "coverScreens": [
+  "/Users/hyunholee/Documents/workspace/Auto/장표스냅/docs/screenshots/raw/ko/05-search.png",
+  "/Users/hyunholee/Documents/workspace/Auto/장표스냅/docs/screenshots/raw/ko/03-slide.png",
+  "/Users/hyunholee/Documents/workspace/Auto/장표스냅/docs/screenshots/raw/ko/02-list.png"
+ ]
+}

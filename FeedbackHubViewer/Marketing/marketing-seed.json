@@ -5598,5 +5598,37 @@
   "bodyEn": "",
   "scriptEn": "",
   "theme": null
+ },
+ {
+  "id": "89dae913-9b62-4120-b10e-fe687f973690",
+  "project": "com.leeo.slidesnap",
+  "kind": "cardNews",
+  "channel": "인스타그램",
+  "title": "강의 장표, 아직도 사진첩에 찍어 둬요?",
+  "angle": "기능 소개형 카드뉴스 7장(파란 표지 + 폰 세 대 부채꼴, 기능마다 번호 · 큰 제목 · 아래로 잘린 폰 화면, 크림 바탕). 반듯하게 · 발표별 정리 · 장표 메모 · 글자 검색 · 사진 앱에서 가져오기. 인스타 https://www.instagram.com/lee25_ios/p/DfXS5ucCTFh/ 스레드 https://www.threads.com/@lee25_ios/post/DfXSqqbH6L8",
+  "plannedAt": "2026-11-05T00:00:00Z",
+  "stage": "posted",
+  "slides": [],
+  "body": "",
+  "script": "",
+  "bodyEn": "",
+  "scriptEn": "",
+  "theme": null
+ },
+ {
+  "id": "bca62f32-b986-4ebe-a8cf-8df91146b4ea",
+  "project": "com.leeo.slidesnap",
+  "kind": "cardNews",
+  "channel": "스레드",
+  "title": "강의 장표, 아직도 사진첩에 찍어 둬요?",
+  "angle": "기능 소개형 카드뉴스 7장(파란 표지 + 폰 세 대 부채꼴, 기능마다 번호 · 큰 제목 · 아래로 잘린 폰 화면, 크림 바탕). 반듯하게 · 발표별 정리 · 장표 메모 · 글자 검색 · 사진 앱에서 가져오기. 인스타 https://www.instagram.com/lee25_ios/p/DfXS5ucCTFh/ 스레드 https://www.threads.com/@lee25_ios/post/DfXSqqbH6L8",
+  "plannedAt": "2026-11-05T00:00:00Z",
+  "stage": "posted",
+  "slides": [],
+  "body": "",
+  "script": "",
+  "bodyEn": "",
+  "scriptEn": "",
+  "theme": null
  }
 ]
