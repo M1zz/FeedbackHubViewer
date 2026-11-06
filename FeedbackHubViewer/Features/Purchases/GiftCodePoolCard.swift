@@ -22,7 +22,16 @@ struct GiftCodePoolCard: View {
     var body: some View {
         Card(title: "선물 코드 묶음", systemImage: "gift") {
             if let project {
-                single(project)
+                // 등급 선물을 파는 앱은 묶음이 등급마다 따로다(Pro · Plus).
+                let keys = GiftCodePool.poolKeys(for: project)
+                VStack(alignment: .leading, spacing: 24) {
+                    ForEach(keys, id: \.self) { key in
+                        if keys.count > 1 {
+                            Text(GiftCodePool.tierLabel(key)).font(.headline)
+                        }
+                        single(key)
+                    }
+                }
             } else {
                 overview
             }
@@ -30,13 +39,22 @@ struct GiftCodePoolCard: View {
         .task(id: project) { await load() }
     }
 
+    /// 묶음 열쇠들. 앱마다 Pro 묶음과, 등급 선물을 파는 앱이면 그 등급 묶음(`GiftCodePool.tierPools`).
     private var appKeys: [String] {
         store.projectCounts.map(\.key).filter { $0 != Feedback.unclassifiedProject && !store.hiddenProjects.contains($0) }
+            .flatMap(GiftCodePool.poolKeys(for:))
+    }
+
+    /// 묶음의 이름. 등급 묶음이면 앱 이름 뒤에 등급을 붙인다.
+    private func name(_ key: String) -> String {
+        let (bundle, product) = GiftCodePool.split(key)
+        let app = store.displayName(for: bundle)
+        return product == nil ? app : "\(app) · \(GiftCodePool.tierLabel(key))"
     }
 
     private func load() async {
         if let project {
-            await pool.refresh(project, connect: connect)
+            for key in GiftCodePool.poolKeys(for: project) { await pool.refresh(key, connect: connect) }
         } else {
             for key in appKeys { await pool.refresh(key, connect: connect) }
         }
@@ -166,7 +184,7 @@ struct GiftCodePoolCard: View {
     private var overview: some View {
         let rows = appKeys
             .map { (key: $0, value: pool.statuses[$0] ?? GiftPoolStatus()) }
-            .sorted { $0.value.left == $1.value.left ? store.displayName(for: $0.key) < store.displayName(for: $1.key) : $0.value.left < $1.value.left }
+            .sorted { $0.value.left == $1.value.left ? name($0.key) < name($1.key) : $0.value.left < $1.value.left }
         let notFull = rows.filter { $0.value.left < GiftCodePool.targetSize }.count
         let active = rows.filter { !$0.value.isEmptyEverywhere }
         let low = active.filter { $0.value.left < GiftCodePool.lowMark }
@@ -204,7 +222,7 @@ struct GiftCodePoolCard: View {
                                  low: [(key: String, value: GiftPoolStatus)],
                                  errors: [(key: String, value: GiftPoolStatus)]) -> GiftVerdict {
         let names: ([(key: String, value: GiftPoolStatus)]) -> String = { list in
-            list.prefix(4).map { self.store.displayName(for: $0.key) }.joined(separator: ", ") + (list.count > 4 ? " 외 \(list.count - 4)개" : "")
+            list.prefix(4).map { self.name($0.key) }.joined(separator: ", ") + (list.count > 4 ? " 외 \(list.count - 4)개" : "")
         }
         if !errors.isEmpty {
             return GiftVerdict(level: .warn, title: "채우지 못한 앱 \(errors.count)개", detail: names(errors) + ". 아래에서 까닭을 확인해 주세요.")
@@ -233,7 +251,7 @@ struct GiftCodePoolCard: View {
                 ForEach(rows, id: \.key) { entry in
                     VStack(alignment: .leading, spacing: 4) {
                         HStack(alignment: .firstTextBaseline) {
-                            Text(store.displayName(for: entry.key))
+                            Text(name(entry.key))
                                 .font(.body.weight(.semibold))
                             Spacer(minLength: 8)
                             Text("남음 \(entry.value.left)")
@@ -241,7 +259,7 @@ struct GiftCodePoolCard: View {
                                 .foregroundStyle(entry.value.left < GiftCodePool.lowMark ? Color.red : Color.primary)
                         }
                         PoolMeter(left: entry.value.left)
-                        if rows.filter({ store.displayName(for: $0.key) == store.displayName(for: entry.key) }).count > 1 {
+                        if rows.filter({ name($0.key) == name(entry.key) }).count > 1 {
                             // 이름이 같은 앱이 둘이면 어느 것인지 번들 ID 로.
                             Text(entry.key)
                                 .font(.body.monospaced())

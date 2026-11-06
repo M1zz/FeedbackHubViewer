@@ -88,6 +88,32 @@ final class GiftCodePool: ObservableObject {
         UserDefaults.standard.set(map, forKey: Self.expiryKey(bundleID))
     }
 
+    // MARK: - 등급 선물의 묶음
+
+    /// 등급마다 선물을 파는 앱(LeeoKit `moreGifts`)의 둘째 묶음부터. 앱의 `LeeoGiftConfig.poolKey` 와 같아야 한다.
+    /// 열쇠는 `"<번들>#<받는 상품 ID>"`, 오퍼 코드는 그 상품에 건다. 첫 묶음(Pro)은 예전처럼 번들 ID 그대로다.
+    static let tierPools: [String: [(productID: String, label: String)]] = [
+        "com.Ysoup.TokenMemo": [("com.Ysoup.TokenMemo.slots5", "Plus")],
+    ]
+
+    /// 앱 하나의 묶음 열쇠들. 첫째가 Pro(번들 ID).
+    static func poolKeys(for bundleID: String) -> [String] {
+        [bundleID] + (tierPools[bundleID] ?? []).map { "\(bundleID)#\($0.productID)" }
+    }
+
+    /// 열쇠를 번들 ID 와 받는 상품 ID 로. 번들 ID 만이면 상품은 nil(= Pro 를 짐작한다).
+    static func split(_ key: String) -> (bundleID: String, productID: String?) {
+        guard let mark = key.firstIndex(of: "#") else { return (key, nil) }
+        return (String(key[..<mark]), String(key[key.index(after: mark)...]))
+    }
+
+    /// 화면에 적는 등급 이름. 첫 묶음은 "Pro".
+    static func tierLabel(_ key: String) -> String {
+        let (bundle, product) = split(key)
+        guard let product else { return "Pro" }
+        return tierPools[bundle]?.first { $0.productID == product }?.label ?? product
+    }
+
     // MARK: - App Store Connect 로 채우기
 
     private static func storeFillKey(_ bundleID: String) -> String { "giftpool.ascfill.\(bundleID)" }
@@ -128,12 +154,14 @@ final class GiftCodePool: ObservableObject {
         let left = statuses[bundleID]?.left ?? 0
         guard left < mark else { return }
         guard let client = connect.client else { throw AppStoreConnect.Failure.missing("App Store Connect 키") }
-        let app = try await connect.resolveApp(bundleID)
+        let (appBundle, product) = Self.split(bundleID)
+        let app = try await connect.resolveApp(appBundle)
         // 이미 예비에 있는 만큼은 새로 만들지 않는다. Apple 은 500장 단위로만 만들어서, 남는 장은
         // 예비로 두었다가 묶음이 줄면 채운다.
         let need = Self.targetSize - left - reserve(bundleID).count
         if need > 0 {
-            let batch = try await client.makeGiftCodes(appID: app.id, bundleID: bundleID, count: need, sandbox: Self.usesSandboxCodes)
+            let batch = try await client.makeGiftCodes(appID: app.id, bundleID: appBundle, count: need,
+                                                       sandbox: Self.usesSandboxCodes, productID: product)
             // 먼저 예비에 둔다 — iCloud 에 올리다 실패해도 만든 코드를 잃지 않는다.
             setReserve(reserve(bundleID) + batch.codes, bundleID)
             var map = expiries(bundleID)

@@ -61,8 +61,15 @@ extension AppStoreConnect {
     /// Pro 상품에 일회용 오퍼 코드를 적어도 `count` 장 만들어 값까지 받는다(Apple 묶음 크기로 올림 —
     /// 500장 아래는 못 만든다).
     /// `sandbox` 면 샌드박스 코드(개발 빌드 · TestFlight 에서 쓰는 것).
-    func makeGiftCodes(appID: String, bundleID: String, count: Int, sandbox: Bool) async throws -> GiftCodeBatch {
-        let pro = try await proProduct(appID: appID, bundleID: bundleID)
+    /// - Parameter productID: 오퍼를 걸 상품(등급 선물, 예: Plus 평생). nil 이면 Pro 상품을 고른다(`proProduct`).
+    func makeGiftCodes(appID: String, bundleID: String, count: Int, sandbox: Bool,
+                       productID: String? = nil) async throws -> GiftCodeBatch {
+        let pro: (id: String, productID: String)
+        if let productID {
+            pro = try await namedProduct(appID: appID, productID: productID)
+        } else {
+            pro = try await proProduct(appID: appID, bundleID: bundleID)
+        }
         let offerID = try await giftOffer(productID: pro.id)
 
         let expires = Calendar(identifier: .gregorian)
@@ -124,6 +131,19 @@ extension AppStoreConnect {
         if candidates.count == 1 { return pick(candidates[0]) }
         if candidates.isEmpty { throw OfferCodeFailure.noProProduct }
         throw OfferCodeFailure.ambiguousPro(candidates.compactMap { $0.string("productId") }.sorted())
+    }
+
+    /// 이름이 정해진 비소모성(등급 선물이 여는 상품). 없으면 묻는다.
+    private func namedProduct(appID: String, productID: String) async throws -> (id: String, productID: String) {
+        let doc = try await list("v1/apps/\(appID)/inAppPurchasesV2", [
+            "fields[inAppPurchases]": "productId,inAppPurchaseType,state",
+            "filter[productId]": productID,
+            "limit": "10"
+        ])
+        guard let item = doc.data.first(where: { $0.string("productId") == productID }) else {
+            throw OfferCodeFailure.noProProduct
+        }
+        return (item.id, productID)
     }
 
     /// 상품에 걸린 "LeeoKit Gift" 오퍼 코드 id.

@@ -200,7 +200,9 @@ struct SectionRefresh {
         case .marketing:
             MarketingStore.shared.pullFromCloud()
         case .giftCodes:
-            for key in project.map({ [$0] }) ?? appKeys { await GiftCodePool.shared.refresh(key, connect: connect) }
+            for key in (project.map({ [$0] }) ?? appKeys).flatMap(GiftCodePool.poolKeys(for:)) {
+                await GiftCodePool.shared.refresh(key, connect: connect)
+            }
         }
     }
 }
