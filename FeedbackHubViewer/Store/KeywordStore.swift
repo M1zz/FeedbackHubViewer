@@ -720,9 +720,14 @@ final class KeywordStore: ObservableObject {
             }
         }
 
+        // 같은 가게의 지난 결과와 견줄 수 있게 남긴다 — 점령도가 올랐나, 새로 뜬 말이 있나.
+        let last = recommendations[project].flatMap { $0.country == country ? $0 : nil }
         recommendations[project] = KeywordRecommendation.Report(
             country: country, measuredAt: Date(),
-            items: KeywordRecommendation.ranked(items), dropped: dropped)
+            items: KeywordRecommendation.ranked(items), dropped: dropped,
+            previousPopularity: last.map { Dictionary($0.items.map { ($0.term, $0.popularity) },
+                                                      uniquingKeysWith: { first, _ in first }) },
+            previousShare: last?.share)
         CacheFile.write(recommendations, to: CacheFile.url(Self.recommendationsFile))
         if failures > 0 {
             errorMessage = "후보 \(failures)개는 검색하지 못했습니다. " + (errorMessage ?? "")

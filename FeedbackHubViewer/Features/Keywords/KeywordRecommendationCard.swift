@@ -35,7 +35,9 @@ struct KeywordRecommendationCard: View {
             runButton
         }
         .task(id: project) {
-            if connect.isConfigured { await connect.loadMetadata(bundleID: project) }
+            guard connect.isConfigured else { return }
+            await connect.loadMetadata(bundleID: project)
+            await connect.loadFunnel(bundleID: project)
         }
         .sheet(isPresented: $isEditing) {
             if let metadata = connect.metadata[project]?.value, let locale = locale(metadata) {
@@ -109,11 +111,14 @@ struct KeywordRecommendationCard: View {
                 .font(.hubCallout)
                 .foregroundStyle(.secondary)
         } else {
+            goal(report)
+            Divider()
             let shown = showsAll ? report.items : Array(report.items.prefix(Self.collapsedCount))
             VStack(alignment: .leading, spacing: 0) {
                 ForEach(Array(shown.enumerated()), id: \.element.id) { index, item in
                     if index > 0 { Divider() }
-                    row(rank: index + 1, item, country: report.country)
+                    row(rank: index + 1, item, country: report.country,
+                        trend: KeywordRecommendation.trend(item, previous: report.previousPopularity))
                 }
             }
             uploadBar
@@ -133,13 +138,90 @@ struct KeywordRecommendationCard: View {
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
         }
-        Text("\(Storefront.name(for: report.country)) · \(AppFormat.relative(report.measuredAt)) 기준. 인기는 검색량이 아니라 자동완성에 뜨는 빠르기로 잰 차례입니다. Apple 은 검색량을 공개하지 않습니다.")
+        Text("\(Storefront.name(for: report.country)) · \(AppFormat.relative(report.measuredAt)) 기준. 인기는 검색량이 아니라 자동완성에 뜨는 빠르기로 잰 차례입니다. Apple 은 검색량을 공개하지 않습니다. 경쟁은 그 검색어 상위 5개 앱의 평점 수로 잽니다.")
             .font(.hubCaption2)
             .foregroundStyle(.secondary)
             .fixedSize(horizontal: false, vertical: true)
     }
 
-    private func row(rank: Int, _ item: KeywordRecommendation.Item, country: String) -> some View {
+    // MARK: - 목표
+
+    /// 맨 위 성적표. 점령도 → 검색으로 온 사람 → 다음 할 일 한 줄.
+    @ViewBuilder
+    private func goal(_ report: KeywordRecommendation.Report) -> some View {
+        let share = report.share
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Text("검색 점령도")
+                    .font(.body.weight(.semibold))
+                Text("\(share)")
+                    .font(.title2.monospacedDigit().weight(.bold))
+                Text("/ 100")
+                    .font(.hubCaption)
+                    .foregroundStyle(.secondary)
+                if let before = report.previousShare, before != share {
+                    let delta = share - before
+                    Text(delta > 0 ? "지난번보다 +\(delta)" : "지난번보다 −\(-delta)")
+                        .font(.hubCaption.weight(.semibold))
+                        .foregroundStyle(delta > 0 ? .green : .orange)
+                }
+            }
+            MeterBar(ratio: Double(share) / 100, height: 8, tint: .green)
+            Text("많이 찾는 말 가운데 우리가 10위 안에 든 몫입니다. 100이면 사람들이 찾는 말마다 첫 화면에 우리가 보입니다.")
+                .font(.hubCaption)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+            if let inflow = searchInflow {
+                Text(inflow)
+                    .font(.hubCaption)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            nextStep(report)
+        }
+        .accessibilityElement(children: .combine)
+    }
+
+    /// 키워드 작업의 성적표 — App Store 검색에서 실제로 온 사람.
+    private var searchInflow: String? {
+        guard case .loaded(.ready(let funnel))? = connect.funnels[project],
+              let search = funnel.sources["App Store search"] else { return nil }
+        var text = "최근 \(funnel.days)일 App Store 검색으로 온 첫 다운로드 \(AppFormat.count(search.firstDownloads))회"
+        if let conversion = search.conversion { text += String(format: " · 검색 전환 %.1f%%", conversion * 100) }
+        return text
+    }
+
+    @ViewBuilder
+    private func nextStep(_ report: KeywordRecommendation.Report) -> some View {
+        let claims = report.items.filter { $0.verdict == .claim }
+        let climbs = report.items.filter { $0.verdict == .climb }
+        let line: String = {
+            if !claims.isEmpty {
+                let names = claims.prefix(3).map { "‘\($0.term)’" }.joined(separator: ", ")
+                return "선점 기회 \(claims.count)개. \(names)부터 키워드 칸에 걸어 두세요. 상위 앱이 약해서 먼저 건 쪽이 자리를 갖습니다."
+            }
+            if !climbs.isEmpty {
+                return "올릴 만한 말 \(climbs.count)개. 이름이나 부제에 넣으면 10위 안으로 들어올 만합니다."
+            }
+            if report.share >= 100 {
+                return "찾는 말마다 10위 안입니다. 리뷰와 평점을 쌓아 이 자리를 지키세요."
+            }
+            return "지금은 상위 앱이 강한 말뿐입니다. 다시 만들기로 후보를 넓혀 보세요."
+        }()
+        Label {
+            Text(line).fixedSize(horizontal: false, vertical: true)
+        } icon: {
+            Image(systemName: "arrow.right.circle.fill").foregroundStyle(.tint)
+        }
+        .font(.hubCallout)
+        if !claims.isEmpty, uploadBlocker == nil {
+            Button("선점 기회 \(claims.count)개 모두 고르기") {
+                picked.formUnion(claims.map(\.term))
+            }
+            .font(.hubCaption)
+        }
+    }
+
+    private func row(rank: Int, _ item: KeywordRecommendation.Item, country: String, trend: String?) -> some View {
         let verdict = item.verdict
         let tracked = keywords.isTracked(item.term, country: country, for: project)
         let isPicked = picked.contains(item.term)
@@ -164,13 +246,14 @@ struct KeywordRecommendationCard: View {
                         .font(.body.weight(.semibold))
                         .lineLimit(2)
                     Tag(text: verdict.label, tint: Self.tint(verdict), isCompact: true)
-                    Spacer(minLength: 4)
-                    Text("인기 \(item.popularity)")
-                        .font(.hubCaption.monospacedDigit())
-                        .foregroundStyle(.secondary)
                 }
-                MeterBar(ratio: Double(item.popularity) / 100, tint: Self.tint(verdict))
-                Text(KeywordRecommendation.reason(item))
+                HStack(spacing: 16) {
+                    meter("인기", item.popularity, tint: Self.tint(verdict))
+                    meter("경쟁", item.competition, tint: .secondary)
+                }
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel("인기 \(item.popularity), 경쟁 \(item.competition)")
+                Text([KeywordRecommendation.reason(item), trend].compactMap { $0 }.joined(separator: " · "))
                     .font(.hubCaption)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -196,6 +279,20 @@ struct KeywordRecommendationCard: View {
         .padding(.vertical, 8)
     }
 
+    /// 0~100 값 하나. 이름 · 막대 · 숫자를 한 줄로.
+    private func meter(_ title: String, _ value: Int, tint: Color) -> some View {
+        HStack(spacing: 6) {
+            Text(title)
+                .font(.hubCaption)
+                .foregroundStyle(.secondary)
+            MeterBar(ratio: Double(value) / 100, tint: tint)
+            Text("\(value)")
+                .font(.hubCaption.monospacedDigit())
+                .foregroundStyle(.secondary)
+                .frame(minWidth: 22, alignment: .trailing)
+        }
+    }
+
     // MARK: - 돌리기
 
     private var runButton: some View {
@@ -218,6 +315,7 @@ struct KeywordRecommendationCard: View {
         switch verdict {
         case .keep: return .green
         case .climb: return .orange
+        case .claim: return .purple
         case .target: return .blue
         }
     }

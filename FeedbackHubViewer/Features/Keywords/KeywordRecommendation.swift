@@ -30,6 +30,12 @@ enum KeywordRecommendation {
         let items: [Item]
         /// 후보였지만 관련이 없어 뺀 것. 왜 이 말이 없냐는 물음에 답하려고 둔다.
         let dropped: [String]
+        /// 지난번에 잰 말별 인기. 새로 떴거나 오른 말을 가리려고 둔다. 처음이면 nil.
+        var previousPopularity: [String: Int]? = nil
+        /// 지난번 점령도. 처음이면 nil.
+        var previousShare: Int? = nil
+
+        var share: Int { KeywordRecommendation.share(items) }
     }
 
     struct Item: Codable, Equatable, Identifiable {
@@ -46,6 +52,8 @@ enum KeywordRecommendation {
         let topRatings: Int
         var id: String { term }
 
+        /// 0~100. 상위 앱 평점 수로 잰 뚫기 어려움.
+        var competition: Int { KeywordRecommendation.competition(topRatings: topRatings) }
         var verdict: Verdict { KeywordRecommendation.verdict(self) }
         var score: Double { KeywordRecommendation.score(self) }
     }
@@ -55,6 +63,8 @@ enum KeywordRecommendation {
         case keep
         /// 11~100위. 메타데이터를 다듬으면 올라갈 만한 자리.
         case climb
+        /// 100위 밖인데 상위 앱들도 약하다. 먼저 걸어 두는 쪽이 자리를 갖는다.
+        case claim
         /// 100위 밖이거나 안 잡힘. 이름 · 부제 · 키워드 칸에 넣어야 시작된다.
         case target
 
@@ -62,10 +72,14 @@ enum KeywordRecommendation {
             switch self {
             case .keep: return "지키기"
             case .climb: return "올릴 만함"
+            case .claim: return "선점 기회"
             case .target: return "새로 노리기"
             }
         }
     }
+
+    /// 이 아래면 상위 앱들이 약하다(평점 수백 개 이하). 선점 기회를 가르는 선.
+    static let claimableCompetition = 60
 
     /// 이 아래는 추천에서 뺀다. 자동완성에 늦게 뜨는 말은 쳐 봐야 오는 사람이 적다.
     static let minimumPopularity = 30
@@ -120,13 +134,42 @@ enum KeywordRecommendation {
         return hint.unicodeScalars.allSatisfy { !appNameMarks.contains($0) }
     }
 
+    // MARK: - 경쟁
+
+    /// 상위 앱 평점 수(중앙값)를 0~100 으로. 평점 수는 몇에서 몇십만까지 벌어지므로
+    /// 자릿수로 잰다 — 100개 40, 1천 개 60, 1만 개 80, 10만 개부터 100.
+    static func competition(topRatings: Int) -> Int {
+        guard topRatings > 0 else { return 0 }
+        return min(100, Int((log10(Double(topRatings)) * 20).rounded()))
+    }
+
     // MARK: - 판정
 
     static func verdict(_ item: Item) -> Verdict {
-        guard let rank = item.rank else { return .target }
-        if rank <= 10 { return .keep }
-        if rank <= 100 { return .climb }
-        return .target
+        if let rank = item.rank, rank <= 10 { return .keep }
+        if let rank = item.rank, rank <= 100 { return .climb }
+        return item.competition < claimableCompetition ? .claim : .target
+    }
+
+    // MARK: - 목표
+
+    /// 검색 점령도 0~100. 많이 찾는 말의 인기 합 가운데, 우리가 10위 안에 든 말의 몫.
+    /// 100 이면 사람들이 찾는 말마다 첫 화면에 우리가 보인다.
+    static func share(_ items: [Item]) -> Int {
+        let total = items.reduce(0) { $0 + $1.popularity }
+        guard total > 0 else { return 0 }
+        let held = items.filter { ($0.rank ?? .max) <= 10 }.reduce(0) { $0 + $1.popularity }
+        return Int((100 * Double(held) / Double(total)).rounded())
+    }
+
+    /// 지난번과 비교한 인기 변화 한 마디. 지난번이 없거나 그대로면 nil.
+    static func trend(_ item: Item, previous: [String: Int]?) -> String? {
+        guard let previous else { return nil }
+        guard let before = previous[item.term] else { return "지난번엔 없던 말" }
+        let delta = item.popularity - before
+        if delta >= 5 { return "인기 +\(delta)" }
+        if delta <= -5 { return "인기 −\(-delta)" }
+        return nil
     }
 
     /// 관련 있는 말인가. 이미 100위 안이면 스토어가 관련 있다고 본 것이다.
@@ -178,13 +221,7 @@ enum KeywordRecommendation {
         case nil: parts.append("자동완성에 안 뜸")
         }
         if let rank = item.rank { parts.append("지금 \(rank)위") } else { parts.append("200위 안에 없음") }
-        if item.rank.map({ $0 > 10 }) ?? true {
-            switch item.topRatings {
-            case ..<1_000: parts.append("상위 앱 평점 적음")
-            case 10_000...: parts.append("상위 앱 평점 많음")
-            default: break
-            }
-        }
+        parts.append("상위 앱 평점 \(item.topRatings.formatted())개")
         return parts.joined(separator: " · ")
     }
 }
