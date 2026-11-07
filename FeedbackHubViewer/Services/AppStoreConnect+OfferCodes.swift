@@ -65,12 +65,17 @@ extension AppStoreConnect {
     func makeGiftCodes(appID: String, bundleID: String, count: Int, sandbox: Bool,
                        productID: String? = nil) async throws -> GiftCodeBatch {
         let pro: (id: String, productID: String)
+        // ⚠️ 오퍼 이름은 **앱 안에서** 하나뿐이어야 한다(409 referenceName). 등급 선물은 "LeeoKit Gift <등급>"(골드위크와 같다).
+        let offerName: String
         if let productID {
             pro = try await namedProduct(appID: appID, productID: productID)
+            let label = await MainActor.run { GiftCodePool.tierLabel("\(bundleID)#\(productID)") }
+            offerName = "\(Self.giftOfferName) \(label)"
         } else {
             pro = try await proProduct(appID: appID, bundleID: bundleID)
+            offerName = Self.giftOfferName
         }
-        let offerID = try await giftOffer(productID: pro.id)
+        let offerID = try await giftOffer(productID: pro.id, name: offerName)
 
         let expires = Calendar(identifier: .gregorian)
             .date(byAdding: .day, value: Self.giftCodeLifetimeDays, to: Date()) ?? Date()
@@ -147,17 +152,17 @@ extension AppStoreConnect {
     }
 
     /// 상품에 걸린 "LeeoKit Gift" 오퍼 코드 id.
-    private func existingGiftOffer(productID id: String) async throws -> String? {
+    private func existingGiftOffer(productID id: String, name: String = giftOfferName) async throws -> String? {
         let existing = try await list("v2/inAppPurchases/\(id)/offerCodes", [
             "fields[inAppPurchaseOfferCodes]": "name,active",
             "limit": "200"
         ])
-        return existing.data.first { $0.string("name") == Self.giftOfferName && $0.bool("active") != false }?.id
+        return existing.data.first { $0.string("name") == name && $0.bool("active") != false }?.id
     }
 
     /// "LeeoKit Gift" 오퍼 코드 id — 있으면 그것, 없으면 무료로 만든다.
-    private func giftOffer(productID id: String) async throws -> String {
-        if let found = try await existingGiftOffer(productID: id) { return found }
+    private func giftOffer(productID id: String, name: String) async throws -> String {
+        if let found = try await existingGiftOffer(productID: id, name: name) { return found }
 
         let territories = try await availableTerritories(productID: id)
         guard !territories.isEmpty else { throw OfferCodeFailure.noTerritories }
@@ -178,7 +183,7 @@ extension AppStoreConnect {
             "data": [
                 "type": "inAppPurchaseOfferCodes",
                 "attributes": [
-                    "name": Self.giftOfferName,
+                    "name": name,
                     "customerEligibilities": ["NON_SPENDER", "ACTIVE_SPENDER", "CHURNED_SPENDER"]
                 ],
                 "relationships": [

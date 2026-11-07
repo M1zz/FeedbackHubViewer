@@ -60,6 +60,20 @@ struct FeedbackHubViewerApp: App {
                     // The daily rank check does wait: the apps it looks for in
                     // each result list are the hub's project keys, and before
                     // the restore there are none.
+                    #if DEBUG
+                    // 화면 없이 선물 코드 묶음을 채운다(명령줄에서): -autoFillGiftPool "<열쇠>,<열쇠>"
+                    // 열쇠는 `GiftCodePool.poolKeys(for:)` 의 것. 결과는 표준 출력으로.
+                    if let keys = UserDefaults.standard.string(forKey: "autoFillGiftPool") {
+                        func say(_ line: String) { FileHandle.standardError.write(Data((line + "\n").utf8)) }
+                        for key in keys.split(separator: ",").map(String.init) {
+                            say("🎁 [autoFillGiftPool] \(key) 시작")
+                            await GiftCodePool.shared.fillFromStore(key, connect: purchases)
+                            let status = GiftCodePool.shared.statuses[key]
+                            say("🎁 [autoFillGiftPool] \(key) left=\(status?.left ?? -1) reserve=\(status?.reserve ?? -1) error=\(GiftCodePool.shared.lastError[key] ?? "none")")
+                        }
+                        say("🎁 [autoFillGiftPool] done")
+                    }
+                    #endif
                     await store.awaitRestore()
                     keywords.start(bundleIds: store.allProjectKeys)
                     startChartsIfDue()

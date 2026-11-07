@@ -94,6 +94,7 @@ final class GiftCodePool: ObservableObject {
     /// 열쇠는 `"<번들>#<받는 상품 ID>"`, 오퍼 코드는 그 상품에 건다. 첫 묶음(Pro)은 예전처럼 번들 ID 그대로다.
     static let tierPools: [String: [(productID: String, label: String)]] = [
         "com.Ysoup.TokenMemo": [("com.Ysoup.TokenMemo.slots5", "Plus")],
+        "com.xa.toki": [("com.xa.toki.remember", "Remember")],
     ]
 
     /// 앱 하나의 묶음 열쇠들. 첫째가 Pro(번들 ID).
