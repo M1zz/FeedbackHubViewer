@@ -21,6 +21,7 @@ import SwiftUI
 struct KeywordsView: View {
     @EnvironmentObject private var store: FeedbackStore
     @EnvironmentObject private var keywords: KeywordStore
+    @EnvironmentObject private var connect: AppStoreConnectStore
 
     /// nil == 전체 프로젝트.
     let project: String?
@@ -49,6 +50,11 @@ struct KeywordsView: View {
             .padding(16)
         }
         .task { addCountries = Set(keywords.countries.prefix(1)) }
+        .task(id: project) { keywords.fillPopularity(for: project) }
+        .task(id: project) {
+            guard let project, connect.isConfigured else { return }
+            await connect.loadMetadata(bundleID: project)
+        }
         // 하루 확인이 이 앱의 말부터 하게 — 보고 있는 것이 먼저 차야 한다.
         .onChange(of: project, initial: true) { _, project in keywords.focusProject = project }
         .overlay(alignment: .top) { checkBanner }
@@ -292,6 +298,28 @@ struct KeywordsView: View {
         return up + standings.filter { rises[$0.keyword.id] == nil }
     }
 
+    /// 이 검색어가 스토어에 나가 있는 메타데이터의 어디에 적혀 있나. 메타데이터를 못 읽었으면 nil.
+    private func source(of keyword: TrackedKeyword) -> KeywordField.Source? {
+        guard let project, let live = connect.metadata[project]?.value?.live else { return nil }
+        guard let text = KeywordField.locales(for: keyword.country).lazy.compactMap({ live.locales[$0] }).first else { return nil }
+        return KeywordField.source(of: keyword.term, in: text)
+    }
+
+    /// 적어 둔 말과 안 적은 말이 몇 개씩인가 — 안 적었는데 순위가 잡히는 말이 공짜 자리다.
+    @ViewBuilder
+    private var writtenSummary: some View {
+        let sources = standings.map { ($0, source(of: $0.keyword)) }
+        if sources.contains(where: { $0.1 != nil }) {
+            let written = sources.filter { $0.1?.isWritten == true }.count
+            let free = sources.filter { $0.1 == .unwritten && $0.0.isRanked }.count
+            let unwritten = sources.filter { $0.1 == .unwritten }.count
+            Text("App Store Connect에 적어 둔 말 \(written)개 · 안 적은 말 \(unwritten)개" + (free > 0 ? " — 그중 \(free)개는 안 적었는데도 순위에 잡힘" : ""))
+                .font(.hubCaption).foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.bottom, 6)
+        }
+    }
+
     /// 표를 읽기 전의 한 줄 — 오른 것이 있나.
     private func rankVerdict(_ rises: [String: SectionChanges.KeywordRise]) -> (text: String, tint: Color) {
         if !rises.isEmpty { return ("올라선 검색어 \(rises.count)개", .green) }
@@ -315,12 +343,20 @@ struct KeywordsView: View {
                         .padding(.bottom, 8)
                 }
                 todayStatus
+                writtenSummary
+                if let progress = keywords.popularityProgress {
+                    Label("검색어 인기 재는 중 \(progress.done)/\(progress.total)", systemImage: "magnifyingglass")
+                        .font(.hubCaption).foregroundStyle(.secondary)
+                        .padding(.bottom, 6)
+                }
                 ForEach(rows, id: \.keyword.id) { standing in
                     KeywordRow(standing: standing,
                                rise: rises[standing.keyword.id],
                                isExpanded: expanded == standing.keyword.id,
                                trackId: keywords.trackId(for: project),
-                               history: keywords.history) {
+                               history: keywords.history,
+                               popularity: keywords.popularity(of: standing.keyword),
+                               source: source(of: standing.keyword)) {
                         expanded = expanded == standing.keyword.id ? nil : standing.keyword.id
                     } onCheck: {
                         keywords.checkNow(standing.keyword)
@@ -328,6 +364,12 @@ struct KeywordsView: View {
                         keywords.remove(standing.keyword, from: project)
                     }
                     if standing.keyword.id != rows.last?.keyword.id { Divider() }
+                }
+                if !rows.isEmpty {
+                    Text("**인기**는 이 검색어를 얼마나 찾는지 — App Store 자동완성에 몇 글자 만에 뜨는지로 잽니다. **가치**는 지금 순위가 데려오는 사람 — 인기에 그 순위까지 내려오는 사람의 몫을 곱한 값입니다. 아무도 치지 않는 말의 1위는 가치 0, 많이 찾는 말의 3위가 그보다 큽니다.")
+                        .font(.hubCaption).foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.top, 10)
                 }
                 if standings.contains(where: { $0.blockers != nil }) {
                     Text("각 줄의 **‘N개 앞섬’** 은 위에 있는 앱 중 내 앱보다 리뷰가 많은 것의 수 — 18위인데 위 17개 중 7개가 나보다 작으면 실제로는 10개 뒤입니다. 순위가 낮아도 앞선 앱이 적으면 그쪽이 더 가깝습니다.")
@@ -522,6 +564,10 @@ private struct KeywordRow: View {
     let isExpanded: Bool
     let trackId: Int?
     let history: KeywordHistory
+    /// 0~100 검색 인기. 아직 안 쟀으면 nil.
+    var popularity: Int? = nil
+    /// App Store Connect 메타데이터의 어디에 적혀 있나. 못 읽었으면 nil.
+    var source: KeywordField.Source? = nil
     let onTap: () -> Void
     let onCheck: () -> Void
     let onRemove: () -> Void
@@ -537,13 +583,17 @@ private struct KeywordRow: View {
                         // it is worth going after; the apps above that are not
                         // smaller than yours can.
                         Text(subtitle).font(.hubCaption2).foregroundStyle(.secondary)
+                        if let source { sourceTag(source) }
                         if let rise {
                             Tag(text: rise.milestone, systemImage: "arrow.up", tint: .green, font: .body)
                         }
                     }
                     Spacer()
+                    demandLabel
                     blockerLabel
-                    RankSparkline(values: standing.recent).frame(width: 72, height: 22)
+                    if showsSparkline {
+                        RankSparkline(values: standing.recent).frame(width: 72, height: 22)
+                    }
                     deltaLabel
                     rankLabel
                 }
@@ -558,6 +608,54 @@ private struct KeywordRow: View {
             Button("지금 확인", systemImage: "arrow.clockwise", action: onCheck)
             Button("추적 중단", systemImage: "trash", role: .destructive, action: onRemove)
         }
+    }
+
+    #if os(iOS)
+    @Environment(\.horizontalSizeClass) private var sizeClass
+    /// 아이폰 폭에서는 인기 · 경쟁 자리를 내려고 30일 선을 뺀다(펼치면 순위 기록이 있다).
+    private var showsSparkline: Bool { sizeClass != .compact }
+    #else
+    private let showsSparkline = true
+    #endif
+
+    /// 순위 왼쪽의 두 줄 — 이 말을 얼마나 찾나(인기), 그래서 지금 순위가 얼마나 값진가(가치).
+    /// 순위만으로는 그 1위가 사람을 데려오는지 알 수 없다. 아무도 치지 않는 말의 1위는 0 이다.
+    private var demandLabel: some View {
+        let value = popularity.map { KeywordRecommendation.rankValue(popularity: $0, rank: standing.rank) }
+        return VStack(alignment: .trailing, spacing: 3) {
+            meter("인기", popularity, tint: .accentColor)
+            meter("가치", value, tint: .green)
+        }
+        .frame(width: 92)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("인기 \(popularity.map(String.init) ?? "재는 중"), 순위 가치 \(value.map(String.init) ?? "재는 중")")
+    }
+
+    private func meter(_ title: String, _ value: Int?, tint: Color) -> some View {
+        HStack(spacing: 4) {
+            Text(title).foregroundStyle(.secondary)
+            MeterBar(ratio: Double(value ?? 0) / 100, height: 4, tint: value == nil ? .clear : tint)
+            Text(value.map(String.init) ?? "—")
+                .monospacedDigit()
+                .foregroundStyle(value == nil ? .tertiary : .primary)
+                .frame(width: 22, alignment: .trailing)
+        }
+        .font(.hubCaption2)
+    }
+
+    /// 적어 둔 말인가 — 안 적었는데 잡히는 말은 따로 눈에 띄게.
+    private func sourceTag(_ source: KeywordField.Source) -> some View {
+        let (text, image, tint): (String, String, Color?) = {
+            switch source {
+            case .keywordField: return ("키워드 칸에 적음", "text.cursor", nil)
+            case .nameSubtitle: return ("이름 · 부제에 있음", "textformat", nil)
+            case .combined: return ("칸들에 나뉘어 적힘", "square.split.2x1", nil)
+            case .unwritten: return standing.isRanked
+                ? ("안 적었는데 잡힘", "sparkles", .orange)
+                : ("안 적은 말", "minus.circle", nil)
+            }
+        }()
+        return Tag(text: text, systemImage: image, tint: tint, isCompact: true)
     }
 
     private var subtitle: String {

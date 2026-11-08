@@ -45,6 +45,20 @@ final class KeywordStore: ObservableObject {
     /// 추천 검색어, 프로젝트마다 마지막으로 돌린 것. 돌리는 데 몇 분 걸려서
     /// 다음 실행까지 디스크에 남긴다(`recommend(for:country:)`).
     @Published private(set) var recommendations: [String: KeywordRecommendation.Report] = [:]
+    /// 검색어(`TrackedKeyword.id`)마다 마지막으로 잰 검색 인기. 순위 줄에 경쟁과 나란히 붙는다.
+    /// 기기마다 따로 잰다 — 자동완성은 언제 재도 다시 잴 수 있는 값이라 동기화할 까닭이 없다.
+    @Published private(set) var popularity: [String: PopularityReading] = [:]
+
+    struct PopularityReading: Codable, Equatable {
+        let score: Int
+        let measuredAt: Date
+    }
+    /// 인기는 순위보다 느리게 변한다. 이보다 오래된 것만 순위 확인 때 다시 잰다.
+    private static let popularityMaxAge: TimeInterval = 7 * 86_400
+    /// 인기를 아직 안 잰 검색어를 재는 중이면 몇 개 중 몇 개째인가.
+    @Published private(set) var popularityProgress: (done: Int, total: Int)?
+    private var popularityTask: Task<Void, Never>?
+    private static let popularityFile = "keyword-popularity"
     /// 스토어 키워드 칸의 기록 — `KeywordField.key(project:locale:)` → 본 값들, 오래된 것부터.
     /// `syncStoreFields` 만 쓴다(`KeywordStore+StoreField.swift`).
     @Published var fieldLog: [String: [KeywordFieldSnapshot]] = [:]
@@ -132,6 +146,18 @@ final class KeywordStore: ObservableObject {
                                           at: CacheFile.url(Self.recommendationsFile)) {
                 self.recommendations = saved
             }
+            var readings = CacheFile.read([String: PopularityReading].self,
+                                          at: CacheFile.url(Self.popularityFile)) ?? [:]
+            // 추천을 만들 때 이미 잰 말은 다시 묻지 않고 그 값으로 시작한다.
+            for report in self.recommendations.values {
+                for item in report.items {
+                    let id = TrackedKeyword(term: item.term, country: report.country).id
+                    if (readings[id]?.measuredAt ?? .distantPast) < report.measuredAt {
+                        readings[id] = PopularityReading(score: item.popularity, measuredAt: report.measuredAt)
+                    }
+                }
+            }
+            self.popularity = readings
             if let saved = CacheFile.read([String: [KeywordFieldSnapshot]].self,
                                           at: CacheFile.url(Self.fieldLogFile)) {
                 self.fieldLog = saved
@@ -268,6 +294,9 @@ final class KeywordStore: ObservableObject {
             do {
                 let results = try await directory.search(term: keyword.term, country: keyword.country)
                 history.record(keyword, results: results, mine: mine)
+                if isStale(popularity[keyword.id]) {
+                    await measurePopularity(of: keyword.term, country: keyword.country)
+                }
             } catch is CancellationError {
                 return
             } catch {
@@ -281,8 +310,9 @@ final class KeywordStore: ObservableObject {
             done += 1
             // Written as it goes: a check is minutes long at three seconds a
             // term, and quitting halfway should keep what it already learned.
-            if done % 10 == 0 { persist() }
+            if done % 10 == 0 { persist(); savePopularity() }
         }
+        savePopularity()
         guard done > 0 else { return }
 
         history.lastCheckedAt = Date()
@@ -473,6 +503,11 @@ final class KeywordStore: ObservableObject {
                                                               country: keyword.country)
                 self.history.record(keyword, results: results, mine: mine)
                 self.persist()
+                // 지금 확인은 그 말의 숫자를 다 채운다 — 방금 더한 말도 인기가 바로 붙게.
+                if self.isStale(self.popularity[keyword.id]) {
+                    await self.measurePopularity(of: keyword.term, country: keyword.country)
+                    self.savePopularity()
+                }
             } catch {
                 self.errorMessage = error.localizedDescription
             }
@@ -687,14 +722,7 @@ final class KeywordStore: ObservableObject {
             guard !Task.isCancelled else { return }
             progress = CheckProgress(done: index + 1, total: candidates.count, term: term)
 
-            var hintsByPrefix: [[String]] = []
-            let target = KeywordRecommendation.compact(term)
-            for prefix in KeywordRecommendation.prefixes(of: term) {
-                guard let list = try? await hints.hints(for: prefix, country: country) else { break }
-                hintsByPrefix.append(list)
-                if list.contains(where: { KeywordRecommendation.compact($0) == target }) { break }
-            }
-            let popularity = KeywordRecommendation.popularity(of: term, hintsByPrefix: hintsByPrefix)
+            guard let popularity = await measurePopularity(of: term, country: country) else { continue }
             // 문턱 아래는 검색하지 않는다. 검색 한 번이 3초라, 아무도 안 치는 말에 쓰기 아깝다.
             guard popularity.score >= KeywordRecommendation.minimumPopularity else { continue }
 
@@ -729,9 +757,66 @@ final class KeywordStore: ObservableObject {
                                                       uniquingKeysWith: { first, _ in first }) },
             previousShare: last?.share)
         CacheFile.write(recommendations, to: CacheFile.url(Self.recommendationsFile))
+        savePopularity()
         if failures > 0 {
             errorMessage = "후보 \(failures)개는 검색하지 못했습니다. " + (errorMessage ?? "")
         }
+    }
+
+    // MARK: - 검색 인기
+
+    /// 이 검색어의 검색 인기 0~100. 아직 안 쟀으면 nil.
+    func popularity(of keyword: TrackedKeyword) -> Int? { popularity[keyword.id]?.score }
+
+    /// 이 앱의 검색어 중 인기가 없거나 오래된 것을 지금 잰다. 순위 확인을 기다리지 않는다 —
+    /// 인기가 비어 있으면 그 순위가 값진지 알 수 없어서다. 자동완성은 1초 간격이라 열 개면 수십 초.
+    func fillPopularity(for project: String?) {
+        guard popularityTask == nil else { return }
+        let missing = history.keywords(for: project)
+            .filter { isStale(popularity[$0.id]) && AppStoreHints.supports($0.country) }
+        guard !missing.isEmpty else { return }
+        popularityTask = Task { [weak self] in
+            guard let self else { return }
+            self.popularityProgress = (0, missing.count)
+            for (index, keyword) in missing.enumerated() {
+                if Task.isCancelled { break }
+                await self.measurePopularity(of: keyword.term, country: keyword.country)
+                self.popularityProgress = (index + 1, missing.count)
+                if (index + 1) % 5 == 0 { self.savePopularity() }
+            }
+            self.savePopularity()
+            self.popularityProgress = nil
+            self.popularityTask = nil
+        }
+    }
+
+    private func isStale(_ reading: PopularityReading?) -> Bool {
+        guard let reading else { return true }
+        return Date().timeIntervalSince(reading.measuredAt) > Self.popularityMaxAge
+    }
+
+    /// `term` 을 한 글자씩 쳐 가며 자동완성에 언제 뜨는지 재고 남긴다.
+    /// 자동완성을 못 읽는 가게이거나 중간에 요청이 실패해 못 쟀으면 nil — 0(아무도 안 침)과 다르다.
+    @discardableResult
+    private func measurePopularity(of term: String, country: String) async -> (score: Int, typed: Int?)? {
+        guard AppStoreHints.supports(country) else { return nil }
+        let target = KeywordRecommendation.compact(term)
+        var hintsByPrefix: [[String]] = []
+        var found = false
+        for prefix in KeywordRecommendation.prefixes(of: term) {
+            guard let list = try? await AppStoreHints.shared.hints(for: prefix, country: country) else { break }
+            hintsByPrefix.append(list)
+            if list.contains(where: { KeywordRecommendation.compact($0) == target }) { found = true; break }
+        }
+        // 끝까지 다 쳐 봤거나 찾았을 때만 믿는다. 도중에 끊기면 "안 뜸"인지 모른다.
+        guard found || hintsByPrefix.count == KeywordRecommendation.prefixes(of: term).count else { return nil }
+        let result = KeywordRecommendation.popularity(of: term, hintsByPrefix: hintsByPrefix)
+        popularity[TrackedKeyword(term: term, country: country).id] = PopularityReading(score: result.score, measuredAt: Date())
+        return result
+    }
+
+    private func savePopularity() {
+        CacheFile.write(popularity, to: CacheFile.url(Self.popularityFile))
     }
 
     /// 이 앱이 이미 이 가게에서 추적 중인 검색어인가.

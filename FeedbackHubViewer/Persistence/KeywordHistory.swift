@@ -93,6 +93,9 @@ struct KeywordStanding {
     /// to the raw rank — which is the right answer for it: go where you already
     /// place best, because nothing up there is smaller than you.
     let weakerAbove: Int?
+    /// 0~100. 마지막 검색 상위 5개 앱의 평점 수 중앙값으로 잰 뚫기 어려움
+    /// (`KeywordRecommendation.competition`). 검색 결과를 아직 못 받았으면 nil.
+    var competition: Int? = nil
 
     var isRanked: Bool { rank != nil }
 
@@ -310,7 +313,15 @@ struct KeywordHistory: Codable, Equatable {
                                best: ranked.map(\.rank).min(),
                                recent: recent,
                                resultCount: latest?.value.resultCount ?? 0,
-                               weakerAbove: current.flatMap { history[$0.day]?.weakerAbove(trackId) })
+                               weakerAbove: current.flatMap { history[$0.day]?.weakerAbove(trackId) },
+                               competition: latest.flatMap { competition(top: $0.value.top) })
+    }
+
+    /// 상위 5개 앱의 평점 수 중앙값을 경쟁 점수로. 앱 정보가 하나도 없으면 nil.
+    func competition(top: [Int]) -> Int? {
+        let ratings = top.prefix(5).compactMap { apps[String($0)]?.ratingCount }.sorted()
+        guard !ratings.isEmpty else { return nil }
+        return KeywordRecommendation.competition(topRatings: ratings[ratings.count / 2])
     }
 
     /// The latest check for a keyword, whichever day it landed on.

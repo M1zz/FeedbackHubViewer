@@ -162,6 +162,27 @@ enum KeywordRecommendation {
         return Int((100 * Double(held) / Double(total)).rounded())
     }
 
+    /// 지금 순위의 가치 0~100 — 그 검색어를 치는 사람 중 몇이 내 앱까지 오나.
+    ///
+    /// 인기(얼마나 찾나) × 그 자리까지 내려오는 사람의 몫. 아무도 치지 않는 내 앱 이름에서
+    /// 1위는 0 이고, 많이 찾는 말의 3위가 그보다 훨씬 값지다. 몫은 검색 결과에서 아래로 갈수록
+    /// 급히 줄어드는 흔한 모양을 따른 근사다.
+    static func rankValue(popularity: Int, rank: Int?) -> Int {
+        guard let rank else { return 0 }
+        let reach: Double
+        switch rank {
+        case 1: reach = 1.0
+        case 2: reach = 0.7
+        case 3: reach = 0.55
+        case 4...5: reach = 0.4
+        case 6...10: reach = 0.25
+        case 11...20: reach = 0.1
+        case 21...50: reach = 0.04
+        default: reach = 0.01
+        }
+        return Int((Double(popularity) * reach).rounded())
+    }
+
     /// 지난번과 비교한 인기 변화 한 마디. 지난번이 없거나 그대로면 nil.
     static func trend(_ item: Item, previous: [String: Int]?) -> String? {
         guard let previous else { return nil }
