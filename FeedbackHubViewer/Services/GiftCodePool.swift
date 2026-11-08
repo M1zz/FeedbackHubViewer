@@ -95,6 +95,7 @@ final class GiftCodePool: ObservableObject {
     static let tierPools: [String: [(productID: String, label: String)]] = [
         "com.Ysoup.TokenMemo": [("com.Ysoup.TokenMemo.slots5", "Plus")],
         "com.xa.toki": [("com.xa.toki.remember", "Remember")],
+        "com.leeo.slidesnap": [("com.leeo.slidesnap.plus", "Plus")],
     ]
 
     /// 앱 하나의 묶음 열쇠들. 첫째가 Pro(번들 ID).
