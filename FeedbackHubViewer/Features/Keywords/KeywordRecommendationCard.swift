@@ -113,6 +113,8 @@ struct KeywordRecommendationCard: View {
         } else {
             goal(report)
             Divider()
+            KeywordMap(items: report.items)
+            Divider()
             let shown = showsAll ? report.items : Array(report.items.prefix(Self.collapsedCount))
             VStack(alignment: .leading, spacing: 0) {
                 ForEach(Array(shown.enumerated()), id: \.element.id) { index, item in
@@ -316,7 +318,7 @@ struct KeywordRecommendationCard: View {
         case .keep: return .green
         case .climb: return .orange
         case .claim: return .purple
-        case .target: return .blue
+        case .target: return .gray
         }
     }
 }
