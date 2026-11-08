@@ -217,6 +217,8 @@ enum ReleaseHealth {
         let bugFeedback: Int?
         /// 이 버전을 쓴 플랫폼(iOS · macCatalyst …).
         let platforms: Set<String>
+        /// 설치를 겹치지 않게 셋으로 가른 것. 불안정도 핵심 행동도 모르면 nil.
+        var people: People? = nil
 
         var coreActionRate: Double? {
             guard let coreActionInstalls, activeInstalls > 0 else { return nil }
@@ -232,6 +234,17 @@ enum ReleaseHealth {
         var crashDensity: Double? {
             activeInstalls > 0 ? Double(crashReports) / Double(activeInstalls) : nil
         }
+    }
+
+    /// 이 버전을 쓴 설치를 겹치지 않게 가른 것 — 곤란을 겪음 · 핵심 행동까지 못 감 · 문제없이 씀.
+    /// 한 설치는 한 칸에만 들어간다. 불안정 이벤트를 보냈으면 핵심 행동을 했어도 곤란 쪽이다.
+    struct People: Equatable {
+        /// 크래시 · 실행 실패 같은 불안정 이벤트를 보낸 설치. 모르면 nil.
+        let troubled: Int?
+        /// 불안정은 없지만 핵심 행동을 한 번도 안 한 설치. 스펙에 핵심 행동이 없으면 nil.
+        let stuck: Int?
+        let fine: Int
+        var total: Int { (troubled ?? 0) + (stuck ?? 0) + fine }
     }
 
     struct Adoption: Equatable {
@@ -422,7 +435,9 @@ enum ReleaseHealth {
                 newSignatures: fresh,
                 feedback: notes.count,
                 bugFeedback: typed.isEmpty ? nil : bugs,
-                platforms: Set(group.map(\.platform))
+                platforms: Set(group.map(\.platform)),
+                people: Self.people(installs: installs, unstable: stabilityKnown ? unstable : nil,
+                               core: coreNames == nil ? nil : core)
             )
         }
 
@@ -449,6 +464,16 @@ enum ReleaseHealth {
                       stabilityKnown: stabilityKnown,
                       eventsWithoutInstall: recent.filter { ($0.installID ?? "").isEmpty }.count,
                       coverageStart: coverageStart.flatMap { $0 > windowStart ? $0 : nil })
+    }
+
+    /// 설치를 곤란 · 막힘 · 괜찮음으로 겹치지 않게 가른다.
+    static func people(installs: Set<String>, unstable: Set<String>?, core: Set<String>?) -> People? {
+        guard unstable != nil || core != nil, !installs.isEmpty else { return nil }
+        let troubled = unstable.map { $0.intersection(installs) } ?? []
+        let stuck = core.map { installs.subtracting($0).subtracting(troubled) }
+        return People(troubled: unstable == nil ? nil : troubled.count,
+                      stuck: stuck?.count,
+                      fine: installs.count - troubled.count - (stuck?.count ?? 0))
     }
 
     // MARK: 판정

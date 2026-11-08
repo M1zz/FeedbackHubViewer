@@ -7,7 +7,8 @@
 //  제 탭을 갖는다.
 //
 //  읽는 차례대로 놓는다.
-//   1. 판정(초록 · 노랑 · 빨강)과 그 이유 한 줄, 초록이 아니면 초록까지 할 일(고칠 것 · 기다릴 것)
+//   1. 판정(초록 · 노랑 · 빨강)과 그 이유 한 줄, 곤란을 겪는 사용자가 몇인지 파이 하나,
+//      초록이 아니면 초록까지 할 일(고칠 것 · 기다릴 것)
 //   2. 최신 버전과 앞 버전을 나란히 (활성 설치 · 핵심 행동률 · 크래시 없는 설치 · 크래시 · 피드백)
 //   3. 채택: 지금 쓰는 사람 중 몇이 새 버전인가
 //   4. 처음 본 크래시, 이 앱이 지키기로 한 약속
@@ -18,6 +19,7 @@
 //
 
 import SwiftUI
+import Charts
 
 struct ReleaseHealthCard: View {
     @EnvironmentObject private var store: FeedbackStore
@@ -27,6 +29,7 @@ struct ReleaseHealthCard: View {
         VStack(alignment: .leading, spacing: 12) {
             if let report = store.releaseHealth(for: project) {
                 header(report.verdict)
+                if let people = report.latest.people { PeoplePie(version: report.latest.version, people: people) }
                 if !report.verdict.steps.isEmpty { toGreen(report.verdict.steps) }
                 copyForClaude(report)
                 comparison(report)
@@ -463,5 +466,104 @@ struct RedFirstToggle: View {
         .buttonStyle(.borderless)
         .help("릴리즈 건강이 빨강인 앱을 위로 올립니다. 같은 색 안에서는 어제 DAU 순입니다.")
         .accessibilityValue(isOn ? "켜짐" : "꺼짐")
+    }
+}
+
+// MARK: - 곤란을 겪는 사용자
+
+/// 최신 버전 사용자를 곤란 · 막힘 · 괜찮음으로 가른 도넛. 판정 글보다 먼저 "몇 명이 힘든가"를
+/// 한눈에 보이려고 둔다. 조각마다 아이콘 · 이름 · 수를 범례에 적어 색만으로 읽지 않게 한다.
+private struct PeoplePie: View {
+    let version: String
+    let people: ReleaseHealth.People
+    @State private var selectedAngle: Int?
+
+    private struct Slice: Identifiable {
+        let id: String
+        let label: String
+        let symbol: String
+        let tint: Color
+        let count: Int
+    }
+
+    private var slices: [Slice] {
+        var all: [Slice] = []
+        if let troubled = people.troubled {
+            all.append(Slice(id: "troubled", label: "크래시 · 실행 실패를 겪음", symbol: "xmark.octagon.fill",
+                             tint: .red, count: troubled))
+        }
+        if let stuck = people.stuck {
+            all.append(Slice(id: "stuck", label: "핵심 기능까지 못 감", symbol: "exclamationmark.triangle.fill",
+                             tint: .orange, count: stuck))
+        }
+        all.append(Slice(id: "fine", label: "문제없이 씀", symbol: "checkmark.circle.fill", tint: .green, count: people.fine))
+        return all
+    }
+
+    private var troubledTotal: Int { (people.troubled ?? 0) + (people.stuck ?? 0) }
+
+    private func percent(_ count: Int) -> String {
+        people.total > 0 ? "\(Int((100 * Double(count) / Double(people.total)).rounded()))%" : "—"
+    }
+
+    /// 마우스를 올린 조각. 각도 값은 조각 수를 앞에서부터 쌓은 자리다.
+    private var selected: Slice? {
+        guard let selectedAngle else { return nil }
+        var running = 0
+        for slice in slices {
+            running += slice.count
+            if selectedAngle < running { return slice }
+        }
+        return nil
+    }
+
+    var body: some View {
+        let slices = slices
+        HStack(alignment: .center, spacing: 20) {
+            Chart(slices) { slice in
+                SectorMark(angle: .value("사용자", slice.count), innerRadius: .ratio(0.62), angularInset: 1.5)
+                    .cornerRadius(3)
+                    .foregroundStyle(slice.tint)
+                    .opacity(selected == nil || selected?.id == slice.id ? 1 : 0.35)
+            }
+            .chartLegend(.hidden)
+            .chartAngleSelection(value: $selectedAngle)
+            .chartBackground { _ in
+                VStack(spacing: 2) {
+                    if let selected {
+                        Text(percent(selected.count)).font(.title2.monospacedDigit().weight(.bold))
+                        Text("\(selected.count)명").font(.hubCaption).foregroundStyle(.secondary)
+                    } else {
+                        Text(percent(troubledTotal)).font(.title2.monospacedDigit().weight(.bold))
+                        Text("곤란을 겪음").font(.hubCaption).foregroundStyle(.secondary)
+                    }
+                }
+            }
+            .frame(width: 150, height: 150)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("\(version) 사용자 \(people.total)명 중 곤란을 겪는 사람 \(troubledTotal)명, \(percent(troubledTotal))")
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text("\(version) 사용자 \(people.total)명 중 \(troubledTotal)명이 곤란을 겪고 있어요")
+                    .font(.headline)
+                    .fixedSize(horizontal: false, vertical: true)
+                ForEach(slices) { slice in
+                    HStack(spacing: 8) {
+                        Image(systemName: slice.symbol).foregroundStyle(slice.tint)
+                        Text(slice.label)
+                        Spacer(minLength: 8)
+                        Text("\(slice.count)명 · \(percent(slice.count))")
+                            .monospacedDigit()
+                            .foregroundStyle(.secondary)
+                    }
+                    .font(.body)
+                }
+                Text("최근 \(ReleaseHealth.windowDays)일 동안 이 버전을 쓴 설치 하나를 한 사람으로 셉니다. 한 사람은 한 칸에만 들어갑니다.")
+                    .font(.hubCaption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding(.vertical, 4)
     }
 }
