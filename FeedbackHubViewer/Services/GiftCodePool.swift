@@ -96,6 +96,7 @@ final class GiftCodePool: ObservableObject {
         "com.Ysoup.TokenMemo": [("com.Ysoup.TokenMemo.slots5", "Plus")],
         "com.xa.toki": [("com.xa.toki.remember", "Remember")],
         "com.leeo.slidesnap": [("com.leeo.slidesnap.plus", "Plus")],
+        "com.example.ScheduleDensityApp": [("com.example.ScheduleDensityApp.plus", "Plus")],
     ]
 
     /// 앱 하나의 묶음 열쇠들. 첫째가 Pro(번들 ID).
