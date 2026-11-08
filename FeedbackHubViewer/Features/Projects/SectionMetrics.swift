@@ -271,7 +271,9 @@ struct SectionMetrics {
                 guard !levels.isEmpty else { return "판정할 수 있는 앱 없음" }
                 let red = levels.filter { $0 == .red }.count
                 let yellow = levels.filter { $0 == .yellow }.count
+                let unknown = levels.filter { $0 == .unknown }.count
                 return "앱 \(levels.count)개 판정 · 빨강 \(red) · 노랑 \(yellow)"
+                    + (unknown > 0 ? " · 판단할 수 없음 \(unknown)" : "")
             }
             guard let report = store.releaseHealth(for: project) else {
                 return "최근 \(ReleaseHealth.windowDays)일에 버전을 가를 사용 이벤트 없음"

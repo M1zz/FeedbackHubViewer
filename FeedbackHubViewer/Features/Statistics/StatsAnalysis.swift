@@ -492,6 +492,7 @@ enum StatsAnalysis {
         case .red: state = .bad
         case .yellow: state = .watch
         case .green: state = .good
+        case .unknown: state = .unknown
         }
         return .init(topic: .release, question: "새 버전 괜찮나?", answer: report.verdict.headline,
                      state: state, action: state == .bad ? "릴리즈 탭에서 이유부터 보기" : nil)

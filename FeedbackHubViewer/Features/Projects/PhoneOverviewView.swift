@@ -295,10 +295,12 @@ struct PhoneOverviewView: View {
             let red = levels.filter { $0 == .red }.count
             let yellow = levels.filter { $0 == .yellow }.count
             let green = levels.filter { $0 == .green }.count
+            let unknown = levels.filter { $0 == .unknown }.count
             return Tile(section: section,
                         value: levels.isEmpty ? "–" : (red > 0 ? "빨강 \(red)" : "빨강 없음"),
-                        caption: levels.isEmpty ? "판정 없음" : "노랑 \(yellow) · 초록 \(green)",
-                        tint: red > 0 ? .red : (yellow > 0 ? .orange : .green), badge: badge)
+                        caption: levels.isEmpty ? "판정 없음"
+                            : "노랑 \(yellow) · 초록 \(green)" + (unknown > 0 ? " · 판단할 수 없음 \(unknown)" : ""),
+                        tint: red > 0 ? .red : (yellow > 0 ? .orange : (green > 0 ? .green : .secondary)), badge: badge)
         case .crashes:
             let summary = store.crashSummary(for: nil)
             return Tile(section: section, value: "7일 \(AppFormat.count(summary.last7Days))건",

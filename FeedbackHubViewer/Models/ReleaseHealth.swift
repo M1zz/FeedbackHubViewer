@@ -143,17 +143,22 @@ enum ReleaseHealth {
     static let adoptionDays = 7
     /// 이보다 작은 차이(%p)는 흔들림으로 보고 퇴행이라 부르지 않는다.
     static let crashFreeWobble = 0.005
+    /// 카드에 나란히 보일 최근 버전 수(최신 포함).
+    static let recentVersions = 4
 
     // MARK: 결과 모양
 
     enum Level: Int, Comparable {
-        case green = 0, yellow = 1, red = 2
+        /// 근거가 모자라 좋다고도 나쁘다고도 못 한다(설치가 적음 · 견줄 앞 버전 없음 · 흔들림 안).
+        /// 곤란을 겪는 사람이 없는데 노랑으로 칠하지 않으려고 따로 둔다.
+        case green = 0, unknown = 1, yellow = 2, red = 3
 
         static func < (lhs: Level, rhs: Level) -> Bool { lhs.rawValue < rhs.rawValue }
 
         var label: String {
             switch self {
             case .green: return "초록"
+            case .unknown: return "판단할 수 없음"
             case .yellow: return "노랑"
             case .red: return "빨강"
             }
@@ -258,6 +263,9 @@ enum ReleaseHealth {
     struct Report: Equatable {
         let latest: VersionMetrics
         let previous: VersionMetrics?
+        /// 같은 플랫폼 줄기의 최근 버전들, 새것부터(첫째가 `latest`). 최신 버전 설치가 적어도
+        /// 앞 버전들에서 사람들이 어땠는지 보이려고 둔다.
+        var recent: [VersionMetrics] = []
         let adoption: Adoption
         let verdict: Verdict
         let spec: ReleaseSpec
@@ -367,9 +375,10 @@ enum ReleaseHealth {
         let latestPlatforms = Set(byVersion[latestVersion, default: []].map(\.platform))
         // 앞 버전은 **같은 플랫폼 줄기**에서 고른다. 맥 앱이 따로 번호를 매기면
         // iOS 5.1 의 앞 버전으로 맥 1.2 를 고르는 일이 생긴다.
-        let previousVersion = versions.dropFirst().first { version in
+        let line = versions.filter { version in
             !Set(byVersion[version, default: []].map(\.platform)).isDisjoint(with: latestPlatforms)
         }
+        let previousVersion = line.dropFirst().first
 
         let stabilityNames = Set(spec.stabilityEvents)
         let stabilityKnown = spec.stabilityEventsDeclared || !everSeenEvents.isDisjoint(with: stabilityNames)
@@ -443,6 +452,8 @@ enum ReleaseHealth {
 
         let latest = metrics(for: latestVersion, includeNewSignatures: true)
         let previous = previousVersion.map { metrics(for: $0, includeNewSignatures: false) }
+        let older = line.dropFirst(2).prefix(recentVersions - 2).map { metrics(for: $0, includeNewSignatures: false) }
+        let recentMetrics = [latest] + (previous.map { [$0] } ?? []) + older
 
         // 채택: 최근 7일 활성 설치마다 그 창에서 본 가장 높은 버전.
         var newestByInstall: [String: String] = [:]
@@ -457,6 +468,7 @@ enum ReleaseHealth {
 
         return Report(latest: latest,
                       previous: previous,
+                      recent: recentMetrics,
                       adoption: adoption,
                       verdict: verdict(latest: latest, previous: previous, thresholds: spec.thresholds),
                       spec: spec,
@@ -478,16 +490,18 @@ enum ReleaseHealth {
 
     // MARK: 판정
 
-    /// 최신 버전과 앞 버전의 숫자로 초록 · 노랑 · 빨강을 정한다. 순수 함수다.
+    /// 최신 버전과 앞 버전의 숫자로 초록 · 판단할 수 없음 · 노랑 · 빨강을 정한다. 순수 함수다.
     ///
     /// 빨강
     ///  - 최신 버전에서 처음 본 크래시 지문이 보고 2건 이상 (설치 수와 무관하다. 크래시는 크래시다)
     ///  - 크래시 없는 설치 비율이 문턱 아래
     ///  - 핵심 행동률이 앞 버전보다 `coreActionDropMax` 넘게(상대값) 떨어졌고, 그 차이가 우연으로
-    ///    설명되지 않음 (`dropIsSignificant`). 문턱만 넘고 표본이 작으면 노랑이다
-    /// 노랑
+    ///    설명되지 않음 (`dropIsSignificant`). 문턱만 넘고 표본이 작으면 판단할 수 없음이다
+    /// 판단할 수 없음 (빨강 · 노랑 이유가 하나도 없을 때만)
     ///  - 최신 버전 활성 설치가 `minInstallsForVerdict` 미만 (비율 판정은 건너뛴다)
     ///  - 견줄 앞 버전이 없음
+    ///  - 핵심 행동률이 문턱 넘게 떨어졌지만 표본이 작아 흔들림 안
+    /// 노랑
     ///  - 작은 퇴행: 새 지문 1건 또는 크래시가 아닌 새 지문, 크래시 없는 비율이 앞보다 낮아짐,
     ///    핵심 행동률이 문턱의 절반을 넘게 떨어짐, 설치당 크래시 보고가 늘어남, 버그 피드백이 늘어남
     /// 초록
@@ -500,6 +514,8 @@ enum ReleaseHealth {
                         thresholds: ReleaseSpec.Thresholds) -> Verdict {
         var red: [String] = []
         var yellow: [String] = []
+        /// 나쁜 것이 아니라 아직 모르는 것. 이것만 있으면 노랑이 아니라 판단할 수 없음이다.
+        var unsure: [String] = []
         var green: [String] = []
         var steps: [Step] = []
         func fix(_ text: String) { steps.append(Step(kind: .fix, text: text)) }
@@ -527,7 +543,7 @@ enum ReleaseHealth {
         let previousEnough = (previous?.activeInstalls ?? 0) >= thresholds.minInstallsForVerdict
 
         if !enough {
-            yellow.insert("아직 판단하기 이르다 (최신 버전 활성 설치 \(latest.activeInstalls)대, 판단에 \(thresholds.minInstallsForVerdict)대 필요)", at: 0)
+            unsure.insert("아직 판단하기 이르다 (최신 버전 활성 설치 \(latest.activeInstalls)대, 판단에 \(thresholds.minInstallsForVerdict)대 필요)", at: 0)
             wait("최신 버전 활성 설치가 \(thresholds.minInstallsForVerdict - latest.activeInstalls)대 더 생기면 판정한다 (지금 \(latest.activeInstalls)/\(thresholds.minInstallsForVerdict)대). 사용자가 원래 적은 앱이면 앱 리포 docs/usage-spec.json 의 release.thresholds.minInstallsForVerdict 를 낮춘다")
         } else {
             // 안정성
@@ -554,7 +570,7 @@ enum ReleaseHealth {
                         red.append("핵심 행동률 \(percent(before)) → \(percent(now)) (\(percent(drop)) 떨어짐, 허용 \(percent(thresholds.coreActionDropMax)))")
                         fix("이번 버전에서 핵심 행동까지 가는 길이 바뀌었거나 막혔는지 확인해 고친다")
                     } else if drop > thresholds.coreActionDropMax {
-                        yellow.append("핵심 행동률 \(percent(before)) → \(percent(now)) (\(percent(drop)) 떨어짐, 표본이 작아 흔들림 안)")
+                        unsure.append("핵심 행동률 \(percent(before)) → \(percent(now)) (\(percent(drop)) 떨어짐, 표본이 작아 흔들림 안)")
                         wait("설치가 더 쌓이면 진짜 떨어진 것인지 가려진다. 그동안 핵심 행동까지 가는 길이 바뀌었는지 한 번 확인한다")
                     } else if drop > thresholds.coreActionDropMax / 2 {
                         yellow.append("핵심 행동률 \(percent(before)) → \(percent(now)) (\(percent(drop)) 떨어짐)")
@@ -577,7 +593,7 @@ enum ReleaseHealth {
         }
 
         if previous == nil {
-            yellow.append("견줄 앞 버전이 최근 \(windowDays)일에 없다")
+            unsure.append("견줄 앞 버전이 최근 \(windowDays)일에 없다")
             wait("다음 버전을 내면 지금 버전이 견줄 앞 버전이 된다")
         } else if let previous, let bugsNow = latest.bugFeedback, bugsNow >= 2, bugsNow > (previous.bugFeedback ?? 0) {
             yellow.append("버그 피드백 \(previous.bugFeedback ?? 0)건 → \(bugsNow)건")
@@ -586,8 +602,9 @@ enum ReleaseHealth {
 
         // 고칠 것이 먼저. 같은 종류 안에서는 이유가 나온 차례를 지킨다.
         let ordered = steps.enumerated().sorted { ($0.element.kind, $0.offset) < ($1.element.kind, $1.offset) }.map(\.element)
-        if !red.isEmpty { return Verdict(level: .red, reasons: red + yellow, steps: ordered) }
-        if !yellow.isEmpty { return Verdict(level: .yellow, reasons: yellow, steps: ordered) }
+        if !red.isEmpty { return Verdict(level: .red, reasons: red + yellow + unsure, steps: ordered) }
+        if !yellow.isEmpty { return Verdict(level: .yellow, reasons: yellow + unsure, steps: ordered) }
+        if !unsure.isEmpty { return Verdict(level: .unknown, reasons: unsure, steps: ordered) }
         return Verdict(level: .green, reasons: [green.joined(separator: " · ")])
     }
 

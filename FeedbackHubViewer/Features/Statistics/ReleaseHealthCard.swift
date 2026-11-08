@@ -7,7 +7,7 @@
 //  제 탭을 갖는다.
 //
 //  읽는 차례대로 놓는다.
-//   1. 판정(초록 · 노랑 · 빨강)과 그 이유 한 줄, 곤란을 겪는 사용자가 몇인지 파이 하나,
+//   1. 판정(초록 · 노랑 · 빨강 · 판단할 수 없음)과 그 이유 한 줄, 최근 버전마다 곤란을 겪는 사용자가 몇인지 파이,
 //      초록이 아니면 초록까지 할 일(고칠 것 · 기다릴 것)
 //   2. 최신 버전과 앞 버전을 나란히 (활성 설치 · 핵심 행동률 · 크래시 없는 설치 · 크래시 · 피드백)
 //   3. 채택: 지금 쓰는 사람 중 몇이 새 버전인가
@@ -29,7 +29,8 @@ struct ReleaseHealthCard: View {
         VStack(alignment: .leading, spacing: 12) {
             if let report = store.releaseHealth(for: project) {
                 header(report.verdict)
-                if let people = report.latest.people { PeoplePie(version: report.latest.version, people: people) }
+                PeopleByVersion(versions: report.recent.isEmpty ? [report.latest] : report.recent,
+                                enough: report.spec.thresholds.minInstallsForVerdict)
                 if !report.verdict.steps.isEmpty { toGreen(report.verdict.steps) }
                 copyForClaude(report)
                 comparison(report)
@@ -422,6 +423,7 @@ struct ReleaseHealthCard: View {
     static func tint(_ level: ReleaseHealth.Level) -> Color {
         switch level {
         case .green: return .green
+        case .unknown: return .secondary
         case .yellow: return .orange
         case .red: return .red
         }
@@ -430,6 +432,7 @@ struct ReleaseHealthCard: View {
     static func symbol(_ level: ReleaseHealth.Level) -> String {
         switch level {
         case .green: return "checkmark.circle.fill"
+        case .unknown: return "questionmark.circle.fill"
         case .yellow: return "exclamationmark.circle.fill"
         case .red: return "xmark.octagon.fill"
         }
@@ -470,6 +473,69 @@ struct RedFirstToggle: View {
 }
 
 // MARK: - 곤란을 겪는 사용자
+
+/// 최근 버전을 나란히 놓고 고른 버전의 파이를 보인다. 최신 버전 설치가 적으면
+/// 판정할 만큼 쓴 가장 새 버전부터 연다 — "모자라다" 한마디로 끝내지 않으려고.
+private struct PeopleByVersion: View {
+    let versions: [ReleaseHealth.VersionMetrics]
+    /// 판정에 필요한 활성 설치 수. 이보다 적은 버전은 "표본 적음"을 붙인다.
+    let enough: Int
+    @State private var chosen: String?
+
+    private var shown: [ReleaseHealth.VersionMetrics] { versions.filter { $0.people != nil } }
+
+    private var current: ReleaseHealth.VersionMetrics? {
+        let shown = shown
+        if let chosen, let match = shown.first(where: { $0.version == chosen }) { return match }
+        return shown.first { $0.activeInstalls >= enough } ?? shown.first
+    }
+
+    var body: some View {
+        if let current, let people = current.people {
+            VStack(alignment: .leading, spacing: 10) {
+                if shown.count > 1 {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 8) {
+                            ForEach(shown, id: \.version) { metrics in chip(metrics, isOn: metrics.version == current.version) }
+                        }
+                    }
+                }
+                PeoplePie(version: current.version, people: people)
+                if current.activeInstalls < enough {
+                    Text("\(current.version)은 아직 \(current.activeInstalls)대만 써서 비율이 크게 흔들립니다. 판정에는 \(enough)대가 필요해요.")
+                        .font(.hubCaption)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+        }
+    }
+
+    /// 버전 하나. 곤란 비율을 함께 적어 누르기 전에도 버전끼리 견줄 수 있게 한다.
+    private func chip(_ metrics: ReleaseHealth.VersionMetrics, isOn: Bool) -> some View {
+        let people = metrics.people!
+        let troubled = (people.troubled ?? 0) + (people.stuck ?? 0)
+        let rate = people.total > 0 ? "\(Int((100 * Double(troubled) / Double(people.total)).rounded()))%" : "—"
+        let isFirst = metrics.version == versions.first?.version
+        return Button {
+            chosen = metrics.version
+        } label: {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(metrics.version + (isFirst ? " · 최신" : ""))
+                    .font(.body.weight(.semibold))
+                Text(metrics.activeInstalls < enough ? "\(people.total)명 · 표본 적음" : "\(people.total)명 · 곤란 \(rate)")
+                    .font(.hubCaption.monospacedDigit())
+                    .foregroundStyle(.secondary)
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(RoundedRectangle(cornerRadius: 8).fill(isOn ? Color.accentColor.opacity(0.15) : Color.secondary.opacity(0.08)))
+            .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(isOn ? Color.accentColor : .clear, lineWidth: 1.5))
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(isOn ? .isSelected : [])
+    }
+}
 
 /// 최신 버전 사용자를 곤란 · 막힘 · 괜찮음으로 가른 도넛. 판정 글보다 먼저 "몇 명이 힘든가"를
 /// 한눈에 보이려고 둔다. 조각마다 아이콘 · 이름 · 수를 범례에 적어 색만으로 읽지 않게 한다.
