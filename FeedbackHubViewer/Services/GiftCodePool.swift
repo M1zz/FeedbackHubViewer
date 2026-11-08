@@ -97,6 +97,7 @@ final class GiftCodePool: ObservableObject {
         "com.xa.toki": [("com.xa.toki.remember", "Remember")],
         "com.leeo.slidesnap": [("com.leeo.slidesnap.plus", "Plus")],
         "com.example.ScheduleDensityApp": [("com.example.ScheduleDensityApp.plus", "Plus")],
+        "com.burningparchment.app": [("com.burningparchment.app.plus", "Plus")],
     ]
 
     /// 앱 하나의 묶음 열쇠들. 첫째가 Pro(번들 ID).
