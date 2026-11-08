@@ -289,6 +289,36 @@ extension CrashReport {
         return lines.joined(separator: "\n")
     }
 
+    /// 내 코드 프레임을 **한 번에** 함수 이름 · 파일:줄로 되돌리는 셸 명령. 내 코드가 없으면 nil.
+    ///
+    /// 받는 쪽(앱 리포에서 연 Claude Code)이 그대로 돌릴 수 있게 빈칸 없이 만든다. 바이너리마다
+    /// UUID 로 그 빌드의 아카이브를 찾고(`mdfind`), 그 안에서 같은 이름의 DWARF 를 골라 atos 에
+    /// 주소를 몰아 준다. mdfind 는 dSYM 이 아니라 그것을 담은 .xcarchive 를 돌려주므로 find 가 한 번 더 든다.
+    var symbolicationScript: String? {
+        let base = 0x1_0000_0000
+        let mine = frames.filter { !$0.isSystem && Int($0.offset) != nil }
+        guard !mine.isEmpty else { return nil }
+        var binaries: [String] = []
+        for frame in mine where !binaries.contains(frame.binary) { binaries.append(frame.binary) }
+        let uuids = binaryUUIDs
+        var lines: [String] = []
+        for binary in binaries {
+            let addresses = mine.filter { $0.binary == binary }
+                .map { "0x" + String(base + Int($0.offset)!, radix: 16) }
+                .joined(separator: " ")
+            lines.append("# \(binary) — 프레임 \(mine.filter { $0.binary == binary }.map { String($0.id) }.joined(separator: ", "))번")
+            if let uuid = uuids[binary] {
+                lines.append("src=$(mdfind \"com_apple_xcode_dsym_uuids == \(uuid)\" | head -1)")
+            } else {
+                lines.append("# UUID 가 안 실렸다. \(appVersion)\(buildNumber.map { " (\($0))" } ?? "") 아카이브를 직접 골라 src 에 넣는다.")
+                lines.append("src=\"<그 빌드의 .xcarchive 또는 .dSYM 경로>\"")
+            }
+            lines.append("dwarf=$(find \"$src\" -path '*.dSYM/Contents/Resources/DWARF/\(binary)' | head -1)")
+            lines.append("atos -o \"$dwarf\" -l 0x\(String(base, radix: 16)) \(addresses)")
+        }
+        return lines.joined(separator: "\n")
+    }
+
     /// 한 이슈 안에서 서로 다른 자리를 가르는 열쇠. 오프셋까지 본다.
     var variantKey: String {
         frames.prefix(4).map { "\($0.binary)+\($0.offset)" }.joined(separator: ">")

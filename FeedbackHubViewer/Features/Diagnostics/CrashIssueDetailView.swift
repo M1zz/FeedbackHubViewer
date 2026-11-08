@@ -78,7 +78,7 @@ struct CrashIssueDetailView: View {
                     } label: {
                         Label("복사", systemImage: "doc.on.doc")
                     }
-                    .help("이 이슈를 텍스트로 복사")
+                    .help("앱 리포에서 연 Claude Code 에 붙여넣을 글 — 함수 이름으로 되돌리는 명령까지 담습니다")
                 }
                 ToolbarItem(placement: .cancellationAction) {
                     Button("닫기") { dismiss() }
@@ -290,22 +290,46 @@ struct CrashIssueDetailView: View {
 
     // MARK: - 복사
 
-    /// 버그 리포트에 붙일 만한 모양으로. 이슈 요약 + 대표 콜스택이다.
+    /// 앱 리포에서 연 Claude Code 에 붙여넣을 글. 오프셋만 주면 어느 코드인지 못 찾으므로,
+    /// 함수 이름으로 되돌리는 명령과 그다음 할 일을 함께 준다.
     private var copyText: String {
         var lines = [
-            "[\(issue.cause.label)] \(issue.title)",
-            "\(issue.count)건 · 최근 7일 \(issue.last7Days)건 (지난주 \(issue.previous7Days)건)"
+            "\(issue.title) 를 고쳐 주세요. App Store 사용자 기기에서 MetricKit 이 보낸 진단입니다.",
+            "",
+            "## 무엇이",
+            "- 갈래: \(issue.cause.label) — \(issue.cause.hint)",
+            "- \(issue.count)건 · 최근 7일 \(issue.last7Days)건 (지난주 \(issue.previous7Days)건)"
         ]
-        if let firstSeen = issue.firstSeen { lines.append("처음: \(AppFormat.dateTime(firstSeen))") }
-        if let lastSeen = issue.lastSeen { lines.append("마지막: \(AppFormat.dateTime(lastSeen))") }
-        lines.append("버전: " + issue.versions.map { "\($0.version)(\($0.count))" }.joined(separator: ", "))
-        lines.append("기기: " + issue.devices.prefix(8).map { "\($0.device)(\($0.count))" }.joined(separator: ", "))
+        if let firstSeen = issue.firstSeen { lines.append("- 처음: \(AppFormat.dateTime(firstSeen))") }
+        if let lastSeen = issue.lastSeen { lines.append("- 마지막: \(AppFormat.dateTime(lastSeen))") }
+        lines.append("- 버전: " + issue.versions.map { "\($0.version)(\($0.count))" }.joined(separator: ", "))
+        lines.append("- 기기: " + issue.devices.prefix(8).map { "\($0.device)(\($0.count))" }.joined(separator: ", "))
+        guard let representative = issue.reports.first else { return lines.joined(separator: "\n") }
+        if let signal = representative.signalLabel { lines.append("- \(signal)") }
+        if representative.hasDetail { lines.append("- \(representative.detail)") }
+
         lines.append("")
-        lines.append(issue.cause.hint)
-        if let representative = issue.reports.first {
+        lines.append("## 할 일")
+        if let script = representative.symbolicationScript {
+            lines.append("1. 아래 명령을 이 Mac 에서 돌려 콜스택의 내 코드 줄을 함수 이름 · 파일:줄로 되돌린다. 그 빌드의 dSYM 은 Xcode 아카이브에 있다.")
+            lines.append("2. 나온 파일:줄을 이 리포에서 열고, 위 갈래에 맞는 원인을 찾아 고친다. 지금 코드와 그 버전 코드가 다르면 그 버전 태그 · 커밋에서 본다.")
+            lines.append("3. dSYM 을 못 찾거나 atos 가 주소만 돌려주면 짐작으로 고치지 말고, 무엇을 못 찾았는지 말한다.")
             lines.append("")
-            lines.append(representative.stack)
+            lines.append("```sh")
+            lines.append(script)
+            lines.append("```")
+        } else {
+            lines.append("콜스택에 이 앱의 코드 줄이 없다(전부 시스템). 위 갈래와 신호, 시스템 프레임 이름으로 어느 API 를 부르다 났는지 짚고, 그 API 를 쓰는 곳을 이 리포에서 찾는다.")
         }
+        if issue.variants > 1 {
+            lines.append("")
+            lines.append("이 이슈 안에 서로 다른 자리가 \(issue.variants)곳 있다. 아래는 가장 많은 것 하나다.")
+        }
+        lines.append("")
+        lines.append("## 대표 콜스택 (0번이 죽은 자리)")
+        lines.append("```")
+        lines.append(representative.stack)
+        lines.append("```")
         return lines.joined(separator: "\n")
     }
 }
