@@ -37,12 +37,11 @@ struct KeywordsView: View {
                 // 먼저 답할 것 — 지금 어떤가, 무엇을 할까. 나머지는 고칠 때 펼쳐 본다.
                 if project == nil { KeywordRefreshOverviewCard() }
                 if linkedApp == nil { unlinkedCard }
-                if needsTerms {
-                    if linkedApp != nil { startCard }
-                    recommendationCard
-                    addCard
-                }
+                if needsTerms, linkedApp != nil { startCard }
                 if project != nil, !standings.isEmpty { rankCard }
+                // 목표(검색 점령도 · 선점 기회)는 늘 보인다 — 무엇을 할지가 여기서 나온다.
+                recommendationCard
+                if needsTerms { addCard }
                 if let project, linkedApp != nil, isRefreshDue { KeywordRefreshCard(project: project) }
                 moreToggle
                 if showsMore { moreCards }
@@ -96,10 +95,7 @@ struct KeywordsView: View {
     private var moreCards: some View {
         if let app = linkedApp { linkedAppCard(app) }
         if let project, linkedApp != nil, !isRefreshDue { KeywordRefreshCard(project: project) }
-        if !needsTerms {
-            recommendationCard
-            addCard
-        }
+        if !needsTerms { addCard }
         // 전체로 보면 줄이 어느 앱의 말인지 안 적혀 있어 원본으로 둔다.
         if project == nil, !standings.isEmpty { rankCard }
         // ASO 카드들 — 순위(어디 서 있나) → 메타데이터(무엇을 걸어 뒀나) → 노출 · 전환(그래서
@@ -282,44 +278,33 @@ struct KeywordsView: View {
 
     private var standings: [KeywordStanding] { keywords.standings(for: project) }
 
-    /// 띠의 "확인" 전까지 남는 10위 선 넘나듦. 전체로 보면 어느 앱의 말인지 못 가려 비운다.
-    private var crossings: [String: SectionChanges.KeywordCrossing] {
+    /// 띠의 "확인" 전까지 남는, 선을 넘어 오른 검색어. 전체로 보면 어느 앱의 말인지 못 가려 비운다.
+    private var rises: [String: SectionChanges.KeywordRise] {
         guard let project else { return [:] }
         let all = changes.recentChanges(.keywords, project: project)
-            .flatMap { SectionChanges.keywordCrossings(before: $0.before, after: $0.after) }
+            .flatMap { SectionChanges.keywordRises(before: $0.before, after: $0.after) }
         return Dictionary(all.map { ($0.id, $0) }, uniquingKeysWith: { _, new in new })
     }
 
-    /// 넘나든 줄이 위(밀린 것 먼저), 그 아래는 순위순 그대로.
-    private func ordered(_ crossings: [String: SectionChanges.KeywordCrossing]) -> [KeywordStanding] {
-        func tier(_ standing: KeywordStanding) -> Int {
-            guard let crossing = crossings[standing.keyword.id] else { return 2 }
-            return crossing.rose ? 1 : 0
-        }
-        return standings.enumerated()
-            .sorted { tier($0.element) == tier($1.element) ? $0.offset < $1.offset : tier($0.element) < tier($1.element) }
-            .map(\.element)
+    /// 오른 줄이 위, 그 아래는 순위순 그대로.
+    private func ordered(_ rises: [String: SectionChanges.KeywordRise]) -> [KeywordStanding] {
+        let up = standings.filter { rises[$0.keyword.id] != nil }
+        return up + standings.filter { rises[$0.keyword.id] == nil }
     }
 
-    /// 표를 읽기 전의 한 줄 — 볼 것이 있나.
-    private func rankVerdict(_ crossings: [String: SectionChanges.KeywordCrossing]) -> (text: String, tint: Color) {
-        let fell = crossings.values.filter { !$0.rose }.count
-        let rose = crossings.count - fell
+    /// 표를 읽기 전의 한 줄 — 오른 것이 있나.
+    private func rankVerdict(_ rises: [String: SectionChanges.KeywordRise]) -> (text: String, tint: Color) {
+        if !rises.isEmpty { return ("올라선 검색어 \(rises.count)개", .green) }
         let line = SectionChanges.topRankLine
-        if fell > 0 {
-            let gained = rose > 0 ? " · 안으로 든 것 \(rose)개" : ""
-            return ("\(line)위 밖으로 밀린 검색어 \(fell)개를 보세요\(gained)", .orange)
-        }
-        if rose > 0 { return ("\(line)위 안으로 \(rose)개 들어왔어요", .green) }
         let top = standings.filter { ($0.rank ?? .max) <= line }.count
         let ranked = standings.filter(\.isRanked).count
-        return ("크게 바뀐 것 없어요 — \(line)위 안 \(top)개 · 순위에 잡힌 것 \(ranked)/\(standings.count)개", .primary)
+        return ("\(line)위 안 \(top)개 · 순위에 잡힌 것 \(ranked)/\(standings.count)개", .primary)
     }
 
     private var rankCard: some View {
-        let crossings = crossings
-        let verdict = rankVerdict(crossings)
-        let rows = ordered(crossings)
+        let rises = rises
+        let verdict = rankVerdict(rises)
+        let rows = ordered(rises)
         return Card(title: "키워드 순위", systemImage: "list.number") {
             VStack(alignment: .leading, spacing: 0) {
                 if project != nil {
@@ -332,7 +317,7 @@ struct KeywordsView: View {
                 todayStatus
                 ForEach(rows, id: \.keyword.id) { standing in
                     KeywordRow(standing: standing,
-                               crossing: crossings[standing.keyword.id],
+                               rise: rises[standing.keyword.id],
                                isExpanded: expanded == standing.keyword.id,
                                trackId: keywords.trackId(for: project),
                                history: keywords.history) {
@@ -532,8 +517,8 @@ struct KeywordsView: View {
 /// One row: the term, where it sits, which way it moved, and thirty days of it.
 private struct KeywordRow: View {
     let standing: KeywordStanding
-    /// 본 뒤 10위 선을 넘나들었으면.
-    var crossing: SectionChanges.KeywordCrossing? = nil
+    /// 본 뒤 선을 넘어 올라섰으면.
+    var rise: SectionChanges.KeywordRise? = nil
     let isExpanded: Bool
     let trackId: Int?
     let history: KeywordHistory
@@ -552,10 +537,8 @@ private struct KeywordRow: View {
                         // it is worth going after; the apps above that are not
                         // smaller than yours can.
                         Text(subtitle).font(.hubCaption2).foregroundStyle(.secondary)
-                        if let crossing {
-                            Tag(text: crossing.direction,
-                                systemImage: crossing.rose ? "arrow.up" : "arrow.down",
-                                tint: crossing.rose ? .green : .orange, font: .body)
+                        if let rise {
+                            Tag(text: rise.milestone, systemImage: "arrow.up", tint: .green, font: .body)
                         }
                     }
                     Spacer()

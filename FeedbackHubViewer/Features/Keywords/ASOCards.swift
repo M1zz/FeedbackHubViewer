@@ -53,7 +53,7 @@ struct RankTrendCard: View {
                 Text("최근 일주일 사이")
                     .font(.headline)
                 if alerts.isEmpty {
-                    note("일주일 전과 견줘 \(KeywordHistory.bigMove)계단 넘게 움직인 키워드도, 나를 새로 앞지른 앱도 없습니다.")
+                    note("일주일 전과 견줘 \(KeywordHistory.bigMove)계단 넘게 오르거나 새로 잡힌 키워드가 없습니다.")
                 } else {
                     VStack(alignment: .leading, spacing: 8) {
                         ForEach(alerts) { alert in alertRow(alert) }
@@ -131,25 +131,12 @@ struct RankTrendCard: View {
         let text: String
         let icon: String
         switch alert.kind {
-        case .dropped(let from, let to):
-            text = "\(from)위 → \(to)위로 \(to - from)계단 떨어짐"; icon = "arrow.down.circle"
         case .climbed(let from, let to):
             text = "\(from)위 → \(to)위로 \(from - to)계단 오름"; icon = "arrow.up.circle"
-        case .lost(let from):
-            text = "\(from)위였는데 순위에서 빠짐"; icon = "xmark.circle"
         case .entered(let to):
             text = "새로 잡힘 — \(to)위"; icon = "sparkles"
-        case .overtaken(let names, let rank):
-            text = "지금 \(rank)위 — 새로 앞지른 앱: " + names.prefix(3).joined(separator: ", ")
-                + (names.count > 3 ? " 외 \(names.count - 3)개" : "")
-            icon = "person.2.badge.gearshape"
         }
-        // 순위가 오르고 내린 알림은 시세판 색(오름 빨강 · 내림 파랑), 나머지는 좋고 나쁨 색.
-        let tint: Color = switch alert.kind {
-        case .climbed, .entered: RankTrend.up
-        case .dropped, .lost: RankTrend.down
-        case .overtaken: .orange
-        }
+        let tint = RankTrend.up
         return HStack(alignment: .firstTextBaseline, spacing: 8) {
             Image(systemName: icon)
                 .foregroundStyle(tint)
