@@ -506,6 +506,11 @@ struct FeedbackRow: View {
                 // stands out in a long list.
                 .foregroundStyle(status.isHandled || isReplied ? .secondary : .primary)
 
+            // 붙인 사진을 상세를 열지 않고 바로 본다. 누르면 크게.
+            if !feedback.screenshotKeys.isEmpty {
+                FeedbackScreenshotStrip(feedback: feedback, height: 72)
+            }
+
             if !note.isEmpty {
                 Label(note, systemImage: "text.bubble")
                     .font(.hubFootnote)
