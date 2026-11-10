@@ -56,6 +56,10 @@ struct FeedbackDetailView: View {
                     }
                 }
 
+                if !feedback.screenshotKeys.isEmpty {
+                    FeedbackScreenshotsSection(feedback: feedback)
+                }
+
                 metadataGrid
 
                 if !feedback.attachedInfoLines.isEmpty {

@@ -1425,6 +1425,15 @@ final class FeedbackStore: ObservableObject {
         return message
     }
 
+    /// 사용자가 붙인 사진 파일. 캐시에 다 있으면 그것을, 모자라면 허브에서 다시 받는다.
+    func screenshots(for feedback: Feedback) async -> [URL] {
+        let keys = feedback.screenshotKeys
+        guard !keys.isEmpty else { return [] }
+        let cached = FeedbackScreenshots.cached(forFeedback: feedback.id, keys: keys)
+        if cached.count == keys.count { return cached }
+        return await service.fetchScreenshots(forFeedback: feedback.id, keys: keys)
+    }
+
     func sendReply(_ message: String, for feedback: Feedback) async throws {
         try await service.saveReply(message, forFeedback: feedback.id, appId: feedback.appId)
         markReplied([feedback.id])

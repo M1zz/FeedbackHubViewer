@@ -487,6 +487,10 @@ struct FeedbackRow: View {
                     Tag(text: "답변함", systemImage: "arrowshape.turn.up.left.fill", tint: .blue,
                         font: .hubCaption2.weight(.medium))
                 }
+                if !feedback.screenshotKeys.isEmpty {
+                    Tag(text: "사진 \(feedback.screenshotKeys.count)", systemImage: "photo", tint: .purple,
+                        font: .hubCaption2.weight(.medium))
+                }
                 Spacer(minLength: 4)
                 Text(dateLabel)
                     .font(.hubFootnote)

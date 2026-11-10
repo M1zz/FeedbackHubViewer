@@ -73,6 +73,17 @@ struct Feedback: HubRecord, Codable {
         contactEmail = fields.string("email", "contactEmail", "contact", "userEmail", "mail")
         feedbackType = fields.string("type", "category", "kind", "feedbackType", "topic")
         platform = fields.string("platform", "os", "osName", "deviceOS")
+
+        // 사진은 글자로 남길 수 없어 받는 자리에서 캐시로 옮긴다.
+        FeedbackScreenshots.keep(record)
+    }
+
+    /// 사용자가 붙인 사진이 실린 필드(`screenshot1`~`screenshot3`). 사진 자체는
+    /// `FeedbackScreenshots` 캐시에 있고, 여기는 몇 장이 있는지만 안다.
+    var screenshotKeys: [String] {
+        FeedbackScreenshots.fieldKeys.filter { key in
+            allFields.contains { $0.key == key && !$0.value.isEmpty }
+        }
     }
 
     /// Convenience initializer used only by SwiftUI previews / sample data.

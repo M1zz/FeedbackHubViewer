@@ -104,6 +104,17 @@ final class CloudKitService {
         (try? await database.record(for: Self.replyRecordID(forFeedback: id)))?["message"] as? String
     }
 
+    /// 피드백에 붙은 사진을 다시 받아 캐시에 옮긴다. 목록을 읽을 때 이미 옮겼으면
+    /// 부르지 않는다 — 다른 기기에서 처음 열었거나 캐시가 비었을 때만.
+    func fetchScreenshots(forFeedback id: String, keys: [String]) async -> [URL] {
+        let recordID = CKRecord.ID(recordName: id)
+        if let results = try? await database.records(for: [recordID], desiredKeys: keys),
+           case .success(let record)? = results[recordID] {
+            FeedbackScreenshots.keep(record)
+        }
+        return FeedbackScreenshots.cached(forFeedback: id, keys: keys)
+    }
+
     /// Which of these feedback already have a reply. Fetched by record name in
     /// batches with no fields — a missing reply is just a per-record error.
     func repliedFeedbackIDs(among ids: [String]) async -> Set<String> {
