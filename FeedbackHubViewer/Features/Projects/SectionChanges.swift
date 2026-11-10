@@ -27,8 +27,9 @@ final class SectionChanges: ObservableObject {
     static let shared = SectionChanges()
 
     /// "새 건" 뱃지가 따로 없는 칸 — 이 칸들만 바뀐 것을 센다.
+    /// 앱 내 구입은 세지 않는다 — 상품 수가 늘어난 것은 내가 올린 것이라 알려 줄 일이 아니다.
     static let tracked: [FeedbackStore.ProjectSection] = [
-        .stats, .release, .acquisition, .storeAnalytics, .keywords, .charts, .purchases, .design,
+        .stats, .release, .acquisition, .storeAnalytics, .keywords, .charts, .design,
     ]
 
     private static let defaultsKey = "section-seen-signatures"
@@ -285,9 +286,6 @@ final class SectionChanges: ObservableObject {
                 .joined(separator: ",")
         case .release:
             return label + "|" + metrics.subtitle(section, project: project)
-        case .purchases:
-            let products = metrics.purchases.products(for: project) ?? []
-            return label + "|" + products.filter(\.isOnSale).count.description
         default:
             return label
         }
@@ -307,8 +305,6 @@ final class SectionChanges: ObservableObject {
             return metrics.keywords.standings(for: project).isEmpty
         case .charts:
             return metrics.charts.history.lastScan == nil || metrics.keywords.trackId(for: project) == nil
-        case .purchases:
-            return !metrics.purchases.isConfigured || metrics.purchases.products(for: project) == nil
         case .storeAnalytics:
             guard case .ready? = metrics.purchases.storeAnalytics[project]?.value else { return true }
             return false
@@ -387,11 +383,11 @@ final class SectionChanges: ObservableObject {
     }
 
     /// 바뀜 하나가 뱃지에서 몇인가. 키워드는 선을 넘어 오른 것마다, 숫자 칸은 15% 넘게
-    /// 움직였을 때만 하나, 릴리즈 · 앱 내 구입은 말이 바뀌면 하나. 뱃지 · 띠 · 앱 목록이 같은 셈을 쓴다.
+    /// 움직였을 때만 하나, 릴리즈는 말이 바뀌면 하나. 뱃지 · 띠 · 앱 목록이 같은 셈을 쓴다.
     static func weight(_ section: FeedbackStore.ProjectSection, before: String, after: String) -> Int {
         guard before != after else { return 0 }
         let lines = lines(section, before: before, after: after).count
-        return section == .release || section == .purchases ? max(1, lines) : lines
+        return section == .release ? max(1, lines) : lines
     }
 
     // MARK: - 무엇이 바뀌었나
@@ -406,12 +402,6 @@ final class SectionChanges: ObservableObject {
             let old = before.components(separatedBy: "|"), new = after.components(separatedBy: "|")
             if old.count == 2, new.count == 2, old[1] != new[1] { return ["\(old[1]) → \(new[1])"] }
             return old.first != new.first ? ["\(old.first ?? "") → \(new.first ?? "")"] : []
-        case .purchases:
-            let old = before.components(separatedBy: "|"), new = after.components(separatedBy: "|")
-            let labels = section == .purchases ? ["", "판매 중 "] : ["", ""]
-            return zip(old, new).enumerated().compactMap { index, pair in
-                pair.0 == pair.1 ? nil : "\(labels[min(index, 1)])\(pair.0) → \(pair.1)"
-            }
         default:
             guard let shift = notableShift(before: before, after: after) else { return [] }
             return ["\(before) → \(after)" + shift]
