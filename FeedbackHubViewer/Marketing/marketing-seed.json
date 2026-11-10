@@ -3929,9 +3929,9 @@
   "kind": "cardNews",
   "channel": "인스타그램",
   "title": "와이파이 비번, 아직도 불러 주세요?",
-  "angle": "카페나 숙소, 집에 온 손님에게 와이파이 비밀번호를 불러 주거나 받아 적는 사람에게. 안내판을 찍으면 연결되고 내 와이파이는 QR로 나눌 수 있다는 걸 보여 준다. 매장 사장님에게는 안내판 인쇄까지.",
-  "plannedAt": null,
-  "stage": "ready",
+  "angle": "기능 소개형 카드뉴스 7장, 빛번짐형(짙은 남색 바탕에 아이콘의 파랑 · 청록이 번지고, 폰은 비스듬히, 폰 위에 말풍선 칩). 찍어서 연결 · QR 한 장으로 공유 · 손님용 안내판 · AirPrint 인쇄 · 지도와 위젯. 인스타 https://www.instagram.com/lee25_ios/p/Dfj7mc-CblP/ 스레드 https://www.threads.com/@lee25_ios/post/Dfj7SI-n-oR",
+  "plannedAt": "2026-11-10T00:00:00Z",
+  "stage": "posted",
   "slides": [
    {
     "id": "db452ead-3c6f-5de3-927c-acb79cdbfc38",
@@ -3977,7 +3977,7 @@
    }
   ],
   "script": "",
-  "body": "와이파이 비밀번호를 불러 주고 받아 적는 일, 생각보다 자주 하죠.\n\n마이파이는 안내판을 찍으면 아이디와 비밀번호를 읽어 바로 연결해 주고, 내 와이파이는 QR 한 장으로 나눠 줘요. 카페나 숙소라면 손님용 안내판을 꾸며서 AirPrint로 바로 인쇄할 수도 있어요. 저장한 와이파이 정보는 기기 안에만 있어요.\n\n앱스토어에서 마이파이 검색\n\n#와이파이 #와이파이비밀번호 #QR코드 #카페창업 #카페사장님 #게스트하우스 #펜션 #생활꿀팁 #앱추천 #아이폰앱",
+  "body": "와이파이 비밀번호를 불러 주고 받아 적는 일, 생각보다 자주 하죠.\n\n마이파이는 안내판을 찍으면 아이디와 비밀번호를 읽어 바로 연결해 주고, 내 와이파이는 QR 한 장으로 나눠 줘요. 카페나 숙소라면 손님용 안내판을 7가지 테마로 꾸며 AirPrint로 바로 인쇄할 수 있어요. 연결했던 곳은 지도에 남고, 저장한 정보는 기기 안에만 있어요.\n\nApp Store에서 마이파이 검색\n\n#와이파이 #와이파이비밀번호 #QR코드 #카페창업 #카페사장님 #게스트하우스 #펜션 #생활꿀팁 #앱추천 #아이폰앱",
   "scriptEn": "",
   "bodyEn": "Reading out a Wi-Fi password, or copying one down. We do it more often than we think.\n\nMyFi reads the network name and password off a sign and connects you right away, and shares your own Wi-Fi with a single QR code. If you run a cafe or a rental, you can design a guest sign and print it straight away with AirPrint. Saved Wi-Fi details stay on your device.\n\nSearch MyFi on the App Store\n\n#wifi #wifipassword #qrcode #cafeowner #smallbusiness #airbnbhost #lifehacks #iphoneapps",
   "theme": 1
@@ -5694,5 +5694,64 @@
   "bodyEn": "",
   "scriptEn": "",
   "theme": null
+ },
+ {
+  "id": "eb9bc5f9-4116-4b4f-a8d1-6d4178f03725",
+  "project": "com.leeo.wifisnap",
+  "kind": "cardNews",
+  "channel": "스레드",
+  "title": "와이파이 비번, 아직도 불러 주세요?",
+  "angle": "기능 소개형 카드뉴스 7장, 빛번짐형(짙은 남색 바탕에 아이콘의 파랑 · 청록이 번지고, 폰은 비스듬히, 폰 위에 말풍선 칩). 찍어서 연결 · QR 한 장으로 공유 · 손님용 안내판 · AirPrint 인쇄 · 지도와 위젯. 인스타 https://www.instagram.com/lee25_ios/p/Dfj7mc-CblP/ 스레드 https://www.threads.com/@lee25_ios/post/Dfj7SI-n-oR",
+  "plannedAt": "2026-11-10T00:00:00Z",
+  "stage": "posted",
+  "slides": [
+   {
+    "id": "db452ead-3c6f-5de3-927c-acb79cdbfc38",
+    "headline": "비번 뭐였더라?",
+    "text": "대문자였나, 0이었나 O였나.\n와이파이 비밀번호 받아 적다 지치죠.",
+    "headlineEn": "What was the password?",
+    "textEn": "Capital or lowercase? Zero or the letter O?\nCopying Wi-Fi passwords gets old fast."
+   },
+   {
+    "id": "1e30cdbd-d60b-5f0c-83f3-53ea26df95e9",
+    "headline": "찍으면 연결",
+    "text": "벽에 붙은 안내판이나 영수증을 찍으면\n아이디와 비밀번호를 읽어 바로 연결해요.",
+    "headlineEn": "Snap to connect",
+    "textEn": "Photograph the sign on the wall or a receipt.\nIt reads the name and password and joins right away."
+   },
+   {
+    "id": "6a16be89-3c46-5995-bea4-7f91873a128c",
+    "headline": "내 와이파이는 QR로",
+    "text": "지금 연결된 와이파이로 QR을 만들어요.\n친구는 카메라로 비추기만 하면 끝.",
+    "headlineEn": "Share yours with a QR",
+    "textEn": "Make a QR code from the Wi-Fi you're on.\nFriends just point their camera at it."
+   },
+   {
+    "id": "fce122a7-3a8b-5ee5-aaf3-b2a10c98fd0d",
+    "headline": "손님용 안내판도",
+    "text": "7가지 테마에 매장 이름과 로고를 넣고\n카드형이나 A4 포스터로 바로 인쇄해요.",
+    "headlineEn": "Guest signs too",
+    "textEn": "Pick one of 7 themes, add your shop name and logo,\nand print it as a card or an A4 poster."
+   },
+   {
+    "id": "388f4b07-85d5-5ce1-b3aa-3f9e94d2cd6f",
+    "headline": "위젯에 QR 하나",
+    "text": "자주 나누는 와이파이 QR을 위젯에 두면\n탭 한 번에 큰 QR이 열려요.",
+    "headlineEn": "A QR on your widget",
+    "textEn": "Put the Wi-Fi you share most on a widget.\nOne tap opens a big QR code."
+   },
+   {
+    "id": "dd0a1c2b-4b92-5897-b360-d985e4e65081",
+    "headline": "마이파이",
+    "text": "찍으면 연결, QR 한 장으로 공유.\n비밀번호는 이제 안 불러도 돼요.",
+    "headlineEn": "MyFi",
+    "textEn": "Snap to connect, share with one QR code.\nNo more reading passwords out loud."
+   }
+  ],
+  "script": "",
+  "body": "와이파이 비번, 아직도 불러 주세요?\n\n\"대문자 K에, 숫자 0 아니고 영어 O…\" 집에 친구가 오면, 카페 안내판 앞에서, 꼭 한 번은 하는 일이죠.\n\n그래서 안내판을 찍으면 아이디와 비밀번호를 읽어 바로 연결하고, 내 와이파이는 QR 한 장으로 나눠 주는 앱을 만들었어요. 카페나 숙소를 하신다면 손님용 안내판을 꾸며 AirPrint로 바로 뽑을 수 있어요. 저장한 정보는 기기 안에만 있어요.\n\n마이파이 https://apps.apple.com/kr/app/id6793472383",
+  "scriptEn": "",
+  "bodyEn": "Reading out a Wi-Fi password, or copying one down. We do it more often than we think.\n\nMyFi reads the network name and password off a sign and connects you right away, and shares your own Wi-Fi with a single QR code. If you run a cafe or a rental, you can design a guest sign and print it straight away with AirPrint. Saved Wi-Fi details stay on your device.\n\nSearch MyFi on the App Store\n\n#wifi #wifipassword #qrcode #cafeowner #smallbusiness #airbnbhost #lifehacks #iphoneapps",
+  "theme": 1
  }
 ]

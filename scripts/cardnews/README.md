@@ -43,3 +43,17 @@ swiftc -parse-as-library -O feature.swift -o /tmp/cardnews-feature
 - `deck.json` 형식은 `feature-example.json`. 결과는 JPG(1080×1350).
 - 중요한 곳이 화면 아래쪽 멀리 있으면 빈 가운데를 잘라 붙인 화면을 따로 만들어 쓴다(장표스냅 메모 장이 그랬다).
 - 인스타는 자르기에서 4:5 로. 스레드는 일곱 장 그대로 올리면 된다.
+
+## 기능 소개형 — 빛번짐 (앱 하나, 짙은 바탕)
+
+같은 7장 구성인데 바탕이 다르다. 2026-11-10 마이파이 "와이파이 비번, 아직도 불러 주세요?" 가 이 형식이다.
+짙은 남색 바탕에 앱 색 두 가지(`accent` · `accent2`)가 모서리에서 번지고, 폰은 유리 테두리로 비스듬히 떠 있다.
+폰 위에 그 기능을 한마디로 적은 흰 말풍선 칩(`callout`: SF Symbol + 글, 위치 `x` · `y` 는 0~1)이 뜬다. 쪽 표시는 점.
+
+```
+swiftc -parse-as-library -O glow.swift -o /tmp/cardnews-glow
+/tmp/cardnews-glow <deck.json> <출력 폴더>
+```
+
+- `deck.json` 형식은 `glow-example.json`. 표지는 폰 한 대(`coverScreen` · `coverTop` · `coverCallout`).
+- 크림 바탕(`feature.swift`)과 번갈아 쓰면 피드가 단조롭지 않다.

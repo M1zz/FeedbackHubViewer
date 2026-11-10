@@ -1,0 +1,59 @@
+{
+ "name": "마이파이",
+ "icon": "/Users/hyunholee/Documents/workspace/Auto/마이파이/WifiSnap/Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png",
+ "accent": "2F8FF5",
+ "accent2": "1DBF9A",
+ "kicker": "마이파이로 끝내는 와이파이 일 5가지",
+ "cover": "와이파이 비번,\n아직도\n불러 주세요?",
+ "coverScreen": "/Users/hyunholee/Documents/workspace/Auto/마이파이/docs/screenshots/raw/ko/01-scan.png",
+ "coverTop": 0.13,
+ "coverCallout": { "symbol": "camera.viewfinder", "text": "찍으면 읽어요", "x": 0.62, "y": 0.1 },
+ "features": [
+  {
+   "label": "찍어서 연결",
+   "headline": "안내판을 찍으면\n바로 연결",
+   "text": "벽의 안내판이나 영수증을 찍으면\n아이디와 비밀번호를 읽어 이 폰을 연결해요.",
+   "screen": "/Users/hyunholee/Documents/workspace/Auto/마이파이/docs/screenshots/raw/ko/01-scan.png",
+   "top": 0.13,
+   "callout": { "symbol": "wifi", "text": "Bakery_Moon_5G 연결됨", "x": 0.6, "y": 0.5 }
+  },
+  {
+   "label": "QR 한 장으로 공유",
+   "headline": "내 와이파이는\nQR 한 장으로",
+   "text": "친구가 카메라로 비추면 바로 연결돼요.\n메시지로 보내거나 내 핫스팟도 QR로.",
+   "screen": "/Users/hyunholee/Documents/workspace/Auto/마이파이/docs/screenshots/raw/ko/02-qr.png",
+   "top": 0.07,
+   "callout": { "symbol": "qrcode.viewfinder", "text": "비추면 연결", "x": 0.68, "y": 0.72 }
+  },
+  {
+   "label": "손님용 안내판",
+   "headline": "카페 · 숙소\n손님용 안내판 만들기",
+   "text": "7가지 테마에 매장 이름과 영업시간을 넣고\n카드형이나 A4 포스터로 골라요.",
+   "screen": "/Users/hyunholee/Documents/workspace/Auto/마이파이/docs/screenshots/raw/ko/04-poster-a4.png",
+   "top": 0.14,
+   "callout": { "symbol": "paintpalette.fill", "text": "테마 7가지", "x": 0.3, "y": 0.68 }
+  },
+  {
+   "label": "바로 인쇄",
+   "headline": "AirPrint로\n바로 뽑아 붙이기",
+   "text": "이미지로 저장하거나 프린터로 바로.\n자리마다 다른 안내판을 여러 장 두고 고쳐 써요.",
+   "screen": "/Users/hyunholee/Documents/workspace/Auto/마이파이/docs/screenshots/raw/ko/03-poster-card.png",
+   "top": 0.14,
+   "callout": { "symbol": "printer.fill", "text": "1층 카운터용", "x": 0.66, "y": 0.1 }
+  },
+  {
+   "label": "지도와 위젯",
+   "headline": "연결했던 곳은\n지도에 남아요",
+   "text": "근처에 오면 그곳 와이파이를 먼저 보여 주고\n위젯에 QR을 띄워 둘 수 있어요.",
+   "screen": "/Users/hyunholee/Documents/workspace/Auto/마이파이/docs/screenshots/raw/ko/05-saved.png",
+   "top": 0.32,
+   "callout": { "symbol": "mappin.and.ellipse", "text": "여기 와이파이", "x": 0.64, "y": 0.56 }
+  }
+ ],
+ "outro": "비밀번호는\n이제 안 불러도 돼요",
+ "points": [
+  "사진 한 장이면 연결",
+  "손님용 안내판 인쇄까지",
+  "저장한 정보는 기기 안에만"
+ ]
+}
