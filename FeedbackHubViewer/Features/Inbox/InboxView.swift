@@ -288,6 +288,13 @@ struct InboxView: View {
                     .font(.body)
                     .foregroundStyle(.secondary)
                 Spacer()
+                // 리뷰 칸과 같은 "리뷰 복사". 아이폰은 줄이 좁아 아이콘만.
+                #if os(iOS)
+                CopyButton(text: review.fullText, title: "리뷰 복사", isCompact: true)
+                #else
+                CopyButton(text: review.fullText, title: "리뷰 복사")
+                    .font(.body)
+                #endif
                 // 답할 필요가 없는 리뷰를 치우는 자리. 다른 기기에서도 빠진다.
                 Button {
                     complete(review.id)
@@ -307,6 +314,13 @@ struct InboxView: View {
             }
         }
         .padding(.vertical, 6)
+        .contextMenu {
+            Button {
+                Platform.copyToPasteboard(review.fullText)
+            } label: {
+                Label("리뷰 복사", systemImage: "doc.on.doc")
+            }
+        }
         #if os(iOS)
         .swipeActions(edge: .trailing) {
             Button {

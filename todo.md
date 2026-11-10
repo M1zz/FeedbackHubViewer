@@ -1,5 +1,24 @@
 # todo
 
+## 할 일 탭 리뷰 복사 (2026-11-10)
+- [x] 할 일 탭의 리뷰 줄에 "리뷰 복사"(리뷰 칸과 같은 `review.fullText`). 맥은 글자 단추, 아이폰은 아이콘만. 길게 누르기 · 오른쪽 클릭 메뉴에도. macOS · iOS 빌드 통과
+
+## 피드백 첨부 사진 보기 (2026-11-10)
+- [x] LeeoKit 이 보내는 `screenshot1`~`3`(CKAsset)을 받는 순간 캐시(Caches/FeedbackScreenshots/<recordName>/)로 옮김(`FeedbackScreenshots`). 예전엔 파일 이름 글자만 남고 사진은 버려졌음
+- [x] 상세 화면 내용 아래 "첨부한 사진 N장" — 맥은 눌러 미리보기, 아이폰은 크게 띄우고 공유. 캐시에 없으면 그 레코드의 사진 필드만 다시 받음
+- [x] 목록 줄에 "사진 N" 태그. macOS · iOS 시뮬레이터 빌드 통과
+- [x] 스키마: Feedback 의 screenshot1~3 ASSET 이 개발 · 운영 모두 배포돼 있음(cktool 로 확인)
+- [ ] 사진 받기(`acceptsScreenshots: true`)를 켠 앱은 클립키보드뿐 — 다른 앱은 켜야 사진 칸이 보임
+- [ ] 실제 사진이 붙은 피드백으로 화면은 아직 못 봄
+
+## 맞춤형 제품 페이지 (2026-11-06)
+- [x] 출시된 iOS 앱 38개에 대표 키워드 하나로 맞춤형 제품 페이지 초안(`cpp-영어키워드`) — 기본 페이지를 바탕으로 만들어 스크린샷 복사, 키워드에 맞는 장을 맨 앞으로, 한국어 · 영어 프로모션 텍스트. API 로 만듦(허브 코드 아님)
+- [x] 25개 심사 제출(2026-11-06)
+- [ ] 13개는 다른 심사가 열려 있어 못 냄: 대기 중 · 문제 해결 필요(Worry Parking · KORA · 세끼 · Not My Tempo)는 그 심사가 끝난 뒤, 제출 전 초안이 있는 8개(실수 100 · 말문 · 벅뚜벅뚜 · Rereminder · 꿈을 찾아서 · 햇빛바라기 · StickyPresenterRemote · ZinggumDol)는 그 초안에 넣어 둠(2026-11-06) — 다음에 그 앱 심사를 낼 때 함께 나감
+- [ ] Mac 전용 앱 5개(질문노트 · Rainbow Craft · 클립키보드 Mac · TetraTint · StickyPresenter)는 맞춤형 제품 페이지 미지원이라 못 만듦
+- [ ] 출시 전 23개 · 오래된 앱 4개(LeeoCon · 라포맵 · 확률계산기 · 링롱)는 뺌
+- [ ] 다른 기기 크기 묶음은 순서가 다를 수 있어 맨 앞 장이 키워드와 안 맞을 수 있음(예: Goldweek 아이패드)
+
 ## 선물 코드 묶음 현황 (2026-11-05)
 - [x] 사이드바 수익 무리에 "선물 코드" 칸(`ProjectSection.giftCodes`, `GiftCodesView`) — 인앱 구입 화면 안의 카드에서 옮김. 앱 목록 줄에 "남음 · 나감", 20장 아래면 빨강. 새로고침 단추가 묶음을 다시 읽고 채움
 - [x] App Store Connect API 로 채우기(`AppStoreConnect+OfferCodes.swift`) — Pro 비소모성에 "LeeoKit Gift" 무료 오퍼 코드를 찾거나 만들고(팔리는 나라마다 0원 가격점), 일회용 코드를 만들어 100장까지 올림. 전체 앱에서 "전부 채우기". 한 번 채운 앱은 50장 아래면 열 때 저절로 다시 채움. 개발 빌드는 SANDBOX, 출시 빌드는 PRODUCTION 코드. 코드는 170일, 끝나기 2주 전 묶음에서 뺌(`expiresAt`)
