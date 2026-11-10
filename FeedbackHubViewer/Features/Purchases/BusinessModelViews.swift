@@ -235,23 +235,95 @@ struct PaywallCard: View {
     }
 }
 
-/// 전체 앱 — 앱마다 신호등 한 줄, 빨강이 위.
+/// 앱 가격을 무료 · 유료 · 부분 유료로 가르고, 유료는 가격대로 다시 가른다.
+enum PriceKind: String, CaseIterable, Identifiable {
+    case all = "전체", free = "무료", paid = "유료", freemium = "부분 유료"
+    var id: Self { self }
+
+    /// pricingModel(free · paid · freemium · freemium-subscription · paid+subscription · paid+iap)에서.
+    static func of(_ model: String?) -> PriceKind? {
+        guard let model else { return nil }
+        if model == "free" { return .free }
+        if model.hasPrefix("paid") { return .paid }
+        if model.hasPrefix("freemium") { return .freemium }
+        return nil
+    }
+}
+
+enum PriceBand: String, CaseIterable, Identifiable {
+    case all = "모든 가격", low = "₩5,000 이하", mid = "₩5,000~15,000", high = "₩15,000 이상"
+    var id: Self { self }
+    func contains(_ krw: Int?) -> Bool {
+        guard self != .all else { return true }
+        guard let krw else { return false }
+        switch self {
+        case .low: return krw <= 5000
+        case .mid: return krw > 5000 && krw <= 15000
+        case .high: return krw > 15000
+        case .all: return true
+        }
+    }
+}
+
+extension PortfolioApp.Price {
+    /// 줄에 보일 가격 한 토막 — "₩4,400" · "인앱 3개" · "무료".
+    var label: String {
+        if let priceKRW, priceKRW > 0 { return "₩" + priceKRW.formatted(.number.grouping(.automatic)) }
+        if let items = iapItems, !items.isEmpty { return "인앱 \(items.count)개" }
+        return pricingModel == "free" || isFree == true ? "무료" : "가격 모름"
+    }
+}
+
+/// 전체 앱 — 앱마다 신호등 한 줄, 빨강이 위. 무료 · 유료 · 부분 유료와 가격대로 거른다.
 struct BusinessOverviewCard: View {
     @EnvironmentObject private var store: FeedbackStore
     @EnvironmentObject private var connect: AppStoreConnectStore
     @EnvironmentObject private var keywords: KeywordStore
     @ObservedObject private var portfolio = PortfolioStore.shared
     @ObservedObject private var icons = StoreIcons.shared
+    @State private var kind: PriceKind = .all
+    @State private var band: PriceBand = .all
+
+    private struct Row {
+        let key: String
+        let signal: BusinessSignal
+        let price: PortfolioApp.Price?
+        var kind: PriceKind? { PriceKind.of(price?.pricingModel ?? (price?.isFree == false ? "paid" : price == nil ? nil : "free")) }
+    }
 
     var body: some View {
-        let rows = store.projectCounts.map(\.key)
+        let all = store.projectCounts.map(\.key)
             .filter { $0 != Feedback.unclassifiedProject }
-            .map { (key: $0, signal: BusinessSignal.of($0, connect: connect)) }
-            .sorted { ($0.signal.level, $0.key) < ($1.signal.level, $1.key) }
+            .map { Row(key: $0, signal: BusinessSignal.of($0, connect: connect), price: portfolio.app(for: $0)?.price) }
+        let rows = all
+            .filter { kind == .all || $0.kind == kind }
+            .filter { band.contains($0.price?.priceKRW) }
+            .sorted {
+                // 가격대를 고르면 비싼 순, 아니면 신호등 순.
+                band != .all ? ($0.price?.priceKRW ?? 0, $0.key) > ($1.price?.priceKRW ?? 0, $1.key)
+                             : ($0.signal.level, $0.key) < ($1.signal.level, $1.key)
+            }
         let count = { (level: BusinessSignal.Level) in rows.filter { $0.signal.level == level }.count }
+        let kindCount = { (k: PriceKind) in all.filter { $0.kind == k }.count }
 
         Card(title: "앱마다 비즈니스 모델 신호등", systemImage: "light.beacon.max") {
-            Text("빨강 \(count(.red)) · 노랑 \(count(.yellow)) · 초록 \(count(.green))" + (count(.unknown) > 0 ? " · 모름 \(count(.unknown))" : ""))
+            Picker("가격 종류", selection: $kind) {
+                ForEach(PriceKind.allCases) { k in
+                    Text(k == .all ? "전체 \(all.count)" : "\(k.rawValue) \(kindCount(k))").tag(k)
+                }
+            }
+            .pickerStyle(.segmented)
+            .labelsHidden()
+            if kind == .paid || kind == .all {
+                Picker("가격대", selection: $band) {
+                    ForEach(PriceBand.allCases) { Text($0.rawValue).tag($0) }
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+                .font(.hubSubheadline)
+            }
+            Text("빨강 \(count(.red)) · 노랑 \(count(.yellow)) · 초록 \(count(.green))" + (count(.unknown) > 0 ? " · 모름 \(count(.unknown))" : "")
+                 + (rows.isEmpty ? " — 이 조건에 맞는 앱이 없어요" : ""))
                 .font(.body.monospacedDigit())
                 .foregroundStyle(.secondary)
             ForEach(rows, id: \.key) { row in
@@ -262,7 +334,12 @@ struct BusinessOverviewCard: View {
                             .padding(.top, 6)
                         AppIcon(url: icons.url(for: row.key, keywords: keywords), size: 28)
                         VStack(alignment: .leading, spacing: 2) {
-                            Text(store.displayName(for: row.key)).font(.body.weight(.semibold))
+                            HStack(spacing: 6) {
+                                Text(store.displayName(for: row.key)).font(.body.weight(.semibold))
+                                if let price = row.price {
+                                    Tag(text: price.label, tint: row.kind == .paid ? .accentColor : nil, isCompact: true)
+                                }
+                            }
                             Text("\(row.signal.model) · \(row.signal.headline)")
                                 .font(.body)
                                 .foregroundStyle(.secondary)
