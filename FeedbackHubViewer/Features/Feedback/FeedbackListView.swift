@@ -379,6 +379,7 @@ struct FeedbackListView: View {
                         isUnread: store.isUnread(feedback),
                         status: status,
                         isReplied: store.isReplied(feedback),
+                        isReplyRead: store.replyReadAt(feedback) != nil,
                         note: store.note(for: feedback))
                 #if os(iOS)
                 // A plain tap target rather than a `NavigationLink`: a link
@@ -450,6 +451,8 @@ struct FeedbackRow: View {
     let status: FeedbackStatus
     /// 답장을 보냈다 — 반영 여부와 따로 보인다.
     var isReplied = false
+    /// 사용자가 그 답장을 읽었다(허브의 읽음 확인).
+    var isReplyRead = false
     let note: String
     /// 앱별로 묶인 목록(할 일)에서는 머리글이 이미 앱 이름을 말한다.
     var showsProject = true
@@ -484,8 +487,9 @@ struct FeedbackRow: View {
                 }
                 StatusChip(status: status)
                 if isReplied {
-                    Tag(text: "답변함", systemImage: "arrowshape.turn.up.left.fill", tint: .blue,
-                        font: .hubCaption2.weight(.medium))
+                    Tag(text: isReplyRead ? "답변 읽음" : "답변함",
+                        systemImage: isReplyRead ? "checkmark.bubble.fill" : "arrowshape.turn.up.left.fill",
+                        tint: .blue, font: .hubCaption2.weight(.medium))
                 }
                 if !feedback.screenshotKeys.isEmpty {
                     Tag(text: "사진 \(feedback.screenshotKeys.count)", systemImage: "photo", tint: .purple,

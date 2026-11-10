@@ -481,6 +481,8 @@ final class FeedbackStore: ObservableObject {
         readIDs = Set(defaults.stringArray(forKey: Self.readIDsKey) ?? [])
         triage = Self.decodeTriage(defaults.data(forKey: Self.triageKey))
         repliedIDs = Set(defaults.stringArray(forKey: Self.repliedIDsKey) ?? [])
+        replyReadAt = defaults.data(forKey: Self.replyReadAtKey)
+            .flatMap { try? JSONDecoder().decode([String: Date].self, from: $0) } ?? [:]
         reviewsDone = defaults.data(forKey: Self.reviewsDoneKey)
             .flatMap { try? JSONDecoder().decode([String: ReviewDoneEntry].self, from: $0) } ?? [:]
         releaseHypotheses = defaults.data(forKey: Self.releaseHypothesesKey)
@@ -1415,14 +1417,18 @@ final class FeedbackStore: ObservableObject {
     /// 답장은 허브에 남으니(`FeedbackReply`) 다른 기기에서 보낸 것도 `checkReplies` 가 찾아온다.
     @Published private(set) var repliedIDs: Set<String> = [] { didSet { invalidateReadState() } }
     private static let repliedIDsKey = "repliedFeedbackIDs"
+    /// 사용자가 답장을 읽은 시각(허브의 읽음 확인). 답장을 고치면 지워진다 — 고친 글은 아직 안 읽은 것이다.
+    @Published private(set) var replyReadAt: [String: Date] = [:]
+    private static let replyReadAtKey = "feedbackReplyReadAt"
     private var lastReplyCheck: Date?
 
     func isReplied(_ feedback: Feedback) -> Bool { repliedIDs.contains(feedback.id) }
+    func replyReadAt(_ feedback: Feedback) -> Date? { replyReadAt[feedback.id] }
 
-    func reply(for feedback: Feedback) async -> String? {
-        let message = await service.fetchReply(forFeedback: feedback.id)
-        if message != nil { markReplied([feedback.id]) }
-        return message
+    func reply(for feedback: Feedback) async -> CloudKitService.ReplyStatus? {
+        let status = await service.fetchReply(forFeedback: feedback.id)
+        if let status { apply(replies: [feedback.id: status]) }
+        return status
     }
 
     /// 사용자가 붙인 사진 파일. 캐시에 다 있으면 그것을, 모자라면 허브에서 다시 받는다.
@@ -1436,24 +1442,38 @@ final class FeedbackStore: ObservableObject {
 
     func sendReply(_ message: String, for feedback: Feedback) async throws {
         try await service.saveReply(message, forFeedback: feedback.id, appId: feedback.appId)
-        markReplied([feedback.id])
+        apply(replies: [feedback.id: .init(message: message)])
         markRead(feedback)
     }
 
-    /// 아직 답장을 모르는 피드백에 답장이 달렸는지 허브에서 확인한다. 답장은 이 앱에서만
-    /// 쓰므로 자주 볼 까닭이 없다 — 새로고침이 잦아도 10분에 한 번.
+    /// 아직 답장을 모르는 피드백에 답장이 달렸는지, 답장을 아직 안 읽은 피드백은 읽었는지 허브에서
+    /// 확인한다. 답장은 이 앱에서만 쓰므로 자주 볼 까닭이 없다 — 새로고침이 잦아도 10분에 한 번.
+    /// 사용자 앱은 보낸 지 180일까지만 답장을 찾으니, 읽음 확인도 그 안의 것만 기다린다.
     private func checkReplies() async {
         if let last = lastReplyCheck, Date().timeIntervalSince(last) < 600 { return }
         lastReplyCheck = Date()
-        let unknown = allFeedback.map(\.id).filter { !repliedIDs.contains($0) }
-        guard !unknown.isEmpty else { return }
-        markReplied(await service.repliedFeedbackIDs(among: unknown))
+        let lookback = Date().addingTimeInterval(-180 * 86_400)
+        let wanted = allFeedback.filter { item in
+            !repliedIDs.contains(item.id)
+                || (replyReadAt[item.id] == nil && (item.createdAt ?? .distantPast) > lookback)
+        }.map(\.id)
+        guard !wanted.isEmpty else { return }
+        apply(replies: await service.replyStatuses(among: wanted))
     }
 
-    private func markReplied(_ ids: Set<String>) {
-        guard !ids.isSubset(of: repliedIDs) else { return }
-        repliedIDs.formUnion(ids)
-        defaults.set(Array(repliedIDs), forKey: Self.repliedIDsKey)
+    /// 허브가 말한 답장 상태를 적는다. 답장이 있으면 답장함, 읽은 시각은 그대로(없으면 지움).
+    private func apply(replies: [String: CloudKitService.ReplyStatus]) {
+        guard !replies.isEmpty else { return }
+        let ids = Set(replies.keys)
+        if !ids.isSubset(of: repliedIDs) {
+            repliedIDs.formUnion(ids)
+            defaults.set(Array(repliedIDs), forKey: Self.repliedIDsKey)
+        }
+        var read = replyReadAt
+        for (id, status) in replies { read[id] = status.readAt }
+        guard read != replyReadAt else { return }
+        replyReadAt = read
+        if let data = try? JSONEncoder().encode(read) { defaults.set(data, forKey: Self.replyReadAtKey) }
     }
 
     func note(for feedback: Feedback) -> String {

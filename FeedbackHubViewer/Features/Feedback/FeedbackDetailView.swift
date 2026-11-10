@@ -111,7 +111,7 @@ struct FeedbackDetailView: View {
             store.markRead(feedback)
             noteDraft = store.note(for: feedback)
             replyState = .idle
-            sentReply = await store.reply(for: feedback)
+            sentReply = await store.reply(for: feedback)?.message
             replyDraft = sentReply ?? ""
         }
         .onChange(of: noteDraft) { _, draft in
@@ -255,7 +255,7 @@ struct FeedbackDetailView: View {
     /// Reply that lands in the sender's app (Settings > 보낸 의견). Works
     /// without an email address, which most feedback does not carry.
     private var replySection: some View {
-        section(title: sentReply == nil ? "답장" : "답장 (보냄)") {
+        section(title: sentReply == nil ? "답장" : replyReadAt == nil ? "답장 (보냄)" : "답장 (읽음)") {
             VStack(alignment: .leading, spacing: 8) {
                 TextEditor(text: $replyDraft)
                     .font(.body)
@@ -276,11 +276,16 @@ struct FeedbackDetailView: View {
         }
     }
 
+    /// 사용자가 이 답장을 읽은 시각 — 허브의 읽음 확인. 스토어가 10분마다 새로 보니 여기 상태로 두지 않는다.
+    private var replyReadAt: Date? { store.replyReadAt(feedback) }
+
     private var replyStatusText: String {
         switch replyState {
-        case .idle: return "사용자 앱의 설정 > 보낸 의견에 보여요"
+        case .idle:
+            if let replyReadAt { return "사용자가 읽었어요 · \(AppFormat.dateTime(replyReadAt))" }
+            return sentReply == nil ? "사용자 앱의 설정 > 보낸 의견에 보여요" : "보냈어요 · 아직 안 읽었어요"
         case .sending: return "보내는 중…"
-        case .sent: return "보냈어요"
+        case .sent: return "보냈어요 · 사용자가 열어 보면 읽음이 떠요"
         case .failed(let message): return message
         }
     }

@@ -530,6 +530,7 @@ CloudKit은 어느 환경을 읽을지 **빌드에 박히는 entitlement**
 |---|---|---|
 | `UsageSnapshot` | 설치 1건(레코드 이름 `usage-<installID>`, upsert) | `appId` `appName` `appVersion` `platform` `osVersion` `locale` `launchCount` `eventCount` `daysSinceInstall` `installDate` `lastActiveAt` `metrics`(JSON `[String: Double]`) |
 | `UsageEvent` | 주요 행동 1건 | `appId` `appName` `event` `appVersion` `platform` `installID` `occurredAt` |
+| `FeedbackReply` | 답장 1건(레코드 이름 `reply-<피드백 recordName>`, 이 앱이 씀) · 읽음 확인 1건(`read-<피드백 recordName>`, 사용자 앱이 씀 — `message` 가 답장 글과 같으면 읽은 것, 고친 답장은 다시 안 읽음) | `feedbackID` `message` `appId` |
 | `CrashReport` | MetricKit 진단 1건 | `appId` `kind`(crash/hang/disk_write) `detail` `appVersion` `osVersion` `deviceType` `stack` · **`occurredAt`**(Date) `buildNumber` `exceptionType` `exceptionCode` `signal` |
 
 - 추이·활성 사용자는 **`occurredAt`** 으로 계산합니다. `creationDate`(서버가 쓴 시각)로 세면
