@@ -70,4 +70,7 @@ swiftc -parse-as-library -O glow.swift -o /tmp/cardnews-glow
   `label` 은 번호 뒤 짧은 말, `headline` 은 두 줄, `text` 는 두 줄. 같은 화면을 `top` 만 달리해 두 번 써도 된다.
 - 마지막 장 `outro` 는 그 기능이 바꾸는 한마디, `points` 는 앱 전체의 믿을 거리 세 줄.
 - 앱 안에 **실제로 있는 숫자 · 문구**만 쓴다(소스 · 화면에서 확인). 기능 여러 개를 나열하지 않는다.
+- 아이콘은 그 앱 `AppIcon.appiconset` 의 1024 PNG. 앱이 Icon Composer(`AppIcon.icon`)만 쓰면 레포의 옛 PNG 를 쓰지 말고
+  App Store 에 올라간 그림을 받아 `decks/icons/<앱>-1024.png` 에 둔다
+  (`curl "https://itunes.apple.com/lookup?id=<앱 id>&country=kr"` 의 `artworkUrl512` 에서 `512x512bb` 를 `1024x1024bb` 로).
 - 덱은 `decks/YYYY-MM-DD-<앱>-<기능>.json` 으로 남긴다. 다음 편은 같은 앱이라도 다른 기능, 되도록 지난 2주에 안 다룬 앱.
