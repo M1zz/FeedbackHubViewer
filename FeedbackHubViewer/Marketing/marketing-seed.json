@@ -5878,9 +5878,9 @@
   "kind": "cardNews",
   "channel": "인스타그램",
   "title": "답장 문구, 이름만 바꿔 쓰고 있어요?",
-  "angle": "한 기능 깊이형 첫 편(크림 바탕 feature.swift, 6장). 템플릿 한 기능만: 복붙하고 이름 고치다 틀림 → {이름} 빈칸으로 저장 → 키보드에서 값 고르기(+로 추가) → {날짜} {시간} {클립보드} 자동. 덱 scripts/cardnews/decks/2026-11-12-클립키보드-템플릿.json",
+  "angle": "한 기능 깊이형 첫 편(크림 바탕 feature.swift, 6장). 템플릿 한 기능만: 복붙하고 이름 고치다 틀림 → {이름} 빈칸으로 저장 → 키보드에서 값 고르기(+로 추가) → {날짜} {시간} {클립보드} 자동. 덱 scripts/cardnews/decks/2026-11-12-클립키보드-템플릿.json 인스타 https://www.instagram.com/lee25_ios/p/Dfm5TOQCRmm/ 스레드 https://www.threads.com/@lee25_ios/post/Dfm5bSkHyEg",
   "plannedAt": "2026-11-12T00:00:00Z",
-  "stage": "ready",
+  "stage": "posted",
   "slides": [
    {
     "id": "37cdf071-2855-595d-a494-c7d310ba5bb8",
@@ -5937,9 +5937,9 @@
   "kind": "cardNews",
   "channel": "스레드",
   "title": "답장 문구, 이름만 바꿔 쓰고 있어요?",
-  "angle": "한 기능 깊이형 첫 편(크림 바탕 feature.swift, 6장). 템플릿 한 기능만: 복붙하고 이름 고치다 틀림 → {이름} 빈칸으로 저장 → 키보드에서 값 고르기(+로 추가) → {날짜} {시간} {클립보드} 자동. 덱 scripts/cardnews/decks/2026-11-12-클립키보드-템플릿.json",
+  "angle": "한 기능 깊이형 첫 편(크림 바탕 feature.swift, 6장). 템플릿 한 기능만: 복붙하고 이름 고치다 틀림 → {이름} 빈칸으로 저장 → 키보드에서 값 고르기(+로 추가) → {날짜} {시간} {클립보드} 자동. 덱 scripts/cardnews/decks/2026-11-12-클립키보드-템플릿.json 인스타 https://www.instagram.com/lee25_ios/p/Dfm5TOQCRmm/ 스레드 https://www.threads.com/@lee25_ios/post/Dfm5bSkHyEg",
   "plannedAt": "2026-11-12T00:00:00Z",
-  "stage": "ready",
+  "stage": "posted",
   "slides": [
    {
     "id": "37cdf071-2855-595d-a494-c7d310ba5bb8",
