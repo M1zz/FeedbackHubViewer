@@ -1,0 +1,48 @@
+{
+ "name": "쑥쑥용돈",
+ "icon": "/Users/hyunholee/Documents/workspace/Auto/쑥쑥용돈/FamilyBank/Assets.xcassets/AppIcon.appiconset/AppIcon.png",
+ "accent": "269E66",
+ "kicker": "혹시 이런 거 아세요? · 쑥쑥용돈의 저축통장",
+ "cover": "아이 용돈에\n이자 붙여 준\n적 있어요?",
+ "coverScreens": [
+  "/Users/hyunholee/Documents/workspace/Auto/쑥쑥용돈/docs/screenshots/raw/ko/02-child.png",
+  "/Users/hyunholee/Documents/workspace/Auto/쑥쑥용돈/docs/screenshots/raw/ko/03-savings.png",
+  "/Users/hyunholee/Documents/workspace/Auto/쑥쑥용돈/docs/screenshots/raw/ko/01-dashboard.png"
+ ],
+ "features": [
+  {
+   "label": "왜 받자마자 쓸까",
+   "headline": "모을 이유가\n없어서예요",
+   "text": "\"아껴 써\" 백 번보다\n두면 불어나는 걸 한 번 보는 게 빨라요.",
+   "screen": "/Users/hyunholee/Documents/workspace/Auto/쑥쑥용돈/docs/screenshots/raw/ko/02-child.png",
+   "top": 0.14
+  },
+  {
+   "label": "이자율은 부모가",
+   "headline": "저축통장에 넣으면\n매주 이자가 붙어요",
+   "text": "주 5%도 돼요. 우리 집 은행이니까요.\n이자는 부모가 정하고, 매주 알아서 들어와요.",
+   "screen": "/Users/hyunholee/Documents/workspace/Auto/쑥쑥용돈/docs/screenshots/raw/ko/03-savings.png",
+   "top": 0.09
+  },
+  {
+   "label": "미리 보여 줘요",
+   "headline": "이대로 두면\n12주 뒤엔 얼마?",
+   "text": "3,150콩이 5,657콩.\n안 쓰고 둔 돈이 커지는 걸 그래프로 봐요.",
+   "screen": "/Users/hyunholee/Documents/workspace/Auto/쑥쑥용돈/docs/screenshots/raw/ko/03-savings.png",
+   "top": 0.6
+  },
+  {
+   "label": "같이 읽어요",
+   "headline": "\"복리의 마법\"은\n눈덩이 이야기",
+   "text": "이자에 이자가 붙는 걸 부모 가이드로.\n설명하고, 물어보고, 해 보기 10분이면 돼요.",
+   "screen": "/Users/hyunholee/Documents/workspace/Auto/쑥쑥용돈/docs/screenshots/raw/ko/06-learn.png",
+   "top": 0.44
+  }
+ ],
+ "outro": "불어나는 걸\n한 번 보면 달라져요",
+ "points": [
+  "화폐 이름도 이자율도 우리 집 마음대로",
+  "이자까지 모든 거래가 장부에 남아요",
+  "같은 iCloud면 가족 기기끼리 맞춰져요"
+ ]
+}

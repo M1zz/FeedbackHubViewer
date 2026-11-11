@@ -1,0 +1,48 @@
+{
+ "name": "클립키보드",
+ "icon": "/Users/hyunholee/Documents/workspace/Auto/클립키보드/docs/icon.png",
+ "accent": "1A7CF2",
+ "kicker": "혹시 이런 거 아세요? · 클립키보드의 템플릿",
+ "cover": "답장 문구,\n이름만 바꿔\n쓰고 있어요?",
+ "coverScreens": [
+  "/Users/hyunholee/Documents/workspace/Auto/클립키보드/docs/screenshots/raw/iphone/ko/03-template-fill.png",
+  "/Users/hyunholee/Documents/workspace/Auto/클립키보드/docs/screenshots/raw/iphone/ko/01-reply.png",
+  "/Users/hyunholee/Documents/workspace/Auto/클립키보드/docs/screenshots/raw/iphone/ko/05-all-snippets.png"
+ ],
+ "features": [
+  {
+   "label": "매번 이름을 고쳐요",
+   "headline": "복붙하고\n이름만 고치다가",
+   "text": "김서연님이 박도윤님에게 가요.\n한 글자 틀리면 다시 보내야 하죠.",
+   "screen": "/Users/hyunholee/Documents/workspace/Auto/클립키보드/docs/screenshots/raw/iphone/ko/01-reply.png",
+   "top": 0.12
+  },
+  {
+   "label": "달라지는 자리는 빈칸",
+   "headline": "{이름}님 안녕하세요,\n이렇게 저장해요",
+   "text": "매번 달라지는 자리만 {빈칸}으로.\n나머지 문장은 그대로 둬요.",
+   "screen": "/Users/hyunholee/Documents/workspace/Auto/클립키보드/docs/screenshots/raw/iphone/ko/03-template-fill.png",
+   "top": 0.52
+  },
+  {
+   "label": "쓸 때 고르기만",
+   "headline": "키보드에서\n이름만 고르면 끝",
+   "text": "저장해 둔 값 중에서 탭 한 번.\n새 이름은 + 로 그 자리에서 더해요.",
+   "screen": "/Users/hyunholee/Documents/workspace/Auto/클립키보드/docs/screenshots/raw/iphone/ko/03-template-fill.png",
+   "top": 0.61
+  },
+  {
+   "label": "날짜는 알아서",
+   "headline": "{날짜} {시간}은\n오늘 걸로 채워져요",
+   "text": "오늘 날짜 · 지금 시각 · 방금 복사한 글은\n{날짜} {시간} {클립보드} 로 자동이에요.",
+   "screen": "/Users/hyunholee/Documents/workspace/Auto/클립키보드/docs/screenshots/raw/iphone/ko/02-recent-clips.png",
+   "top": 0.56
+  }
+ ],
+ "outro": "같은 말은 한 번만,\n다른 건 빈칸으로",
+ "points": [
+  "카톡 · 메일 · 사파리 어디서나 같은 키보드",
+  "100번 넣을 때까지 모든 기능 무료",
+  "내용은 이 기기에만, 분석 도구 없음"
+ ]
+}

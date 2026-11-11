@@ -5753,5 +5753,241 @@
   "scriptEn": "",
   "bodyEn": "Reading out a Wi-Fi password, or copying one down. We do it more often than we think.\n\nMyFi reads the network name and password off a sign and connects you right away, and shares your own Wi-Fi with a single QR code. If you run a cafe or a rental, you can design a guest sign and print it straight away with AirPrint. Saved Wi-Fi details stay on your device.\n\nSearch MyFi on the App Store\n\n#wifi #wifipassword #qrcode #cafeowner #smallbusiness #airbnbhost #lifehacks #iphoneapps",
   "theme": 1
+ },
+ {
+  "id": "faaa14ca-95ab-4469-8b92-0c2b058e8ab1",
+  "project": "com.family.FamilyBank",
+  "kind": "cardNews",
+  "channel": "인스타그램",
+  "title": "아이 용돈에 이자 붙여 준 적 있어요?",
+  "angle": "한 기능 깊이형 첫 편(크림 바탕 feature.swift, 6장). 저축통장 한 기능만: 왜 받자마자 쓰나 → 매주 이자(부모가 정함) → 12주 복리 미리보기 → 배우기 '복리의 마법'. 덱 scripts/cardnews/decks/2026-11-12-쑥쑥용돈-저축이자.json",
+  "plannedAt": "2026-11-12T00:00:00Z",
+  "stage": "ready",
+  "slides": [
+   {
+    "id": "c79a0823-0d3b-533e-83a2-c06bd13e4065",
+    "headline": "아이 용돈에 이자 붙여 준 적 있어요?",
+    "text": "혹시 이런 거 아세요? 쑥쑥용돈의 저축통장 이야기.",
+    "headlineEn": "Ever paid your kid interest on their allowance?",
+    "textEn": "Did you know? The savings account in FamilyBank."
+   },
+   {
+    "id": "b4529a22-d6ae-5220-a0a4-b7909d3dfbd1",
+    "headline": "모을 이유가 없어서예요",
+    "text": "\"아껴 써\" 백 번보다\n두면 불어나는 걸 한 번 보는 게 빨라요.",
+    "headlineEn": "There's no reason to save",
+    "textEn": "Seeing money grow once beats\na hundred \"spend wisely\" talks."
+   },
+   {
+    "id": "f452f7a8-0cfb-5384-8ede-b16b5e0ed9d7",
+    "headline": "저축통장에 넣으면 매주 이자가 붙어요",
+    "text": "주 5%도 돼요. 우리 집 은행이니까요.\n이자는 부모가 정하고, 매주 알아서 들어와요.",
+    "headlineEn": "Weekly interest on savings",
+    "textEn": "5% a week is fine. It's your family's bank.\nParents set the rate; it's paid automatically."
+   },
+   {
+    "id": "028f7f22-0da4-5bce-b407-de56c722cb04",
+    "headline": "이대로 두면 12주 뒤엔 얼마?",
+    "text": "3,150콩이 5,657콩.\n안 쓰고 둔 돈이 커지는 걸 그래프로 봐요.",
+    "headlineEn": "What will it be in 12 weeks?",
+    "textEn": "3,150 beans become 5,657.\nA chart shows untouched money growing."
+   },
+   {
+    "id": "968aa247-d889-525f-94b4-f4c910553868",
+    "headline": "\"복리의 마법\"은 눈덩이 이야기",
+    "text": "이자에 이자가 붙는 걸 부모 가이드로.\n설명하고, 물어보고, 해 보기 10분이면 돼요.",
+    "headlineEn": "\"The magic of compounding\"",
+    "textEn": "A parent guide to interest on interest.\nExplain, ask, try: ten minutes."
+   },
+   {
+    "id": "f7bc8ca9-5e4b-5e6a-b8c3-3341f7aa3ce8",
+    "headline": "불어나는 걸 한 번 보면 달라져요",
+    "text": "화폐 이름도 이자율도 우리 집 마음대로.\n이자까지 모든 거래가 장부에 남아요.",
+    "headlineEn": "Once they see it grow, it changes",
+    "textEn": "Your own currency name and rate.\nEvery transaction, interest included, is in the ledger."
+   }
+  ],
+  "script": "",
+  "body": "아이 용돈에 이자 붙여 준 적 있어요?\n\n받자마자 쓰는 건 모을 이유가 없어서예요. 쑥쑥용돈에서는 아이가 저축통장에 넣어 둔 돈에 매주 이자가 붙어요. 이자율은 부모가 정해요. 주 5%도 돼요, 우리 집 은행이니까요.\n\n이대로 두면 12주 뒤 얼마가 되는지 그래프로 미리 보여 주고, 배우기 탭의 '복리의 마법'으로 왜 늘어나는지 같이 읽을 수 있어요. 이자까지 모든 거래는 장부에 남아요.\n\nApp Store에서 쑥쑥용돈 검색\n\n#용돈 #용돈교육 #경제교육 #어린이경제교육 #복리 #저축습관 #초등맘 #육아꿀팁 #앱추천 #아이폰앱",
+  "scriptEn": "",
+  "bodyEn": "Ever paid your kid interest on their allowance?\n\nKids spend it right away because there's no reason to save. In FamilyBank, money in the savings account earns interest every week. Parents set the rate, and 5% a week is fine. It's your family's bank.\n\nA chart shows what it becomes in 12 weeks, and the parent guide on compounding explains why. Every transaction, interest included, stays in the ledger.\n\nSearch FamilyBank on the App Store\n\n#allowance #kidsmoney #financialliteracy #compoundinterest #parentingtips #iphoneapps",
+  "theme": 0
+ },
+ {
+  "id": "775e8da3-f862-47d1-add5-9050aad442ce",
+  "project": "com.family.FamilyBank",
+  "kind": "cardNews",
+  "channel": "스레드",
+  "title": "아이 용돈에 이자 붙여 준 적 있어요?",
+  "angle": "한 기능 깊이형 첫 편(크림 바탕 feature.swift, 6장). 저축통장 한 기능만: 왜 받자마자 쓰나 → 매주 이자(부모가 정함) → 12주 복리 미리보기 → 배우기 '복리의 마법'. 덱 scripts/cardnews/decks/2026-11-12-쑥쑥용돈-저축이자.json",
+  "plannedAt": "2026-11-12T00:00:00Z",
+  "stage": "ready",
+  "slides": [
+   {
+    "id": "c79a0823-0d3b-533e-83a2-c06bd13e4065",
+    "headline": "아이 용돈에 이자 붙여 준 적 있어요?",
+    "text": "혹시 이런 거 아세요? 쑥쑥용돈의 저축통장 이야기.",
+    "headlineEn": "Ever paid your kid interest on their allowance?",
+    "textEn": "Did you know? The savings account in FamilyBank."
+   },
+   {
+    "id": "b4529a22-d6ae-5220-a0a4-b7909d3dfbd1",
+    "headline": "모을 이유가 없어서예요",
+    "text": "\"아껴 써\" 백 번보다\n두면 불어나는 걸 한 번 보는 게 빨라요.",
+    "headlineEn": "There's no reason to save",
+    "textEn": "Seeing money grow once beats\na hundred \"spend wisely\" talks."
+   },
+   {
+    "id": "f452f7a8-0cfb-5384-8ede-b16b5e0ed9d7",
+    "headline": "저축통장에 넣으면 매주 이자가 붙어요",
+    "text": "주 5%도 돼요. 우리 집 은행이니까요.\n이자는 부모가 정하고, 매주 알아서 들어와요.",
+    "headlineEn": "Weekly interest on savings",
+    "textEn": "5% a week is fine. It's your family's bank.\nParents set the rate; it's paid automatically."
+   },
+   {
+    "id": "028f7f22-0da4-5bce-b407-de56c722cb04",
+    "headline": "이대로 두면 12주 뒤엔 얼마?",
+    "text": "3,150콩이 5,657콩.\n안 쓰고 둔 돈이 커지는 걸 그래프로 봐요.",
+    "headlineEn": "What will it be in 12 weeks?",
+    "textEn": "3,150 beans become 5,657.\nA chart shows untouched money growing."
+   },
+   {
+    "id": "968aa247-d889-525f-94b4-f4c910553868",
+    "headline": "\"복리의 마법\"은 눈덩이 이야기",
+    "text": "이자에 이자가 붙는 걸 부모 가이드로.\n설명하고, 물어보고, 해 보기 10분이면 돼요.",
+    "headlineEn": "\"The magic of compounding\"",
+    "textEn": "A parent guide to interest on interest.\nExplain, ask, try: ten minutes."
+   },
+   {
+    "id": "f7bc8ca9-5e4b-5e6a-b8c3-3341f7aa3ce8",
+    "headline": "불어나는 걸 한 번 보면 달라져요",
+    "text": "화폐 이름도 이자율도 우리 집 마음대로.\n이자까지 모든 거래가 장부에 남아요.",
+    "headlineEn": "Once they see it grow, it changes",
+    "textEn": "Your own currency name and rate.\nEvery transaction, interest included, is in the ledger."
+   }
+  ],
+  "script": "",
+  "body": "아이 용돈에 이자 붙여 준 적 있어요?\n\n받자마자 쓰는 건 모을 이유가 없어서예요. \"아껴 써\" 백 번보다 두면 불어나는 걸 한 번 보는 게 빨라요.\n\n그래서 쑥쑥용돈에서는 저축통장에 넣은 돈에 매주 이자가 붙어요. 이자율은 부모가 정하고(주 5%도 돼요, 우리 집 은행이니까요), 이대로 두면 12주 뒤 얼마가 되는지 그래프로 미리 보여 줘요. 배우기 탭에 '복리의 마법'도 있어요.\n\n쑥쑥용돈 https://apps.apple.com/kr/app/id6790130891",
+  "scriptEn": "",
+  "bodyEn": "Ever paid your kid interest on their allowance?\n\nKids spend it right away because there's no reason to save. In FamilyBank, money in the savings account earns interest every week. Parents set the rate, and 5% a week is fine. It's your family's bank.\n\nA chart shows what it becomes in 12 weeks, and the parent guide on compounding explains why. Every transaction, interest included, stays in the ledger.\n\nSearch FamilyBank on the App Store\n\n#allowance #kidsmoney #financialliteracy #compoundinterest #parentingtips #iphoneapps",
+  "theme": 0
+ },
+ {
+  "id": "ef4314fa-b421-4c5c-9722-20391587344d",
+  "project": "com.Ysoup.TokenMemo",
+  "kind": "cardNews",
+  "channel": "인스타그램",
+  "title": "답장 문구, 이름만 바꿔 쓰고 있어요?",
+  "angle": "한 기능 깊이형 첫 편(크림 바탕 feature.swift, 6장). 템플릿 한 기능만: 복붙하고 이름 고치다 틀림 → {이름} 빈칸으로 저장 → 키보드에서 값 고르기(+로 추가) → {날짜} {시간} {클립보드} 자동. 덱 scripts/cardnews/decks/2026-11-12-클립키보드-템플릿.json",
+  "plannedAt": "2026-11-12T00:00:00Z",
+  "stage": "ready",
+  "slides": [
+   {
+    "id": "37cdf071-2855-595d-a494-c7d310ba5bb8",
+    "headline": "답장 문구, 이름만 바꿔 쓰고 있어요?",
+    "text": "혹시 이런 거 아세요? 클립키보드의 템플릿.",
+    "headlineEn": "Still swapping the name in the same reply?",
+    "textEn": "Did you know? Templates in Clip Keyboard."
+   },
+   {
+    "id": "a3f673c0-a465-5410-b525-2c3ee374c3b3",
+    "headline": "복붙하고 이름만 고치다가",
+    "text": "김서연님이 박도윤님에게 가요.\n한 글자 틀리면 다시 보내야 하죠.",
+    "headlineEn": "Paste, then fix the name",
+    "textEn": "One slip and Ms. Kim's reply goes to Mr. Park.\nThen you send it again."
+   },
+   {
+    "id": "36203bae-d4a1-5e81-a3c9-296e0202993b",
+    "headline": "{이름}님 안녕하세요, 이렇게 저장해요",
+    "text": "매번 달라지는 자리만 {빈칸}으로.\n나머지 문장은 그대로 둬요.",
+    "headlineEn": "Save it as \"Hi {name},\"",
+    "textEn": "Only the part that changes becomes a {blank}.\nThe rest of the sentence stays."
+   },
+   {
+    "id": "e890ecbc-d2a2-5cde-a3ee-18c694d25eec",
+    "headline": "키보드에서 이름만 고르면 끝",
+    "text": "저장해 둔 값 중에서 탭 한 번.\n새 이름은 + 로 그 자리에서 더해요.",
+    "headlineEn": "Pick the name right on the keyboard",
+    "textEn": "One tap from the values you saved.\nA new name? Add it there with +."
+   },
+   {
+    "id": "0a08438c-23c5-5560-af79-b5ee02f9bbd0",
+    "headline": "{날짜} {시간}은 오늘 걸로 채워져요",
+    "text": "오늘 날짜 · 지금 시각 · 방금 복사한 글은\n{날짜} {시간} {클립보드} 로 자동이에요.",
+    "headlineEn": "{date} and {time} fill themselves",
+    "textEn": "Today's date, the current time and what you just copied:\n{date} {time} {clipboard}, automatically."
+   },
+   {
+    "id": "ab376c95-c2e7-5a0a-9d07-5022f5bd968a",
+    "headline": "같은 말은 한 번만, 다른 건 빈칸으로",
+    "text": "카톡 · 메일 · 사파리 어디서나 같은 키보드.\n100번 넣을 때까지 모든 기능 무료.",
+    "headlineEn": "Say it once, leave the rest blank",
+    "textEn": "The same keyboard in chat, mail and Safari.\nEverything is free for your first 100 inserts."
+   }
+  ],
+  "script": "",
+  "body": "답장 문구, 이름만 바꿔 쓰고 있어요?\n\n복붙하고 이름만 고치다가 김서연님이 박도윤님에게 가는 날이 있죠. 클립키보드에서는 매번 달라지는 자리만 {이름}처럼 빈칸으로 두고 저장해요. 쓸 때는 키보드에서 저장해 둔 이름을 탭 한 번 고르면 문장이 완성돼요. 새 이름은 그 자리에서 + 로 더하고요.\n\n{날짜} {시간} {클립보드}는 알아서 채워져요. 오늘 날짜, 지금 시각, 방금 복사한 글. 카톡이든 메일이든 사파리든 같은 키보드예요.\n\nApp Store에서 클립키보드 검색\n\n#클립키보드 #상용구 #빠른답장 #고객응대 #자영업자 #쇼핑몰운영 #직장인꿀팁 #아이폰키보드 #앱추천 #아이폰앱",
+  "scriptEn": "",
+  "bodyEn": "Still swapping the name in the same reply?\n\nPaste, fix the name, and one day Ms. Kim's reply goes to Mr. Park. In Clip Keyboard you save the sentence with the changing part as a blank, like {name}. When you use it, pick a saved name right on the keyboard and the sentence is done. New name? Add it there with +.\n\n{date}, {time} and {clipboard} fill themselves. Same keyboard in chat, mail and Safari.\n\nSearch Clip Keyboard on the App Store\n\n#textexpander #quickreply #customerservice #smallbusiness #iphonekeyboard #productivityapps",
+  "theme": 0
+ },
+ {
+  "id": "7001366d-0cac-4747-a7db-853ae133d49b",
+  "project": "com.Ysoup.TokenMemo",
+  "kind": "cardNews",
+  "channel": "스레드",
+  "title": "답장 문구, 이름만 바꿔 쓰고 있어요?",
+  "angle": "한 기능 깊이형 첫 편(크림 바탕 feature.swift, 6장). 템플릿 한 기능만: 복붙하고 이름 고치다 틀림 → {이름} 빈칸으로 저장 → 키보드에서 값 고르기(+로 추가) → {날짜} {시간} {클립보드} 자동. 덱 scripts/cardnews/decks/2026-11-12-클립키보드-템플릿.json",
+  "plannedAt": "2026-11-12T00:00:00Z",
+  "stage": "ready",
+  "slides": [
+   {
+    "id": "37cdf071-2855-595d-a494-c7d310ba5bb8",
+    "headline": "답장 문구, 이름만 바꿔 쓰고 있어요?",
+    "text": "혹시 이런 거 아세요? 클립키보드의 템플릿.",
+    "headlineEn": "Still swapping the name in the same reply?",
+    "textEn": "Did you know? Templates in Clip Keyboard."
+   },
+   {
+    "id": "a3f673c0-a465-5410-b525-2c3ee374c3b3",
+    "headline": "복붙하고 이름만 고치다가",
+    "text": "김서연님이 박도윤님에게 가요.\n한 글자 틀리면 다시 보내야 하죠.",
+    "headlineEn": "Paste, then fix the name",
+    "textEn": "One slip and Ms. Kim's reply goes to Mr. Park.\nThen you send it again."
+   },
+   {
+    "id": "36203bae-d4a1-5e81-a3c9-296e0202993b",
+    "headline": "{이름}님 안녕하세요, 이렇게 저장해요",
+    "text": "매번 달라지는 자리만 {빈칸}으로.\n나머지 문장은 그대로 둬요.",
+    "headlineEn": "Save it as \"Hi {name},\"",
+    "textEn": "Only the part that changes becomes a {blank}.\nThe rest of the sentence stays."
+   },
+   {
+    "id": "e890ecbc-d2a2-5cde-a3ee-18c694d25eec",
+    "headline": "키보드에서 이름만 고르면 끝",
+    "text": "저장해 둔 값 중에서 탭 한 번.\n새 이름은 + 로 그 자리에서 더해요.",
+    "headlineEn": "Pick the name right on the keyboard",
+    "textEn": "One tap from the values you saved.\nA new name? Add it there with +."
+   },
+   {
+    "id": "0a08438c-23c5-5560-af79-b5ee02f9bbd0",
+    "headline": "{날짜} {시간}은 오늘 걸로 채워져요",
+    "text": "오늘 날짜 · 지금 시각 · 방금 복사한 글은\n{날짜} {시간} {클립보드} 로 자동이에요.",
+    "headlineEn": "{date} and {time} fill themselves",
+    "textEn": "Today's date, the current time and what you just copied:\n{date} {time} {clipboard}, automatically."
+   },
+   {
+    "id": "ab376c95-c2e7-5a0a-9d07-5022f5bd968a",
+    "headline": "같은 말은 한 번만, 다른 건 빈칸으로",
+    "text": "카톡 · 메일 · 사파리 어디서나 같은 키보드.\n100번 넣을 때까지 모든 기능 무료.",
+    "headlineEn": "Say it once, leave the rest blank",
+    "textEn": "The same keyboard in chat, mail and Safari.\nEverything is free for your first 100 inserts."
+   }
+  ],
+  "script": "",
+  "body": "답장 문구, 이름만 바꿔 쓰고 있어요?\n\n복붙하고 이름만 고치다가 김서연님이 박도윤님에게 가는 날, 다들 한 번은 있죠.\n\n그래서 클립키보드에는 템플릿이 있어요. 매번 달라지는 자리만 {이름}처럼 빈칸으로 저장해 두면, 쓸 때 키보드에서 저장해 둔 이름을 탭 한 번 고르는 걸로 끝이에요. {날짜} {시간} {클립보드}는 알아서 채워지고요.\n\n클립키보드 https://apps.apple.com/kr/app/id1543660502",
+  "scriptEn": "",
+  "bodyEn": "Still swapping the name in the same reply?\n\nPaste, fix the name, and one day Ms. Kim's reply goes to Mr. Park. In Clip Keyboard you save the sentence with the changing part as a blank, like {name}. When you use it, pick a saved name right on the keyboard and the sentence is done. New name? Add it there with +.\n\n{date}, {time} and {clipboard} fill themselves. Same keyboard in chat, mail and Safari.\n\nSearch Clip Keyboard on the App Store\n\n#textexpander #quickreply #customerservice #smallbusiness #iphonekeyboard #productivityapps",
+  "theme": 0
  }
 ]
