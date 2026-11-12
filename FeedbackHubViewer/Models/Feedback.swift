@@ -157,6 +157,24 @@ struct Feedback: HubRecord, Codable {
             // Fall back to the first non-empty field so the row is never blank.
             return allFields.first(where: { !$0.value.isEmpty })?.value ?? "(no text)"
         }
-        return trimmed
+        let answers = Self.answers(in: trimmed)
+        return answers.isEmpty ? trimmed : answers.joined(separator: " · ")
+    }
+
+    /// LeeoKit 양식은 `질문\n답` 덩이를 빈 줄로 이어 보낸다(`LeeoFeedbackPrompt.compose`).
+    /// 몇 줄만 보이는 목록 줄에 질문이 자리를 차지하지 않게, 덩이마다 질문 줄을 떼고 답만 남긴다.
+    /// 양식이 아닌 글은 그대로다.
+    private static func answers(in text: String) -> [String] {
+        let labels: Set<String> = ["문제 종류", "덧붙임"]
+        return text.components(separatedBy: "\n\n").compactMap { block in
+            var lines = block.split(separator: "\n").map { $0.trimmingCharacters(in: .whitespaces) }
+            guard let first = lines.first else { return nil }
+            let question = first.replacingOccurrences(of: #"\s*\([^)]*\)$"#, with: "", options: .regularExpression)
+            if lines.count > 1, question.hasSuffix("?") || question.hasSuffix("？") || labels.contains(first) {
+                lines.removeFirst()
+            }
+            let answer = lines.joined(separator: " ").trimmed
+            return answer.isEmpty ? nil : answer
+        }
     }
 }

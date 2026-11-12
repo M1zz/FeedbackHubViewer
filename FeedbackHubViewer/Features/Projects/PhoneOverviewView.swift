@@ -198,7 +198,7 @@ struct PhoneOverviewView: View {
                 if let version = feedback.appVersion, !version.isEmpty { meta.append(version) }
                 if feedback.createdAt != nil { meta.append(feedback.createdAtRelative) }
                 return Finding.Item(id: "feedback|\(feedback.id)", title: name(feedback.projectKey),
-                                    meta: meta.joined(separator: " · "), lines: [feedback.text.trimmed],
+                                    meta: meta.joined(separator: " · "), lines: [feedback.snippet],
                                     translatesLines: true,
                                     route: .feedback(feedback))
             }
