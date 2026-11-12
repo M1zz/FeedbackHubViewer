@@ -87,8 +87,12 @@ final class SectionChanges: ObservableObject {
         }
         seen = marks.mapValues(\.signature)
         seenAt = marks.mapValues(\.at)
-        recent = (UserDefaults.standard.data(forKey: Self.recentKey))
-            .flatMap { try? JSONDecoder().decode([String: Change].self, from: $0) } ?? [:]
+        // 세지 않게 된 칸(키워드)의 옛 바뀜은 버린다 — 그 칸의 말을 사람 말로 옮기는 길이 없어져
+        // 날것("kr/가볼곳=181,…")이 띠에 그대로 찍혔다.
+        let tracked = Set(Self.tracked.map(\.rawValue))
+        recent = ((UserDefaults.standard.data(forKey: Self.recentKey))
+            .flatMap { try? JSONDecoder().decode([String: Change].self, from: $0) } ?? [:])
+            .filter { tracked.contains($0.value.section) }
         acknowledgedRed = Set(UserDefaults.standard.stringArray(forKey: Self.releaseAckKey) ?? [])
         syncObserver = NotificationCenter.default.addObserver(forName: SyncedDefaults.changed, object: nil,
                                                               queue: .main) { note in
@@ -236,9 +240,10 @@ final class SectionChanges: ObservableObject {
 
     /// 이 칸(한 앱이면 그 앱)의 확인 안 한 바뀜. 최근 것이 위.
     func recentChanges(_ section: FeedbackStore.ProjectSection, project: String?) -> [Change] {
-        recent.values
+        guard Self.tracked.contains(section) else { return [] }
+        return recent.values
             .filter { $0.section == section.rawValue && (project == nil || $0.project == project) }
-            // 키워드는 10위 안팎을 넘나든 것만 말한다 — 그 안에서만 움직였으면 띠에 올리지 않는다.
+            // 볼 만큼 바뀐 것만 띠에 올린다.
             .filter { !Self.lines(section, before: $0.before, after: $0.after).isEmpty }
             .sorted { $0.at > $1.at }
     }
