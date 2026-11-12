@@ -78,6 +78,7 @@ extension FeedbackStore {
         var carryingCapacity: [CapacityKey: CarryingCapacity?] = [:]
         // 릴리즈 건강. nil 도 결과다("창 안에 버전을 가를 이벤트가 없다").
         var releaseHealth: [String: ReleaseHealth.Report?] = [:]
+        var platformTags: [String: String]?
         var stabilization: [StabilizationKey: Stabilization.Report?] = [:]
     }
 
@@ -192,6 +193,20 @@ extension FeedbackStore {
     var feedbackByProject: [String: [Feedback]] {
         memoized(\.feedbackByProject) { Dictionary(grouping: allFeedback, by: \.projectKey) }
     }
+    /// iOS 가 아닌 앱의 OS 이름("macOS") — 앱 줄의 이름 옆에 붙인다. 클립키보드처럼 iOS 판과
+    /// Mac 판이 따로 있는 앱은 이름이 같아 둘을 가를 수 없었다. 대부분이 iOS 라 iOS 는 적지 않는다.
+    /// 설치마다 남긴 사용 현황의 OS 중 가장 많은 것을 그 앱의 OS 로 본다.
+    func platformTag(for project: String) -> String? {
+        memoized(\.platformTags) {
+            snapshotsByProject.compactMapValues { snapshots in
+                let counts = Dictionary(grouping: snapshots, by: \.platform).mapValues(\.count)
+                guard let platform = counts.max(by: { $0.value < $1.value })?.key,
+                      !platform.isEmpty, platform != "iOS", platform != "iPadOS" else { return nil }
+                return platform
+            }
+        }[project]
+    }
+
     var snapshotsByProject: [String: [UsageSnapshot]] {
         memoized(\.snapshotsByProject) { Dictionary(grouping: allSnapshots, by: \.projectKey) }
     }

@@ -95,6 +95,7 @@ struct AppListView: View {
         let isSelected = !pushes && store.selectedProject == project
         let content = AppRow(
             name: project.map(store.displayName(for:)) ?? "전체 앱",
+            platform: project.flatMap(store.platformTag(for:)),
             iconURL: project.flatMap { icons.url(for: $0, keywords: keywords) },
             systemImage: project == nil ? "square.grid.2x2"
                 : project == Feedback.unclassifiedProject ? "questionmark.folder" : "app.dashed",
@@ -220,6 +221,8 @@ struct StatsGlance {
 /// 앱 한 줄. 두 줄이고 말은 평범하게 — 이름, 그리고 이 기능이 이 앱에 대해 하는 한마디.
 private struct AppRow: View {
     let name: String
+    /// iOS 가 아니면 그 OS("macOS"). 이름 옆에 회색으로.
+    var platform: String?
     var iconURL: URL?
     let systemImage: String
     let tint: Color
@@ -241,6 +244,9 @@ private struct AppRow: View {
                         .font(.body.weight(isSelected ? .semibold : .medium))
                         .lineLimit(2)
                         .fixedSize(horizontal: false, vertical: true)
+                    if let platform {
+                        Tag(text: platform, isCompact: true)
+                    }
                     if let action = badge?.action {
                         Tag(text: action, tint: badge?.tint, isCompact: true)
                     }
