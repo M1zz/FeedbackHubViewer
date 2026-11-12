@@ -527,7 +527,7 @@ enum ReleaseHealth {
     ///
     /// 빨강
     ///  - 최신 버전에서 처음 본 크래시 지문이 보고 2건 이상 (설치 수와 무관하다. 크래시는 크래시다)
-    ///  - 크래시 없는 설치 비율이 문턱 아래
+    ///  - 크래시 없는 설치 비율이 문턱 아래 — 앞 버전도 그만큼 낮았으면 노랑이다(이번 버전 탓이 아니다)
     ///  - 핵심 행동률이 앞 버전보다 `coreActionDropMax` 넘게(상대값) 떨어졌고, 그 차이가 우연으로
     ///    설명되지 않음 (`dropIsSignificant`). 문턱만 넘고 표본이 작으면 판단할 수 없음이다
     /// 판단할 수 없음 (빨강 · 노랑 이유가 하나도 없을 때만)
@@ -581,7 +581,13 @@ enum ReleaseHealth {
         } else {
             // 안정성
             if let rate = latest.crashFreeRate {
-                if rate < thresholds.crashFreeInstallsMin {
+                if rate < thresholds.crashFreeInstallsMin, let before = previous?.crashFreeRate, previousEnough,
+                   rate >= before - crashFreeWobble {
+                    // 문턱 아래지만 앞 버전도 그만큼이었다 — 이번 버전이 나빠진 것이 아니라 원래 그렇다.
+                    // 릴리즈 판정은 "이번 버전이 나빠졌나"라 빨강이 아니다. 고칠 것으로는 남긴다.
+                    yellow.append("크래시 없는 설치 \(percent(rate)), 문턱 \(percent(thresholds.crashFreeInstallsMin)) 아래지만 앞 버전(\(percent(before)))부터 그랬다")
+                    fix("불안정 갈래 중 많은 것부터 본다. 이번 버전 탓은 아니라, 다음 버전에서 줄이면 풀린다")
+                } else if rate < thresholds.crashFreeInstallsMin {
                     red.append("크래시 없는 설치 \(percent(rate)), 문턱 \(percent(thresholds.crashFreeInstallsMin)) 아래")
                     fix("불안정 설치를 줄여 크래시 없는 설치를 \(percent(thresholds.crashFreeInstallsMin)) 위로 올린다. 아래 표의 불안정 갈래 중 많은 것부터 본다")
                 } else if let before = previous?.crashFreeRate, previousEnough, rate < before - crashFreeWobble {
