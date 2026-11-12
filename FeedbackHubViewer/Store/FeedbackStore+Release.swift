@@ -25,6 +25,7 @@ extension FeedbackStore {
             return ReleaseHealth.measure(events: events(for: project),
                                          crashes: crashes(for: project),
                                          feedback: feedback(for: project),
+                                         metrics: allMetrics.filter { $0.projectKey == project },
                                          spec: ProjectStatsSpecCatalog.spec(for: project)?.release,
                                          everSeenEvents: everSeen,
                                          coverageStart: rawEventCoverageStart)

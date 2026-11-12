@@ -79,6 +79,7 @@ extension FeedbackStore {
         // 릴리즈 건강. nil 도 결과다("창 안에 버전을 가를 이벤트가 없다").
         var releaseHealth: [String: ReleaseHealth.Report?] = [:]
         var platformTags: [String: String]?
+        var metrics: [CrashReport]?
         var stabilization: [StabilizationKey: Stabilization.Report?] = [:]
     }
 
@@ -174,8 +175,13 @@ extension FeedbackStore {
     var allEvents: [UsageEvent] {
         memoized(\.events) { visible(fetchedEvents) }
     }
+    /// 진단만 — 성능 한 줄(kind "metrics")은 뺀다.
     var allCrashes: [CrashReport] {
-        memoized(\.crashes) { visible(fetchedCrashes) }
+        memoized(\.crashes) { visible(fetchedCrashes).filter { !$0.isMetrics } }
+    }
+    /// 성능 한 줄들(LeeoKit 이 버전마다 설치 하나에서 한 번 올린다).
+    var allMetrics: [CrashReport] {
+        memoized(\.metrics) { visible(fetchedCrashes).filter(\.isMetrics) }
     }
 
     private func visible<Record: HubRecord>(_ records: [Record]) -> [Record] {

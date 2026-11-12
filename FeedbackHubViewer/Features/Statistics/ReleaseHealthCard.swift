@@ -127,6 +127,10 @@ struct ReleaseHealthCard: View {
             row("불안정 갈래별 설치") { sliceText($0) }
         }
         row("크래시 보고") { "\($0.crashReports)건" }
+        if latest.performance != nil || previous?.performance != nil {
+            row("첫 화면까지") { ReleaseHealthCard.launchText($0) }
+            row("멈춤 (한 시간에)") { ReleaseHealthCard.hangText($0) }
+        }
         row("피드백") { metrics in
             metrics.bugFeedback.map { "\(metrics.feedback)건 (버그 \($0))" } ?? "\(metrics.feedback)건"
         }
@@ -258,7 +262,21 @@ struct ReleaseHealthCard: View {
             row("크래시 보고", "\(latest.crashReports)건", previous.map { "\($0.crashReports)건" })
             row("새 크래시 지문", "\(latest.newSignatures.count)종", previous.map { _ in "" })
             row("피드백", feedbackText(latest), previous.map(feedbackText))
+            if latest.performance != nil || previous?.performance != nil {
+                row("첫 화면까지", Self.launchText(latest), previous.map(Self.launchText))
+                row("멈춤 (한 시간에)", Self.hangText(latest), previous.map(Self.hangText))
+            }
         }
+    }
+
+    static func launchText(_ metrics: ReleaseHealth.VersionMetrics) -> String {
+        guard let perf = metrics.performance, let ms = perf.launchMs else { return "모름" }
+        return "\(Int(ms))ms (\(perf.samples)대)"
+    }
+
+    static func hangText(_ metrics: ReleaseHealth.VersionMetrics) -> String {
+        guard let perf = metrics.performance, let hang = perf.hangPerHour else { return "모름" }
+        return String(format: "%.1f초", hang) + " (\(perf.samples)대)"
     }
 
     private func columnTitle(_ title: String, _ version: String) -> some View {

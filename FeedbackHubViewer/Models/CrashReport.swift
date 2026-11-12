@@ -48,6 +48,19 @@ struct CrashReport: HubRecord, Codable {
 
     var kindLabel: String { Self.label(for: kind) }
 
+    /// LeeoKit 3.44 부터 진단과 같은 레코드에 실려 오는 성능 한 줄(kind "metrics"). 진단이 아니다 —
+    /// 허브는 진단 목록에서 빼고 릴리즈 판정의 성능 비교에만 쓴다(`FeedbackStore.allMetrics`).
+    var isMetrics: Bool { kind == "metrics" }
+
+    /// "launch_ms=420 hang_s_per_h=1.2 peak_mb=180 fg_min=48" → 이름마다 값.
+    var metricValues: [String: Double] {
+        Dictionary(detail.split(separator: " ").compactMap { pair -> (String, Double)? in
+            let parts = pair.split(separator: "=", maxSplits: 1)
+            guard parts.count == 2, let value = Double(parts[1]) else { return nil }
+            return (String(parts[0]), value)
+        }, uniquingKeysWith: { a, _ in a })
+    }
+
     /// Same wording the apps use on their own 안정성 screen. An unknown kind is
     /// shown as sent rather than hidden.
     static func label(for kind: String) -> String {

@@ -224,6 +224,8 @@ enum ReleaseHealth {
         let platforms: Set<String>
         /// 설치를 겹치지 않게 셋으로 가른 것. 불안정도 핵심 행동도 모르면 nil.
         var people: People? = nil
+        /// 이 버전의 성능(LeeoKit 성능 한 줄). 한 장도 안 왔으면 nil.
+        var performance: Performance? = nil
 
         var coreActionRate: Double? {
             guard let coreActionInstalls, activeInstalls > 0 else { return nil }
@@ -251,6 +253,32 @@ enum ReleaseHealth {
         let fine: Int
         var total: Int { (troubled ?? 0) + (stuck ?? 0) + fine }
     }
+
+    /// 버전 하나의 성능 — 설치마다 한 장씩 온 값의 가운데.
+    struct Performance: Equatable {
+        let samples: Int
+        /// 첫 화면까지(ms).
+        let launchMs: Double?
+        /// 앞에 떠 있던 한 시간에 멈춘 초.
+        let hangPerHour: Double?
+        let peakMB: Double?
+
+        init?(_ reports: [CrashReport]) {
+            let values = reports.map(\.metricValues)
+            guard !values.isEmpty else { return nil }
+            func median(_ key: String) -> Double? {
+                let sorted = values.compactMap { $0[key] }.sorted()
+                return sorted.isEmpty ? nil : sorted[sorted.count / 2]
+            }
+            samples = values.count
+            launchMs = median("launch_ms")
+            hangPerHour = median("hang_s_per_h")
+            peakMB = median("peak_mb")
+        }
+    }
+
+    /// 성능을 견주려면 두 버전 모두 이만큼은 와야 한다. 한두 대의 값은 기기 차이일 뿐이다.
+    static let performanceMinSamples = 5
 
     struct Adoption: Equatable {
         /// 최근 `adoptionDays` 일 활성 설치 중 최신 버전을 쓴 설치.
@@ -359,6 +387,7 @@ enum ReleaseHealth {
     static func measure(events: [UsageEvent],
                         crashes: [CrashReport],
                         feedback: [Feedback],
+                        metrics performanceReports: [CrashReport] = [],
                         spec releaseSpec: ReleaseSpec?,
                         everSeenEvents: Set<String>,
                         coverageStart: Date? = nil,
@@ -434,7 +463,7 @@ enum ReleaseHealth {
             let typed = notes.filter { !($0.feedbackType?.trimmingCharacters(in: .whitespaces).isEmpty ?? true) }
             let bugs = typed.filter { $0.feedbackType?.trimmingCharacters(in: .whitespaces).lowercased() == "bug" }.count
 
-            return VersionMetrics(
+            var result = VersionMetrics(
                 version: version,
                 activeInstalls: installs.count,
                 coreActionInstalls: coreNames == nil ? nil : core.count,
@@ -448,6 +477,10 @@ enum ReleaseHealth {
                 people: Self.people(installs: installs, unstable: stabilityKnown ? unstable : nil,
                                core: coreNames == nil ? nil : core)
             )
+            result.performance = Performance(performanceReports.filter {
+                $0.appVersion.trimmingCharacters(in: .whitespaces) == version
+            })
+            return result
         }
 
         let latest = metrics(for: latestVersion, includeNewSignatures: true)
@@ -589,6 +622,19 @@ enum ReleaseHealth {
                latest.crashReports >= 2, now > before * 1.5 {
                 yellow.append("설치당 크래시 보고가 늘었다 (\(previous.crashReports)건 → \(latest.crashReports)건)")
                 fix("진단 칸에서 이번 버전에 많이 난 크래시부터 고친다")
+            }
+        }
+
+        // 성능 — 설치 수 문턱과 따로, 두 버전 모두 성능 한 줄이 충분히 왔을 때만 견준다.
+        if let now = latest.performance, let before = previous?.performance,
+           now.samples >= performanceMinSamples, before.samples >= performanceMinSamples {
+            if let was = before.launchMs, let isNow = now.launchMs, isNow > was * 1.2, isNow - was >= 100 {
+                yellow.append("켜서 첫 화면까지 \(Int(was))ms → \(Int(isNow))ms 로 느려졌다")
+                fix("이번 버전에서 켤 때 하는 일(초기화 · 첫 화면을 그리기 전에 읽는 것)이 늘었는지 확인한다")
+            }
+            if let was = before.hangPerHour, let isNow = now.hangPerHour, isNow > was * 1.5, isNow - was >= 0.5 {
+                yellow.append("멈춤이 한 시간에 \(String(format: "%.1f", was))초 → \(String(format: "%.1f", isNow))초로 늘었다")
+                fix("진단 칸에서 이번 버전의 멈춤부터 본다")
             }
         }
 

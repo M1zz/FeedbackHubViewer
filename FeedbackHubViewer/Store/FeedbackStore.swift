@@ -648,6 +648,18 @@ final class FeedbackStore: ObservableObject {
     /// Diagnostics are read whole and are small; this is the only cap they get
     /// — again on what is kept, applied after the merge.
     private static let crashLimit = 1000
+    /// 같은 레코드 타입에 실려 오는 성능 한 줄(kind "metrics")의 몫. 진단 몫을 밀어내지 않게 따로 센다.
+    private static let metricsLimit = 5000
+
+    /// 진단과 성능 한 줄을 각자의 몫까지, 차례는 그대로.
+    private static func capped(_ records: [CrashReport]) -> [CrashReport] {
+        var diagnostics = 0, metrics = 0
+        return records.filter { record in
+            if record.isMetrics { metrics += 1; return metrics <= metricsLimit }
+            diagnostics += 1
+            return diagnostics <= crashLimit
+        }
+    }
 
     /// When each record type was last read successfully. Persisted with the
     /// cache; drives the incremental queries.
@@ -941,7 +953,7 @@ final class FeedbackStore: ObservableObject {
             // non-empty incremental result is genuinely new. Comparing counts
             // would miss one once the cap is reached and the count stops moving.
             if !crashes.isEmpty || !incremental {
-                fetchedCrashes = Array(all.prefix(Self.crashLimit))
+                fetchedCrashes = Self.capped(all)
             }
         }
         watermarks.merge(usage.syncedTypes) { _, new in new }
@@ -1074,7 +1086,7 @@ final class FeedbackStore: ObservableObject {
         // 값이어야 하기 때문이다 — 자르기 전의 수로 "내가 더 갖고 있다"를
         // 판단하면, 잘려 나갈 몫 때문에 실행할 때마다 헛되이 올리게 된다.
         hub.events = Self.withinRetention(hub.events)
-        hub.crashes = Array(hub.crashes.prefix(Self.crashLimit))
+        hub.crashes = Self.capped(hub.crashes)
         let recordsChanged = hub.feedback.count != fetchedFeedback.count
             || Self.fingerprint(hub.snapshots) != Self.fingerprint(fetchedSnapshots)
             || hub.events.count != fetchedEvents.count
