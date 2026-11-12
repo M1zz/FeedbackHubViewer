@@ -37,6 +37,7 @@ final class SectionChanges: ObservableObject {
     private static let defaultsKey = "section-seen-signatures"
     private static let recentKey = "section-recent-changes"
     static let releaseAckKey = "release-red-acknowledged"
+    static let keywordDueAckKey = "keyword-refresh-acknowledged"
     /// 기기 사이에서 맞추는 칸 · 앱마다 본 말과 그 시각(`Mark`).
     static let marksKey = "section-seen-marks"
 
@@ -79,6 +80,10 @@ final class SectionChanges: ObservableObject {
     /// 않고, 새 버전이 빨강이 되면 다시 단다. 빨강 점 · 판정은 그대로다.
     @Published private var acknowledgedRed: Set<String>
 
+    /// 알아본 "키워드 다시 짤 때" — "앱|칸을 바꾼 날". 키워드 칸을 열어 보면 사이드바 뱃지는
+    /// 지우고(앱 줄의 "다시 짤 때" 는 남는다), 다시 짠 뒤 또 때가 되면 날이 바뀌어 다시 단다.
+    @Published private var acknowledgedDue: Set<String>
+
     private init() {
         let legacy = UserDefaults.standard.dictionary(forKey: Self.defaultsKey) as? [String: String] ?? [:]
         var marks = Self.decodeMarks(UserDefaults.standard.object(forKey: Self.marksKey))
@@ -94,9 +99,10 @@ final class SectionChanges: ObservableObject {
             .flatMap { try? JSONDecoder().decode([String: Change].self, from: $0) } ?? [:])
             .filter { tracked.contains($0.value.section) }
         acknowledgedRed = Set(UserDefaults.standard.stringArray(forKey: Self.releaseAckKey) ?? [])
+        acknowledgedDue = Set(UserDefaults.standard.stringArray(forKey: Self.keywordDueAckKey) ?? [])
         syncObserver = NotificationCenter.default.addObserver(forName: SyncedDefaults.changed, object: nil,
                                                               queue: .main) { note in
-            guard note.touches(Self.marksKey, Self.releaseAckKey) else { return }
+            guard note.touches(Self.marksKey, Self.releaseAckKey, Self.keywordDueAckKey) else { return }
             Task { @MainActor in SectionChanges.shared.adoptSynced() }
         }
     }
@@ -114,6 +120,28 @@ final class SectionChanges: ObservableObject {
         if nextRecent != recent { recent = nextRecent }
         let ack = Set(UserDefaults.standard.stringArray(forKey: Self.releaseAckKey) ?? [])
         if ack != acknowledgedRed { acknowledgedRed = ack }
+        let due = Set(UserDefaults.standard.stringArray(forKey: Self.keywordDueAckKey) ?? [])
+        if due != acknowledgedDue { acknowledgedDue = due }
+    }
+
+    // MARK: - 키워드 다시 짤 때
+
+    private static func dueKey(_ entry: (project: String, days: Int), now: Date = Date()) -> String {
+        let day = Calendar.current.dateComponents([.year, .month, .day],
+                                                   from: Calendar.current.date(byAdding: .day, value: -entry.days, to: now) ?? now)
+        return "\(entry.project)|\(day.year ?? 0)-\(day.month ?? 0)-\(day.day ?? 0)"
+    }
+
+    /// 다시 짤 때가 됐는데 아직 알아보지 않은 앱 — 사이드바 뱃지가 센다.
+    func unacknowledgedDue(_ due: [(project: String, days: Int)]) -> [String] {
+        due.filter { !acknowledgedDue.contains(Self.dueKey($0)) }.map(\.project)
+    }
+
+    func acknowledgeDue(_ due: [(project: String, days: Int)]) {
+        let next = acknowledgedDue.union(due.map { Self.dueKey($0) })
+        guard next != acknowledgedDue else { return }
+        acknowledgedDue = next
+        SyncedDefaults.set(Array(next).sorted(), forKey: Self.keywordDueAckKey)
     }
 
     nonisolated static func decodeMarks(_ value: Any?) -> [String: Mark] {
@@ -498,6 +526,10 @@ struct SectionVisitTracker: ViewModifier {
                                  quiet: SectionChanges.quiet(section, metrics: metrics))
                 if let project { changes.clearVisit(section, project: project) }
                 // 릴리즈 칸을 열어 봤으면 빨강인 앱도 알아본 것으로 — 뱃지만 지우고 판정은 남는다.
+                if section == .keywords {
+                    let projects = project.map { [$0] } ?? SectionChanges.appKeys(store)
+                    changes.acknowledgeDue(metrics.keywords.refreshDue(projects: projects))
+                }
                 if section == .release {
                     changes.noteVisited(section, counts: alerts)
                     changes.acknowledgeRed(project.map { [$0] } ?? store.projectCounts.map(\.key), store: store)

@@ -102,9 +102,16 @@ struct SectionMetrics {
             // 손볼 것은 하나 — 키워드 칸을 바꾼 지 두 주가 지나 다시 짤 때가 된 앱(`KeywordRefreshCard`).
             let projects = project.map { [$0] }
                 ?? store.allProjectKeys.filter { $0 != Feedback.unclassifiedProject && !store.hiddenProjects.contains($0) }
-            let due = keywords.refreshDue(projects: projects).count
-            return due > 0 ? Badge(count: due, systemImage: "arrow.triangle.2.circlepath", tint: .orange,
-                                   name: "키워드 다시 짤 앱", action: project == nil ? nil : "다시 짤 때") : nil
+            // 앱 한 줄에는 때가 된 동안 늘 "다시 짤 때", 사이드바 숫자는 아직 알아보지 않은 앱만
+            // — 칸을 열어 보면 지워지고, 새로 때가 된 앱이 생겨야 다시 선다.
+            let due = keywords.refreshDue(projects: projects)
+            if project != nil {
+                return due.isEmpty ? nil : Badge(count: 1, systemImage: "arrow.triangle.2.circlepath", tint: .orange,
+                                                 name: "키워드 다시 짤 때", action: "다시 짤 때")
+            }
+            let fresh = SectionChanges.shared.unacknowledgedDue(due).count
+            return fresh > 0 ? Badge(count: fresh, systemImage: "arrow.triangle.2.circlepath", tint: .orange,
+                                     name: "키워드 다시 짤 앱") : nil
         default:
             return nil
         }

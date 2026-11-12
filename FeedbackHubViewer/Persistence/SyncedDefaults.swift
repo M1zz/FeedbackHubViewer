@@ -39,6 +39,7 @@ enum SyncedDefaults {
         "chartCountries": nil,
         SectionChanges.marksKey: { SectionChanges.mergeSyncedMarks($0, $1) },
         SectionChanges.releaseAckKey: { union($0, $1) },
+        SectionChanges.keywordDueAckKey: { union($0, $1) },
         "newsLastReadAt": { later($0, $1) },
     ]
 
