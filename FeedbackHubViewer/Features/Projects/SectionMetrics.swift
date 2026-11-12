@@ -40,6 +40,8 @@ struct SectionMetrics {
         let systemImage: String
         let tint: Color
         let name: String
+        /// 앱 한 줄에서 숫자 대신 이름 옆에 적을 말 — "다시 짤 때". 들어가 보지 않아도 할 일이 보이게.
+        var action: String? = nil
     }
 
     // MARK: - Badge
@@ -101,7 +103,8 @@ struct SectionMetrics {
             let projects = project.map { [$0] }
                 ?? store.allProjectKeys.filter { $0 != Feedback.unclassifiedProject && !store.hiddenProjects.contains($0) }
             let due = keywords.refreshDue(projects: projects).count
-            return due > 0 ? Badge(count: due, systemImage: "arrow.triangle.2.circlepath", tint: .orange, name: "키워드 다시 짤 앱") : nil
+            return due > 0 ? Badge(count: due, systemImage: "arrow.triangle.2.circlepath", tint: .orange,
+                                   name: "키워드 다시 짤 앱", action: project == nil ? nil : "다시 짤 때") : nil
         default:
             return nil
         }
@@ -112,7 +115,9 @@ struct SectionMetrics {
     func count(_ section: FeedbackStore.ProjectSection, project: String?) -> Int {
         switch section {
         case .inbox: return inboxCount
-        case .news: return news.items.filter { project == nil || $0.project == project }.count
+        case .news:
+            let cutoff = news.recentCutoff
+            return news.items.filter { $0.foundAt > cutoff && (project == nil || $0.project == project) }.count
         case .feedback: return store.feedback(for: project).count
         case .stats: return store.usage(for: project).installs
         // 빨강인 앱 수. 한 앱이면 0 아니면 1.

@@ -21,6 +21,8 @@ struct NewsView: View {
     @State private var project: String?
     /// 화면을 열었을 때의 읽음 시각. 이보다 뒤에 찾은 것에 점을 찍는다.
     @State private var readMark: Date?
+    /// 최근 `NewsStore.recentDays` 일보다 오래된 기록까지 펼쳤나.
+    @State private var showsOlder = false
 
     var body: some View {
         let shown = news.items.filter {
@@ -148,7 +150,10 @@ struct NewsView: View {
     // MARK: 목록
 
     private func list(_ items: [NewsItem]) -> some View {
-        let days = Dictionary(grouping: items) { Calendar.current.startOfDay(for: $0.foundAt) }
+        let cutoff = news.recentCutoff
+        let olderCount = items.filter { $0.foundAt <= cutoff }.count
+        let visible = showsOlder ? items : items.filter { $0.foundAt > cutoff }
+        let days = Dictionary(grouping: visible) { Calendar.current.startOfDay(for: $0.foundAt) }
         return List {
             Section {
                 briefingCard(news.briefing())
@@ -161,6 +166,15 @@ struct NewsView: View {
                         Button { open(item) } label: { row(item) }
                             .buttonStyle(.plain)
                     }
+                }
+            }
+            if olderCount > 0 {
+                Section {
+                    Button(showsOlder ? "지난 소식 접기"
+                                      : "\(NewsStore.recentDays)일 전 소식 \(AppFormat.count(olderCount))개 보기") {
+                        showsOlder.toggle()
+                    }
+                    .buttonStyle(.borderless)
                 }
             }
         }

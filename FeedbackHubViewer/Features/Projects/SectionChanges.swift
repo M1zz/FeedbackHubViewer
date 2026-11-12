@@ -27,9 +27,11 @@ final class SectionChanges: ObservableObject {
     static let shared = SectionChanges()
 
     /// "새 건" 뱃지가 따로 없는 칸 — 이 칸들만 바뀐 것을 센다.
+    /// 키워드는 세지 않는다 — 순위는 날마다 흔들려 나라 × 검색어마다 뱃지가 서는데, 볼 일은 없었다.
+    /// 키워드의 뱃지는 다시 짤 때가 된 앱 하나뿐이다(`SectionMetrics.itemBadge`).
     /// 앱 내 구입은 세지 않는다 — 상품 수가 늘어난 것은 내가 올린 것이라 알려 줄 일이 아니다.
     static let tracked: [FeedbackStore.ProjectSection] = [
-        .stats, .release, .acquisition, .storeAnalytics, .keywords, .charts, .design,
+        .stats, .release, .acquisition, .storeAnalytics, .charts, .design,
     ]
 
     private static let defaultsKey = "section-seen-signatures"
@@ -278,12 +280,6 @@ final class SectionChanges: ObservableObject {
                           metrics: SectionMetrics) -> String {
         let label = metrics.label(section, project: project)
         switch section {
-        case .keywords:
-            // "3/10 잡힘" 은 12위가 5위가 돼도 그대로다 — 키워드마다 순위를 적는다.
-            return metrics.keywords.standings(for: project)
-                .map { "\($0.keyword.id)=\($0.rank.map(String.init) ?? "-")" }
-                .sorted()
-                .joined(separator: ",")
         case .release:
             return label + "|" + metrics.subtitle(section, project: project)
         default:
@@ -301,8 +297,6 @@ final class SectionChanges: ObservableObject {
             return metrics.count(section, project: project) == 0
         case .release:
             return metrics.store.releaseLevel(for: project) == nil
-        case .keywords:
-            return metrics.keywords.standings(for: project).isEmpty
         case .charts:
             return metrics.charts.history.lastScan == nil || metrics.keywords.trackId(for: project) == nil
         case .storeAnalytics:
@@ -353,7 +347,7 @@ final class SectionChanges: ObservableObject {
         return Set(appKeys(metrics.store).filter { (traffic[$0]?.mau ?? 0) < statsQuietMAU })
     }
 
-    /// 본 뒤 바뀐 것의 수. 키워드는 10위 선을 넘나든 키워드마다, 나머지 칸은 앱마다 하나.
+    /// 본 뒤 바뀐 것의 수. 앱마다 하나(릴리즈는 바뀐 줄마다).
     func changedCount(_ section: FeedbackStore.ProjectSection, project: String?,
                       metrics: SectionMetrics) -> Int {
         guard Self.tracked.contains(section) else { return 0 }
@@ -382,7 +376,7 @@ final class SectionChanges: ObservableObject {
             .sorted { $0.project < $1.project }
     }
 
-    /// 바뀜 하나가 뱃지에서 몇인가. 키워드는 선을 넘어 오른 것마다, 숫자 칸은 15% 넘게
+    /// 바뀜 하나가 뱃지에서 몇인가. 숫자 칸은 15% 넘게
     /// 움직였을 때만 하나, 릴리즈는 말이 바뀌면 하나. 뱃지 · 띠 · 앱 목록이 같은 셈을 쓴다.
     static func weight(_ section: FeedbackStore.ProjectSection, before: String, after: String) -> Int {
         guard before != after else { return 0 }
@@ -395,8 +389,6 @@ final class SectionChanges: ObservableObject {
     /// 바뀜을 사람 말로 — "설치 120대 → 125대", "🇰🇷 메모 12위 → 5위".
     static func lines(_ section: FeedbackStore.ProjectSection, before: String, after: String) -> [String] {
         switch section {
-        case .keywords:
-            return keywordRises(before: before, after: after).map(\.line)
         case .release:
             // "판정|부제" — 부제가 판정까지 담고 있어(… · 초록) 부제가 바뀌었으면 부제 한 줄만.
             let old = before.components(separatedBy: "|"), new = after.components(separatedBy: "|")
@@ -406,32 +398,6 @@ final class SectionChanges: ObservableObject {
             guard let shift = notableShift(before: before, after: after) else { return [] }
             return ["\(before) → \(after)" + shift]
         }
-    }
-
-    /// 볼 만하게 오른 키워드 하나. 뱃지 · 띠 · 순위 줄이 같은 것을 읽는다.
-    /// 떨어진 것은 세지 않는다 — 할 일은 오르는 말을 더 밀어 올리는 것이다.
-    @MainActor struct KeywordRise {
-        let id: String
-        let name: String
-        let was: String
-        let now: String
-        /// 넘어선 선 — "1위", "10위 안으로", "새로 잡힘".
-        var milestone: String { SectionChanges.milestone(now) }
-        var line: String { "\(name) \(SectionChanges.rankText(was)) → \(SectionChanges.rankText(now)) · \(milestone)" }
-    }
-
-    /// 오른 키워드 중 선을 넘어선 것만, 더 높이 간 것부터.
-    static func keywordRises(before: String, after: String) -> [KeywordRise] {
-        let old = ranks(before), new = ranks(after)
-        return new.keys.sorted().compactMap { id -> KeywordRise? in
-            guard let was = old[id], let now = new[id] else { return nil }
-            // 순위는 매일 몇 칸씩 흔들린다. 검색 화면의 자리가 바뀌는 선을 넘을 때만 센다.
-            guard tier(now) < tier(was) else { return nil }
-            let parts = id.split(separator: "/", maxSplits: 1).map(String.init)
-            let name = parts.count == 2 ? "\(ChartStorefronts.flag(parts[0])) \(parts[1])" : id
-            return KeywordRise(id: id, name: name, was: was, now: now)
-        }
-        .sorted { tier($0.now) == tier($1.now) ? $0.id < $1.id : tier($0.now) < tier($1.now) }
     }
 
     /// 숫자가 이만큼은 움직여야 뱃지가 선다.
@@ -477,34 +443,6 @@ final class SectionChanges: ObservableObject {
         flush()
         return (skeleton, values)
     }
-
-    private static func ranks(_ signature: String) -> [String: String] {
-        Dictionary(signature.split(separator: ",").compactMap { item -> (String, String)? in
-            guard let eq = item.lastIndex(of: "=") else { return nil }
-            return (String(item[..<eq]), String(item[item.index(after: eq)...]))
-        }, uniquingKeysWith: { a, _ in a })
-    }
-
-    /// 오름으로 치는 선. 1위 · 스크롤 없이 보이는 3위 · 첫 화면 10위 · 30위 · 100위.
-    /// 이 선 하나를 넘어 올라서야 검색하는 사람 눈에 띄는 자리가 실제로 바뀐다.
-    static let riseLines = [1, 3, 10, 30, 100]
-    /// 순위 줄 요약이 기준으로 삼는 첫 화면 선.
-    static let topRankLine = 10
-
-    /// 몇 번째 선 안인가. 작을수록 높다. 100위 밖이면 선 수, 순위 밖이면 그 다음.
-    fileprivate static func tier(_ rank: String) -> Int {
-        guard let rank = Int(rank) else { return riseLines.count + 1 }
-        return riseLines.firstIndex { rank <= $0 } ?? riseLines.count
-    }
-
-    fileprivate static func milestone(_ rank: String) -> String {
-        guard let value = Int(rank) else { return "" }
-        if value == 1 { return "1위" }
-        if let line = riseLines.first(where: { value <= $0 }) { return "\(line)위 안으로" }
-        return "새로 잡힘"
-    }
-
-    fileprivate static func rankText(_ rank: String) -> String { rank == "-" ? "순위 밖" : "\(rank)위" }
 }
 
 /// 처음 보는 칸 · 앱의 기준선을 잡는다. 저장된 허브를 다 들인 뒤에만 — 들이는 도중의 빈
@@ -636,12 +574,6 @@ struct SectionChangesBanner: View {
                     Text("외 \(items.count - Self.shownLimit)개 앱")
                         .font(.body)
                         .foregroundStyle(.secondary)
-                }
-                if section == .keywords {
-                    Text("뱃지는 1 · 3 · 10 · 30 · 100위 선을 넘어 올라선 검색어만 셉니다. 떨어진 것은 세지 않습니다.")
-                        .font(.body)
-                        .foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
                 }
             }
             .padding(12)

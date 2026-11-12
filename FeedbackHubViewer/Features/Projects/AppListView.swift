@@ -236,10 +236,15 @@ private struct AppRow: View {
 
             // 자르지 않는다 — 길면 줄을 넘긴다.
             VStack(alignment: .leading, spacing: 3) {
-                Text(name)
-                    .font(.body.weight(isSelected ? .semibold : .medium))
-                    .lineLimit(2)
-                    .fixedSize(horizontal: false, vertical: true)
+                HStack(alignment: .firstTextBaseline, spacing: 6) {
+                    Text(name)
+                        .font(.body.weight(isSelected ? .semibold : .medium))
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
+                    if let action = badge?.action {
+                        Tag(text: action, tint: badge?.tint, isCompact: true)
+                    }
+                }
                 HStack(spacing: 5) {
                     ReleaseDot(level: release)
                     Text(detail)
@@ -253,7 +258,7 @@ private struct AppRow: View {
 
             Spacer(minLength: 8)
 
-            if let badge {
+            if let badge, badge.action == nil {
                 CountBadge(count: badge.count, systemImage: badge.systemImage,
                            tint: badge.tint, name: badge.name)
             }

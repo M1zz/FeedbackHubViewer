@@ -28,6 +28,16 @@ final class NewsStore: ObservableObject {
 
     /// 새것부터.
     @Published private(set) var items: [NewsItem] = []
+    /// 소식 칸이 펼쳐 보이는 기간. 그보다 오래된 것은 "지난 소식" 으로 접어 둔다 —
+    /// 쌓인 기록이 수백 건이라 다시 볼 일이 없는 것이 화면을 덮었다.
+    static let recentDays = 7
+
+    /// 이 시각 뒤에 찾은 소식이 최근 소식이다.
+    var recentCutoff: Date {
+        let calendar = Calendar.current
+        return calendar.date(byAdding: .day, value: -Self.recentDays, to: calendar.startOfDay(for: Date())) ?? .distantPast
+    }
+
     /// 이 시각 뒤에 찾은 소식이 "새 소식" 이다. 소식 칸을 열면 옮긴다.
     @Published private(set) var lastReadAt: Date = .distantPast
     /// 소식 알림을 보낼지. 설정의 알림 스위치 아래에 따로 있다.

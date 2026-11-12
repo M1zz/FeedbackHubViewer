@@ -30,7 +30,6 @@ struct KeywordsView: View {
     @State private var addCountries: Set<String> = []
     @State private var expanded: TrackedKeyword.ID?
     @AppStorage("keywords-shows-more") private var showsMore = false
-    @ObservedObject private var changes = SectionChanges.shared
 
     var body: some View {
         ScrollView {
@@ -284,20 +283,6 @@ struct KeywordsView: View {
 
     private var standings: [KeywordStanding] { keywords.standings(for: project) }
 
-    /// 띠의 "확인" 전까지 남는, 선을 넘어 오른 검색어. 전체로 보면 어느 앱의 말인지 못 가려 비운다.
-    private var rises: [String: SectionChanges.KeywordRise] {
-        guard let project else { return [:] }
-        let all = changes.recentChanges(.keywords, project: project)
-            .flatMap { SectionChanges.keywordRises(before: $0.before, after: $0.after) }
-        return Dictionary(all.map { ($0.id, $0) }, uniquingKeysWith: { _, new in new })
-    }
-
-    /// 오른 줄이 위, 그 아래는 순위순 그대로.
-    private func ordered(_ rises: [String: SectionChanges.KeywordRise]) -> [KeywordStanding] {
-        let up = standings.filter { rises[$0.keyword.id] != nil }
-        return up + standings.filter { rises[$0.keyword.id] == nil }
-    }
-
     /// 이 검색어가 스토어에 나가 있는 메타데이터의 어디에 적혀 있나. 메타데이터를 못 읽었으면 nil.
     private func source(of keyword: TrackedKeyword) -> KeywordField.Source? {
         guard let project, let live = connect.metadata[project]?.value?.live else { return nil }
@@ -320,25 +305,19 @@ struct KeywordsView: View {
         }
     }
 
-    /// 표를 읽기 전의 한 줄 — 오른 것이 있나.
-    private func rankVerdict(_ rises: [String: SectionChanges.KeywordRise]) -> (text: String, tint: Color) {
-        if !rises.isEmpty { return ("올라선 검색어 \(rises.count)개", .green) }
-        let line = SectionChanges.topRankLine
-        let top = standings.filter { ($0.rank ?? .max) <= line }.count
+    /// 표를 읽기 전의 한 줄.
+    private var rankVerdict: String {
+        let top = standings.filter { ($0.rank ?? .max) <= 10 }.count
         let ranked = standings.filter(\.isRanked).count
-        return ("\(line)위 안 \(top)개 · 순위에 잡힌 것 \(ranked)/\(standings.count)개", .primary)
+        return "10위 안 \(top)개 · 순위에 잡힌 것 \(ranked)/\(standings.count)개"
     }
 
     private var rankCard: some View {
-        let rises = rises
-        let verdict = rankVerdict(rises)
-        let rows = ordered(rises)
         return Card(title: "키워드 순위", systemImage: "list.number") {
             VStack(alignment: .leading, spacing: 0) {
                 if project != nil {
-                    Text(verdict.text)
+                    Text(rankVerdict)
                         .font(.title3.weight(.semibold))
-                        .foregroundStyle(verdict.tint)
                         .fixedSize(horizontal: false, vertical: true)
                         .padding(.bottom, 8)
                 }
@@ -349,9 +328,8 @@ struct KeywordsView: View {
                         .font(.hubCaption).foregroundStyle(.secondary)
                         .padding(.bottom, 6)
                 }
-                ForEach(rows, id: \.keyword.id) { standing in
+                ForEach(standings, id: \.keyword.id) { standing in
                     KeywordRow(standing: standing,
-                               rise: rises[standing.keyword.id],
                                isExpanded: expanded == standing.keyword.id,
                                trackId: keywords.trackId(for: project),
                                history: keywords.history,
@@ -363,15 +341,15 @@ struct KeywordsView: View {
                     } onRemove: {
                         keywords.remove(standing.keyword, from: project)
                     }
-                    if standing.keyword.id != rows.last?.keyword.id { Divider() }
+                    if standing.keyword.id != standings.last?.keyword.id { Divider() }
                 }
-                if !rows.isEmpty {
+                if !standings.isEmpty {
                     Text("**인기**는 이 검색어를 얼마나 찾는지 — App Store 자동완성에 몇 글자 만에 뜨는지로 잽니다. **가치**는 지금 순위가 데려오는 사람 — 인기에 그 순위까지 내려오는 사람의 몫을 곱한 값입니다. 아무도 치지 않는 말의 1위는 가치 0, 많이 찾는 말의 3위가 그보다 큽니다.")
                         .font(.hubCaption).foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                         .padding(.top, 10)
                 }
-                if !rows.isEmpty {
+                if !standings.isEmpty {
                     Text("**‘N개 앞섬’** 은 검색 결과에서 내 앱보다 위에 있으면서 리뷰도 적지 않은 앱의 수입니다. 적을수록 1등에 가깝습니다.")
                         .font(.hubCaption).foregroundStyle(.secondary)
                         .padding(.top, 10)
@@ -559,8 +537,6 @@ struct KeywordsView: View {
 /// One row: the term, where it sits, which way it moved, and thirty days of it.
 private struct KeywordRow: View {
     let standing: KeywordStanding
-    /// 본 뒤 선을 넘어 올라섰으면.
-    var rise: SectionChanges.KeywordRise? = nil
     let isExpanded: Bool
     let trackId: Int?
     let history: KeywordHistory
@@ -584,9 +560,6 @@ private struct KeywordRow: View {
                         // smaller than yours can.
                         Text(subtitle).font(.hubCaption2).foregroundStyle(.secondary)
                         if let source { sourceTag(source) }
-                        if let rise {
-                            Tag(text: rise.milestone, systemImage: "arrow.up", tint: .green, font: .body)
-                        }
                     }
                     Spacer()
                     demandLabel
