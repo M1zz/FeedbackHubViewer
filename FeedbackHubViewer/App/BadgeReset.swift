@@ -56,7 +56,7 @@ enum BadgeReset {
         case .news: news.markAllRead()
         case .leads: LeadStore.shared.markViewed(project: nil)
         case .keywords:
-            SectionChanges.shared.acknowledgeDue(metrics.keywords.refreshDue(projects: SectionChanges.appKeys(metrics.store)))
+            SectionChanges.shared.acknowledgeDue(metrics.keywords.refreshDue(projects: SectionMetrics.keywordProjects(metrics.store)))
         case .release:
             SectionChanges.shared.acknowledgeRed(metrics.store.projectCounts.map(\.key), store: metrics.store)
             SectionChanges.shared.markSeen(section,

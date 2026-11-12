@@ -126,18 +126,16 @@ final class SectionChanges: ObservableObject {
 
     // MARK: - 키워드 다시 짤 때
 
-    private static func dueKey(_ entry: (project: String, days: Int), now: Date = Date()) -> String {
-        let day = Calendar.current.dateComponents([.year, .month, .day],
-                                                   from: Calendar.current.date(byAdding: .day, value: -entry.days, to: now) ?? now)
-        return "\(entry.project)|\(day.year ?? 0)-\(day.month ?? 0)-\(day.day ?? 0)"
+    private static func dueKey(_ entry: (project: String, days: Int, since: Date)) -> String {
+        "\(entry.project)|\(Int(entry.since.timeIntervalSince1970))"
     }
 
     /// 다시 짤 때가 됐는데 아직 알아보지 않은 앱 — 사이드바 뱃지가 센다.
-    func unacknowledgedDue(_ due: [(project: String, days: Int)]) -> [String] {
+    func unacknowledgedDue(_ due: [(project: String, days: Int, since: Date)]) -> [String] {
         due.filter { !acknowledgedDue.contains(Self.dueKey($0)) }.map(\.project)
     }
 
-    func acknowledgeDue(_ due: [(project: String, days: Int)]) {
+    func acknowledgeDue(_ due: [(project: String, days: Int, since: Date)]) {
         let next = acknowledgedDue.union(due.map { Self.dueKey($0) })
         guard next != acknowledgedDue else { return }
         acknowledgedDue = next
@@ -526,16 +524,25 @@ struct SectionVisitTracker: ViewModifier {
                                  quiet: SectionChanges.quiet(section, metrics: metrics))
                 if let project { changes.clearVisit(section, project: project) }
                 // 릴리즈 칸을 열어 봤으면 빨강인 앱도 알아본 것으로 — 뱃지만 지우고 판정은 남는다.
-                if section == .keywords {
-                    let projects = project.map { [$0] } ?? SectionChanges.appKeys(store)
-                    changes.acknowledgeDue(metrics.keywords.refreshDue(projects: projects))
-                }
                 if section == .release {
                     changes.noteVisited(section, counts: alerts)
                     changes.acknowledgeRed(project.map { [$0] } ?? store.projectCounts.map(\.key), store: store)
                 }
             }
+            // 키워드 칸을 열어 봤으면 다시 짤 때가 된 앱도 알아본 것으로. 말(signatures)이 없는
+            // 칸이라 따로 — 켜자마자 열린 채면 키워드를 다 읽기 전이라, 목록이 바뀔 때마다 다시 적는다.
+            .onChange(of: dueKeys, initial: true) {
+                guard isActive, section == .keywords else { return }
+                SectionChanges.shared.acknowledgeDue(due)
+            }
     }
+
+    private var due: [(project: String, days: Int, since: Date)] {
+        guard section == .keywords else { return [] }
+        return metrics.keywords.refreshDue(projects: project.map { [$0] } ?? SectionMetrics.keywordProjects(store))
+    }
+
+    private var dueKeys: [String] { due.map { "\($0.project)|\($0.since.timeIntervalSince1970)" } }
 
     private func leave() {
         if isActive { SectionChanges.shared.leaveVisit(except: section) }

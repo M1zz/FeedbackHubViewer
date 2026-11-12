@@ -105,10 +105,11 @@ extension KeywordStore {
     }
 
     /// 다시 짤 때가 된 앱 — 순위를 보는 칸이 하나라도 두 주를 넘겼다. 오래된 것부터.
-    func refreshDue(projects: [String], now: Date = Date()) -> [(project: String, days: Int)] {
+    /// `since` 는 그 칸을 바꾼 때 — 다시 짜기 전까지 변하지 않아 "알아봤다" 를 적는 열쇠가 된다.
+    func refreshDue(projects: [String], now: Date = Date()) -> [(project: String, days: Int, since: Date)] {
         projects.compactMap { project in
-            let settled = refreshStates(for: project, now: now).filter(\.isSettled)
-            return settled.map(\.days).max().map { (project, $0) }
+            let oldest = refreshStates(for: project, now: now).filter(\.isSettled).max { $0.days < $1.days }
+            return oldest.map { (project, $0.days, $0.current.seenAt) }
         }
         .sorted { $0.days > $1.days }
     }

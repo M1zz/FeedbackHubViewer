@@ -29,6 +29,11 @@ struct SectionMetrics {
         var signatures: [String: [String: String]] = [:]
     }
 
+    /// 키워드 뱃지가 보는 앱 — 뱃지 · 열어 봄 · 모두 읽기가 같은 앱들을 봐야 센 것이 지워진다.
+    static func keywordProjects(_ store: FeedbackStore) -> [String] {
+        store.allProjectKeys.filter { $0 != Feedback.unclassifiedProject && !store.hiddenProjects.contains($0) }
+    }
+
     static func memoKey(_ section: FeedbackStore.ProjectSection, _ project: String?) -> String {
         "\(section.rawValue)|\(project ?? "\u{1}")"
     }
@@ -100,8 +105,7 @@ struct SectionMetrics {
             return Badge(count: count, systemImage: "stethoscope", tint: .red, name: "바뀌었거나 빨강인 앱")
         case .keywords:
             // 손볼 것은 하나 — 키워드 칸을 바꾼 지 두 주가 지나 다시 짤 때가 된 앱(`KeywordRefreshCard`).
-            let projects = project.map { [$0] }
-                ?? store.allProjectKeys.filter { $0 != Feedback.unclassifiedProject && !store.hiddenProjects.contains($0) }
+            let projects = project.map { [$0] } ?? Self.keywordProjects(store)
             // 앱 한 줄에는 때가 된 동안 늘 "다시 짤 때", 사이드바 숫자는 아직 알아보지 않은 앱만
             // — 칸을 열어 보면 지워지고, 새로 때가 된 앱이 생겨야 다시 선다.
             let due = keywords.refreshDue(projects: projects)
