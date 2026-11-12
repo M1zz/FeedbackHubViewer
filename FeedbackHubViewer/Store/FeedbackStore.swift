@@ -640,7 +640,10 @@ final class FeedbackStore: ObservableObject {
     /// end — so an unordered read handed back an arbitrary slice of the stream
     /// and the rest was never asked for again. Reads are uncapped now; what is
     /// bounded is what this device *keeps*.
-    /// 릴리즈 건강 카드가 "원본이 창 끝까지 남아 있나"를 따지려고 읽는다.
+    ///
+    /// 릴리즈 판정 창(`ReleaseHealth.windowDays`) 안의 원본에는 걸지 않는다. 예전에는 허브 전체에
+    /// 걸려서, 하루 수백 건을 보내는 앱 둘이 5,000건을 7일 만에 채우고 다른 앱의 앞 7일까지 밀어냈다.
+    /// 그러면 릴리즈 판정이 14일이 아니라 7일로 설치를 세어 "판단할 수 없음"이 늘었다.
     nonisolated static let eventLimit = 5000
     /// Diagnostics are read whole and are small; this is the only cap they get
     /// — again on what is kept, applied after the merge.
@@ -825,6 +828,13 @@ final class FeedbackStore: ObservableObject {
         if watermarks[CloudKitService.eventRecordType] != nil {
             usageKnown[CloudKitService.eventRecordType] = rollups.knownEventIDs()
         }
+        // 원본이 릴리즈 창 시작까지 닿지 않으면(예전 상한에 잘려 나간 날들) 이벤트는 창 시작부터,
+        // 아는 기록에서 멈추지 않고 다시 읽는다. 아는 기록에서 멈추는 읽기로는 잘린 앞쪽이 영영
+        // 돌아오지 않는다. 겹치는 기록은 ID 로 합쳐지고, 접기도 같은 ID 를 두 번 세지 않는다.
+        if readsNumbers, let start = rawEventCoverageStart, start > Self.releaseWindowStart() {
+            usageKnown[CloudKitService.eventRecordType] = nil
+            usageSince[CloudKitService.eventRecordType] = Self.releaseWindowStart()
+        }
         if isIncremental, watermarks[CloudKitService.crashRecordType] != nil {
             usageKnown[CloudKitService.crashRecordType] = Set(fetchedCrashes.map(\.id))
         }
@@ -944,14 +954,21 @@ final class FeedbackStore: ObservableObject {
     }
 
     /// The slice of the event stream kept as individual records, newest first.
+    /// 릴리즈 판정 창 안은 통째로, 그보다 오래된 쪽만 `eventLimit` 까지.
     private nonisolated static func withinRetention(_ events: [UsageEvent],
                                         calendar: Calendar = .current,
                                         now: Date = Date()) -> [UsageEvent] {
-        guard let cutoff = calendar.date(byAdding: .day, value: -rawEventRetentionDays,
-                                         to: calendar.startOfDay(for: now)) else {
-            return Array(events.prefix(eventLimit))
-        }
-        return Array(events.filter { $0.occurredAt >= cutoff }.prefix(eventLimit))
+        let windowStart = releaseWindowStart(now: now)
+        let cutoff = calendar.date(byAdding: .day, value: -rawEventRetentionDays,
+                                   to: calendar.startOfDay(for: now)) ?? windowStart
+        let recent = events.filter { $0.occurredAt >= windowStart }
+        let older = events.filter { $0.occurredAt < windowStart && $0.occurredAt >= cutoff }
+        return recent + older.prefix(eventLimit)
+    }
+
+    /// 릴리즈 판정 창의 시작. 이 뒤의 원본은 이 기기가 빠짐없이 들고 있어야 한다.
+    nonisolated static func releaseWindowStart(now: Date = Date()) -> Date {
+        now.addingTimeInterval(-Double(ReleaseHealth.windowDays) * 86_400)
     }
 
     /// A cheap stand-in for "did any install's numbers move". Coarse on

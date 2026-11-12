@@ -31,12 +31,11 @@ extension FeedbackStore {
         }
     }
 
-    /// 원본 이벤트 보관 상한에 걸렸을 때, 남아 있는 가장 오래된 시각. 상한은 앱별이
-    /// 아니라 허브 전체에 걸리므로, 이 시각 앞의 이벤트는 **어느 앱이든** 이 기기에 없다.
-    /// 상한에 안 걸렸으면 nil (보관 기간 90일은 창 14일보다 길다).
+    /// 이 기기가 들고 있는 가장 오래된 원본 이벤트 시각. 이 앞의 이벤트는 **어느 앱이든** 없다.
+    /// 릴리즈 창 시작보다 늦으면 창 앞쪽이 빠진 것이라, 판정이 그 사실을 적고
+    /// 다음 숫자 새로고침이 창 시작부터 다시 읽는다(`load(mode:parts:)`).
     var rawEventCoverageStart: Date? {
-        guard fetchedEvents.count >= Self.eventLimit else { return nil }
-        return fetchedEvents.map(\.occurredAt).min()
+        fetchedEvents.map(\.occurredAt).min()
     }
 
     /// 목록 점의 색. 잴 수 없으면 nil 이라 점이 안 뜬다(초록으로 칠하지 않는다).

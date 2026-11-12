@@ -403,7 +403,7 @@ struct ReleaseHealthCard: View {
             note("크래시 보고는 MetricKit이 하루쯤 늦게, 일부만 보냅니다. 오늘 낸 버전의 크래시는 내일에야 보입니다. 설치 ID가 없어 크래시 없는 설치 비율에는 안 들어가고, 그 비율은 불안정 이벤트(\(report.spec.stabilityEvents.joined(separator: ", ")))를 보낸 설치로만 셉니다.")
             note("통계 고르개(전체 · 유료 · 무료)와 무관하게 언제나 전체 기준입니다.")
             if let start = report.coverageStart {
-                note("이 기기에는 원본 이벤트가 \(AppFormat.dateTime(start))부터만 남아 있습니다(보관 상한 \(AppFormat.count(FeedbackStore.eventLimit))건). 그 앞의 활동은 빠진 채로 셌습니다.")
+                note("이 기기에는 원본 이벤트가 \(AppFormat.dateTime(start))부터만 있어, 그 앞의 활동은 빠진 채로 셌습니다. 숫자를 새로고침하면 창 시작까지 다시 받습니다.")
             }
             if report.eventsWithoutInstall > 0 {
                 note("설치 ID가 없는 이벤트 \(AppFormat.count(report.eventsWithoutInstall))건은 설치로 셀 수 없어 뺐습니다.")
