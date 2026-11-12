@@ -89,10 +89,10 @@ struct ReviewResponseSheet: View {
                 CopyButton(text: review.fullText, isCompact: true)
             }
             if let title = review.title, !title.isEmpty {
-                Text(title).font(.headline)
+                KoreanText(title).font(.headline)
             }
             if let body = review.body, !body.isEmpty {
-                Text(body)
+                KoreanText(body)
                     .font(.body)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -101,8 +101,7 @@ struct ReviewResponseSheet: View {
                     .font(.hubCaption)
                     .foregroundStyle(.secondary)
             }
-            TranslateToKoreanView(text: review.fullText)
-                .font(.hubCallout)
+            TranslationFooter([review.title, review.body])
         }
         .textSelection(.enabled)
         .frame(maxWidth: .infinity, alignment: .leading)

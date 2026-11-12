@@ -20,6 +20,8 @@ struct ContentView: View {
         layout
             // 개발 빌드는 강조색부터 다르다(`EnvironmentBadge.swift`).
             .environmentTint()
+            // 리뷰 · 피드백을 한국어로 옮기는 세션이 도는 자리(`KoreanTranslator`).
+            .koreanTranslationHost()
             // A refresh writes what it has read every few seconds; this is what
             // keeps the last few from being lost when the app is quit or —
             // on a phone, which is most of the time — switched away from

@@ -275,14 +275,15 @@ struct InboxView: View {
                     .lineLimit(1)
             }
             if let title = review.title, !title.isEmpty {
-                Text(title)
+                KoreanText(title)
                     .font(.headline)
             }
             if let body = review.body, !body.isEmpty {
-                Text(body)
+                KoreanText(body)
                     .font(.body)
                     .lineLimit(3)
             }
+            TranslationFooter([review.title, review.body])
             HStack {
                 Text(review.territoryName)
                     .font(.body)

@@ -46,13 +46,13 @@ struct FeedbackDetailView: View {
                     section(title: "내용", accessory: {
                         CopyButton(text: feedback.text, title: "내용 복사")
                     }) {
-                        Text(feedback.text)
+                        // Feedback comes in whatever language its writer speaks;
+                        // it is shown in Korean, with the original one tap away.
+                        KoreanText(feedback.text)
                             .font(.title3)
                             .textSelection(.enabled)
                             .frame(maxWidth: .infinity, alignment: .leading)
-                        // Feedback comes in whatever language its writer speaks;
-                        // this puts Korean under it without leaving the app.
-                        TranslateToKoreanView(text: feedback.text)
+                        TranslationFooter([feedback.text])
                     }
                 }
 

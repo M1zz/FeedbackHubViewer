@@ -181,6 +181,7 @@ struct PhoneOverviewView: View {
                 return Finding.Item(id: "review|\(review.id)", title: name(entry.project),
                                     meta: "\(stars) · \(review.territoryName) · \(AppFormat.relative(review.createdDate))",
                                     lines: text, emphasizesFirstLine: review.title?.isEmpty == false,
+                                    translatesLines: true,
                                     route: .project(entry.project, .reviews))
             }
             result.append(Finding(section: .reviews, badge: badge, items: items))
@@ -198,6 +199,7 @@ struct PhoneOverviewView: View {
                 if feedback.createdAt != nil { meta.append(feedback.createdAtRelative) }
                 return Finding.Item(id: "feedback|\(feedback.id)", title: name(feedback.projectKey),
                                     meta: meta.joined(separator: " · "), lines: [feedback.text.trimmed],
+                                    translatesLines: true,
                                     route: .feedback(feedback))
             }
             result.append(Finding(section: .feedback, badge: badge, items: items))
@@ -563,6 +565,8 @@ fileprivate struct Finding: Identifiable {
         /// 그 일의 본문 — 피드백 글, 리뷰 제목과 본문, 판정 까닭, 바뀐 숫자.
         let lines: [String]
         var emphasizesFirstLine = false
+        /// 남이 쓴 글(리뷰 · 피드백)이라 한국어로 옮겨 보여 줄 것.
+        var translatesLines = false
         let route: Route
     }
 
@@ -636,6 +640,15 @@ private struct FindingCard: View {
 private struct ItemRow: View {
     let item: Finding.Item
 
+    @ViewBuilder
+    private func lineText(_ line: String) -> some View {
+        if item.translatesLines {
+            KoreanText(line)
+        } else {
+            Text(line)
+        }
+    }
+
     var body: some View {
         HStack(alignment: .top, spacing: 8) {
             VStack(alignment: .leading, spacing: 4) {
@@ -650,7 +663,7 @@ private struct ItemRow: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 ForEach(Array(item.lines.enumerated()), id: \.offset) { index, line in
-                    Text(line)
+                    lineText(line)
                         .font(index == 0 && item.emphasizesFirstLine ? .body.weight(.semibold) : .body)
                         .foregroundStyle(.primary)
                         .fixedSize(horizontal: false, vertical: true)

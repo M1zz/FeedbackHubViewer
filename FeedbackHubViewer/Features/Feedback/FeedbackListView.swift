@@ -502,7 +502,7 @@ struct FeedbackRow: View {
                     .lineLimit(1)
             }
 
-            Text(feedback.snippet)
+            KoreanText(feedback.snippet)
                 .font(.body)
                 .fontWeight(isUnread ? .semibold : .regular)
                 .lineLimit(snippetLineLimit)
