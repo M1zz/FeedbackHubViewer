@@ -125,17 +125,12 @@ struct PhoneOverviewView: View {
         var result: [Finding] = []
         let name = store.displayName(for:)
 
-        // 릴리즈 — 바뀌었거나 아직 안 본 빨강인 앱의 판정 까닭.
+        // 릴리즈 — 아직 안 본 빨강인 앱의 판정 까닭.
         if let badge = metrics.badge(.release, project: nil) {
-            let alerts = SectionChanges.shared.releaseAlerts(metrics: metrics)
-            let changed = Dictionary(SectionChanges.shared.pendingLines(.release, metrics: metrics)
-                .map { ($0.project, $0.lines) }, uniquingKeysWith: { a, _ in a })
-            let apps = alerts.filter { $0.value > 0 }.map(\.key)
-                .sorted { (store.releaseLevel(for: $0)?.rawValue ?? -1) > (store.releaseLevel(for: $1)?.rawValue ?? -1) }
+            let apps = SectionChanges.shared.releaseAlerts(metrics: metrics).keys.sorted()
             let items = apps.map { project -> Finding.Item in
                 let report = store.releaseHealth(for: project)
-                var lines = changed[project] ?? []
-                lines += report?.verdict.reasons.prefix(3) ?? []
+                let lines = Array(report?.verdict.reasons.prefix(3) ?? [])
                 var meta = [String]()
                 if let level = store.releaseLevel(for: project) { meta.append(level.label) }
                 if let version = report?.latest.version { meta.append(version) }
