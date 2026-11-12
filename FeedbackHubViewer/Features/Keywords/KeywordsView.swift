@@ -371,8 +371,8 @@ struct KeywordsView: View {
                         .fixedSize(horizontal: false, vertical: true)
                         .padding(.top, 10)
                 }
-                if standings.contains(where: { $0.blockers != nil }) {
-                    Text("각 줄의 **‘N개 앞섬’** 은 위에 있는 앱 중 내 앱보다 리뷰가 많은 것의 수 — 18위인데 위 17개 중 7개가 나보다 작으면 실제로는 10개 뒤입니다. 순위가 낮아도 앞선 앱이 적으면 그쪽이 더 가깝습니다.")
+                if !rows.isEmpty {
+                    Text("**‘N개 앞섬’** 은 검색 결과에서 내 앱보다 위에 있으면서 리뷰도 적지 않은 앱의 수입니다. 적을수록 1등에 가깝습니다.")
                         .font(.hubCaption).foregroundStyle(.secondary)
                         .padding(.top, 10)
                 }
@@ -590,12 +590,11 @@ private struct KeywordRow: View {
                     }
                     Spacer()
                     demandLabel
-                    blockerLabel
                     if showsSparkline {
                         RankSparkline(values: standing.recent).frame(width: 72, height: 22)
                     }
                     deltaLabel
-                    rankLabel
+                    blockerLabel
                 }
                 .contentShape(Rectangle())
             }
@@ -658,38 +657,24 @@ private struct KeywordRow: View {
         return Tag(text: text, systemImage: image, tint: tint, isCompact: true)
     }
 
-    private var subtitle: String {
-        let country = Storefront.name(for: standing.keyword.country)
-        guard let rank = standing.rank, rank > 1, let weaker = standing.weakerAbove else { return country }
-        return "\(country) · 위 \(rank - 1)개 중 \(weaker)개가 내 앱보다 리뷰 적음"
-    }
+    private var subtitle: String { Storefront.name(for: standing.keyword.country) }
 
-    /// How many apps above this one are not smaller than it — the honest
-    /// distance to the top, next to the raw rank rather than in place of it.
-    @ViewBuilder
+    /// 순위 숫자 대신 이것 하나 — 내 앞에 있으면서 나보다 작지 않은 앱 수. 18위여도 위 17개 중
+    /// 7개가 나보다 작으면 넘어야 할 것은 10개다. 리뷰 수를 아직 못 읽었으면 위에 있는 앱 수 그대로.
     private var blockerLabel: some View {
-        if let blockers = standing.blockers, standing.rank ?? 0 > 1 {
-            Text(blockers == 0 ? "앞에 없음" : "\(blockers)개 앞섬")
-                .font(.hubCaption2.weight(.semibold))
-                .foregroundStyle(blockers <= 2 ? .green : (blockers <= 10 ? .orange : .secondary))
-                .frame(width: 62, alignment: .trailing)
-        } else {
-            Color.clear.frame(width: 62, height: 1)
-        }
-    }
-
-    private var rankLabel: some View {
         Group {
             if let rank = standing.rank {
-                Text("\(rank)위")
-                    .font(.body.weight(.semibold).monospacedDigit())
+                let blockers = standing.blockers ?? (rank - 1)
+                Text(blockers == 0 ? "앞에 없음" : "\(blockers)개 앞섬")
+                    .font(.hubCallout.weight(.semibold).monospacedDigit())
+                    .foregroundStyle(blockers <= 2 ? .green : (blockers <= 10 ? .orange : .secondary))
             } else {
                 Text("안 잡힘")
                     .font(.hubCaption)
                     .foregroundStyle(.secondary)
             }
         }
-        .frame(width: 56, alignment: .trailing)
+        .frame(width: 76, alignment: .trailing)
     }
 
     /// 시세판처럼 — 30위에서 12위로 오르면 빨강 ▲18, 내리면 파랑 ▼(`RankMoveLabel`).

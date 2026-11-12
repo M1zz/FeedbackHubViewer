@@ -96,6 +96,12 @@ struct SectionMetrics {
             let count = project.map { alerts[$0] ?? 0 } ?? alerts.values.reduce(0, +)
             guard count > 0 else { return nil }
             return Badge(count: count, systemImage: "stethoscope", tint: .red, name: "바뀌었거나 빨강인 앱")
+        case .keywords:
+            // 손볼 것은 하나 — 키워드 칸을 바꾼 지 두 주가 지나 다시 짤 때가 된 앱(`KeywordRefreshCard`).
+            let projects = project.map { [$0] }
+                ?? store.allProjectKeys.filter { $0 != Feedback.unclassifiedProject && !store.hiddenProjects.contains($0) }
+            let due = keywords.refreshDue(projects: projects).count
+            return due > 0 ? Badge(count: due, systemImage: "arrow.triangle.2.circlepath", tint: .orange, name: "키워드 다시 짤 앱") : nil
         default:
             return nil
         }
@@ -294,9 +300,9 @@ struct SectionMetrics {
             guard !standings.isEmpty else { return "추적 중인 키워드 없음" }
             guard project != nil else { return "키워드 \(standings.count)개 추적 중 · 앱을 골라 순위를 봅니다" }
             let ranked = standings.filter(\.isRanked)
-            let best = ranked.compactMap(\.rank).min()
+            let clear = ranked.filter { ($0.blockers ?? ($0.rank ?? 1) - 1) == 0 }.count
             var text = "키워드 \(standings.count)개 · \(ranked.count)개 잡힘"
-            if let best { text += " · 최고 \(best)위" }
+            if clear > 0 { text += " · 앞에 없음 \(clear)개" }
             return text
         case .charts:
             guard let scan = charts.history.lastScan else { return "국가별 App Store 인기 차트 상위 100위" }
