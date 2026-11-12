@@ -10,6 +10,7 @@
 
 import SwiftUI
 import ImageIO
+import UniformTypeIdentifiers
 #if os(macOS)
 import AppKit
 #else
@@ -106,16 +107,20 @@ struct FeedbackScreenshotStrip: View {
             VStack(alignment: .leading, spacing: 6) {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: height > 100 ? 12 : 8) {
-                        ForEach(files, id: \.self) { url in
-                            Button { open(url) } label: {
-                                FileImage(url: url, maxPixel: height * 3)
-                                    .frame(height: height)
-                                    .clipShape(RoundedRectangle(cornerRadius: height > 100 ? 8 : 6))
-                                    .overlay(RoundedRectangle(cornerRadius: height > 100 ? 8 : 6)
-                                        .strokeBorder(Color.secondary.opacity(0.25)))
+                        ForEach(Array(files.enumerated()), id: \.element) { index, url in
+                            VStack(alignment: .leading, spacing: 6) {
+                                Button { open(url) } label: {
+                                    FileImage(url: url, maxPixel: height * 3)
+                                        .frame(height: height)
+                                        .clipShape(RoundedRectangle(cornerRadius: height > 100 ? 8 : 6))
+                                        .overlay(RoundedRectangle(cornerRadius: height > 100 ? 8 : 6)
+                                            .strokeBorder(Color.secondary.opacity(0.25)))
+                                }
+                                .buttonStyle(.plain)
+                                .help("크게 보기")
+                                // 상세에서만 — 목록 줄의 작은 띠에는 단추를 두지 않는다.
+                                if showsStatus { download(url, index: index) }
                             }
-                            .buttonStyle(.plain)
-                            .help("크게 보기")
                         }
                     }
                 }
@@ -127,6 +132,35 @@ struct FeedbackScreenshotStrip: View {
             }
         }
     }
+
+    /// 사진 한 장 내려받기. 맥은 저장 위치를 고르고, 아이폰은 공유 시트(사진에 저장 · 파일에 저장).
+    @ViewBuilder
+    private func download(_ url: URL, index: Int) -> some View {
+        #if os(macOS)
+        Button {
+            save(url, index: index)
+        } label: {
+            Label("다운로드", systemImage: "arrow.down.circle")
+        }
+        .buttonStyle(.borderless)
+        #else
+        ShareLink(item: url) {
+            Label("저장", systemImage: "square.and.arrow.down")
+        }
+        #endif
+    }
+
+    #if os(macOS)
+    private func save(_ url: URL, index: Int) {
+        let panel = NSSavePanel()
+        panel.allowedContentTypes = [.jpeg]
+        let day = (feedback.createdAt ?? Date()).formatted(.iso8601.year().month().day())
+        panel.nameFieldStringValue = "\(feedback.appName ?? "피드백")-\(day)-\(index + 1).jpg"
+        guard panel.runModal() == .OK, let destination = panel.url else { return }
+        try? FileManager.default.removeItem(at: destination)
+        try? FileManager.default.copyItem(at: url, to: destination)
+    }
+    #endif
 
     private func open(_ url: URL) {
         #if os(macOS)
