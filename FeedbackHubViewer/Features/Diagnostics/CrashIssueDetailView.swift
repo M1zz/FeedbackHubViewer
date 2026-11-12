@@ -35,20 +35,9 @@ struct CrashIssueDetailView: View {
             List {
                 Section { header }
 
-                Section("언제") { timing }
-
-                if !issue.isLegacy {
-                    Section {
-                        stack
-                    } header: {
-                        HStack {
-                            Text("콜스택").textCase(nil)
-                            Spacer()
-                            Text("0번이 죽은 자리")
-                                .font(.hubCaption2)
-                                .foregroundStyle(HierarchicalShapeStyle.hubFaint)
-                        }
-                    }
+                Section("언제") {
+                    DiagnosticsTrendChart(reports: issue.reports)
+                    timing
                 }
 
                 Section("어디서") { distributions }
@@ -64,6 +53,13 @@ struct CrashIssueDetailView: View {
                     }
                 } header: {
                     Text("개별 진단 \(issue.count)건").textCase(nil)
+                }
+
+                // 콜스택은 고치는 쪽(Claude Code)이 읽는 것 — 기본은 접어 둔다.
+                if !issue.isLegacy {
+                    Section {
+                        DisclosureGroup("콜스택 (0번이 죽은 자리)") { stack }
+                    }
                 }
             }
             .hubListStyle()
@@ -108,6 +104,16 @@ struct CrashIssueDetailView: View {
                 .font(.hubCallout)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
+
+            // 콜스택을 직접 읽지 않는다 — 앱 리포에서 연 Claude Code 에 이 글을 붙이면
+            // dSYM 으로 함수 이름을 되돌려 원인을 찾고 고친다.
+            Button {
+                Platform.copyToPasteboard(copyText)
+            } label: {
+                Label("Claude Code 에 맡길 글 복사", systemImage: "doc.on.doc")
+            }
+            .buttonStyle(.borderedProminent)
+            .help("앱 리포에서 연 Claude Code 에 붙여넣으면 함수 이름으로 되돌려 원인을 찾고 고칩니다")
 
             HStack(spacing: 16) {
                 // 통계·진단 화면의 다른 숫자들과 같은 차례: 이름이 위, 값이 아래.

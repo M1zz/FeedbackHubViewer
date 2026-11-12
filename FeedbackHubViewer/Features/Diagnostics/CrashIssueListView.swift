@@ -12,6 +12,7 @@
 //
 
 import SwiftUI
+import Charts
 
 struct CrashIssueListView: View {
     @EnvironmentObject private var store: FeedbackStore
@@ -41,7 +42,13 @@ struct CrashIssueListView: View {
                 }
             } else {
                 List {
-                    Section { headline(all) }
+                    Section {
+                        headline(all)
+                        DiagnosticsTrendChart(reports: all.flatMap(\.reports))
+                        if project == nil {
+                            DiagnosticsByAppChart(issues: all)
+                        }
+                    }
 
                     if causeChips(of: all).count > 1 {
                         Section("원인") { chips(of: all) }
@@ -158,11 +165,9 @@ struct CrashIssueRow: View {
                     .foregroundStyle(HierarchicalShapeStyle.hubFaint)
             }
 
-            Text(issue.shape)
-                .font(.hubCaption2.monospaced())
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
-                .truncationMode(.middle)
+            DailyBars(counts: issue.daily())
+                .frame(height: 18)
+                .accessibilityLabel("최근 14일 하루 건수")
 
             HStack(spacing: 6) {
                 if let projectLabel {
@@ -205,5 +210,145 @@ struct CrashIssueRow: View {
         }
         .padding(.vertical, 6)
         .contentShape(Rectangle())
+    }
+}
+
+// MARK: - 그림
+
+/// 진단의 종류를 셋으로 — 그래프 색이 셋을 넘으면 읽히지 않는다.
+private enum DiagnosticKind: String, CaseIterable, Plottable {
+    case crash = "크래시"
+    case hang = "멈춤"
+    case other = "기타"
+
+    init(_ kind: String) {
+        switch kind {
+        case "crash": self = .crash
+        case "hang": self = .hang
+        default: self = .other
+        }
+    }
+
+    var color: Color {
+        switch self {
+        case .crash: return .red
+        case .hang: return .orange
+        case .other: return .gray
+        }
+    }
+}
+
+/// 최근 30일, 하루에 몇 건 났나 — 크래시 · 멈춤 · 기타로 쌓아서. 늘고 있는지가 한눈에.
+struct DiagnosticsTrendChart: View {
+    let reports: [CrashReport]
+    private let days = 30
+
+    private struct Day: Identifiable {
+        let date: Date
+        let kind: DiagnosticKind
+        let count: Int
+        var id: String { "\(date.timeIntervalSince1970)|\(kind.rawValue)" }
+    }
+
+    private var series: [Day] {
+        let calendar = Calendar.current
+        let start = calendar.date(byAdding: .day, value: -(days - 1), to: calendar.startOfDay(for: Date())) ?? Date()
+        var counts: [Date: [DiagnosticKind: Int]] = [:]
+        for report in reports {
+            guard let date = report.happenedAt, date >= start else { continue }
+            counts[calendar.startOfDay(for: date), default: [:]][DiagnosticKind(report.kind), default: 0] += 1
+        }
+        return counts.flatMap { day, kinds in kinds.map { Day(date: day, kind: $0.key, count: $0.value) } }
+    }
+
+    var body: some View {
+        let series = series
+        VStack(alignment: .leading, spacing: 6) {
+            Text("최근 \(days)일, 하루에 난 진단")
+                .font(.headline)
+            if series.isEmpty {
+                Text("최근 \(days)일에는 없습니다.")
+                    .font(.body)
+                    .foregroundStyle(.green)
+            } else {
+                Chart(series) { day in
+                    BarMark(x: .value("날", day.date, unit: .day),
+                            y: .value("건수", day.count))
+                        .foregroundStyle(by: .value("종류", day.kind))
+                }
+                .chartForegroundStyleScale(domain: DiagnosticKind.allCases,
+                                           range: DiagnosticKind.allCases.map(\.color))
+                .chartXAxis {
+                    AxisMarks(values: .stride(by: .day, count: 7)) {
+                        AxisGridLine()
+                        AxisValueLabel(format: .dateTime.month(.defaultDigits).day())
+                    }
+                }
+                .frame(height: 140)
+            }
+        }
+        .padding(.vertical, 4)
+    }
+}
+
+/// 최근 7일, 어느 앱에서 많이 났나 — 전체 앱으로 볼 때만.
+struct DiagnosticsByAppChart: View {
+    @EnvironmentObject private var store: FeedbackStore
+    let issues: [CrashIssue]
+
+    private struct AppCount: Identifiable {
+        let name: String
+        let kind: DiagnosticKind
+        let count: Int
+        var id: String { name + kind.rawValue }
+    }
+
+    var body: some View {
+        let weekAgo = Date().addingTimeInterval(-7 * 86_400)
+        var byApp: [String: [DiagnosticKind: Int]] = [:]
+        for report in issues.flatMap(\.reports) where (report.happenedAt ?? .distantPast) >= weekAgo {
+            byApp[report.projectKey, default: [:]][DiagnosticKind(report.kind), default: 0] += 1
+        }
+        let top = byApp.sorted { $0.value.values.reduce(0, +) > $1.value.values.reduce(0, +) }.prefix(8)
+        let rows = top.flatMap { key, kinds in
+            kinds.map { AppCount(name: store.displayName(for: key), kind: $0.key, count: $0.value) }
+        }
+        return Group {
+            if !rows.isEmpty {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("최근 7일, 앱마다")
+                        .font(.headline)
+                    Chart(rows) { row in
+                        BarMark(x: .value("건수", row.count),
+                                y: .value("앱", row.name))
+                            .foregroundStyle(by: .value("종류", row.kind))
+                    }
+                    .chartForegroundStyleScale(domain: DiagnosticKind.allCases,
+                                               range: DiagnosticKind.allCases.map(\.color))
+                    .chartYScale(domain: top.map { store.displayName(for: $0.key) })
+                    .frame(height: CGFloat(top.count) * 26 + 30)
+                }
+                .padding(.vertical, 4)
+            }
+        }
+    }
+}
+
+/// 이슈 한 줄의 작은 막대 — 최근 14일 하루 건수. 아직 나는지, 늘고 있는지.
+struct DailyBars: View {
+    let counts: [Int]
+
+    var body: some View {
+        let peak = max(counts.max() ?? 0, 1)
+        HStack(alignment: .bottom, spacing: 2) {
+            ForEach(Array(counts.enumerated()), id: \.offset) { index, count in
+                RoundedRectangle(cornerRadius: 1.5)
+                    .fill(count == 0 ? AnyShapeStyle(Color.secondary.opacity(0.18))
+                                     : AnyShapeStyle(index >= counts.count - 7 ? Color.red : Color.red.opacity(0.45)))
+                    .frame(width: 6)
+                    .frame(height: count == 0 ? 2 : max(4, 18 * CGFloat(count) / CGFloat(peak)))
+            }
+        }
+        .frame(maxHeight: .infinity, alignment: .bottom)
     }
 }

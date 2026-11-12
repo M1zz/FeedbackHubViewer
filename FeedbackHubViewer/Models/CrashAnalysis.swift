@@ -81,11 +81,12 @@ extension CrashReport {
 
         var label: String {
             switch self {
-            case .watchdogTerminate: return "워치독: 종료 지연"
-            case .watchdogScene:     return "워치독: 화면 갱신 지연"
-            case .watchdogOther:     return "워치독: 기타"
+            // 시스템이 죽인 것(워치독)과 앱이 스스로 죽은 것(신호)을 개발 용어 없이.
+            case .watchdogTerminate: return "닫을 때 멈춰 강제 종료"
+            case .watchdogScene:     return "화면을 못 그려 강제 종료"
+            case .watchdogOther:     return "오래 멈춰 강제 종료"
             case .memory:            return "메모리 부족"
-            case .signal:            return "신호"
+            case .signal:            return "크래시"
             case .hang:              return "멈춤"
             case .diskWrite:         return "디스크 쓰기"
             case .unknown:           return "분류 안 됨"
