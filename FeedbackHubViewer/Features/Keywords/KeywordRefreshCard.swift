@@ -99,11 +99,12 @@ struct KeywordRefreshOverviewCard: View {
     @EnvironmentObject private var store: FeedbackStore
     @EnvironmentObject private var keywords: KeywordStore
     @EnvironmentObject private var charts: ChartStore
+    @State private var copied = false
 
     var body: some View {
         let projects = store.allProjectKeys.filter { $0 != Feedback.unclassifiedProject && !store.hiddenProjects.contains($0) }
         let due = keywords.refreshDue(projects: projects)
-        let watched = projects.filter { !keywords.refreshStates(for: $0).isEmpty }
+        let watched = projects.filter { !keywords.refreshStates(for: $0, withRanks: false).isEmpty }
         Card(title: "키워드 다시 짜기", systemImage: "arrow.triangle.2.circlepath") {
             if watched.isEmpty {
                 Text("스토어에 걸린 키워드 칸을 아직 읽지 못했습니다. App Store Connect 키가 있으면 하루 한 번 모든 앱의 칸을 읽습니다.")
@@ -138,12 +139,19 @@ struct KeywordRefreshOverviewCard: View {
                     .buttonStyle(.plain)
                 }
                 HStack(spacing: 8) {
-                    CopyButton(text: KeywordRefreshPrompt.make(due.map { entry in
-                        KeywordRefreshCard.promptApp(entry.project,
-                                                     states: keywords.refreshStates(for: entry.project),
-                                                     store: store, keywords: keywords, charts: charts)
-                    }), title: "\(due.count)개 한꺼번에 맡길 글 복사")
-                        .buttonStyle(.borderedProminent)
+                    // 글은 누를 때 짓는다 — 앱마다 모든 검색어의 순위를 훑어 그릴 때마다 지으면 무겁다.
+                    Button {
+                        Platform.copyToPasteboard(KeywordRefreshPrompt.make(due.map { entry in
+                            KeywordRefreshCard.promptApp(entry.project,
+                                                         states: keywords.refreshStates(for: entry.project),
+                                                         store: store, keywords: keywords, charts: charts)
+                        }))
+                        copied = true
+                    } label: {
+                        Label(copied ? "복사됨" : "\(due.count)개 한꺼번에 맡길 글 복사",
+                              systemImage: copied ? "checkmark" : "doc.on.doc")
+                    }
+                    .buttonStyle(.borderedProminent)
                     Text("~/Documents/workspace/Auto 에서 연 Claude 에 붙여넣으면 앱마다 레포를 찾아 키워드 줄을 고칩니다.")
                         .font(.body)
                         .foregroundStyle(.secondary)

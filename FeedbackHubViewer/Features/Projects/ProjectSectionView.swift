@@ -26,6 +26,9 @@ struct ProjectSectionView: View {
     @Binding var selection: Feedback.ID?
     /// 이 화면을 열 때 새것이던 진단 · 리뷰 — "앱|칸" 과 함께. 줄마다 "새" 를 남긴다.
     @State private var fresh: (key: String, ids: Set<String>) = ("", [])
+    /// 그려 둔 화면의 "앱|칸". 다르면 먼저 로딩 표시를 띄우고 다음 순간에 그린다 — 무거운 칸(유입 ·
+    /// 통계)을 누른 순간 사이드바 선택조차 바뀌지 않은 채 멈춰 보이던 것. 누르면 바로 반응한다.
+    @State private var drawnKey: String?
 
     init(project: String?, section: FeedbackStore.ProjectSection,
          selection: Binding<Feedback.ID?> = .constant(nil)) {
@@ -35,7 +38,21 @@ struct ProjectSectionView: View {
     }
 
     var body: some View {
-        content
+        Group {
+            if drawnKey == freshKey {
+                content
+            } else {
+                ProgressView()
+                    .controlSize(.small)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+        }
+            // 로딩 표시가 한 번 그려질 틈을 준 뒤 화면을 그린다.
+            .task(id: freshKey) {
+                guard drawnKey != freshKey else { return }
+                try? await Task.sleep(for: .milliseconds(16))
+                drawnKey = freshKey
+            }
             .environment(\.freshItemIDs, fresh.key == freshKey ? fresh.ids : [])
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             // 뱃지를 눌러 들어왔으면 무엇이 바뀌었는지가 맨 위에.
