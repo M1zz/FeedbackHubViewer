@@ -100,6 +100,8 @@ final class SectionChanges: ObservableObject {
         recent = ((UserDefaults.standard.data(forKey: Self.recentKey))
             .flatMap { try? JSONDecoder().decode([String: Change].self, from: $0) } ?? [:])
             .filter { tracked.contains($0.value.section) }
+            // 유입의 옛 이름("유입|…")으로 남은 바뀜 — 말이 바뀌기 전 것이라 버린다(`key`).
+            .filter { !$0.key.hasPrefix(FeedbackStore.ProjectSection.acquisition.rawValue + "|") }
         acknowledgedRed = Set(UserDefaults.standard.stringArray(forKey: Self.releaseAckKey) ?? [])
         acknowledgedDue = Set(UserDefaults.standard.stringArray(forKey: Self.keywordDueAckKey) ?? [])
         syncObserver = NotificationCenter.default.addObserver(forName: SyncedDefaults.changed, object: nil,
@@ -207,7 +209,10 @@ final class SectionChanges: ObservableObject {
     }
 
     private static func key(_ section: FeedbackStore.ProjectSection, _ project: String) -> String {
-        "\(section.rawValue)|\(project)"
+        // 유입은 2026-11-14 에 말이 "지도 없음 · 길 N개" 에서 "줄었나" 로 바뀌었다 — 옛 말과 견주면
+        // 모든 앱에 한 번씩 뱃지가 서므로 새 이름으로 기준선을 다시 잡는다.
+        let name = section == .acquisition ? "유입-v2" : section.rawValue
+        return "\(name)|\(project)"
     }
 
     /// 본 뒤 말이 달라졌는가. 기준선이 아직 없으면 아니다.
@@ -303,7 +308,15 @@ final class SectionChanges: ObservableObject {
     /// 움직임을 놓치는 칸만 더 자세히 적는다.
     static func signature(_ section: FeedbackStore.ProjectSection, project: String,
                           metrics: SectionMetrics) -> String {
-        metrics.label(section, project: project)
+        // 유입은 다운로드 수가 날마다 바뀌어 한마디를 그대로 쓰면 매일 뱃지가 선다.
+        // 지난주보다 줄었는지만 본다 — 줄기 시작한 날 한 번 알린다.
+        if section == .acquisition {
+            guard case .ready(let funnel)? = metrics.purchases.funnels[project]?.value, funnel.instances > 0,
+                  let inflow = AcquisitionDiagnosis.inflow(daily: funnel.daily.mapValues(\.firstDownloads))
+            else { return metrics.label(section, project: project) }
+            return inflow.isFalling ? "지난주보다 줄어듦" : "줄지 않음"
+        }
+        return metrics.label(section, project: project)
     }
 
     /// 그 칸이 이 앱에 대해 아직 할 말이 없다 — 불러오는 중이거나 데이터가 없다. 이런 앱은 말에서

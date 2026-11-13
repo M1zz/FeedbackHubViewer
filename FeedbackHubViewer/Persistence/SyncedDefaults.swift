@@ -43,6 +43,8 @@ enum SyncedDefaults {
         "newsLastReadAt": { later($0, $1) },
         // 고마운 분들 — 지운 것이 되살아나지 않게 합치지 않고 마지막 쓰기가 이긴다.
         SupportersStore.defaultsKey: nil,
+        // 캠페인 링크의 제공자 토큰(pt) — 계정에 하나.
+        CampaignProvider.defaultsKey: nil,
     ]
 
     private static var store: NSUbiquitousKeyValueStore { .default }

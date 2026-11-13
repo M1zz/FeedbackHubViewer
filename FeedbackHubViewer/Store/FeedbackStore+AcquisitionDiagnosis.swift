@@ -37,7 +37,8 @@ extension FeedbackStore {
                                        downloadsBySource: funnel.sources.mapValues(\.firstDownloads),
                                        impressionsBySource: funnel.sources.mapValues(\.impressions),
                                        pageViewsBySource: funnel.sources.mapValues(\.pageViews),
-                                       dailyDownloads: funnel.daily.mapValues(\.firstDownloads))
+                                       dailyDownloads: funnel.daily.mapValues(\.firstDownloads),
+                                       pageDownloads: total.pageDownloads)
                 }
             default:
                 break
@@ -90,9 +91,16 @@ extension FeedbackStore {
                                  why: "지도가 가리키는 \"\(map.appZone?.activation ?? "")\" 칸을 보낸 설치가 아직 없습니다. 새 버전이 퍼지면 채워집니다."))
         }
 
+        var campaigns: AcquisitionDiagnosis.Campaigns?
+        if case .ready(_, let report)? = connect.referrals[project]?.value, report.instances > 0 {
+            campaigns = .init(links: report.campaigns.count,
+                              downloads: report.campaigns.values.reduce(0) { $0 + $1.firstDownloads },
+                              days: report.days)
+        }
+
         return AcquisitionDiagnosis.make(map: map,
                                          ladder: acquisitionLadder(for: project, map: map),
                                          paywall: acquisitionPaywall(for: project, map: map),
-                                         store: storeInput, aso: aso, missing: missing)
+                                         store: storeInput, aso: aso, campaigns: campaigns, missing: missing)
     }
 }

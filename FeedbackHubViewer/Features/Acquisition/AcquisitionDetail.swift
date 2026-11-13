@@ -49,6 +49,7 @@ struct AcquisitionDetail: View {
                 }
             }
 
+            if !map.isFallback {
             DisclosureGroup(isExpanded: $showsMap) {
                 MapDetail(map: map)
                     .padding(.top, 8)
@@ -58,6 +59,7 @@ struct AcquisitionDetail: View {
             }
             .padding(Platform.cardPadding)
             .cardSurface()
+            }
         }
         .task(id: project) {
             await connect.loadFunnel(bundleID: project)

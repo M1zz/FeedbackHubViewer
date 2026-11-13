@@ -9,7 +9,8 @@
 //   2. 지금 할 일 하나
 //   3. 구역별 한 줄(숫자 하나 + 뜻)
 //   4. 받는 사람이 주로 어디서 오나
-//  지도 원본(길 목록 · 남은 할 일 전부)은 접어 둔다. 머리로 합쳐야 하는 표는 앞에 두지
+//  리포에 손으로 쓴 지도가 없는 앱도 기본 지도로 판정한다(`AcquisitionMap(fallbackFor:)`).
+//  지도 원본(길 목록 · 남은 할 일 전부)은 손으로 쓴 지도가 있을 때만 접어 둔다. 머리로 합쳐야 하는 표는 앞에 두지
 //  않는다 — 합친 결과가 위의 판정이다. 계산은 `AcquisitionDiagnosis` 가 한다.
 //
 
@@ -43,11 +44,10 @@ struct AcquisitionView: View {
                                 proxy.scrollTo(Self.referralAnchor, anchor: .top)
                             }
                         }
-                        if let map = AcquisitionCatalog.map(for: project) {
-                            AcquisitionDetail(project: project, map: map)
-                        } else {
-                            missingMap
-                        }
+                        AcquisitionDetail(project: project,
+                                          map: AcquisitionCatalog.effectiveMap(for: project,
+                                                                              appName: store.displayName(for: project)))
+                        CampaignLinkCard(project: project)
                         ReferralCard(project: project)
                             .id(Self.referralAnchor)
                     } else {
@@ -86,14 +86,5 @@ struct AcquisitionView: View {
         }
         .buttonStyle(.bordered)
         .help("이 화면 아래의 링크 출처 카드로 바로 내려갑니다")
-    }
-
-    private var missingMap: some View {
-        Card(title: "유입 지도가 없습니다", systemImage: "map") {
-            Text("이 앱의 리포에 docs/engineering/acquisition.json 을 두고 scripts/spec-sources.sh 에 한 줄 더한 뒤 scripts/sync-stats-specs.sh 를 돌리면, 어디서 새는지 판정이 여기 나옵니다. ClipKeyboard 의 파일을 본으로 쓰면 됩니다.")
-                .font(.body)
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-        }
     }
 }

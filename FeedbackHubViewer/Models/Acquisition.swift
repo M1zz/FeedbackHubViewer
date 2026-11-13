@@ -126,6 +126,23 @@ struct AcquisitionMap: Decodable {
     }
 
     var activeChannels: [Channel] { channels.filter { $0.status == .active } }
+
+    /// 리포에 손으로 쓴 지도가 없는 앱의 기본 지도. 지도가 없다고 화면을 막지 않는다 —
+    /// App Store Connect 리포트만으로 가게 앞 · 홍보는 판정하고, 앱 구역 사다리는 모른다고 말한다.
+    /// 가게 앞 선 25% 는 클립키보드 지도와 같은 임시 선이다.
+    init(fallbackFor appId: String, appName: String?) {
+        acquisitionVersion = Self.supportedVersion
+        self.appId = appId
+        self.appName = appName
+        asOf = nil
+        mapURL = nil
+        appZone = nil
+        storefront = Storefront(conversionFloor: 0.25, note: nil)
+        isFallback = true
+    }
+
+    /// 기본 지도인가 — 지도 원본 칸을 숨긴다.
+    private(set) var isFallback = false
 }
 
 // MARK: - 목록
@@ -137,6 +154,11 @@ enum AcquisitionCatalog {
     }
 
     static var all: [AcquisitionMap] { loaded.maps }
+
+    /// 손으로 쓴 지도, 없으면 기본 지도. 유입 탭은 이것으로 모든 앱을 판정한다.
+    static func effectiveMap(for projectKey: String, appName: String?) -> AcquisitionMap {
+        map(for: projectKey) ?? AcquisitionMap(fallbackFor: projectKey, appName: appName)
+    }
 
     /// 읽다가 깨진 지도. 없는 것과 깨진 것은 할 일이 달라서 따로 말한다.
     static var failures: [ProjectStatsSpecCatalog.Failure] { loaded.failures }
@@ -243,6 +265,8 @@ struct AcquisitionDiagnosis {
         var pageViewsBySource: [String: Int] = [:]
         /// 날짜(yyyy-MM-dd) → 첫 다운로드.
         var dailyDownloads: [String: Int] = [:]
+        /// 제품 페이지에서 받은 첫 다운로드. nil 이면 리포트에 Page Type 이 없어 모른다.
+        var pageDownloads: Int?
     }
 
     /// 판단에 필요한데 아직 없는 입력. 뷰가 종류마다 바로 누를 단추를 단다.
@@ -264,14 +288,24 @@ struct AcquisitionDiagnosis {
         let previous7: Int
         var perDay: Double { Double(last7) / 7 }
         var change: Double? { previous7 > 0 ? Double(last7 - previous7) / Double(previous7) : nil }
-        var isFalling: Bool { (change ?? 0) <= -0.2 }
+        /// 앞 주가 7건(하루 1건) 아래면 줄었다고 하지 않는다 — 2건이 0건 된 것은 흔들림이다.
+        var isFalling: Bool { previous7 >= 7 && (change ?? 0) <= -0.2 }
         var isStalled: Bool { last7 < 7 }
     }
 
     // MARK: 계산
 
+    /// 캠페인 링크(`ct`)로 잰 것 — 상세 리포트의 Campaign 칸.
+    struct Campaigns {
+        /// 리포트에 나타난 캠페인 수.
+        var links: Int
+        var downloads: Int
+        var days: Int
+    }
+
     static func make(map: AcquisitionMap, ladder: Ladder?, paywall: Paywall?, store: Store?,
-                     aso: ASOPrescription? = nil, missing: [MissingInput] = []) -> AcquisitionDiagnosis {
+                     aso: ASOPrescription? = nil, campaigns: Campaigns? = nil,
+                     missing: [MissingInput] = []) -> AcquisitionDiagnosis {
         var readings: [Reading] = []
         let inflow = store.flatMap(inflow(of:))
 
@@ -286,7 +320,7 @@ struct AcquisitionDiagnosis {
         readings.append(promotionReading(store: store, frontOK: frontOK, inflow: inflow, aso: aso))
 
         // 4. 재는 법 — 새는 곳과 별개로, 어느 길이 효과가 있었는지 알 수 있나.
-        readings.append(measurementReading(map: map))
+        readings.append(measurementReading(map: map, campaigns: campaigns))
 
         let order: [AcquisitionMap.Zone] = [.app, .storefront, .promotion]
         let leak = order.first { zone in readings.first { $0.zone == zone }?.state == .leaking }
@@ -376,8 +410,9 @@ struct AcquisitionDiagnosis {
                            ? "App Store Connect 노출 리포트가 아직 없습니다."
                            : "최근 \(store?.days ?? 30)일 제품 페이지 조회가 0입니다.")
         }
-        let conversion = Double(store.firstDownloads) / Double(store.pageViews)
-        let text = "제품 페이지를 본 사람 중 \(percent(conversion))가 받습니다"
+        // 페이지에서 받은 것만 페이지 조회와 견준다. 그 칸이 없는 옛 리포트만 전체 다운로드로.
+        let conversion = min(1, Double(store.pageDownloads ?? store.firstDownloads) / Double(store.pageViews))
+        let text = "제품 페이지를 본 사람 중 \(percent(conversion))가 거기서 받습니다"
         guard let floor = map.storefront?.conversionFloor else {
             return Reading(zone: .storefront, state: .watch, figure: percent(conversion), meaning: text + ". 견줄 선이 없어 판정은 미룹니다.")
         }
@@ -426,8 +461,13 @@ struct AcquisitionDiagnosis {
     }
 
     private static func inflow(of store: Store) -> Inflow? {
-        guard !store.dailyDownloads.isEmpty else { return nil }
-        let days = store.dailyDownloads.keys.sorted()
+        inflow(daily: store.dailyDownloads)
+    }
+
+    /// 날짜("yyyy-MM-dd") → 첫 다운로드에서 최근 7일과 그 앞 7일.
+    static func inflow(daily dailyDownloads: [String: Int]) -> Inflow? {
+        guard !dailyDownloads.isEmpty else { return nil }
+        let days = dailyDownloads.keys.sorted()
         guard let latest = days.last else { return nil }
         // 리포트는 하루 이틀 늦게 오므로 "오늘"이 아니라 마지막으로 온 날을 기준으로 자른다.
         let f = DateFormatter()
@@ -438,16 +478,26 @@ struct AcquisitionDiagnosis {
         func sum(_ from: Int, _ to: Int) -> Int {
             (from..<to).reduce(0) { total, offset in
                 let day = f.string(from: end.addingTimeInterval(-Double(offset) * 86_400))
-                return total + (store.dailyDownloads[day] ?? 0)
+                return total + (dailyDownloads[day] ?? 0)
             }
         }
         return Inflow(last7: sum(0, 7), previous7: sum(7, 14))
     }
 
-    private static func measurementReading(map: AcquisitionMap) -> Reading {
+    private static func measurementReading(map: AcquisitionMap, campaigns: Campaigns?) -> Reading {
         let active = map.activeChannels
         guard !active.isEmpty else {
-            return Reading(zone: .measurement, state: .unknown, figure: nil, meaning: "지도에 쓰는 길이 없습니다.")
+            // 지도가 없으면 캠페인 링크로 잰다 — 글마다 링크를 달았으면 어느 글이 데려왔는지 안다.
+            guard let campaigns else {
+                return Reading(zone: .measurement, state: .unknown, figure: nil,
+                               meaning: "상세 리포트가 아직 없어 링크별로 셀 수 없습니다.")
+            }
+            if campaigns.downloads > 0 || campaigns.links > 0 {
+                return Reading(zone: .measurement, state: .healthy, figure: "링크 \(campaigns.links)개",
+                               meaning: "캠페인 링크 \(campaigns.links)개로 최근 \(campaigns.days)일 첫 다운로드 \(campaigns.downloads)건을 셌습니다.")
+            }
+            return Reading(zone: .measurement, state: .watch, figure: "0",
+                           meaning: "글 · SNS 에서 온 사람이 모두 '웹에서' 로 뭉쳐 보입니다. 아래 캠페인 링크를 글에 달면 글마다 셉니다.")
         }
         let separate = active.filter { $0.measure == .separate }.count
         let blind = active.filter { $0.measure == .none }.map(\.name)

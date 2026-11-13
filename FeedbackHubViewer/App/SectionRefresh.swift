@@ -67,7 +67,7 @@ struct SectionRefresh {
         case .reviews: "\(scope)App Store 리뷰"
         case .stats: "사용 현황 · 이벤트"
         case .release: project == nil ? "사용 현황 · 이벤트 · 진단 · 모든 앱의 버전 기록 · 성능" : "사용 현황 · 이벤트 · 진단 · 리뷰 · 버전 기록 · 성능"
-        case .acquisition: project == nil ? "모든 앱의 노출 · 전환 · 스토어 문구" : "노출 · 전환 · 스토어 문구 · 링크 출처"
+        case .acquisition: project == nil ? "App Store 에 있는 모든 앱의 노출 · 전환 · 경로" : "노출 · 전환 · 스토어 문구 · 링크 출처"
         case .storeAnalytics: project == nil ? "분석 리포트가 있는 앱 목록" : "스토어 분석 리포트"
         case .crashes: "진단"
         case .keywords: "오늘 아직 확인 안 한 키워드 순위"
@@ -95,7 +95,7 @@ struct SectionRefresh {
         case .reviews:
             return (project.map { [$0] } ?? appKeys).contains { connect.reviewFeeds[$0]?.isLoading == true }
         case .acquisition:
-            guard let project else { return false }
+            guard let project else { return connect.funnels.values.contains { $0.isLoading } }
             return connect.funnels[project]?.isLoading == true
                 || connect.metadata[project]?.isLoading == true
                 || connect.referrals[project]?.isLoading == true
@@ -157,9 +157,9 @@ struct SectionRefresh {
                     group.addTask { await connect.loadReferrals(bundleID: project, force: true) }
                 }
             } else {
-                for map in AcquisitionCatalog.all {
-                    await connect.loadFunnel(bundleID: map.appId, force: true)
-                    await connect.loadMetadata(bundleID: map.appId, force: true)
+                // 모든 앱 — 차례로 하나씩. App Store 에 없는 앱은 실패로 남는다.
+                for key in appKeys {
+                    await connect.loadFunnel(bundleID: key, force: true)
                 }
             }
         case .storeAnalytics:

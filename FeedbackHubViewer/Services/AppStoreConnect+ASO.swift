@@ -95,6 +95,14 @@ struct StoreFunnel {
         var impressions = 0
         var pageViews = 0
         var firstDownloads = 0
+        /// 제품 페이지에서 받은 첫 다운로드(Page Type "Product page"). 페이지 조회와 견줄 수는 이것뿐이다 —
+        /// 둘러보기 · 검색 목록에서 페이지를 안 열고 바로 받은 것까지 나누면 100% 를 넘는다.
+        var pageDownloads = 0
+
+        /// 제품 페이지를 본 사람 중 거기서 받은 몫.
+        var pageConversion: Double? {
+            pageViews > 0 ? Double(pageDownloads) / Double(pageViews) : nil
+        }
 
         /// 노출 대비 첫 다운로드.
         var conversion: Double? {
@@ -105,6 +113,7 @@ struct StoreFunnel {
             impressions += other.impressions
             pageViews += other.pageViews
             firstDownloads += other.firstDownloads
+            pageDownloads += other.pageDownloads
         }
     }
 
@@ -259,6 +268,7 @@ extension AppStoreConnect {
             for row in rows where row["Download Type"] == "First-time download" {
                 var counts = StoreFunnel.Counts()
                 counts.firstDownloads = Int(row["Counts"] ?? "") ?? 0
+                if row["Page Type"] == "Product page" { counts.pageDownloads = counts.firstDownloads }
                 add(counts, source: row["Source Type"] ?? "Unavailable", date: date)
             }
         }

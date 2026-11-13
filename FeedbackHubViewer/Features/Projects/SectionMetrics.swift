@@ -136,8 +136,12 @@ struct SectionMetrics {
         // 빨강인 앱 수. 한 앱이면 0 아니면 1.
         case .release: return releaseRedCount(project)
         case .acquisition:
-            guard let project else { return AcquisitionCatalog.all.count }
-            return AcquisitionCatalog.map(for: project)?.activeChannels.count ?? 0
+            // 최근 30일 첫 다운로드 — 한 앱이면 그 앱, 전체면 리포트가 있는 앱 수.
+            guard let project else {
+                return purchases.funnels.values.filter { if case .ready(let f)? = $0.value { f.instances > 0 } else { false } }.count
+            }
+            if case .ready(let funnel)? = purchases.funnels[project]?.value { return funnel.total.firstDownloads }
+            return 0
         case .crashes: return store.crashSummary(for: project).total
         case .keywords: return keywords.standings(for: project).filter(\.isRanked).count
         case .charts:
@@ -189,8 +193,8 @@ struct SectionMetrics {
             }
             return store.releaseLevel(for: project)?.label ?? "판정 없음"
         case .acquisition:
-            guard project != nil else { return count > 0 ? "지도 \(count)개" : "지도 없음" }
-            return count > 0 ? "길 \(count)개" : "지도 없음"
+            guard project != nil else { return count > 0 ? "앱 \(count)개" : "리포트 없음" }
+            return count > 0 ? "30일 \(AppFormat.count(count))건" : "다운로드 없음"
         case .crashes:
             guard count > 0 else { return "없음" }
             let recent = store.crashSummary(for: project).last7Days
@@ -307,7 +311,7 @@ struct SectionMetrics {
             return text + " · \(report.verdict.level.label)"
         case .acquisition:
             guard let project else { return "앱마다 어디서 새는지" }
-            guard let map = AcquisitionCatalog.map(for: project) else { return "유입 지도 없음" }
+            guard let map = AcquisitionCatalog.map(for: project) else { return "어디서 와서 어디서 새나 · App Store Connect 리포트로" }
             return "쓰는 길 \(map.activeChannels.count)개" + (map.asOf.map { " · 지도 \($0) 기준" } ?? "")
         case .crashes:
             let summary = store.crashSummary(for: project)
