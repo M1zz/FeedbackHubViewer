@@ -19,7 +19,7 @@ import Foundation
 enum BadgeReset {
     /// 읽음으로 지울 수 있는 칸.
     static let readable: [FeedbackStore.ProjectSection] =
-        [.feedback, .reviews, .crashes, .news, .leads, .keywords] + SectionChanges.tracked
+        [.feedback, .reviews, .crashes, .news, .keywords] + SectionChanges.tracked
 
     static func isReadable(_ section: FeedbackStore.ProjectSection) -> Bool {
         readable.contains(section)
@@ -34,7 +34,6 @@ enum BadgeReset {
         case .reviews: return store.showsBadge(.review) ? metrics.purchases.newReviewCount(for: nil) : 0
         case .crashes: return store.showsBadge(.crash) ? store.newCrashCount(for: nil) : 0
         case .news: return metrics.news.unreadCount(for: nil)
-        case .leads: return LeadStore.shared.unseenCount(for: nil)
         case .release:
             return SectionChanges.shared.releaseAlerts(metrics: metrics).values.reduce(0, +)
         case .keywords: return metrics.badge(.keywords, project: nil)?.count ?? 0
@@ -54,7 +53,6 @@ enum BadgeReset {
         case .reviews: metrics.purchases.markReviewsViewed(bundleID: nil)
         case .crashes: metrics.store.markCrashesViewed(project: nil)
         case .news: news.markAllRead()
-        case .leads: LeadStore.shared.markViewed(project: nil)
         case .keywords:
             SectionChanges.shared.acknowledgeDue(metrics.keywords.refreshDue(projects: SectionMetrics.keywordProjects(metrics.store)))
         case .release:

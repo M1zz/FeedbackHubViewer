@@ -25,8 +25,6 @@ struct AppListView: View {
     @ObservedObject private var changes = SectionChanges.shared
     /// 마케팅 칸의 "올렸나요?" 뱃지.
     @ObservedObject private var marketing = MarketingStore.shared
-    /// 질문 찾기 칸의 새 질문 뱃지.
-    @ObservedObject private var leadStore = LeadStore.shared
     /// 맥 전용 앱처럼 키워드 칸이 못 찾은 앱의 아이콘.
     @ObservedObject private var icons = StoreIcons.shared
     /// App Store 와 손수 이을 앱(오른쪽 클릭 메뉴).
@@ -42,10 +40,18 @@ struct AppListView: View {
         let traffic = section == .stats ? store.trafficByProject : [:]
         // 뱃지가 선 앱이 언제나 맨 위 — 볼 것을 찾아다니지 않게. 그 안과 나머지는 MAU 순
         // 그대로(릴리즈는 빨강 먼저). 눌러 고른 앱은 뱃지가 사라져도 떠날 때까지 자리를 지킨다.
-        let base = section == .release
-            ? store.redFirst(store.projectCounts, key: { $0.key })
-            : store.projectCounts
-        let flagged = Set(base.map(\.key).filter {
+        // 스토어 분석은 우선순위 점수가 높은 앱부터 — 점수가 순서 그 자체라 뱃지로 끌어올리지 않는다.
+        let scores = section == .storeAnalytics ? metrics.priorityScores : [:]
+        let base = switch section {
+        case .release: store.redFirst(store.projectCounts, key: { $0.key })
+        case .storeAnalytics:
+            store.projectCounts.enumerated().sorted {
+                let (a, b) = (scores[$0.element.key] ?? -1, scores[$1.element.key] ?? -1)
+                return a == b ? $0.offset < $1.offset : a > b
+            }.map(\.element)
+        default: store.projectCounts
+        }
+        let flagged = section == .storeAnalytics ? [] : Set(base.map(\.key).filter {
             (metrics.badge(section, project: $0) ?? visitBadge($0)) != nil || ($0 == held && $0 == store.selectedProject)
         })
         let entries = base.filter { flagged.contains($0.key) } + base.filter { !flagged.contains($0.key) }

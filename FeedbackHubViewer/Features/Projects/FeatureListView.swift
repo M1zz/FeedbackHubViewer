@@ -27,8 +27,6 @@ struct FeatureListView: View {
     @ObservedObject private var changes = SectionChanges.shared
     /// 마케팅 칸의 "올렸나요?" 뱃지.
     @ObservedObject private var marketing = MarketingStore.shared
-    /// 질문 찾기 칸의 새 질문 뱃지.
-    @ObservedObject private var leadStore = LeadStore.shared
     /// "확인할 것" 에서 눌러 고른 칸. 뱃지가 사라져도 떠날 때까지 그 자리에 둔다.
     @State private var held: FeedbackStore.ProjectSection?
 
@@ -68,6 +66,53 @@ struct FeatureListView: View {
                 }
             }
 
+            Section {
+                AppFocusPicker()
+            }
+
+            if let app = store.focusedApp, !store.usesStackNavigation {
+                focusedSections(app, metrics: metrics)
+            } else {
+                allSections(metrics)
+            }
+        }
+        .animation(.default, value: flagged(metrics))
+        .hubSidebarListStyle()
+        .modifier(SectionChangesBaseline(metrics: metrics))
+        .navigationTitle("FeedbackHub")
+        #if os(iOS)
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarLeading) { EnvironmentBadge() }
+        }
+        #endif
+    }
+
+    /// 앱 하나로 보는 중 — 그 앱의 기능을 무리별로, 숫자와 뱃지도 그 앱의 것으로.
+    @ViewBuilder
+    private func focusedSections(_ app: String, metrics: SectionMetrics) -> some View {
+        ForEach(AppScopedSections.groups(), id: \.group) { entry in
+            Section(entry.group.rawValue) {
+                ForEach(entry.sections) { section in
+                    let isSelected = store.projectSection == section
+                    Button {
+                        store.selectedProject = app
+                        store.projectSection = section
+                    } label: {
+                        FeatureRow(section: section,
+                                   detail: metrics.label(section, project: app),
+                                   badge: metrics.badge(section, project: app),
+                                   isSelected: isSelected)
+                    }
+                    .buttonStyle(.plain)
+                    .listRowBackground(Rectangle().fill(isSelected ? AnyShapeStyle(.tint.opacity(0.14)) : AnyShapeStyle(.clear)))
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func allSections(_ metrics: SectionMetrics) -> some View {
             // 뱃지가 달린 칸은 맨 위 "확인할 것" 으로 올린다. 뱃지가 사라지고 그 칸을 떠나면 제 무리의
             // 제자리로 — 누르자마자 줄이 도망가면 무엇을 골랐는지 볼 수 없다.
             // 할 일은 이미 맨 위 한 줄이라 그대로 둔다.
@@ -93,17 +138,6 @@ struct FeatureListView: View {
                     }
                 }
             }
-        }
-        .animation(.default, value: flagged(metrics))
-        .hubSidebarListStyle()
-        .modifier(SectionChangesBaseline(metrics: metrics))
-        .navigationTitle("FeedbackHub")
-        #if os(iOS)
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .topBarLeading) { EnvironmentBadge() }
-        }
-        #endif
     }
 
     /// 뱃지가 달린 칸 — 무리 차례 그대로.
@@ -136,6 +170,61 @@ struct FeatureListView: View {
             }
         }
         .listRowBackground(Rectangle().fill(isSelected ? AnyShapeStyle(.tint.opacity(0.14)) : AnyShapeStyle(.clear)))
+    }
+}
+
+/// 사이드바 맨 위 — "모든 앱" 이면 기능 → 앱 차례, 앱을 고르면 그 앱 하나로 기능을 넘겨 본다.
+struct AppFocusPicker: View {
+    @EnvironmentObject private var store: FeedbackStore
+    @EnvironmentObject private var keywords: KeywordStore
+    @ObservedObject private var icons = StoreIcons.shared
+
+    var body: some View {
+        Menu {
+            Button {
+                store.focusedApp = nil
+            } label: {
+                Label("모든 앱 (기능부터 고르기)", systemImage: "square.grid.2x2")
+            }
+            Divider()
+            ForEach(store.projectCounts.map(\.key).filter { $0 != Feedback.unclassifiedProject }, id: \.self) { key in
+                Button(store.displayName(for: key)) { store.focusedApp = key }
+            }
+        } label: {
+            HStack(spacing: 10) {
+                if let app = store.focusedApp {
+                    AppIcon(url: icons.url(for: app, keywords: keywords), size: 28)
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(store.displayName(for: app))
+                            .font(.headline)
+                            .lineLimit(1)
+                        Text("이 앱 하나로 보는 중")
+                            .font(.hubCaption)
+                            .foregroundStyle(.secondary)
+                    }
+                } else {
+                    Image(systemName: "square.grid.2x2")
+                        .font(.title3)
+                        .foregroundStyle(.purple)
+                        .frame(width: 28)
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text("모든 앱")
+                            .font(.headline)
+                        Text("앱 하나로 보려면 고르세요")
+                            .font(.hubCaption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                Spacer(minLength: 4)
+                Image(systemName: "chevron.up.chevron.down")
+                    .foregroundStyle(.secondary)
+            }
+            .contentShape(Rectangle())
+        }
+        .menuStyle(.button)
+        .buttonStyle(.plain)
+        .menuIndicator(.hidden)
+        .accessibilityLabel(store.focusedApp.map { "\(store.displayName(for: $0)) 하나로 보는 중, 앱 바꾸기" } ?? "앱 하나로 보기")
     }
 }
 

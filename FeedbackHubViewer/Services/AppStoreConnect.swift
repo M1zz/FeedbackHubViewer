@@ -388,7 +388,9 @@ actor AppStoreConnect {
 
     func app(bundleID: String) async throws -> ConnectApp {
         let doc = try await list("v1/apps", ["filter[bundleId]": bundleID, "fields[apps]": "name,bundleId"])
-        guard let app = doc.data.first(where: { $0.string("bundleId") == bundleID }) ?? doc.data.first else {
+        // 꼭 같은 번들 ID 만. 예전에는 없으면 목록의 첫 앱을 썼는데, 그러면 다른 앱의
+        // 상품 · 상태 · 가격이 이 앱 것처럼 보였다.
+        guard let app = doc.data.first(where: { $0.string("bundleId") == bundleID }) else {
             throw Failure.appNotFound(bundleID)
         }
         return ConnectApp(id: app.id, name: app.string("name") ?? bundleID, bundleID: bundleID)
@@ -468,7 +470,8 @@ actor AppStoreConnect {
             return nil
         }
 
-        let schedule = try await single("v2/inAppPurchases/\(product.id)/iapPriceSchedule")
+        let schedule = try await single("v2/inAppPurchases/\(product.id)/iapPriceSchedule",
+                                        ["include": "baseTerritory"])
         let doc = try await list("v1/inAppPurchasePriceSchedules/\(schedule.id)/manualPrices", [
             "include": "inAppPurchasePricePoint,territory",
             "fields[inAppPurchasePricePoints]": "customerPrice",
@@ -491,12 +494,14 @@ actor AppStoreConnect {
            let text = Self.formatPrice(korean, point: "inAppPurchasePricePoint", in: automatic) {
             return text
         }
-        guard let chosen = current.first else { return nil }
+        // 그래도 없으면 기준 국가의 가격 — 아무 나라나 집으면 엉뚱한 통화 · 금액이 나왔다.
+        let base = schedule.relationshipID("baseTerritory")
+        guard let chosen = current.first(where: { $0.relationshipID("territory") == base }) ?? current.first else { return nil }
         return Self.formatPrice(chosen, point: "inAppPurchasePricePoint", in: doc)
     }
 
-    func single(_ path: String) async throws -> ASCResource {
-        let (data, status) = try await send(url(path))
+    func single(_ path: String, _ query: [String: String] = [:]) async throws -> ASCResource {
+        let (data, status) = try await send(url(path, query))
         try check(data, status)
         guard let doc = try? JSONDecoder().decode(ASCSingleDocument.self, from: data) else { throw Failure.decoding }
         return doc.data

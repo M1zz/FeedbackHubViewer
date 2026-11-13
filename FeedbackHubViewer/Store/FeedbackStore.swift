@@ -78,8 +78,6 @@ final class FeedbackStore: ObservableObject {
         /// 내가 할 마케팅 — 기획 · 자료(카드뉴스 · 영상 · 글) · 올렸는지 확인(`MarketingStore`).
         /// 다른 칸은 일어난 일을 읽지만 이 칸은 내가 쓴다.
         case marketing = "마케팅"
-        /// 레딧에서 "이런 앱 없나요?" 를 묻는 질문(`LeadsView`, `RedditLead`). 답은 사람이 직접.
-        case leads = "질문 찾기"
         /// 앱이 사용자에게 줘야 하는 경험과 사용자가 꿈꿀 수 있는 모습(`ExperienceView`).
         /// 숫자를 보다가 이 앱이 원래 무엇을 하려던 것인지 다시 붙잡는 자리.
         case experience = "경험"
@@ -94,7 +92,7 @@ final class FeedbackStore: ObservableObject {
             case .crashes, .release: .quality
             case .stats, .acquisition, .keywords, .charts, .storeAnalytics: .growth
             case .purchases, .giftCodes: .revenue
-            case .marketing, .leads: .marketing
+            case .marketing: .marketing
             case .design, .experience: .build
             }
         }
@@ -150,7 +148,6 @@ final class FeedbackStore: ObservableObject {
             case .reviews: return "star.bubble"
             case .design: return "pencil.and.ruler"
             case .marketing: return "megaphone"
-            case .leads: return "questionmark.bubble"
             case .experience: return "sparkles"
             }
         }
@@ -338,6 +335,23 @@ final class FeedbackStore: ObservableObject {
         let section: ProjectSection
     }
 
+    /// 한 앱의 기능 목록(`AppHomeView`) — 아이폰에서 앱부터 고를 때.
+    struct AppRoute: Hashable {
+        let project: String
+    }
+
+    /// 맥 · 아이패드의 "앱 하나로 보기". 고르면 앱 목록 칸을 걷고, 기능 목록이 이 앱의
+    /// 숫자로 바뀐다 — 기능을 넘겨도 앱이 그대로라 한 앱을 리뷰 · 통계 · 진단으로 넘겨 본다.
+    @Published var focusedApp: String? = UserDefaults.standard.string(forKey: "focused-app") {
+        didSet {
+            UserDefaults.standard.set(focusedApp, forKey: "focused-app")
+            if let focusedApp {
+                selectedProject = focusedApp
+                if !projectSection.usesAppList { projectSection = .feedback }
+            }
+        }
+    }
+
     // Navigation
 
     /// 지금 고른 기능. 화면의 첫 단계다 — 앱은 그 안에서 고른다.
@@ -367,6 +381,8 @@ final class FeedbackStore: ObservableObject {
     /// moves, so pushing (iPhone) and re-scoping the column (Mac/iPad) don't
     /// have to be spelled out at each call site.
     func open(project: String?, section: ProjectSection? = nil) {
+        // 앱 하나로 보던 중에 다른 앱(또는 전체)으로 가는 링크면 그 앱으로 옮겨 쥔다.
+        if focusedApp != nil, focusedApp != project { focusedApp = project }
         selectedProject = project
         if let section {
             projectSection = section

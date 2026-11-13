@@ -15,6 +15,8 @@ import SwiftUI
 struct NewsView: View {
     @EnvironmentObject private var store: FeedbackStore
     @EnvironmentObject private var news: NewsStore
+    @EnvironmentObject private var keywords: KeywordStore
+    @ObservedObject private var icons = StoreIcons.shared
     @Environment(\.openURL) private var openURL
 
     @State private var category: NewsCategory?
@@ -23,6 +25,8 @@ struct NewsView: View {
     @State private var readMark: Date?
     /// 최근 `NewsStore.recentDays` 일보다 오래된 기록까지 펼쳤나.
     @State private var showsOlder = false
+    /// 펼친 줄(같은 앱 · 같은 종류 묶음, 하루의 "그 밖에").
+    @State private var expanded: Set<String> = []
 
     var body: some View {
         let shown = news.items.filter {
@@ -72,12 +76,10 @@ struct NewsView: View {
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
-            ForEach(Array(briefing.lines.enumerated()), id: \.element.id) { index, line in
+            ForEach(briefing.lines) { line in
                 Button { open(line) } label: {
-                    HStack(alignment: .firstTextBaseline, spacing: 10) {
-                        Text("\(index + 1)")
-                            .font(.headline.monospacedDigit())
-                            .foregroundStyle(line.kind.category.tint)
+                    HStack(alignment: .top, spacing: 10) {
+                        newsIcon(project: line.project, kind: line.kind, size: 36)
                         VStack(alignment: .leading, spacing: 3) {
                             Text(line.title)
                                 .font(.headline)
@@ -149,6 +151,28 @@ struct NewsView: View {
 
     // MARK: 목록
 
+    /// 하루 안에서 같은 앱 · 같은 종류를 한 줄로 합친 것.
+    private struct NewsGroup: Identifiable {
+        let id: String
+        let items: [NewsItem]
+        var first: NewsItem { items[0] }
+        var count: Int { items.count }
+    }
+
+    /// 하루의 기록을 볼 만한 줄과 조용한 줄(브리핑에 오르지 않는 종류)로 나눈다.
+    private func groups(_ items: [NewsItem]) -> (main: [NewsGroup], quiet: [NewsGroup]) {
+        let grouped = Dictionary(grouping: items) { "\($0.project)|\($0.kind.rawValue)" }
+        let all = grouped.map { key, value in
+            NewsGroup(id: key + "|" + (value.first.map { NewsDetector.day($0.foundAt) } ?? ""),
+                  items: value.sorted { $0.date > $1.date })
+        }
+        .sorted {
+            let (a, b) = ($0.first.kind.category.rank, $1.first.kind.category.rank)
+            return a == b ? $0.first.foundAt > $1.first.foundAt : a < b
+        }
+        return (all.filter { $0.first.kind.briefingRank != nil }, all.filter { $0.first.kind.briefingRank == nil })
+    }
+
     private func list(_ items: [NewsItem]) -> some View {
         let cutoff = news.recentCutoff
         let olderCount = items.filter { $0.foundAt <= cutoff }.count
@@ -161,10 +185,13 @@ struct NewsView: View {
                     .listRowBackground(Color.clear)
             }
             ForEach(days.keys.sorted(by: >), id: \.self) { day in
-                Section("기록 · " + Self.dayTitle(day)) {
-                    ForEach(days[day] ?? []) { item in
-                        Button { open(item) } label: { row(item) }
-                            .buttonStyle(.plain)
+                let split = groups(days[day] ?? [])
+                Section(Self.dayTitle(day)) {
+                    ForEach(split.main) { group in
+                        groupRow(group)
+                    }
+                    if !split.quiet.isEmpty {
+                        quietRow(split.quiet, day: day)
                     }
                 }
             }
@@ -180,50 +207,125 @@ struct NewsView: View {
         }
     }
 
-    private func row(_ item: NewsItem) -> some View {
-        let tint = item.kind.category.tint
-        let isNew = readMark.map { item.foundAt > $0 } ?? false
-        return HStack(alignment: .top, spacing: 12) {
-            Image(systemName: item.kind.systemImage)
-                .font(.body.weight(.semibold))
-                .foregroundStyle(tint)
-                .frame(width: 32, height: 32)
-                .background(tint.opacity(0.14), in: RoundedRectangle(cornerRadius: 8))
-            VStack(alignment: .leading, spacing: 3) {
-                HStack(spacing: 6) {
-                    Text(store.displayName(for: item.project))
-                    Text("·")
-                    Text(item.kind.category.rawValue)
-                    Spacer(minLength: 4)
-                    Text(item.date, format: .relative(presentation: .named))
-                }
-                .font(.hubCaption)
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
-                Text(item.title)
-                    .font(.headline)
-                    .fixedSize(horizontal: false, vertical: true)
-                if !item.body.isEmpty {
-                    Text(item.body)
+    /// 한 줄 — 아이콘과 제목 하나. 제목에 앱 이름이 들어 있어 따로 적지 않는다.
+    /// 여러 건이거나 덧붙일 말이 있으면 오른쪽 단추로 펼친다.
+    @ViewBuilder
+    private func groupRow(_ group: NewsGroup) -> some View {
+        let isOpen = expanded.contains(group.id)
+        let canOpen = group.count > 1 || !group.first.body.isEmpty
+        HStack(alignment: .center, spacing: 10) {
+            Button { open(group.first) } label: {
+                HStack(alignment: .center, spacing: 10) {
+                    newsIcon(project: group.first.project, kind: group.first.kind, size: 32)
+                    Text(title(group))
                         .font(.body)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(4)
-                        .fixedSize(horizontal: false, vertical: true)
+                        .foregroundStyle(group.first.kind.tone == .bad ? Color.red : Color.primary)
+                        .lineLimit(2)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                if let url = item.url {
-                    Label(url.host() ?? url.absoluteString, systemImage: "arrow.up.right.square")
-                        .font(.hubCaption)
-                        .foregroundStyle(Color.accentColor)
-                        .lineLimit(1)
-                }
+                .contentShape(Rectangle())
             }
-            if isNew {
-                Circle().fill(Color.accentColor).frame(width: 8, height: 8).padding(.top, 6)
+            .buttonStyle(.plain)
+            if isNew(group) {
+                Circle().fill(Color.accentColor).frame(width: 8, height: 8)
                     .accessibilityLabel("새 소식")
             }
+            if canOpen {
+                Button {
+                    if isOpen { expanded.remove(group.id) } else { expanded.insert(group.id) }
+                } label: {
+                    Image(systemName: isOpen ? "chevron.up" : "chevron.down")
+                        .foregroundStyle(.secondary)
+                        .frame(width: 28, height: 22)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(isOpen ? "접기" : "자세히")
+            }
         }
-        .padding(.vertical, 4)
-        .contentShape(Rectangle())
+        .padding(.vertical, 2)
+        if isOpen {
+            ForEach(group.count > 1 ? group.items : []) { item in
+                Button { open(item) } label: {
+                    Text(item.title)
+                        .font(.body)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.leading, 42)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+            }
+            if group.count == 1, !group.first.body.isEmpty {
+                Text(group.first.body)
+                    .font(.body)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.leading, 42)
+            }
+        }
+    }
+
+    /// 브리핑에 오르지 않는 일(심사 시작 · 차트에서 빠짐 · 새 나라 설치)은 하루에 한 줄로 접는다.
+    @ViewBuilder
+    private func quietRow(_ quiet: [NewsGroup], day: Date) -> some View {
+        let id = "quiet|" + NewsDetector.day(day)
+        let isOpen = expanded.contains(id)
+        let total = quiet.reduce(0) { $0 + $1.count }
+        Button {
+            if isOpen { expanded.remove(id) } else { expanded.insert(id) }
+        } label: {
+            HStack(spacing: 10) {
+                Image(systemName: "ellipsis.circle")
+                    .font(.title3)
+                    .foregroundStyle(.secondary)
+                    .frame(width: 32)
+                Text("그 밖에 \(AppFormat.count(total))건")
+                    .font(.body)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                Image(systemName: isOpen ? "chevron.up" : "chevron.down")
+                    .foregroundStyle(.secondary)
+                    .frame(width: 28)
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        if isOpen {
+            ForEach(quiet) { group in
+                groupRow(group)
+            }
+        }
+    }
+
+    /// 앱 아이콘에, 오른쪽 아래 동그라미 하나 — 무슨 일인지(기호)와 좋은지 나쁜지(색).
+    private func newsIcon(project: String, kind: NewsKind, size: CGFloat) -> some View {
+        let badge = size * 0.55
+        return AppIcon(url: icons.url(for: project, keywords: keywords), size: size)
+            .overlay(alignment: .bottomTrailing) {
+                Image(systemName: kind.systemImage)
+                    .font(.system(size: badge * 0.55, weight: .bold))
+                    .foregroundStyle(.white)
+                    .frame(width: badge, height: badge)
+                    .background(kind.tone.tint, in: Circle())
+                    .overlay(Circle().strokeBorder(.background, lineWidth: 2))
+                    .offset(x: badge * 0.3, y: badge * 0.3)
+            }
+            .padding(.trailing, badge * 0.3)
+            .padding(.bottom, badge * 0.3)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("\(store.displayName(for: project)) · \(kind.tone.label)")
+    }
+
+    private func title(_ group: NewsGroup) -> String {
+        guard group.count > 1 else { return group.first.title }
+        return Briefing.mergedTitle(group.first.kind, app: store.displayName(for: group.first.project), count: group.count)
+    }
+
+    private func isNew(_ group: NewsGroup) -> Bool {
+        guard let readMark else { return false }
+        return group.items.contains { $0.foundAt > readMark }
     }
 
     private func open(_ item: NewsItem) {

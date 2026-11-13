@@ -128,8 +128,9 @@ final class AppStoreConnectStore: ObservableObject {
     /// 값이 얼마나 묵었는지를 데이터 상태 칸이 말할 수 있게 디스크에 남는다.
     @Published private(set) var fetchedAt: [String: Date] = [:]
 
-    private static var appsFile: URL? { CacheFile.url("connect-apps") }
-    private static var catalogsFile: URL? { CacheFile.url("store-catalogs") }
+    /// v2 — 번들 ID 가 꼭 같은 앱만 잇도록 고친 뒤(그 전엔 다른 앱으로 잘못 이은 것이 남았다).
+    private static var appsFile: URL? { CacheFile.url("connect-apps-v2") }
+    private static var catalogsFile: URL? { CacheFile.url("store-catalogs-v2") }
     private static var salesFile: URL? { CacheFile.url("sales-days") }
     static var subscriptionEventsFile: URL? { CacheFile.url("subscription-event-days") }
     private static var fetchedAtFile: URL? { CacheFile.url("connect-fetched-at") }
@@ -152,6 +153,8 @@ final class AppStoreConnectStore: ObservableObject {
     }
 
     private func restoreStoreCaches() {
+        CacheFile.remove(CacheFile.url("connect-apps"))
+        CacheFile.remove(CacheFile.url("store-catalogs"))
         apps = CacheFile.read([String: ConnectApp].self, at: Self.appsFile) ?? [:]
         for (bundleID, stored) in CacheFile.read([String: StoredCatalog].self, at: Self.catalogsFile) ?? [:] {
             catalogs[bundleID] = .loaded(stored.app, stored.products)
@@ -160,6 +163,16 @@ final class AppStoreConnectStore: ObservableObject {
         subscriptionReportCache = CacheFile.read([String: [SubscriptionEventLine]].self,
                                                  at: Self.subscriptionEventsFile) ?? [:]
         fetchedAt = CacheFile.read([String: Date].self, at: Self.fetchedAtFile) ?? [:]
+        restoreVersions()
+        for (bundleID, stored) in CacheFile.read([String: StoreMetadata].self, at: Self.metadataFile) ?? [:] {
+            metadata[bundleID] = .loaded(stored)
+        }
+    }
+
+    private static var metadataFile: URL? { CacheFile.url("store-metadata") }
+
+    private func saveMetadataCache() {
+        CacheFile.write(metadata.compactMapValues(\.value), to: Self.metadataFile)
     }
 
     /// 네트워크에서 새로 받아 냈다고 적는다.
@@ -224,6 +237,7 @@ final class AppStoreConnectStore: ObservableObject {
         salesError = nil
         reportCache = [:]
         metadata = [:]
+        CacheFile.remove(Self.metadataFile)
         funnels = [:]
         apps = [:]
         forgetReviews()
@@ -249,15 +263,21 @@ final class AppStoreConnectStore: ObservableObject {
 
     // MARK: - 메타데이터
 
+    /// 디스크에 둔 것을 바로 보이고, 이번 실행에서 처음 볼 때 한 번 새로 받는다.
     func loadMetadata(bundleID: String, force: Bool = false) async {
         guard let client else { return }
-        if !force, let state = metadata[bundleID], !(state.value == nil && !state.isLoading) { return }
-        metadata[bundleID] = .loading
+        let key = "metadata:\(bundleID)"
+        if !force, refreshed.contains(key) || metadata[bundleID]?.isLoading == true { return }
+        refreshed.insert(key)
+        if force || metadata[bundleID]?.value == nil { metadata[bundleID] = .loading }
         do {
             let app = try await resolveApp(bundleID)
             metadata[bundleID] = .loaded(try await client.metadata(appID: app.id))
-            markFetched("metadata:\(bundleID)")
+            saveMetadataCache()
+            markFetched(key)
         } catch {
+            refreshed.remove(key)
+            if !force, metadata[bundleID]?.value != nil { return }
             metadata[bundleID] = .failed(error.localizedDescription)
         }
     }

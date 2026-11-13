@@ -135,8 +135,6 @@ struct ProjectSectionView: View {
             MarketingView(project: project)
         case .experience:
             ExperienceView(project: project)
-        case .leads:
-            LeadsView(project: project)
         }
     }
 }

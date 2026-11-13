@@ -18,13 +18,13 @@ import Foundation
 // MARK: - 메타데이터 모델
 
 /// 한 앱의 스토어 메타데이터 — 나가 있는 것과, 고칠 수 있는 것.
-struct StoreMetadata {
+struct StoreMetadata: Codable {
     /// 지금 스토어에 나가 있는 버전과 앱 정보.
     let live: Edition
     /// 고칠 수 있는 버전 · 앱 정보. 없으면 새 버전을 만들어야 키워드 · 이름 · 부제를 고친다.
     let draft: Edition?
 
-    struct Edition {
+    struct Edition: Codable {
         let versionID: String?
         let versionString: String?
         let versionState: String?
@@ -40,7 +40,7 @@ struct StoreMetadata {
     }
 
     /// 한 로케일의 글. 필드마다 그 필드가 사는 리소스의 id를 같이 든다 — 고칠 때 쓴다.
-    struct LocaleText: Hashable {
+    struct LocaleText: Hashable, Codable {
         let locale: String
         var appInfoLocalizationID: String?
         var versionLocalizationID: String?

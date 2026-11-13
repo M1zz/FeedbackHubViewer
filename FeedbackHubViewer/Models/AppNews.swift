@@ -104,6 +104,39 @@ enum NewsKind: String, Codable, CaseIterable {
     }
 }
 
+/// 소식이 좋은 일인지 나쁜 일인지 — 앱 아이콘 위 동그라미 색이 된다. 읽지 않고도 알게.
+enum NewsTone {
+    case good, bad, neutral
+
+    var tint: Color {
+        switch self {
+        case .good: .green
+        case .bad: .red
+        case .neutral: .gray
+        }
+    }
+
+    var label: String {
+        switch self {
+        case .good: "좋은 소식"
+        case .bad: "나쁜 소식"
+        case .neutral: "알림"
+        }
+    }
+}
+
+extension NewsKind {
+    var tone: NewsTone {
+        switch self {
+        case .releaseRed, .newCrash, .versionRejected, .reviewLowCluster, .chartDropped: .bad
+        case .versionInReview, .keywordRefresh: .neutral
+        case .versionLive, .chartEntered, .chartBest, .storeSurge, .keywordTop10,
+             .referralNew, .referralSurge, .reviewGlowing, .reviewNewTerritory,
+             .installMilestone, .dailyInstallRecord, .dauRecord, .newCountry: .good
+        }
+    }
+}
+
 extension NewsKind {
     /// 브리핑에 올릴 차례. nil 이면 기록에만 남고 브리핑에는 안 오른다 — 심사 시작 · 차트에서
     /// 빠짐 · 새 나라의 설치는 일어난 일이지만, 일부러 보러 갈 만한 일은 아니다.
@@ -191,7 +224,8 @@ struct Briefing {
         more = max(0, ranked.count - Self.limit)
     }
 
-    private static func mergedTitle(_ kind: NewsKind, app: String, count: Int) -> String {
+    /// 같은 앱 · 같은 종류 여러 건을 한 줄로. 소식 칸의 기록도 이것으로 합친다.
+    static func mergedTitle(_ kind: NewsKind, app: String, count: Int) -> String {
         switch kind {
         case .chartEntered: "\(app.이가) 차트 \(count)곳에 새로 들었어요"
         case .chartBest: "\(app.이가) 차트 \(count)곳에서 최고 순위예요"
@@ -201,6 +235,9 @@ struct Briefing {
         case .reviewNewTerritory: "\(app)에 처음 보는 나라의 리뷰가 \(count)곳에서 왔어요"
         case .keywordTop10: "\(app.이가) 검색어 \(count)개에서 10위 안에 들었어요"
         case .newCrash: "\(app)에서 처음 보는 크래시가 \(count)가지 나왔어요"
+        case .chartDropped: "\(app.이가) 차트 \(count)곳에서 빠졌어요"
+        case .newCountry: "\(app.이가) 새 나라 \(count)곳에서 처음 설치됐어요"
+        case .keywordRefresh: "\(app) 키워드를 다시 짤 때예요 (\(count)곳)"
         default: "\(app) 소식 \(count)건"
         }
     }
@@ -212,6 +249,9 @@ enum NewsCategory: String, CaseIterable, Identifiable {
     case people = "사람들"
     case milestone = "이정표"
     var id: String { rawValue }
+
+    /// 같은 날 안에서의 차례 — 경고가 맨 위.
+    var rank: Int { Self.allCases.firstIndex(of: self) ?? 0 }
 
     var tint: Color {
         switch self {

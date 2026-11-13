@@ -33,6 +33,9 @@ struct SplitRootView: View {
         // it, so cross-screen links re-scope the column instead of pushing
         // (see `FeedbackStore.open(project:section:)`).
         .task { store.usesStackNavigation = false }
+        .task(id: store.focusedApp) {
+            if let app = store.focusedApp { store.selectedProject = app }
+        }
         #if os(macOS)
         .toolbar { macToolbarContent }
         #endif
@@ -42,7 +45,8 @@ struct SplitRootView: View {
     /// 둘 다 가게(`store`)에 적힌다.
     private var contentColumn: some View {
         HStack(spacing: 0) {
-            if store.projectSection.usesAppList {
+            // 앱 하나로 보는 중이면 앱 목록 칸은 걷는다 — 앱은 사이드바 맨 위에서 이미 골랐다.
+            if store.projectSection.usesAppList && store.focusedApp == nil {
                 AppListView(section: store.projectSection)
                     .frame(width: Self.appListWidth)
                 Divider()

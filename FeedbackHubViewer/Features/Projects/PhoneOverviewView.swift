@@ -29,7 +29,6 @@ struct PhoneOverviewView: View {
     @EnvironmentObject private var news: NewsStore
     @ObservedObject private var changes = SectionChanges.shared
     @ObservedObject private var marketing = MarketingStore.shared
-    @ObservedObject private var leadStore = LeadStore.shared
     @ObservedObject private var icons = StoreIcons.shared
 
     /// 앱 카드를 처음엔 이만큼만 — 나머지는 "모두 보기".
@@ -200,21 +199,6 @@ struct PhoneOverviewView: View {
             result.append(Finding(section: .feedback, badge: badge, items: items))
         }
 
-        // 레딧 질문 — 아직 안 본 새 질문.
-        if let badge = metrics.badge(.leads, project: nil) {
-            let ids = leadStore.unseenIDs(for: nil)
-            let leads = leadStore.open(for: nil).filter { ids.contains($0.id) }
-            let items = leads.map { lead -> Finding.Item in
-                var meta = ["r/\(lead.subreddit)"]
-                if let date = lead.date { meta.append(AppFormat.relative(date)) }
-                return Finding.Item(id: "lead|\(lead.id)", title: name(lead.project),
-                                    meta: meta.joined(separator: " · "),
-                                    lines: [lead.title, lead.snippet].map(\.trimmed).filter { !$0.isEmpty },
-                                    emphasizesFirstLine: true,
-                                    route: .project(lead.project, .leads))
-            }
-            result.append(Finding(section: .leads, badge: badge, items: items))
-        }
 
         // 소식 — 안 읽은 것.
         if let badge = metrics.badge(.news, project: nil) {
@@ -343,8 +327,8 @@ struct PhoneOverviewView: View {
         return VStack(alignment: .leading, spacing: 10) {
             sectionTitle("앱별 · \(apps.count)개")
             ForEach(shown, id: \.key) { entry in
-                let section = AppCard.watched.first { metrics.badge($0, project: entry.key) != nil } ?? .stats
-                NavigationLink(value: FeedbackStore.ProjectRoute(project: entry.key, section: section)) {
+                // 누르면 그 앱의 기능 목록 — 한 앱을 리뷰 · 통계 · 진단으로 넘겨 본다.
+                NavigationLink(value: FeedbackStore.AppRoute(project: entry.key)) {
                     AppCard(project: entry.key,
                             name: store.displayName(for: entry.key),
                             iconURL: icons.url(for: entry.key, keywords: keywords),

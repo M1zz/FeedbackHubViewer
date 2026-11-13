@@ -29,8 +29,8 @@ final class NewsStore: ObservableObject {
     /// 새것부터.
     @Published private(set) var items: [NewsItem] = []
     /// 소식 칸이 펼쳐 보이는 기간. 그보다 오래된 것은 "지난 소식" 으로 접어 둔다 —
-    /// 쌓인 기록이 수백 건이라 다시 볼 일이 없는 것이 화면을 덮었다.
-    static let recentDays = 7
+    /// 쌓인 기록이 수백 건이라 다시 볼 일이 없는 것이 화면을 덮었다. 이레도 길어서 사흘.
+    static let recentDays = 3
 
     /// 이 시각 뒤에 찾은 소식이 최근 소식이다.
     var recentCutoff: Date {
