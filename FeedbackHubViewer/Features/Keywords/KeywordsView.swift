@@ -36,13 +36,14 @@ struct KeywordsView: View {
             LazyVStack(alignment: .leading, spacing: 14) {
                 // 먼저 답할 것 — 지금 어떤가, 무엇을 할까. 나머지는 고칠 때 펼쳐 본다.
                 if project == nil { KeywordRefreshOverviewCard() }
+                // "다시 짤 때" 뱃지를 보고 들어왔으면 할 일이 맨 위에 있어야 한다.
+                if let project, linkedApp != nil, isRefreshDue { KeywordRefreshCard(project: project) }
                 if linkedApp == nil { unlinkedCard }
                 if needsTerms, linkedApp != nil { startCard }
                 if project != nil, !standings.isEmpty { rankCard }
                 // 목표(검색 점령도 · 선점 기회)는 늘 보인다 — 무엇을 할지가 여기서 나온다.
                 recommendationCard
                 if needsTerms { addCard }
-                if let project, linkedApp != nil, isRefreshDue { KeywordRefreshCard(project: project) }
                 moreToggle
                 if showsMore { moreCards }
             }

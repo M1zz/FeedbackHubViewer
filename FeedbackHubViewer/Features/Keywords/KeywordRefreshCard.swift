@@ -32,17 +32,19 @@ struct KeywordRefreshCard: View {
                     .font(.title3.weight(.semibold))
                     .foregroundStyle(settled ? Color.primary : Color.secondary)
                     .fixedSize(horizontal: false, vertical: true)
-                ForEach(states) { state in stateRow(state) }
-                HStack(spacing: 8) {
-                    CopyButton(text: KeywordRefreshPrompt.make([promptApp(project, states: states)]),
-                               title: "Claude에게 맡길 글 복사")
-                        .buttonStyle(.bordered)
-                        .opacity(settled ? 1 : 0.6)
-                    Text("앱 리포에서 연 Claude 에 붙여넣으면 순위를 근거로 키워드 줄을 다시 짜서 커밋합니다. 스토어에는 다음 배포 때 올라갑니다.")
+                if settled {
+                    // 할 일은 이것 하나 — 순위를 읽고 판단할 필요는 없다. 그건 Claude 가 한다.
+                    Text("할 일: 아래 단추로 글을 복사해 이 앱 리포에서 연 Claude 에 붙여넣으세요. 순위를 근거로 키워드 줄을 다시 짜서 커밋하고, 스토어에는 다음 배포 때 올라갑니다.")
                         .font(.body)
-                        .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
+                let copy = CopyButton(text: KeywordRefreshPrompt.make([promptApp(project, states: states)]),
+                                      title: "Claude에게 맡길 글 복사")
+                if settled { copy.buttonStyle(.borderedProminent) } else { copy.buttonStyle(.bordered) }
+                DisclosureGroup("나라마다 지금 순위") {
+                    ForEach(states) { state in stateRow(state) }
+                }
+                .font(.body)
             }
         }
     }
@@ -116,6 +118,9 @@ struct KeywordRefreshOverviewCard: View {
             } else {
                 Text("다시 짤 때가 된 앱 \(due.count)개")
                     .font(.title3.weight(.semibold))
+                Text("할 일: 아래 단추로 한꺼번에 맡기거나, 앱을 눌러 하나씩 맡기세요. 순위는 Claude 가 읽고 판단합니다.")
+                    .font(.body)
+                    .fixedSize(horizontal: false, vertical: true)
                 ForEach(due, id: \.project) { entry in
                     Button {
                         store.open(project: entry.project, section: .keywords)
@@ -138,7 +143,7 @@ struct KeywordRefreshOverviewCard: View {
                                                      states: keywords.refreshStates(for: entry.project),
                                                      store: store, keywords: keywords, charts: charts)
                     }), title: "\(due.count)개 한꺼번에 맡길 글 복사")
-                        .buttonStyle(.bordered)
+                        .buttonStyle(.borderedProminent)
                     Text("~/Documents/workspace/Auto 에서 연 Claude 에 붙여넣으면 앱마다 레포를 찾아 키워드 줄을 고칩니다.")
                         .font(.body)
                         .foregroundStyle(.secondary)
