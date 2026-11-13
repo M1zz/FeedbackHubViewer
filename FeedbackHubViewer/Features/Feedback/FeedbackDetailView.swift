@@ -114,9 +114,15 @@ struct FeedbackDetailView: View {
             sentReply = await store.reply(for: feedback)?.message
             replyDraft = sentReply ?? ""
         }
-        .onChange(of: noteDraft) { _, draft in
-            guard draft != store.note(for: feedback) else { return }
-            store.setNote(draft, for: feedback)
+        // 메모는 치다 멈췄을 때 한 번 저장한다. `onChange` 에서 바로 쓰면 맥의 TextField 가
+        // 화면을 그리는 도중에 글을 넘길 때 스토어가 바뀌어 "view update 중 publish" 경고가 났고,
+        // 글자마다 iCloud 로 올렸다. 값은 시작할 때 잡는다 — 다른 피드백으로 넘어가며 취소된
+        // 작업이 새 피드백의 메모를 옛 피드백에 쓰지 않게. 취소돼도(다음 글자 · 화면 닫힘) 저장한다.
+        .task(id: noteDraft) {
+            let draft = noteDraft, target = feedback
+            try? await Task.sleep(for: .milliseconds(400))
+            guard draft != store.note(for: target) else { return }
+            store.setNote(draft, for: target)
         }
         #if os(iOS)
         // 맥에는 툴바 단추를 두지 않는다. 맥의 상세는 가운데 칸 옆에 나란히 서서
