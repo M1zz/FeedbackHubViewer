@@ -1,0 +1,77 @@
+{
+ "name": "ClipKeyboard",
+ "icon": "/Users/hyunholee/Documents/workspace/개발중/FeedbackHubViewer/scripts/cardnews/decks/icons/클립키보드-1024.png",
+ "accent": "1A7CF2",
+ "accent2": "1DBF9A",
+ "kicker": "Did you know? · ClipKeyboard's Recent tab",
+ "cover": "Copied it\nan hour ago.\nWhere is it now?",
+ "coverScreen": "/Users/hyunholee/Documents/workspace/Auto/클립키보드/docs/screenshots/raw/iphone/en/02-recent-clips.png",
+ "coverTop": 0.5,
+ "coverCallout": {
+  "symbol": "doc.on.clipboard",
+  "text": "Still here",
+  "x": 0.62,
+  "y": 0.12
+ },
+ "features": [
+  {
+   "label": "One copy at a time",
+   "headline": "Copy something new,\nthe last one is gone",
+   "text": "The tracking number, then the address.\nYour iPhone only remembers the latest.",
+   "screen": "/Users/hyunholee/Documents/workspace/Auto/클립키보드/docs/screenshots/raw/iphone/en/02-recent-clips.png",
+   "top": 0.08,
+   "callout": {
+    "symbol": "questionmark.bubble.fill",
+    "text": "And the tracking number?",
+    "x": 0.55,
+    "y": 0.62
+   }
+  },
+  {
+   "label": "Save it on the keyboard",
+   "headline": "One tap keeps\nwhat you copied",
+   "text": "Tap Save copied text on the Recent tab.\nIt stays ready there for 30 days.",
+   "screen": "/Users/hyunholee/Documents/workspace/Auto/클립키보드/docs/screenshots/raw/iphone/en/02-recent-clips.png",
+   "top": 0.55,
+   "callout": {
+    "symbol": "clock.fill",
+    "text": "Ready for 30 days",
+    "x": 0.6,
+    "y": 0.12
+   }
+  },
+  {
+   "label": "Sorted for you",
+   "headline": "It knows what\neach one is",
+   "text": "Tracking numbers, addresses, codes,\nemails, phone numbers and IBANs.",
+   "screen": "/Users/hyunholee/Documents/workspace/Auto/클립키보드/docs/screenshots/raw/iphone/en/02-recent-clips.png",
+   "top": 0.6,
+   "callout": {
+    "symbol": "shippingbox.fill",
+    "text": "Tracking number",
+    "x": 0.4,
+    "y": 0.2
+   }
+  },
+  {
+   "label": "Paste anywhere",
+   "headline": "Then drop it into\nany app",
+   "text": "Messages, Mail, Safari. Anywhere you type,\nswitch to ClipKeyboard and tap once.",
+   "screen": "/Users/hyunholee/Documents/workspace/Auto/클립키보드/docs/screenshots/raw/iphone/en/01-reply.png",
+   "top": 0.5,
+   "callout": {
+    "symbol": "hand.tap.fill",
+    "text": "One tap",
+    "x": 0.62,
+    "y": 0.2
+   }
+  }
+ ],
+ "outro": "Copy now,\npaste whenever",
+ "points": [
+  "Works anywhere you can type",
+  "Every feature free for your first 100 inserts",
+  "Stays on your device, no analytics"
+ ],
+ "search": "Search “Clip Keyboard” on the App Store"
+}

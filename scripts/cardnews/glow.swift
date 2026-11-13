@@ -13,6 +13,8 @@ struct Deck: Decodable {
     let kicker: String; let cover: String; let coverScreen: String; var coverTop: Double = 0; var coverCallout: Callout?
     let features: [Feature]
     let outro: String; let points: [String]
+    /// 마지막 장의 검색 안내. 없으면 한국어("App Store 에서 “이름” 검색"). 영어 덱은 "Search “Clip Keyboard” on the App Store".
+    var search: String?
 }
 
 let W: CGFloat = 1080, H: CGFloat = 1350
@@ -175,7 +177,7 @@ struct Outro: View {
             Spacer()
             HStack(spacing: 14) {
                 Image(systemName: "magnifyingglass").font(.system(size: 34, weight: .bold))
-                Text("App Store 에서 \u{201C}\(deck.name)\u{201D} 검색").font(.system(size: 38, weight: .bold))
+                Text(deck.search ?? "App Store 에서 \u{201C}\(deck.name)\u{201D} 검색").font(.system(size: 38, weight: .bold))
             }.foregroundStyle(night).padding(.horizontal, 44).padding(.vertical, 30)
                 .frame(maxWidth: .infinity).background(.white, in: RoundedRectangle(cornerRadius: 32, style: .continuous))
             Spacer().frame(height: 70)
