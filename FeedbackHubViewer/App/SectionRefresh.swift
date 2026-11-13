@@ -53,6 +53,7 @@ struct SectionRefresh {
         case .design: "설계 문서 다시 읽기"
         case .marketing: "마케팅 기록 맞추기"
         case .experience: "앱 소개 다시 읽기"
+        case .supporters: "후원 건수 새로고침"
         }
     }
 
@@ -76,6 +77,7 @@ struct SectionRefresh {
         case .design: "리포의 설계 문서 목록"
         case .marketing: "마케팅 자료(iCloud)"
         case .experience: "app-portfolio 의 앱 소개 · vision"
+        case .supporters: "App Store Connect 최근 판매(팁 건수) · 상품. 이름은 허브에 적은 것(iCloud)"
         }
     }
 
@@ -108,6 +110,8 @@ struct SectionRefresh {
             return connect.isLoadingSales || project.map(connect.isCatalogLoading) == true
         case .giftCodes:
             return !GiftCodePool.shared.working.isEmpty
+        case .supporters:
+            return connect.isLoadingSales
         case .design, .marketing, .experience:
             return PortfolioStore.shared.isLoading && section == .experience
         }
@@ -192,6 +196,9 @@ struct SectionRefresh {
             await PortfolioStore.shared.load(workspace: design.workspace, force: true)
         case .marketing:
             MarketingStore.shared.pullFromCloud()
+        case .supporters:
+            await connect.loadSales(force: true)
+            if let project { await connect.loadCatalog(bundleID: project, force: true) }
         case .giftCodes:
             for key in (project.map({ [$0] }) ?? appKeys).flatMap(GiftCodePool.poolKeys(for:)) {
                 await GiftCodePool.shared.refresh(key, connect: connect)

@@ -142,6 +142,8 @@ struct ProjectSectionView: View {
             InAppPurchasesView(project: project)
         case .giftCodes:
             GiftCodesView(project: project)
+        case .supporters:
+            SupportersView(project: project)
         case .reviews:
             ReviewsView(project: project)
         case .design:

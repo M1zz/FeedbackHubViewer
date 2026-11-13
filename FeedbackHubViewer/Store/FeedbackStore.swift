@@ -81,6 +81,9 @@ final class FeedbackStore: ObservableObject {
         /// 앱이 사용자에게 줘야 하는 경험과 사용자가 꿈꿀 수 있는 모습(`ExperienceView`).
         /// 숫자를 보다가 이 앱이 원래 무엇을 하려던 것인지 다시 붙잡는 자리.
         case experience = "경험"
+        /// 이 앱이 여기까지 오게 해 준 분들 — 내가 고른 분과 후원해 준 분(`SupportersStore`).
+        /// 지금은 허브에서만 보고, 모아 두었다가 앱 · 웹에 내보낸다.
+        case supporters = "고마운 분들"
         var id: String { rawValue }
         /// 할 일은 처음부터 모든 앱을 앱별로 묶어 보여 주는 칸이라 앱 목록을 거치지 않는다.
         var usesAppList: Bool { self != .inbox && self != .news }
@@ -93,7 +96,7 @@ final class FeedbackStore: ObservableObject {
             case .stats, .acquisition, .keywords, .charts, .storeAnalytics: .growth
             case .purchases, .giftCodes: .revenue
             case .marketing: .marketing
-            case .design, .experience: .build
+            case .design, .experience, .supporters: .build
             }
         }
         /// 기능 목록의 무리. 열한 칸을 한 줄로 늘어놓으면 무엇이 어디 있는지 읽히지 않는다 —
@@ -149,6 +152,7 @@ final class FeedbackStore: ObservableObject {
             case .design: return "pencil.and.ruler"
             case .marketing: return "megaphone"
             case .experience: return "sparkles"
+            case .supporters: return "heart.text.square"
             }
         }
     }

@@ -41,6 +41,8 @@ enum SyncedDefaults {
         SectionChanges.releaseAckKey: { union($0, $1) },
         SectionChanges.keywordDueAckKey: { union($0, $1) },
         "newsLastReadAt": { later($0, $1) },
+        // 고마운 분들 — 지운 것이 되살아나지 않게 합치지 않고 마지막 쓰기가 이긴다.
+        SupportersStore.defaultsKey: nil,
     ]
 
     private static var store: NSUbiquitousKeyValueStore { .default }

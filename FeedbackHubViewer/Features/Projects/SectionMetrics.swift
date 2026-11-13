@@ -157,6 +157,7 @@ struct SectionMetrics {
         case .reviews: return reviewCount(project)
         case .design: return design.docs(for: project).count
         case .marketing: return MarketingStore.shared.items(for: project).count
+        case .supporters: return SupportersStore.shared.supporters(for: project).count
         case .experience:
             guard let project else {
                 return store.projectCounts.filter { AppExperience.of($0.key) != nil }.count
@@ -237,6 +238,8 @@ struct SectionMetrics {
         case .experience:
             guard let project else { return "그려 둔 앱 \(count)개" }
             return AppExperience.of(project) == nil ? "아직 안 그림" : "경험 \(count)가지"
+        case .supporters:
+            return count > 0 ? "\(count)명" : "아직 없음"
         }
     }
 
@@ -362,6 +365,8 @@ struct SectionMetrics {
         case .experience:
             guard let project else { return "앱마다 사용자가 꿈꿀 수 있는 모습" }
             return AppExperience.of(project)?.dream ?? "사용자가 꿈꿀 수 있는 모습 · 줘야 하는 경험"
+        case .supporters:
+            return "이 앱을 여기까지 오게 해 준 분들 · 함께 만든 분과 후원해 준 분 · 지금은 허브에만"
         case .storeAnalytics:
             guard purchases.isConfigured else { return "App Store Connect 키를 넣으면 Apple 이 모은 분석 리포트가 나옵니다" }
             guard let project else {
