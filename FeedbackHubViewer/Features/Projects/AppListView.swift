@@ -78,6 +78,9 @@ struct AppListView: View {
             }
         }
         .animation(.default, value: entries.map(\.key))
+        // 칸을 바꾸면 목록을 새로 — 같은 목록이 새 칸의 차례로 줄을 섞으며 날아다니지 않게.
+        // 줄이 움직이는 애니메이션은 한 칸 안에서 차례가 바뀔 때만(뱃지가 서거나 질 때).
+        .id(section)
         .onChange(of: section) { held = nil }
         .hubSidebarListStyle()
         .modifier(PushedTitle(title: section.rawValue, isPushed: pushes))

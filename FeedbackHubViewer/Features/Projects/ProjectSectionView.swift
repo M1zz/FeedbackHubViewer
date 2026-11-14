@@ -17,6 +17,7 @@ struct ProjectSectionView: View {
     @EnvironmentObject private var design: DesignDocsStore
     @EnvironmentObject private var charts: ChartStore
     @EnvironmentObject private var news: NewsStore
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// nil == 전체 앱.
     let project: String?
     /// 어느 기능의 화면인가. 아이폰은 탭마다 다른 기능이 열려 있으므로 가게의 "지금 기능"
@@ -41,12 +42,16 @@ struct ProjectSectionView: View {
         Group {
             if drawnKey == freshKey {
                 content
+                    .transition(.opacity)
             } else {
                 ProgressView()
                     .controlSize(.small)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .transition(.opacity)
             }
         }
+            // 칸 · 앱을 바꾸면 새 화면이 툭 갈아 끼워지지 않고 짧게 번져 들어온다.
+            .animation(reduceMotion ? nil : .easeOut(duration: 0.18), value: drawnKey == freshKey)
             // 로딩 표시가 한 번 그려질 틈을 준 뒤 화면을 그린다.
             .task(id: freshKey) {
                 guard drawnKey != freshKey else { return }
