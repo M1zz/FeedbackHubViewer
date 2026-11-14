@@ -6080,5 +6080,53 @@
   "slides": [],
   "body": "",
   "bodyEn": "Copy a tracking number, then an address, and the first one is gone.\n\nClipKeyboard keeps what you copy for 30 days, one tap away on the keyboard. It even sorts emails, phones, addresses, cards and IBANs.\n\nFree. Search \"Clip Keyboard\" on the App Store.\n#buildinpublic #indiedev #iOS"
+ },
+ {
+  "project": "com.Ysoup.LeaveWise",
+  "plannedAt": "2026-11-14T00:00:00Z",
+  "stage": "ready",
+  "title": "Which days off make the longest break?",
+  "script": "",
+  "scriptEn": "",
+  "theme": null,
+  "id": "a46f1a55-8709-492d-8906-5593b71822e3",
+  "kind": "video",
+  "channel": "인스타그램 릴스",
+  "angle": "영어 · 해외 대상 둘째 편(크림 feature.swift, 6장). 추천 일정 한 기능: 어느 날 쉬나 → 공휴일+주말을 짝지음 → 연차 2일로 5일 → 남은 연차. 덱 scripts/cardnews/decks/2026-11-14-골드위크-추천일정-en.json 영상 16초. 자료 app-portfolio marketing/cardnews/2026-11-14-goldweek-recommend-en/",
+  "slides": [],
+  "body": "",
+  "bodyEn": "Which days off give you the longest break?\n\nGoldweek pairs public holidays with weekends and shows which days to take off. Martin Luther King Jr. Day 2027: take 2 days of leave, get 5 days off in a row.\n\nHolidays for 42 countries, down to your state or region. Your used, planned and remaining days sit on one screen and on a Home Screen widget.\n\nSearch \"Goldweek\" on the App Store.\n\n#pto #vacationplanning #longweekend #publicholidays #worklifebalance #iosapp #indiedev #productivity"
+ },
+ {
+  "project": "com.Ysoup.LeaveWise",
+  "plannedAt": "2026-11-14T00:00:00Z",
+  "stage": "ready",
+  "title": "Which days off make the longest break?",
+  "script": "",
+  "scriptEn": "",
+  "theme": null,
+  "id": "c0701724-ec30-4b9c-9959-5108dfc22c45",
+  "kind": "cardNews",
+  "channel": "스레드",
+  "angle": "영어 · 해외 대상 둘째 편(크림 feature.swift, 6장). 추천 일정 한 기능: 어느 날 쉬나 → 공휴일+주말을 짝지음 → 연차 2일로 5일 → 남은 연차. 덱 scripts/cardnews/decks/2026-11-14-골드위크-추천일정-en.json 영상 16초. 자료 app-portfolio marketing/cardnews/2026-11-14-goldweek-recommend-en/",
+  "slides": [],
+  "body": "",
+  "bodyEn": "Which days off give you the longest break?\n\nGoldweek pairs public holidays with weekends and shows which days to take off. MLK Day 2027: 2 days of leave, 5 days off in a row.\n\nHolidays for 42 countries, down to your state or region. Search \"Goldweek\" on the App Store."
+ },
+ {
+  "project": "com.Ysoup.LeaveWise",
+  "plannedAt": "2026-11-14T00:00:00Z",
+  "stage": "ready",
+  "title": "Which days off make the longest break?",
+  "script": "",
+  "scriptEn": "",
+  "theme": null,
+  "id": "49094df4-6ab5-43f6-94a3-f97e9201a82b",
+  "kind": "video",
+  "channel": "X",
+  "angle": "영어 · 해외 대상 둘째 편(크림 feature.swift, 6장). 추천 일정 한 기능: 어느 날 쉬나 → 공휴일+주말을 짝지음 → 연차 2일로 5일 → 남은 연차. 덱 scripts/cardnews/decks/2026-11-14-골드위크-추천일정-en.json 영상 16초. 자료 app-portfolio marketing/cardnews/2026-11-14-goldweek-recommend-en/",
+  "slides": [],
+  "body": "",
+  "bodyEn": "Which days off give you the longest break?\n\nGoldweek pairs public holidays with weekends and shows which days to take.\nMLK Day 2027: 2 days of leave, 5 days off in a row.\n\nHolidays for 42 countries. Pick your state or region.\nSearch \"Goldweek\" on the App Store.\n\n#indiedev #iosdev"
  }
 ]

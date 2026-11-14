@@ -236,7 +236,7 @@ enum MarketingSeed {
     /// 2026-10-30: 두번알림 인스타 글을 안 잘린 4:5 이미지로 다시 올린 대로.
     /// 2026-11-12: 10-30 뒤로 시드에만 적고 판을 안 올려 앱에 안 들어간 것들 — 한 기능 깊이형 카드뉴스(클립키보드 템플릿 · 쑥쑥용돈 저축 이자) 올림 등.
     /// 2026-11-13: 첫 영어판 — 클립키보드 Recent 탭(인스타 릴스 · 스레드 카드 6장 · X 영상).
-    static let version = "2026-11-13"
+    static let version = "2026-11-14"
     static let fileName = "marketing-seed"
     /// 처음 시드를 만든 날. 시드에서 온 활동의 만든 시각 · 고친 시각이 이것이다.
     static let firstStamp = ISO8601DateFormatter().date(from: "2026-10-22T00:00:00Z") ?? .distantPast
