@@ -81,7 +81,7 @@ struct NewsView: View {
                     HStack(alignment: .top, spacing: 10) {
                         newsIcon(project: line.project, kind: line.kind, size: 36)
                         VStack(alignment: .leading, spacing: 3) {
-                            Text(line.title)
+                            Text(store.currentWording(line.title, project: line.project))
                                 .font(.headline)
                                 .fixedSize(horizontal: false, vertical: true)
                             Text("→ \(line.action)")
@@ -247,7 +247,7 @@ struct NewsView: View {
         if isOpen {
             ForEach(group.count > 1 ? group.items : []) { item in
                 Button { open(item) } label: {
-                    Text(item.title)
+                    Text(store.currentWording(item.title, project: item.project))
                         .font(.body)
                         .foregroundStyle(.secondary)
                         .lineLimit(2)
@@ -319,7 +319,7 @@ struct NewsView: View {
     }
 
     private func title(_ group: NewsGroup) -> String {
-        guard group.count > 1 else { return group.first.title }
+        guard group.count > 1 else { return store.currentWording(group.first.title, project: group.first.project) }
         return Briefing.mergedTitle(group.first.kind, app: store.displayName(for: group.first.project), count: group.count)
     }
 

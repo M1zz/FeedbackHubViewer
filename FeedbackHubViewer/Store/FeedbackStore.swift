@@ -1827,7 +1827,45 @@ final class FeedbackStore: ObservableObject {
     var storeAppNames: [String: String] = [:] {
         // 이름만 바뀌면 화면이 다시 그려지지 않아 옛 이름이 다른 일로 다시 그릴 때까지 남았다.
         willSet { if newValue != storeAppNames { objectWillChange.send() } }
-        didSet { if storeAppNames != oldValue { invalidateLabels() } }
+        didSet {
+            guard storeAppNames != oldValue else { return }
+            // 스토어에서 이름을 바꾸면 옛 이름을 적어 둔다 — 그 이름으로 저장된 글(소식 제목 등)을
+            // 지금 이름으로 바꿔 보여 주려고(`currentWording`).
+            var former = formerStoreNames
+            for (key, old) in oldValue where !old.isEmpty && storeAppNames[key].map({ $0 != old }) == true {
+                former[key, default: []].insert(old)
+            }
+            if former != formerStoreNames {
+                formerStoreNames = former
+                defaults.set(former.mapValues { Array($0) }, forKey: Self.formerStoreNamesKey)
+            }
+            invalidateLabels()
+        }
+    }
+
+    /// 스토어에 걸렸던 옛 이름들.
+    private lazy var formerStoreNames: [String: Set<String>] =
+        ((defaults.dictionary(forKey: Self.formerStoreNamesKey) as? [String: [String]]) ?? [:]).mapValues(Set.init)
+    private static let formerStoreNamesKey = "formerStoreAppNames"
+    /// 앱이 스스로 보낸 이름들(피드백 · 사용 기록). 옛 이름일 수 있다.
+    private var reportedAppNames: [String: Set<String>] = [:]
+
+    /// 저장해 둔 글 속 옛 앱 이름을 지금 이름으로. 소식처럼 만들 때 이름을 박아 둔 글은 앱이
+    /// 이름을 바꾸면 옛 이름으로 남아 화면에 두 이름이 섞였다("징검돌" · "모찌모").
+    /// 조사(이/가, 으로/로)도 새 이름에 맞춘다.
+    func currentWording(_ text: String, project: String) -> String {
+        let current = displayName(for: project)
+        let names = (formerStoreNames[project] ?? []).union(reportedAppNames[project] ?? [])
+            .map(Self.shortName)
+            .filter { $0 != current && $0.count >= 2 }
+            .sorted { $0.count > $1.count }
+        var result = text
+        for old in names where result.contains(old) {
+            result = result.replacingOccurrences(of: old.이가, with: current.이가)
+                .replacingOccurrences(of: old.으로, with: current.으로)
+                .replacingOccurrences(of: old, with: current)
+        }
+        return result
     }
 
     /// Manual `appId → 앱 이름` overrides for apps whose records never include an
@@ -1837,6 +1875,16 @@ final class FeedbackStore: ObservableObject {
 
     private func learnAppNames(from feedback: [Feedback]) {
         var map: [String: String] = [:]
+        var reported: [String: Set<String>] = [:]
+        func note(_ id: String?, _ name: String?) {
+            guard let id = id?.trimmingCharacters(in: .whitespaces), !id.isEmpty,
+                  let name = name?.trimmingCharacters(in: .whitespaces), !name.isEmpty else { return }
+            reported[id, default: []].insert(name)
+        }
+        for fb in feedback { note(fb.appId, fb.recordAppName) }
+        for snapshot in fetchedSnapshots { note(snapshot.appId, snapshot.appName) }
+        for event in fetchedEvents { note(event.appId, event.appName) }
+        reportedAppNames = reported
         for fb in feedback {
             guard let id = fb.appId?.trimmingCharacters(in: .whitespaces), !id.isEmpty,
                   let name = fb.recordAppName else { continue }

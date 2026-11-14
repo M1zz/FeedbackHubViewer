@@ -158,7 +158,7 @@ struct AppPriorityCards: View {
                     .foregroundStyle(tint)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(title).font(.hubCaption).foregroundStyle(.secondary)
-                    Text(row.name).font(.title3.bold()).lineLimit(2)
+                    Text(store.displayName(for: row.id)).font(.title3.bold()).lineLimit(2)
                     Text(detail).font(.hubCaption).foregroundStyle(.secondary)
                 }
                 Spacer(minLength: 0)
@@ -203,6 +203,7 @@ struct AppPriorityCards: View {
 // MARK: - 한 줄
 
 private struct PriorityRowCard: View {
+    @EnvironmentObject private var store: FeedbackStore
     let rank: Int
     let row: PriorityRow
     let sort: PrioritySort
@@ -230,7 +231,7 @@ private struct PriorityRowCard: View {
             VStack(alignment: .leading, spacing: 10) {
                 HStack(spacing: 8) {
                     AppIcon(url: iconURL, size: 26)
-                    Text(row.name)
+                    Text(store.displayName(for: row.id))
                         .font(.headline)
                         .lineLimit(2)
                     Spacer(minLength: 8)
