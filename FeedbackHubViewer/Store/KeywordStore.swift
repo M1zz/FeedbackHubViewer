@@ -75,7 +75,8 @@ final class KeywordStore: ObservableObject {
 
     private static let countriesKey = "keywordCountries"
     private static let lastCheckDayKey = "keywordLastCheckDay"
-    private static let lastListingRefreshDayKey = "keywordLastListingRefreshDay"
+    /// 스토어 이름 · 아이콘을 마지막으로 다시 읽은 때(초).
+    private static let lastListingRefreshKey = "keywordLastListingRefreshAt"
     private static let recommendationsFile = "keyword-recommendations"
     static let fieldLogFile = "keyword-fields"
 
@@ -207,7 +208,7 @@ final class KeywordStore: ObservableObject {
             // ("벅터벅터" → "벅뚜벅뚜"). 이름은 허브 전체의 앱 이름이 되므로 낡으면 안 된다.
             // 키워드가 없어도 돈다 - 요청은 앱 20개당 하나다.
             if self.needsListingRefresh {
-                UserDefaults.standard.set(UsageRollups.dayKey(Date()), forKey: Self.lastListingRefreshDayKey)
+                UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: Self.lastListingRefreshKey)
                 await self.linkTask?.value
                 self.refreshLinks(bundleIds: Array(Set(bundleIds).union(self.history.links.keys))
                     .filter { $0 != Feedback.unclassifiedProject })
@@ -217,9 +218,11 @@ final class KeywordStore: ObservableObject {
         }
     }
 
-    /// Whether the store listings (names, icons) have been re-read today.
+    /// Whether the store listings (names, icons) are older than six hours.
     private var needsListingRefresh: Bool {
-        UserDefaults.standard.string(forKey: Self.lastListingRefreshDayKey) != UsageRollups.dayKey(Date())
+        // 하루 한 번이면 새벽에 읽은 뒤 아침에 바뀐 이름이 하루 내내 옛것으로 남았다("징검돌" → "모찌모").
+        // 6시간마다 — 요청은 앱 20개당 하나라 가볍다.
+        Date().timeIntervalSince1970 - UserDefaults.standard.double(forKey: Self.lastListingRefreshKey) > 6 * 3600
     }
 
     /// Whether today's check has run. Stored as a day key rather than a date so

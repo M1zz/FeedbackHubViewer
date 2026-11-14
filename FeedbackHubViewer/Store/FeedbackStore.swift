@@ -1399,7 +1399,11 @@ final class FeedbackStore: ObservableObject {
     @Published private(set) var readIDs: Set<String> = [] { didSet { invalidateReadState() } }
     private static let readIDsKey = "readFeedbackIDs"
 
-    func isUnread(_ feedback: Feedback) -> Bool { !readIDs.contains(feedback.id) }
+    /// 답장을 보낸 것은 읽은 것이다 — 다른 기기에서 답장해 이 기기에선 연 적이 없어도.
+    /// 그게 빠져 "피드백 9" 와 "할 일 5" 가 어긋났다(답장만 하고 안 연 4건).
+    func isUnread(_ feedback: Feedback) -> Bool {
+        !readIDs.contains(feedback.id) && !repliedIDs.contains(feedback.id)
+    }
 
     /// Unread across every project — the number the tab badge shows.
     var unreadCount: Int { countUnread(in: allFeedback) }
@@ -1415,7 +1419,7 @@ final class FeedbackStore: ObservableObject {
     /// Not `private`: the project summaries in `FeedbackStore+Projects.swift`
     /// count unread per project as they build each card.
     func countUnread(in items: [Feedback]) -> Int {
-        items.reduce(0) { $0 + (readIDs.contains($1.id) ? 0 : 1) }
+        items.reduce(0) { $0 + (isUnread($1) ? 1 : 0) }
     }
 
     /// Called when a feedback's detail is shown.
@@ -1821,6 +1825,8 @@ final class FeedbackStore: ObservableObject {
     /// 앱이 보낸 이름보다 앞선다. 스토어에 없는 앱(개발 빌드·심사 중)은 여기
     /// 없어서 앱이 보낸 이름으로 남는다.
     var storeAppNames: [String: String] = [:] {
+        // 이름만 바뀌면 화면이 다시 그려지지 않아 옛 이름이 다른 일로 다시 그릴 때까지 남았다.
+        willSet { if newValue != storeAppNames { objectWillChange.send() } }
         didSet { if storeAppNames != oldValue { invalidateLabels() } }
     }
 
