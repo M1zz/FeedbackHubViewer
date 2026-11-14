@@ -123,6 +123,38 @@ struct SectionMetrics {
         Dictionary((purchases.priority?.rows ?? []).map { ($0.id, $0.priority) }, uniquingKeysWith: max)
     }
 
+    // MARK: - 차례
+
+    /// 앱 목록에서 이 칸이 먼저 보여 줄 앱일수록 큰 값. 뱃지 선 앱이 늘 이것보다 앞서고
+    /// (`AppListView`), 값이 같으면 MAU 순 그대로. 칸마다 "지금 손댈 것이 많은 앱" 이 위로 —
+    /// 피드백은 남은 일, 진단은 최근 7일, 유입은 다운로드처럼. nil 이면 MAU 순 그대로(통계).
+    func sortKey(_ section: FeedbackStore.ProjectSection, project: String) -> Double? {
+        // 앞 값이 먼저, 같으면 뒤 값으로 — 뒤 값이 앞 값을 넘지 않게 크게 벌린다.
+        func then(_ first: Int, _ second: Int) -> Double { Double(first) * 1_000_000 + Double(second) }
+        switch section {
+        case .inbox, .news, .stats: return nil
+        case .feedback:
+            let items = store.feedback(for: project)
+            return then(store.countPending(in: items), items.count)
+        case .reviews: return then(unansweredReviews(project), reviewCount(project))
+        case .release: return Double(store.releaseLevel(for: project)?.rawValue ?? -1)
+        case .crashes:
+            let summary = store.crashSummary(for: project)
+            return then(summary.last7Days, summary.total)
+        case .storeAnalytics: return priorityScores[project] ?? -1
+        case .purchases:
+            // 최근 결제 건수 — 상품 수는 손댈 곳을 말하지 않는다.
+            guard let sales = purchases.sales, let products = purchases.products(for: project) else { return -1 }
+            return then(products.reduce(0) { $0 + sales.totals(for: $1.id).purchases }, products.count)
+        case .marketing:
+            let items = MarketingStore.shared.items(for: project).filter { !$0.isDeleted }
+            let upcoming = items.filter { [.planned, .preparing, .ready].contains($0.stage) }.count
+            return then(upcoming, items.count)
+        case .acquisition, .keywords, .charts, .giftCodes, .design, .supporters, .experience:
+            return Double(count(section, project: project))
+        }
+    }
+
     // MARK: - Count
 
     func count(_ section: FeedbackStore.ProjectSection, project: String?) -> Int {

@@ -38,20 +38,15 @@ struct AppListView: View {
     var body: some View {
         let metrics = SectionMetrics(store: store, keywords: keywords, purchases: purchases, design: design, charts: charts, news: news)
         let traffic = section == .stats ? store.trafficByProject : [:]
-        // 뱃지가 선 앱이 언제나 맨 위 — 볼 것을 찾아다니지 않게. 그 안과 나머지는 MAU 순
-        // 그대로(릴리즈는 빨강 먼저). 눌러 고른 앱은 뱃지가 사라져도 떠날 때까지 자리를 지킨다.
-        // 스토어 분석은 우선순위 점수가 높은 앱부터 — 점수가 순서 그 자체라 뱃지로 끌어올리지 않는다.
-        let scores = section == .storeAnalytics ? metrics.priorityScores : [:]
-        let base = switch section {
-        case .release: store.redFirst(store.projectCounts, key: { $0.key })
-        case .storeAnalytics:
-            store.projectCounts.enumerated().sorted {
-                let (a, b) = (scores[$0.element.key] ?? -1, scores[$1.element.key] ?? -1)
-                return a == b ? $0.offset < $1.offset : a > b
-            }.map(\.element)
-        default: store.projectCounts
-        }
-        let flagged = section == .storeAnalytics ? [] : Set(base.map(\.key).filter {
+        // 뱃지가 선 앱이 언제나 맨 위 — 볼 것을 찾아다니지 않게. 그 안과 나머지는 칸마다 손댈 것이
+        // 많은 앱부터(`SectionMetrics.sortKey`), 같으면 MAU 순. 눌러 고른 앱은 뱃지가 사라져도
+        // 떠날 때까지 자리를 지킨다.
+        let keys = Dictionary(uniqueKeysWithValues: store.projectCounts.map { ($0.key, metrics.sortKey(section, project: $0.key)) })
+        let base = store.projectCounts.enumerated().sorted {
+            let (a, b) = (keys[$0.element.key] ?? nil, keys[$1.element.key] ?? nil)
+            return a == b ? $0.offset < $1.offset : (a ?? 0) > (b ?? 0)
+        }.map(\.element)
+        let flagged = Set(base.map(\.key).filter {
             (metrics.badge(section, project: $0) ?? visitBadge($0)) != nil || ($0 == held && $0 == store.selectedProject)
         })
         let entries = base.filter { flagged.contains($0.key) } + base.filter { !flagged.contains($0.key) }
