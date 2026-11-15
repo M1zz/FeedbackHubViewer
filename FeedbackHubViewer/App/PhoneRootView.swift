@@ -112,6 +112,16 @@ private struct PhoneTab: View {
     private var root: some View {
         if tab == .overview {
             PhoneOverviewView()
+        } else if tab == .today {
+            // 할 일 탭은 곧바로 할 일(손볼 것 + 알아 둘 것). 소식은 오른쪽 위에서.
+            ProjectSectionView(project: nil, section: .inbox)
+                .toolbar {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        NavigationLink(value: FeedbackStore.ProjectRoute(project: nil, section: .news)) {
+                            Label("소식", systemImage: "newspaper")
+                        }
+                    }
+                }
         } else {
             sectionList
         }
@@ -132,11 +142,11 @@ private struct PhoneTab: View {
         return List {
             ForEach(tab.groups) { group in
                 Section {
-                    ForEach(group.phoneSections) { section in
+                    ForEach(group.hosts) { section in
                         link(section) {
                             FeatureRow(section: section,
                                        detail: metrics.label(section, project: nil),
-                                       badge: metrics.badge(section, project: nil),
+                                       badge: metrics.hostBadge(section, project: nil),
                                        isSelected: false)
                         }
                     }

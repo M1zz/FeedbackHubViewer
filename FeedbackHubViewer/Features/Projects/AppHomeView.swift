@@ -17,7 +17,7 @@ import SwiftUI
 enum AppScopedSections {
     static func groups() -> [(group: FeedbackStore.ProjectSection.Group, sections: [FeedbackStore.ProjectSection])] {
         FeedbackStore.ProjectSection.Group.allCases.compactMap { group in
-            let sections = group.phoneSections.filter(\.usesAppList)
+            let sections = group.hosts.filter(\.usesAppList)
             return sections.isEmpty ? nil : (group, sections)
         }
     }
@@ -57,7 +57,7 @@ struct AppHomeView: View {
                         NavigationLink(value: FeedbackStore.ProjectRoute(project: project, section: section)) {
                             FeatureRow(section: section,
                                        detail: metrics.label(section, project: project),
-                                       badge: metrics.badge(section, project: project),
+                                       badge: metrics.hostBadge(section, project: project),
                                        isSelected: false)
                         }
                     }

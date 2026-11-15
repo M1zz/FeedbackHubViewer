@@ -85,6 +85,32 @@ final class FeedbackStore: ObservableObject {
         /// 지금은 허브에서만 보고, 모아 두었다가 앱 · 웹에 내보낸다.
         case supporters = "고마운 분들"
         var id: String { rawValue }
+
+        /// 이 칸이 들어가 사는 칸. 같은 물음에 답하는 칸끼리 묶어 목록에는 하나만 세우고, 나머지는
+        /// 그 화면 위의 탭으로 넘긴다 — 칸 16개를 오가며 숫자 하나를 찾지 않게.
+        ///  - 릴리즈 ← 진단: 빨강의 까닭은 대개 크래시에 있다.
+        ///  - 통계 ← 스토어 분석: 설치 · 사용과 스토어 쪽 숫자.
+        ///  - 유입 ← 키워드 · 차트: 사람들이 어떻게 앱을 찾아오나.
+        ///  - 앱 내 구입 ← 선물 코드, 설계 ← 경험.
+        var host: ProjectSection {
+            switch self {
+            case .crashes: .release
+            case .storeAnalytics: .stats
+            case .keywords, .charts: .acquisition
+            case .giftCodes: .purchases
+            case .experience: .design
+            default: self
+            }
+        }
+        var isHost: Bool { host == self }
+        /// 한 칸에 사는 탭들 — 집 칸이 먼저.
+        var members: [ProjectSection] {
+            let host = host
+            return [host] + ProjectSection.allCases.filter { $0 != host && $0.host == host }
+                #if os(iOS)
+                .filter { $0 != .design }
+                #endif
+        }
         /// 할 일은 처음부터 모든 앱을 앱별로 묶어 보여 주는 칸이라 앱 목록을 거치지 않는다.
         var usesAppList: Bool { self != .inbox && self != .news }
         /// 기능 목록에서 이 칸이 놓이는 무리.
@@ -111,6 +137,8 @@ final class FeedbackStore: ObservableObject {
             case build = "만들기"
             var id: String { rawValue }
             var sections: [ProjectSection] { ProjectSection.allCases.filter { $0.group == self } }
+            /// 목록에 서는 칸 — 딸린 칸(`ProjectSection.host`)은 그 칸 안의 탭으로 들어간다.
+            var hosts: [ProjectSection] { phoneSections.filter(\.isHost) }
             /// 아이폰에서 여는 기능. 설계는 맥의 디스크를 읽는 칸이라(`DesignDocsStore.isSupported`)
             /// 아이폰에는 없다.
             var phoneSections: [ProjectSection] {
@@ -385,8 +413,11 @@ final class FeedbackStore: ObservableObject {
     /// moves, so pushing (iPhone) and re-scoping the column (Mac/iPad) don't
     /// have to be spelled out at each call site.
     func open(project: String?, section: ProjectSection? = nil) {
-        // 앱 하나로 보던 중에 다른 앱(또는 전체)으로 가는 링크면 그 앱으로 옮겨 쥔다.
-        if focusedApp != nil, focusedApp != project { focusedApp = project }
+        // 맥 · 아이패드: 앱이 걸린 링크는 늘 그 앱 하나로 보는 상태로 연다 — 어느 모드로 갈지
+        // 헤아리지 않아도 되게. 전체(nil)로 가는 링크면 앱 하나로 보기를 푼다.
+        if !usesStackNavigation, focusedApp != project {
+            focusedApp = project == Feedback.unclassifiedProject ? nil : project
+        }
         selectedProject = project
         if let section {
             projectSection = section
@@ -394,14 +425,10 @@ final class FeedbackStore: ObservableObject {
             projectSection = .feedback
         }
         if usesStackNavigation {
-            // 그 기능이 사는 탭으로 옮겨 가서 민다. 뒤로 가면 그 탭의 앱 목록이 나온다.
-            let tab = PhoneTab.containing(projectSection)
-            phoneTab = tab
-            // 기능 목록 → 앱 목록 → 앱 차례라, 뒤로 가면 그 기능의 앱 목록이 나오게.
-            var path = NavigationPath()
-            if projectSection.usesAppList { path.append(SectionRoute(section: projectSection)) }
-            path.append(ProjectRoute(project: project, section: projectSection))
-            phonePaths[tab] = path
+            // 지금 탭 안에서 민다. 예전에는 그 기능이 사는 탭으로 건너가 밀어서, 뒤로 가도
+            // 누른 곳(현황 · 오늘)으로 돌아오지 않았다.
+            phonePaths[phoneTab, default: NavigationPath()]
+                .append(ProjectRoute(project: project, section: projectSection))
         }
     }
 

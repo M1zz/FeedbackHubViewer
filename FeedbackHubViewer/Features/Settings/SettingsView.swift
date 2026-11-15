@@ -94,6 +94,10 @@ private struct AttentionSettings: View {
                 Toggle(isOn: $store.notificationsEnabled) {
                     Label("새것이 오면 이 기기에 알림 보내기", systemImage: "bell")
                 }
+                // 툴바에 있던 스위치 — 한 번 정하면 그만이라 여기로.
+                Toggle(isOn: $store.autoRefresh) {
+                    Label("1분마다 자동으로 새로고침", systemImage: "timer")
+                }
                 ForEach(alertable) { kind in
                     VStack(alignment: .leading, spacing: 2) {
                         Toggle(isOn: binding(for: kind, in: \.alertKinds)) {

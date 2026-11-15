@@ -22,7 +22,9 @@ struct ProjectSectionView: View {
     let project: String?
     /// 어느 기능의 화면인가. 아이폰은 탭마다 다른 기능이 열려 있으므로 가게의 "지금 기능"
     /// 이 아니라 이 값을 따른다.
-    let section: FeedbackStore.ProjectSection
+    let requested: FeedbackStore.ProjectSection
+    /// 지금 보이는 탭. 묶인 칸(`ProjectSection.members`)이면 화면 위 탭으로 바꾼다.
+    @State private var section: FeedbackStore.ProjectSection
     /// The Mac's inspector follows this; a phone pushes the detail instead.
     @Binding var selection: Feedback.ID?
     /// 이 화면을 열 때 새것이던 진단 · 리뷰 — "앱|칸" 과 함께. 줄마다 "새" 를 남긴다.
@@ -34,7 +36,8 @@ struct ProjectSectionView: View {
     init(project: String?, section: FeedbackStore.ProjectSection,
          selection: Binding<Feedback.ID?> = .constant(nil)) {
         self.project = project
-        self.section = section
+        self.requested = section
+        _section = State(initialValue: section)
         _selection = selection
     }
 
@@ -62,8 +65,12 @@ struct ProjectSectionView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             // 뱃지를 눌러 들어왔으면 무엇이 바뀌었는지가 맨 위에.
             .safeAreaInset(edge: .top, spacing: 0) {
-                SectionChangesBanner(section: section, project: project)
+                VStack(spacing: 0) {
+                    memberTabs
+                    SectionChangesBanner(section: section, project: project)
+                }
             }
+            .onChange(of: requested) { section = requested }
             // 띠를 얹은 화면은 "띠 + 내용" 높이를 우겨 맥 창보다 커졌고, 넘친 만큼 위아래로
             // 삐져 띠 윗부분이 툴바 밑에 깔렸다. 높이는 창이 주는 만큼만 — 띠 아래 내용이 준다.
             .frame(minHeight: 0, maxHeight: .infinity)
@@ -78,6 +85,23 @@ struct ProjectSectionView: View {
             .modifier(SectionVisitTracker(section: section, project: project, metrics: metrics))
             .navigationTitle(title)
             .hubNavigationSubtitle(metrics.subtitle(section, project: project))
+    }
+
+    /// 묶인 칸의 탭 — 진단은 릴리즈 안, 스토어 분석은 통계 안 … (`ProjectSection.host`).
+    @ViewBuilder
+    private var memberTabs: some View {
+        let members = section.members
+        if members.count > 1 {
+            Picker("보기", selection: Binding(get: { section }, set: { new in
+                section = new
+                if !store.usesStackNavigation { store.projectSection = new }
+            })) {
+                ForEach(members) { Text($0.rawValue).tag($0) }
+            }
+            .pickerStyle(.segmented)
+            .labelsHidden()
+            .hubHeaderBar(verticalPadding: 8)
+        }
     }
 
     private func syncStore() {

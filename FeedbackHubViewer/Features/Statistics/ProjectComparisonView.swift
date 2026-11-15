@@ -46,7 +46,13 @@ struct ProjectComparisonView: View {
                             .frame(maxWidth: .infinity, alignment: .leading)
                     }
                 } else {
-                    leaders(rows)
+                    // 결론 한 줄과 1등 셋만 위에. 줄 세운 카드 전부는 접어 둔다.
+                    headline(rows)
+                    leaders(rows, primary: true)
+                    DetailFold(storageKey: "fold.stats.all",
+                               summary: "1등 더 보기 · 매일 설치 · 설치 지도 · 지표마다 줄 세운 순위 7장") {
+                        VStack(alignment: .leading, spacing: sectionSpacing) {
+                    leaders(rows, primary: false)
                     DailyInstallsCard(project: nil, audience: .all)
                     InstallMapCard(project: nil)
                     ranking(rows, title: "가장 많이 설치된 앱", systemImage: "iphone",
@@ -91,6 +97,8 @@ struct ProjectComparisonView: View {
                         guard $0.feedback > 0 else { return nil }
                         return Metric(value: Double($0.feedback), text: "\($0.feedback)건",
                                       hint: $0.rating.map { String(format: "평균 별점 %.2f", $0) } ?? "별점 없음")
+                    }
+                        }
                     }
                 }
             }
@@ -154,21 +162,49 @@ struct ProjectComparisonView: View {
 
     /// 순위 카드마다 맨 위 한 줄만 뽑아 둔 것. 화면을 열자마자 답이 보이고,
     /// 까닭은 아래 카드에서 읽는다.
-    private func leaders(_ rows: [Row]) -> some View {
+    /// 맨 위 한 줄 — 아래 "WAU 증감" 순위를 말로 합친 것. 지난주보다 덜 쓰는 앱부터 본다.
+    private func headline(_ rows: [Row]) -> some View {
+        let compared = rows.filter { $0.wau > 0 || $0.previousWau > 0 }
+        let down = compared.filter { $0.wau < $0.previousWau }
+        let up = compared.filter { $0.wau > $0.previousWau }
+        let text: String
+        if compared.isEmpty {
+            text = "앱 \(rows.count)개 — 지난 2주 동안 이벤트를 보낸 앱이 없어 아직 견줄 수 없습니다."
+        } else if down.isEmpty {
+            text = "앱 \(rows.count)개 — 지난주보다 덜 쓰는 앱이 없습니다. 더 쓰는 앱 \(up.count)개."
+        } else {
+            let names = down.sorted { ($0.wau - $0.previousWau) < ($1.wau - $1.previousWau) }
+                .prefix(3).map(\.name).joined(separator: ", ")
+            text = "앱 \(rows.count)개 중 \(down.count)개를 지난주보다 덜 씁니다 — \(names). 더 쓰는 앱 \(up.count)개."
+        }
+        return Text(text)
+            .font(.title3.weight(.semibold))
+            .fixedSize(horizontal: false, vertical: true)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(Platform.cardPadding)
+            .cardSurface()
+    }
+
+    /// 1등 타일. `primary` 는 위에 두는 셋(설치 · MAU · 7일 신규), 아니면 접힌 쪽의 둘.
+    @ViewBuilder
+    private func leaders(_ rows: [Row], primary: Bool) -> some View {
         let sticky = rows.filter { $0.mau >= Self.stickinessFloor && $0.stickiness != nil }
-        return LazyVGrid(columns: tileColumns, spacing: 10) {
-            LeaderTile(title: "가장 많이 설치됨", systemImage: "iphone", tint: .accentColor,
-                       winner: rows.max { $0.installs < $1.installs }.map { ($0.name, "\($0.installs)대") })
-            LeaderTile(title: "잠재 고객이 가장 많음", systemImage: "person.badge.clock", tint: .orange,
-                       winner: rows.filter { ($0.prospects ?? 0) > 0 }.max { ($0.prospects ?? 0) < ($1.prospects ?? 0) }
-                        .map { ($0.name, "\($0.prospects ?? 0)명") })
-            LeaderTile(title: "가장 활발함 (MAU)", systemImage: "bolt.fill", tint: .blue,
-                       winner: rows.filter { $0.mau > 0 }.max { $0.mau < $1.mau }.map { ($0.name, "\($0.mau)명") })
-            LeaderTile(title: "가장 빨리 큼 (7일 신규)", systemImage: "sparkles", tint: .green,
-                       winner: rows.filter { $0.new7 > 0 }.max { $0.new7 < $1.new7 }.map { ($0.name, "\($0.new7)대") })
-            LeaderTile(title: "가장 자주 엶 (고착도)", systemImage: "arrow.clockwise", tint: .teal,
-                       winner: sticky.max { ($0.stickiness ?? 0) < ($1.stickiness ?? 0) }
-                        .map { ($0.name, String(format: "%.0f%%", (($0.stickiness ?? 0) * 100).rounded())) })
+        LazyVGrid(columns: tileColumns, spacing: 10) {
+            if primary {
+                LeaderTile(title: "가장 많이 설치됨", systemImage: "iphone", tint: .accentColor,
+                           winner: rows.max { $0.installs < $1.installs }.map { ($0.name, "\($0.installs)대") })
+                LeaderTile(title: "가장 활발함 (MAU)", systemImage: "bolt.fill", tint: .blue,
+                           winner: rows.filter { $0.mau > 0 }.max { $0.mau < $1.mau }.map { ($0.name, "\($0.mau)명") })
+                LeaderTile(title: "가장 빨리 큼 (7일 신규)", systemImage: "sparkles", tint: .green,
+                           winner: rows.filter { $0.new7 > 0 }.max { $0.new7 < $1.new7 }.map { ($0.name, "\($0.new7)대") })
+            } else {
+                LeaderTile(title: "잠재 고객이 가장 많음", systemImage: "person.badge.clock", tint: .orange,
+                           winner: rows.filter { ($0.prospects ?? 0) > 0 }.max { ($0.prospects ?? 0) < ($1.prospects ?? 0) }
+                            .map { ($0.name, "\($0.prospects ?? 0)명") })
+                LeaderTile(title: "가장 자주 엶 (고착도)", systemImage: "arrow.clockwise", tint: .teal,
+                           winner: sticky.max { ($0.stickiness ?? 0) < ($1.stickiness ?? 0) }
+                            .map { ($0.name, String(format: "%.0f%%", (($0.stickiness ?? 0) * 100).rounded())) })
+            }
         }
     }
 

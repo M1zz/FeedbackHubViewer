@@ -79,6 +79,19 @@ struct SplitRootView: View {
                     FeedbackDetailView(feedback: feedback,
                                        projectLabel: store.displayName(for: feedback.projectKey))
                         .id(feedback.id)
+                        .overlay(alignment: .topTrailing) {
+                            Button {
+                                isDetailCollapsed = true
+                            } label: {
+                                Image(systemName: "xmark.circle.fill")
+                                    .font(.title3)
+                                    .foregroundStyle(.secondary)
+                            }
+                            .buttonStyle(.plain)
+                            .padding(10)
+                            .help("상세 칸 닫기 (⌥⌘I)")
+                            .keyboardShortcut("i", modifiers: [.command, .option])
+                        }
                 }
                 .frame(width: Self.detailWidth)
                 .transition(.move(edge: .trailing).combined(with: .opacity))
@@ -160,36 +173,9 @@ struct SplitRootView: View {
             IdentityMenu()
         }
 
-        // 상세 칸을 접고 펴는 스위치. 고른 피드백이 있을 때만 뜻이 있다.
-        ToolbarItem(placement: .primaryAction) {
-            Button {
-                isDetailCollapsed.toggle()
-            } label: {
-                Label(isDetailCollapsed ? "상세 펴기" : "상세 접기", systemImage: "sidebar.right")
-            }
-            .help("오른쪽 피드백 상세 칸을 접거나 폅니다")
-            .disabled(selectedFeedback == nil || !store.projectSection.showsFeedbackDetail)
-            .keyboardShortcut("i", modifiers: [.command, .option])
-        }
-
+        // 알림 · 자동 갱신 스위치는 설정(⌘,)으로, 상세 접기는 상세 칸 머리로 옮겼다 —
+        // 툴바에는 날마다 누르는 것만.
         ToolbarItemGroup(placement: .primaryAction) {
-            Toggle(isOn: $store.notificationsEnabled) {
-                Label("알림", systemImage: "bell.badge")
-            }
-            .help("새것이 들어오면 알립니다. 무엇을 알리고 뱃지로 셀지는 설정(⌘,) → 알림에서 고릅니다")
-            .toggleStyle(.button)
-
-            // A stopwatch, not a second round arrow: beside the refresh
-            // button the old icon was the same glyph twice, and nothing said
-            // which one ran now and which one only scheduled. Spelling the
-            // title out would say it plainer still, but it widens the group
-            // enough to push the toolbar into its overflow menu.
-            Toggle(isOn: $store.autoRefresh) {
-                Label("자동 갱신", systemImage: "timer")
-            }
-            .help("1분마다 자동으로 새로고침합니다")
-            .toggleStyle(.button)
-
             // 이름까지 보인다 — 화면마다 받는 것이 달라서 "리뷰 새로고침" · "차트 순위 새로고침"
             // 처럼 무엇을 받는지가 단추에 적혀 있어야 한다. 전부는 ⇧⌘R · 데이터 상태 칸.
             RefreshButton()

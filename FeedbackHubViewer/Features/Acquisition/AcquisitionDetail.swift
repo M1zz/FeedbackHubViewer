@@ -2,19 +2,23 @@
 //  AcquisitionDetail.swift
 //  FeedbackHubViewer
 //
-//  한 앱의 유입 — 판정 한 줄 · 할 일 · 구역별 한 줄 · 출처. 계산은 `AcquisitionDiagnosis`.
+//  한 앱의 유입 — 판정 한 줄 · 할 일 · 구역별 한 줄이 위에, 나머지(채울 것 · ASO 처방 ·
+//  스토어 흐름 · 노출 · 출처 · 지도 원본 · `footer`)는 "자세히 보기" 에 접는다.
+//  계산은 `AcquisitionDiagnosis`.
 //
 
 import SwiftUI
 
 // MARK: - 한 앱
 
-struct AcquisitionDetail: View {
+struct AcquisitionDetail<Footer: View>: View {
     @EnvironmentObject private var store: FeedbackStore
     @EnvironmentObject private var connect: AppStoreConnectStore
     @EnvironmentObject private var keywords: KeywordStore
     let project: String
     let map: AcquisitionMap
+    /// 접힌 칸 맨 아래에 함께 넣는 카드(링크 출처).
+    @ViewBuilder var footer: Footer
 
     @State private var showsMap = false
 
@@ -24,32 +28,58 @@ struct AcquisitionDetail: View {
         VStack(alignment: .leading, spacing: 14) {
             verdict(diagnosis)
 
-            if !diagnosis.missing.isEmpty {
-                MissingInputsCard(project: project, missing: diagnosis.missing)
-            }
-
-            if let aso = diagnosis.aso {
-                ASOPrescriptionCard(project: project, aso: aso)
-            }
-
             VStack(spacing: 10) {
                 ForEach(diagnosis.readings) { reading in
                     ReadingRow(reading: reading, isLeak: reading.zone == diagnosis.leak)
                 }
             }
 
-            if case .ready(let funnel)? = connect.funnels[project]?.value, funnel.instances > 0 {
-                StoreFlowCard(funnel: funnel, sourceMix: diagnosis.sourceMix)
-                ExposureCard(funnel: funnel, bundleID: project)
-            } else if let mix = diagnosis.sourceMix {
-                Card(title: "받는 사람은 어디서 오나", systemImage: "arrow.triangle.branch") {
-                    Text(mix)
-                        .font(.body)
-                        .fixedSize(horizontal: false, vertical: true)
+            DetailFold(storageKey: AcquisitionFold.key, summary: foldSummary(diagnosis)) {
+                VStack(alignment: .leading, spacing: 14) {
+                    folded(diagnosis)
                 }
             }
+        }
+        .task(id: project) {
+            await connect.loadFunnel(bundleID: project)
+            await connect.loadMetadata(bundleID: project)
+        }
+    }
 
-            if !map.isFallback {
+    /// 접힌 칸에 무엇이 있는지 한 줄.
+    private func foldSummary(_ diagnosis: AcquisitionDiagnosis) -> String {
+        var parts: [String] = []
+        if !diagnosis.missing.isEmpty { parts.append("채울 것 \(diagnosis.missing.count)개") }
+        if diagnosis.aso != nil { parts.append("ASO 처방") }
+        parts.append("스토어 흐름 · 노출 · 받는 사람은 어디서 오나")
+        if !map.isFallback { parts.append("지도 원본") }
+        parts.append("캠페인 링크 · 링크 출처")
+        return parts.joined(separator: " · ")
+    }
+
+    @ViewBuilder
+    private func folded(_ diagnosis: AcquisitionDiagnosis) -> some View {
+        if !diagnosis.missing.isEmpty {
+            MissingInputsCard(project: project, missing: diagnosis.missing)
+        }
+
+        if let aso = diagnosis.aso {
+            ASOPrescriptionCard(project: project, aso: aso)
+        }
+
+        if case .ready(let funnel)? = connect.funnels[project]?.value, funnel.instances > 0 {
+            StoreFlowCard(funnel: funnel, sourceMix: diagnosis.sourceMix)
+            ExposureCard(funnel: funnel, bundleID: project)
+        } else if let mix = diagnosis.sourceMix {
+            Card(title: "받는 사람은 어디서 오나", systemImage: "arrow.triangle.branch") {
+                Text(mix)
+                    .font(.body)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+
+        // 기본 지도(`isFallback`)는 리포에 쓴 원본이 없으니 보일 것도 없다.
+        if !map.isFallback {
             DisclosureGroup(isExpanded: $showsMap) {
                 MapDetail(map: map)
                     .padding(.top, 8)
@@ -59,12 +89,9 @@ struct AcquisitionDetail: View {
             }
             .padding(Platform.cardPadding)
             .cardSurface()
-            }
         }
-        .task(id: project) {
-            await connect.loadFunnel(bundleID: project)
-            await connect.loadMetadata(bundleID: project)
-        }
+
+        footer
     }
 
     private func verdict(_ diagnosis: AcquisitionDiagnosis) -> some View {
@@ -98,6 +125,11 @@ struct AcquisitionDetail: View {
         .padding(Platform.cardPadding)
         .cardSurface()
     }
+}
+
+/// 한 앱 유입 화면의 "자세히 보기" 를 연 상태를 담는 키.
+enum AcquisitionFold {
+    static let key = "fold.acquisition.project"
 }
 
 struct ReadingRow: View {

@@ -94,30 +94,39 @@ struct StatisticsDashboard: View {
                         if !usage.hasUsageData { noUsageCard }
                         audiencePicker
                         summaryCard
-                        threeQuestionsCard
-                        DailyInstallsCard(project: scope, audience: audience)
-                        if audience == .all { InstallMapCard(project: scope) }
+                        keyTiles
 
-                        // 카드마다 묻는 것과 답이 위에 있고, 숫자는 "자세히" 아래로 접힌다.
-                        // 규모가 작으면 DAU 계열이 바깥 일에 흔들리므로 코호트 잔존이 먼저다.
-                        if habit.isSmall {
-                            retentionCard
-                            habitCard
-                            activeUsersCard
-                            lifecycleCard
-                        } else {
-                            habitCard
-                            activeUsersCard
-                            lifecycleCard
-                            retentionCard
+                        // 판정을 만든 카드 · 원본은 접어 둔다. 위의 한 줄이 이 카드들을 합친 결과다.
+                        DetailFold(storageKey: "fold.stats.project",
+                                   summary: "판정 전부 · 세 가지 질문 · 설치 · 습관 · 잔존 · 활성 사용자 · 지역 · 앱별 지표 · 한도 · 원본 데이터") {
+                            VStack(alignment: .leading, spacing: sectionSpacing) {
+                                findingsCard
+                                threeQuestionsCard
+                                DailyInstallsCard(project: scope, audience: audience)
+                                if audience == .all { InstallMapCard(project: scope) }
+
+                                // 카드마다 묻는 것과 답이 위에 있고, 숫자는 "자세히" 아래로 접힌다.
+                                // 규모가 작으면 DAU 계열이 바깥 일에 흔들리므로 코호트 잔존이 먼저다.
+                                if habit.isSmall {
+                                    retentionCard
+                                    habitCard
+                                    activeUsersCard
+                                    lifecycleCard
+                                } else {
+                                    habitCard
+                                    activeUsersCard
+                                    lifecycleCard
+                                    retentionCard
+                                }
+                                if audience == .all { regionCard }
+                                activeDaysCard
+                                if audience == .all { accessCard }
+                                specCards
+                                capacityCard
+
+                                rawSection
+                            }
                         }
-                        if audience == .all { regionCard }
-                        activeDaysCard
-                        if audience == .all { accessCard }
-                        specCards
-                        capacityCard
-
-                        rawSection
                     }
                     .padding(contentPadding)
                 }
@@ -198,7 +207,8 @@ struct StatisticsDashboard: View {
         return StatsAnalysis.ranked(all)
     }
 
-    /// 맨 위 한 장. 이 앱이 지금 어떤지를 결론만.
+    /// 맨 위 한 장. 이 앱이 지금 어떤지를 결론만 — 한 줄 판정과 지금 할 일.
+    /// 판정 하나하나는 "자세히 보기" 안의 `findingsCard` 에 있다.
     private var summaryCard: some View {
         let ranked = findings
         let known = ranked.filter { $0.state != .unknown }
@@ -223,6 +233,28 @@ struct StatisticsDashboard: View {
                     .foregroundStyle(Color.accentColor)
                     .fixedSize(horizontal: false, vertical: true)
             }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(Platform.cardPadding)
+        .cardSurface()
+    }
+
+    /// 맨 위에 두는 숫자 셋 — 원본의 설치 수 타일 가운데 지금 쓰는 사람과 새로 온 사람.
+    private var keyTiles: some View {
+        LazyVGrid(columns: tileColumns, spacing: 10) {
+            StatTile(title: "최근 30일 활성", value: "\(usage.active30)", unit: "명",
+                     systemImage: "calendar", tint: .teal)
+            StatTile(title: "최근 7일 활성", value: "\(usage.active7)", unit: "명",
+                     systemImage: "bolt.fill", tint: .blue)
+            StatTile(title: "최근 7일 신규", value: "\(usage.new7)", unit: "대",
+                     systemImage: "sparkles", tint: .green)
+        }
+    }
+
+    /// 판정 전부, 나쁜 것부터. 맨 위 한 줄이 이 목록의 첫 줄을 말로 한 것이다.
+    private var findingsCard: some View {
+        let ranked = findings
+        return Card(title: "판정 전부", systemImage: "checklist") {
             VStack(alignment: .leading, spacing: 10) {
                 ForEach(ranked) { finding in
                     HStack(alignment: .top, spacing: 10) {
@@ -239,9 +271,6 @@ struct StatisticsDashboard: View {
                 }
             }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(Platform.cardPadding)
-        .cardSurface()
     }
 
     private var capacityCard: some View {

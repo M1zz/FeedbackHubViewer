@@ -118,6 +118,13 @@ struct InboxView: View {
 
         #if os(macOS)
         List(selection: $selection) {
+            Section {
+                TodayDigest()
+                    .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))
+                    .listRowBackground(Color.clear)
+            } header: {
+                Text("알아 둘 것")
+            }
             sections(reviews: showsReviews ? reviews : nil,
                      bugs: showsBugs ? bugs : nil,
                      others: showsOthers ? others : nil,
@@ -127,6 +134,13 @@ struct InboxView: View {
         .id(rowsKey)
         #else
         List {
+            Section {
+                TodayDigest()
+                    .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))
+                    .listRowBackground(Color.clear)
+            } header: {
+                Text("알아 둘 것")
+            }
             sections(reviews: showsReviews ? reviews : nil,
                      bugs: showsBugs ? bugs : nil,
                      others: showsOthers ? others : nil,

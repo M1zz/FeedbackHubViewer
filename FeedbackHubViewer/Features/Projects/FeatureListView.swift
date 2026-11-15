@@ -27,8 +27,6 @@ struct FeatureListView: View {
     @ObservedObject private var changes = SectionChanges.shared
     /// 마케팅 칸의 "올렸나요?" 뱃지.
     @ObservedObject private var marketing = MarketingStore.shared
-    /// "확인할 것" 에서 눌러 고른 칸. 뱃지가 사라져도 떠날 때까지 그 자리에 둔다.
-    @State private var held: FeedbackStore.ProjectSection?
 
     var body: some View {
         let metrics = SectionMetrics(store: store, keywords: keywords, purchases: purchases, design: design, charts: charts, news: news)
@@ -76,7 +74,6 @@ struct FeatureListView: View {
                 allSections(metrics)
             }
         }
-        .animation(.default, value: flagged(metrics))
         .hubSidebarListStyle()
         .modifier(SectionChangesBaseline(metrics: metrics))
         .navigationTitle("FeedbackHub")
@@ -94,14 +91,14 @@ struct FeatureListView: View {
         ForEach(AppScopedSections.groups(), id: \.group) { entry in
             Section(entry.group.rawValue) {
                 ForEach(entry.sections) { section in
-                    let isSelected = store.projectSection == section
+                    let isSelected = store.projectSection.host == section
                     Button {
                         store.selectedProject = app
                         store.projectSection = section
                     } label: {
                         FeatureRow(section: section,
                                    detail: metrics.label(section, project: app),
-                                   badge: metrics.badge(section, project: app),
+                                   badge: metrics.hostBadge(section, project: app),
                                    isSelected: isSelected)
                     }
                     .buttonStyle(.plain)
@@ -111,52 +108,30 @@ struct FeatureListView: View {
         }
     }
 
+    /// 무리별로 목록에 선 칸만(`Group.hosts`). 볼 것을 모아 보여 주던 "확인할 것" 은 할 일 맨 위
+    /// "알아 둘 것"(`TodayDigest`)으로 옮겼다 — 뱃지는 줄마다 그대로 선다.
     @ViewBuilder
     private func allSections(_ metrics: SectionMetrics) -> some View {
-            // 뱃지가 달린 칸은 맨 위 "확인할 것" 으로 올린다. 뱃지가 사라지고 그 칸을 떠나면 제 무리의
-            // 제자리로 — 누르자마자 줄이 도망가면 무엇을 골랐는지 볼 수 없다.
-            // 할 일은 이미 맨 위 한 줄이라 그대로 둔다.
-            let flagged = flagged(metrics)
-            if !flagged.isEmpty {
-                Section("확인할 것") {
-                    ForEach(flagged) { section in
-                        row(section, metrics: metrics)
-                    }
+        ForEach(FeedbackStore.ProjectSection.Group.allCases) { group in
+            Section {
+                ForEach(group.hosts) { section in
+                    row(section, metrics: metrics)
                 }
+            } header: {
+                // 할 일은 맨 위 한 줄이라 무리 이름이 없어도 읽힌다.
+                if group != .today { Text(group.rawValue) }
             }
-
-            ForEach(FeedbackStore.ProjectSection.Group.allCases) { group in
-                let sections = group.sections.filter { !flagged.contains($0) }
-                if !sections.isEmpty {
-                    Section {
-                        ForEach(sections) { section in
-                            row(section, metrics: metrics)
-                        }
-                    } header: {
-                        // 할 일은 맨 위 한 줄이라 무리 이름이 없어도 읽힌다.
-                        if group != .today { Text(group.rawValue) }
-                    }
-                }
-            }
-    }
-
-    /// 뱃지가 달린 칸 — 무리 차례 그대로.
-    private func flagged(_ metrics: SectionMetrics) -> [FeedbackStore.ProjectSection] {
-        FeedbackStore.ProjectSection.Group.allCases
-            .filter { $0 != .today }
-            .flatMap(\.sections)
-            .filter { metrics.badge($0, project: nil) != nil || ($0 == held && $0 == store.projectSection) }
+        }
     }
 
     private func row(_ section: FeedbackStore.ProjectSection, metrics: SectionMetrics) -> some View {
-        let isSelected = store.projectSection == section
+        let isSelected = store.projectSection.host == section
         return Button {
-            held = metrics.badge(section, project: nil) != nil ? section : nil
             store.projectSection = section
         } label: {
             FeatureRow(section: section,
                        detail: metrics.label(section, project: nil),
-                       badge: metrics.badge(section, project: nil),
+                       badge: metrics.hostBadge(section, project: nil),
                        isSelected: isSelected)
         }
         .buttonStyle(.plain)

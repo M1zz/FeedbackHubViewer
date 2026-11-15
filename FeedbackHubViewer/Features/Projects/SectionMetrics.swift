@@ -53,6 +53,15 @@ struct SectionMetrics {
 
     /// 우선순위: 안 읽은 피드백 → 새 진단 → 새 리뷰 → 답 안 한 리뷰.
     /// 설정 → 알림에서 끈 종류는 뱃지를 달지 않는다(기본: 진단은 안 단다).
+    /// 목록에 선 칸의 뱃지 — 그 칸에 사는 탭들(`members`)의 뱃지를 더한다. 하나뿐이면 그 뱃지 그대로.
+    func hostBadge(_ section: FeedbackStore.ProjectSection, project: String?) -> Badge? {
+        let badges = section.members.compactMap { badge($0, project: project) }
+        guard let first = badges.first else { return nil }
+        guard badges.count > 1 else { return first }
+        return Badge(count: badges.reduce(0) { $0 + $1.count }, systemImage: first.systemImage,
+                     tint: first.tint, name: badges.map(\.name).joined(separator: " · "))
+    }
+
     func badge(_ section: FeedbackStore.ProjectSection, project: String?) -> Badge? {
         let key = Self.memoKey(section, project)
         if let cached = memo.badges[key] { return cached }

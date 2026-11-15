@@ -5,10 +5,12 @@
 //  스토어 분석 탭. App Store Connect 분석 리포트에서 Apple 만 아는 것을 한 앱씩 보인다.
 //
 //  읽는 차례:
-//   1. 분석 — 몰린 기간과 평상시를 갈라 읽은 판정(`StoreInsights`), 그리고 창 전체의 숫자
-//   2. 사용(세션) · 설치와 삭제 · 다운로드 구성 · 스토어 행동 · 구매 · 웹 미리보기 ·
-//      설치 성능 · 크래시 · 설치 경로 · 구독
-//   3. 리포트 전부 훑기 — 위에 없는 리포트(위젯 · 단축어 …)에 데이터가 있으면 거기서 본다
+//   1. 판정 한 줄 — `StoreInsights` 의 가장 나쁜 판정과 할 일, 그리고 숫자 셋
+//   2. "자세히 보기" (접힘)
+//      분석 — 몰린 기간과 평상시를 갈라 읽은 판정 전부, 그리고 창 전체의 숫자 ·
+//      사용(세션) · 설치와 삭제 · 다운로드 구성 · 스토어 행동 · 구매 · 웹 미리보기 ·
+//      설치 성능 · 크래시 · 설치 경로 · 구독 ·
+//      리포트 전부 훑기 — 위에 없는 리포트(위젯 · 단축어 …)에 데이터가 있으면 거기서 본다
 //
 //  노출 → 다운로드 퍼널과 링크 출처는 유입 · 키워드 탭에 이미 있어서 여기서 다시 그리지 않는다.
 //
@@ -86,10 +88,68 @@ struct StoreAnalyticsView: View {
                         SnapshotRequestView(project: project)
                     }
                 }
-                cards(analytics)
+                verdict(analytics)
             }
-            AnalyticsExplorerCard(project: project)
+            // 판정을 만든 카드 · 리포트 원본은 접어 둔다.
+            DetailFold(storageKey: "fold.storeAnalytics.project",
+                       summary: analytics.isEmpty
+                        ? "리포트 전부 훑기"
+                        : "판정 전부 · 숫자 · 세션 · 설치와 삭제 · 다운로드 · 스토어 행동 · 구매 · 설치 성능 · 크래시 · 리포트 전부 훑기") {
+                VStack(alignment: .leading, spacing: 14) {
+                    if !analytics.isEmpty { cards(analytics) }
+                    AnalyticsExplorerCard(project: project)
+                }
+            }
         }
+    }
+
+    /// 맨 위 한 장 — 판정 가운데 가장 나쁜 것 한 줄과 그 할 일, 그리고 창 전체의 숫자 셋.
+    /// 판정 전부와 숫자 전부는 "자세히 보기" 안의 분석 · 숫자 카드에 있다.
+    private func verdict(_ analytics: StoreAnalytics) -> some View {
+        let findings = analytics.insights?.findings ?? []
+        let worst = findings.first { $0.level == .bad || $0.level == .watch }
+        let action = findings.first { ($0.level == .bad || $0.level == .watch) && $0.action != nil }?.action
+        let headline: String = {
+            if let worst { return worst.title }
+            if findings.isEmpty { return "아직 판정할 만큼 쌓이지 않았습니다." }
+            return "문제로 보이는 곳은 없습니다. " + (findings.first?.title ?? "")
+        }()
+        let tint: Color = worst?.level == .bad ? .red : worst?.level == .watch ? .orange : findings.isEmpty ? .gray : .green
+        let flagged = findings.filter { $0.level == .bad || $0.level == .watch }.count
+
+        return VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .firstTextBaseline, spacing: 10) {
+                Circle().fill(tint).frame(width: 12, height: 12)
+                Text(headline)
+                    .font(.title3.weight(.semibold))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            if let action {
+                Label("지금 할 일: \(action)", systemImage: "hand.point.right")
+                    .font(.body.weight(.semibold))
+                    .foregroundStyle(Color.accentColor)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            if flagged > 1 {
+                AnalyticsNote("볼 것 \(flagged)가지 — 나머지는 아래 \"자세히 보기\" 의 분석 카드에 있습니다.")
+            }
+            FigureRow {
+                if let downloads = analytics.downloads {
+                    Figure("첫 다운로드", AnalyticsFormat.count(downloads.firstTime),
+                           note: "다시 받기 \(AnalyticsFormat.count(downloads.redownloads))")
+                }
+                if let installs = analytics.installs {
+                    Figure("새 설치 · 삭제", "\(AnalyticsFormat.count(installs.newInstalls)) · \(AnalyticsFormat.count(installs.deletions))")
+                }
+                if let devices = analytics.sessions?.dailyDevices {
+                    Figure("하루 사용 기기", AnalyticsFormat.decimal(devices), note: "공유 동의한 기기")
+                }
+            }
+            AnalyticsNote("숫자는 최근 \(analytics.days)일 합계입니다.")
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(Platform.cardPadding)
+        .cardSurface()
     }
 
     @ViewBuilder

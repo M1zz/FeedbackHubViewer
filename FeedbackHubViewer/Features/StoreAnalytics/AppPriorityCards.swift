@@ -34,22 +34,40 @@ struct AppPriorityCards: View {
         VStack(alignment: .leading, spacing: 16) {
             header
             if let analysis = purchases.priority, !analysis.rows.isEmpty {
+                // 판정(가장 신경 쓸 앱 · 키울 앱)과 앞의 셋만 위에. 나머지 순위와 읽는 법은 접는다.
                 headline(analysis.rows)
-                legend(analysis)
-                let rows = sort.sorted(analysis.rows)
-                ForEach(Array(rows.enumerated()), id: \.element.id) { index, row in
-                    Button {
-                        store.open(project: row.id, section: .storeAnalytics)
-                    } label: {
-                        PriorityRowCard(rank: index + 1, row: row, sort: sort,
-                                        iconURL: keywords.storeApp(for: row.id)?.iconURL)
+                let rows = Array(sort.sorted(analysis.rows).enumerated())
+                ForEach(rows.prefix(Self.leadingRows), id: \.element.id) { index, row in
+                    rowButton(rank: index + 1, row: row)
+                }
+                DetailFold(storageKey: "fold.storeAnalytics.all",
+                           summary: rows.count > Self.leadingRows
+                            ? "\(Self.leadingRows + 1)위부터 \(rows.count)위까지 · 점수 읽는 법"
+                            : "점수 읽는 법") {
+                    VStack(alignment: .leading, spacing: 16) {
+                        legend(analysis)
+                        ForEach(rows.dropFirst(Self.leadingRows), id: \.element.id) { index, row in
+                            rowButton(rank: index + 1, row: row)
+                        }
                     }
-                    .buttonStyle(.plain)
                 }
             } else if !purchases.isAnalyzingPriority {
                 empty
             }
         }
+    }
+
+    /// 접지 않고 위에 두는 순위 수.
+    private static let leadingRows = 3
+
+    private func rowButton(rank: Int, row: PriorityRow) -> some View {
+        Button {
+            store.open(project: row.id, section: .storeAnalytics)
+        } label: {
+            PriorityRowCard(rank: rank, row: row, sort: sort,
+                            iconURL: keywords.storeApp(for: row.id)?.iconURL)
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: 머리
