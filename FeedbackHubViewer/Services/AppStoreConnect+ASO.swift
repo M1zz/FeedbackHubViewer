@@ -80,7 +80,7 @@ struct MetadataEdit {
 // MARK: - 노출 · 전환 모델
 
 /// 최근 N일의 App Store 퍼널 — 경로별 노출 → 페이지 조회 → 첫 다운로드.
-struct StoreFunnel {
+struct StoreFunnel: Codable {
     let days: Int
     /// 경로 이름(리포트 원문) → 수.
     let sources: [String: Counts]
@@ -91,7 +91,7 @@ struct StoreFunnel {
     /// 날짜 → 나라 → 둘러보기 노출. 어디에 걸렸는지 짐작하는 데 쓴다(`StoreExposure`).
     var browse: [String: [String: Int]] = [:]
 
-    struct Counts {
+    struct Counts: Codable {
         var impressions = 0
         var pageViews = 0
         var firstDownloads = 0

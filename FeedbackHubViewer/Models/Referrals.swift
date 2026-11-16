@@ -194,7 +194,7 @@ struct ReferralProfile {
 // MARK: - 리포트
 
 /// 한 앱의 최근 `days`일 출처별 셈.
-struct ReferralReport {
+struct ReferralReport: Codable {
     /// 캠페인 이름이 담기는 칸. 리포트 판에 따라 이름이 조금 다를 수 있어 둘 다 본다.
     static let campaignColumns = ["Campaign", "Campaign Name"]
 
@@ -205,7 +205,7 @@ struct ReferralReport {
         return nil
     }
 
-    struct Tally {
+    struct Tally: Codable {
         /// 날짜 → 그날 첫 다운로드.
         var downloadsByDate: [String: Int] = [:]
         /// 제품 페이지 조회(고유). 다운로드로 안 이어진 관심까지 보인다.

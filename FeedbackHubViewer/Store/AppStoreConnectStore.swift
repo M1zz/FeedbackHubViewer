@@ -39,7 +39,7 @@ final class AppStoreConnectStore: ObservableObject {
     /// 번들 ID → 스토어 메타데이터(이름 · 부제 · 키워드 · 프로모션 텍스트).
     @Published private(set) var metadata: [String: LoadState<StoreMetadata>] = [:]
     /// 번들 ID → 최근 30일 노출 · 전환.
-    @Published private(set) var funnels: [String: LoadState<FunnelResult>] = [:]
+    @Published var funnels: [String: LoadState<FunnelResult>] = [:]
     /// 번들 ID → 누가 링크했나(`AppStoreConnectStore+Referrals.swift`).
     @Published var referrals: [String: LoadState<ReferralResult>] = [:]
     /// 번들 ID → (출처 → 처음 본 날). 디스크에 남는다.
@@ -164,6 +164,7 @@ final class AppStoreConnectStore: ObservableObject {
                                                  at: Self.subscriptionEventsFile) ?? [:]
         fetchedAt = CacheFile.read([String: Date].self, at: Self.fetchedAtFile) ?? [:]
         restoreVersions()
+        restoreAnalyticsResults()
         for (bundleID, stored) in CacheFile.read([String: StoreMetadata].self, at: Self.metadataFile) ?? [:] {
             metadata[bundleID] = .loaded(stored)
         }
@@ -233,6 +234,7 @@ final class AppStoreConnectStore: ObservableObject {
         CacheFile.remove(Self.catalogsFile)
         CacheFile.remove(Self.salesFile)
         AnalyticsCache.forget()
+        forgetAnalyticsResults()
         sales = nil
         salesError = nil
         reportCache = [:]
@@ -302,6 +304,7 @@ final class AppStoreConnectStore: ObservableObject {
             let funnel = try await client.funnel(requestID: requestID, appID: appID, days: Self.salesDays)
             return requestID == nil && funnel.instances == 0 ? nil : .ready(funnel)
         }
+        saveAnalyticsResults()
     }
 
     /// 분석 리포트로 만드는 것(퍼널 · 링크 감지)을 받는 공통 흐름.
@@ -322,6 +325,9 @@ final class AppStoreConnectStore: ObservableObject {
            let cached = try? await read(client, nil, app.id), self[keyPath: state][bundleID]?.value == nil {
             self[keyPath: state][bundleID] = .loaded(cached)
         }
+        // 몇 시간 안에 받은 것이면 네트워크로 다시 묻지 않는다 — 리포트는 하루 한 번 나온다.
+        if !force, self[keyPath: state][bundleID]?.value != nil, let at = fetchedAt[key],
+           Date().timeIntervalSince(at) < Self.analyticsFreshness { return }
         if force || self[keyPath: state][bundleID]?.value == nil {
             self[keyPath: state][bundleID] = .loading
         }

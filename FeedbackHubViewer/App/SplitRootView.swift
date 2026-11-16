@@ -19,6 +19,8 @@ struct SplitRootView: View {
     @State private var selection: Feedback.ID?
     /// 고른 피드백은 그대로 두고 오른쪽 상세 칸만 접은 상태. 다른 행을 고르면 다시 연다.
     @State private var isDetailCollapsed = false
+    /// 피드백 상세가 없을 때 오른쪽에 고른 앱의 대시보드(`AppDashboardPanel`)를 둘까.
+    @AppStorage("app-dashboard-shown") private var showsDashboard = true
     /// 동작 줄이기를 켠 사람에게는 상세가 미끄러지지 않고 바로 나타난다.
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -95,11 +97,19 @@ struct SplitRootView: View {
                 }
                 .frame(width: Self.detailWidth)
                 .transition(.move(edge: .trailing).combined(with: .opacity))
+            } else if showsDashboardPanel {
+                HStack(spacing: 0) {
+                    Divider()
+                    AppDashboardPanel(project: dashboardProject) { showsDashboard = false }
+                }
+                .frame(width: Self.detailWidth)
+                .transition(.move(edge: .trailing).combined(with: .opacity))
             }
         }
         // 미끄러지는 동안 상세가 목록 위로 삐져나오지 않게.
         .clipped()
         .animation(reduceMotion ? nil : .snappy(duration: 0.28), value: isShowingDetail.wrappedValue)
+        .animation(reduceMotion ? nil : .snappy(duration: 0.28), value: showsDashboardPanel)
         .onChange(of: selection) { isDetailCollapsed = false }
         #else
         projectStack
@@ -137,6 +147,17 @@ struct SplitRootView: View {
         return store.allFeedback.first(where: { $0.id == id })
     }
 
+    /// 오른쪽 대시보드를 둘까 — 앱을 고르는 칸이고 접지 않았을 때. 앱을 안 골랐으면(전체) 전체 대시보드.
+    private var showsDashboardPanel: Bool {
+        showsDashboard && store.projectSection.usesAppList
+    }
+
+    /// 대시보드가 볼 앱. nil 이면 전체.
+    private var dashboardProject: String? {
+        guard let project = store.selectedProject, project != Feedback.unclassifiedProject else { return nil }
+        return project
+    }
+
     /// Open while a row is selected, 피드백 is showing, and the user hasn't
     /// folded it away.
     private var isShowingDetail: Binding<Bool> {
@@ -171,6 +192,14 @@ struct SplitRootView: View {
 
         ToolbarItem(placement: .primaryAction) {
             IdentityMenu()
+        }
+
+        // 오른쪽 앱 대시보드를 접고 편다. 접은 채로는 단추로만 다시 연다.
+        ToolbarItem(placement: .primaryAction) {
+            Toggle(isOn: $showsDashboard) {
+                Label("앱 대시보드", systemImage: "rectangle.righthalf.inset.filled")
+            }
+            .help(showsDashboard ? "오른쪽 앱 대시보드 접기" : "오른쪽 앱 대시보드 펴기")
         }
 
         // 알림 · 자동 갱신 스위치는 설정(⌘,)으로, 상세 접기는 상세 칸 머리로 옮겼다 —

@@ -96,7 +96,11 @@ struct ProjectSectionView: View {
                 section = new
                 if !store.usesStackNavigation { store.projectSection = new }
             })) {
-                ForEach(members) { Text($0.rawValue).tag($0) }
+                // 칸 뱃지는 탭들의 합이라, 어느 탭에서 온 수인지 탭 이름 옆에 적는다.
+                ForEach(members) { member in
+                    let count = metrics.badge(member, project: project)?.count ?? 0
+                    Text(count > 0 ? "\(member.rawValue) \(count)" : member.rawValue).tag(member)
+                }
             }
             .pickerStyle(.segmented)
             .labelsHidden()

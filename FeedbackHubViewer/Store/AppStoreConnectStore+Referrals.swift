@@ -48,5 +48,6 @@ extension AppStoreConnectStore {
             }
             return .ready(detection, report)
         }
+        saveAnalyticsResults()
     }
 }
