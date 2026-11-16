@@ -71,7 +71,7 @@ struct SplitRootView: View {
             // 뺀 자리보다 넓어질 때 분할 칸이 사이드바를 줄여 주지 않고, 칸 전체가 창보다
             // 넓어져 가운데 정렬된 채 **양옆이 잘린다**(사이드바 왼쪽 · 상세 오른쪽).
             // 줄어드는 몫은 목록이 받는다. 얼마까지 줄지는 창의 최소 너비가 정한다.
-            projectStack
+            mainContent
                 .frame(maxWidth: .infinity)
             if isShowingDetail.wrappedValue, let feedback = selectedFeedback {
                 // 열고 닫을 때만 오른쪽에서 밀려 들어오고 나간다. 다른 행을 고를 때는
@@ -112,8 +112,36 @@ struct SplitRootView: View {
         .animation(reduceMotion ? nil : .snappy(duration: 0.28), value: showsDashboardPanel)
         .onChange(of: selection) { isDetailCollapsed = false }
         #else
-        projectStack
+        mainContent
         #endif
+    }
+
+    /// "전체 앱"이면 가운데에 모든 앱 대시보드, 아니면 고른 앱의 칸. 전체 앱일 때만 맨 위에
+    /// 대시보드 · 모아보기 전환이 선다.
+    private var mainContent: some View {
+        Group {
+            if isAllAppsDashboard {
+                AppDashboardPanel(project: nil)
+            } else {
+                projectStack
+            }
+        }
+        .safeAreaInset(edge: .top, spacing: 0) {
+            if isAllApps {
+                Picker("전체 앱 보기", selection: $store.showsAllAppsDashboard) {
+                    Text("대시보드").tag(true)
+                    Text("\(store.projectSection.rawValue) 모아보기").tag(false)
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+                .fixedSize()
+                .padding(.vertical, 8)
+                .frame(maxWidth: .infinity)
+                .background(.bar)
+            }
+        }
+        // 사이드바에서 칸을 고르면 그 칸을 보러 온 것 — 대시보드는 칸과 상관없이 같으니 모아보기로.
+        .onChange(of: store.projectSection) { store.showsAllAppsDashboard = false }
     }
 
     private var projectStack: some View {
@@ -147,12 +175,22 @@ struct SplitRootView: View {
         return store.allFeedback.first(where: { $0.id == id })
     }
 
-    /// 오른쪽 대시보드를 둘까 — 앱을 고르는 칸이고 접지 않았을 때. 앱을 안 골랐으면(전체) 전체 대시보드.
-    private var showsDashboardPanel: Bool {
-        showsDashboard && store.projectSection.usesAppList
+    /// 앱을 고르는 칸에서 "전체 앱"을 골랐나.
+    private var isAllApps: Bool {
+        store.projectSection.usesAppList && store.focusedApp == nil && store.selectedProject == nil
     }
 
-    /// 대시보드가 볼 앱. nil 이면 전체.
+    /// 가운데에 전체 대시보드를 세울까.
+    private var isAllAppsDashboard: Bool {
+        isAllApps && store.showsAllAppsDashboard
+    }
+
+    /// 오른쪽 대시보드를 둘까 — 앱 하나를 골랐고 접지 않았을 때. 전체 앱은 가운데가 대시보드다.
+    private var showsDashboardPanel: Bool {
+        showsDashboard && store.projectSection.usesAppList && dashboardProject != nil
+    }
+
+    /// 오른쪽 대시보드가 볼 앱. nil 이면 세우지 않는다.
     private var dashboardProject: String? {
         guard let project = store.selectedProject, project != Feedback.unclassifiedProject else { return nil }
         return project
@@ -161,7 +199,8 @@ struct SplitRootView: View {
     /// Open while a row is selected, 피드백 is showing, and the user hasn't
     /// folded it away.
     private var isShowingDetail: Binding<Bool> {
-        Binding(get: { selectedFeedback != nil && store.projectSection.showsFeedbackDetail && !isDetailCollapsed },
+        Binding(get: { selectedFeedback != nil && store.projectSection.showsFeedbackDetail
+                        && !isDetailCollapsed && !isAllAppsDashboard },
                 set: { isDetailCollapsed = !$0 })
     }
 

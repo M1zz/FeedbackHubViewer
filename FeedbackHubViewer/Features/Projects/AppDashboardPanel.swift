@@ -2,12 +2,13 @@
 //  AppDashboardPanel.swift
 //  FeedbackHubViewer
 //
-//  맥의 오른쪽 칸 — 고른 앱 하나를 한눈에. 가운데에서 리뷰를 보든 통계를 보든, 오른쪽에는
+//  고른 앱 하나를 한눈에 — 맥의 오른쪽 칸. "전체 앱"이면 가운데 넓은 칸 전체가 이 대시보드다. 가운데에서 리뷰를 보든 통계를 보든, 오른쪽에는
 //  그 앱의 모든 칸이 한 장씩 카드로 서 있다. 카드는 그 칸의 한마디(`SectionMetrics.label`)와
 //  뱃지라, 칸을 옮겨 다니지 않고도 "이 앱은 지금 어떤가" 가 보인다. 누르면 그 칸으로 간다.
 //
 //  손볼 것(뱃지 · 경고)이 있는 카드가 맨 위에 모이고, 나머지는 기능 목록 차례 그대로.
-//  앱 목록에서 "전체" 를 고르면 같은 카드가 모든 앱의 합으로 서고, 손볼 것이 많은 앱이 위에 붙는다.
+//  앱 목록에서 "전체 앱"을 고르면 같은 카드가 모든 앱의 합으로 서고, 그 아래 모든 앱이 카드로
+//  선다(손볼 것이 많은 앱부터). 카드 열 수는 칸 너비를 따른다 — 좁은 오른쪽 칸이면 두 줄.
 //  피드백 상세가 열리면 그 자리를 내준다(`SplitRootView`).
 //
 
@@ -23,7 +24,8 @@ struct AppDashboardPanel: View {
     @ObservedObject private var icons = StoreIcons.shared
     /// nil 이면 전체 앱.
     let project: String?
-    let onClose: () -> Void
+    /// nil 이면 닫기 단추가 없다(가운데에 선 전체 대시보드).
+    var onClose: (() -> Void)? = nil
 
     private struct Tile: Identifiable {
         let section: FeedbackStore.ProjectSection
@@ -44,14 +46,11 @@ struct AppDashboardPanel: View {
         }
         let urgent = tiles.filter(\.needsLook)
         let rest = tiles.filter { !$0.needsLook }
-        let busyApps = project == nil ? Self.busyApps(tiles: tiles, metrics: metrics) : []
+        let apps = project == nil ? Self.apps(tiles: tiles, metrics: metrics) : []
 
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 header
-                if !busyApps.isEmpty {
-                    appsBlock(busyApps)
-                }
                 if !urgent.isEmpty {
                     block("손볼 것", tiles: urgent)
                 } else {
@@ -60,8 +59,11 @@ struct AppDashboardPanel: View {
                         .foregroundStyle(.green)
                 }
                 block("한눈에", tiles: rest)
+                if !apps.isEmpty {
+                    appsBlock(apps)
+                }
             }
-            .padding(14)
+            .padding(project == nil ? 20 : 14)
         }
         .background(.background)
         .task(id: project) {
@@ -97,14 +99,16 @@ struct AppDashboardPanel: View {
                 }
             }
             Spacer(minLength: 4)
-            Button(action: onClose) {
-                Image(systemName: "xmark.circle.fill")
-                    .font(.title3)
-                    .foregroundStyle(.secondary)
+            if let onClose {
+                Button(action: onClose) {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.title3)
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
+                .help("대시보드 닫기 (⌥⌘I)")
+                .keyboardShortcut("i", modifiers: [.command, .option])
             }
-            .buttonStyle(.plain)
-            .help("대시보드 닫기 (⌥⌘I)")
-            .keyboardShortcut("i", modifiers: [.command, .option])
         }
     }
 
@@ -113,7 +117,7 @@ struct AppDashboardPanel: View {
             Text(title)
                 .font(.body.weight(.semibold))
                 .foregroundStyle(.secondary)
-            LazyVGrid(columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)], spacing: 8) {
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 8)], spacing: 8) {
                 ForEach(tiles) { tile in
                     Button {
                         store.open(project: project, section: tile.section)
@@ -126,67 +130,69 @@ struct AppDashboardPanel: View {
         }
     }
 
-    /// 전체일 때 — 손볼 것이 있는 앱. 칸마다 뱃지 수를 더한 것이 큰 앱부터 다섯.
-    private struct BusyApp: Identifiable {
+    /// 전체일 때 — 모든 앱. 칸마다 뱃지 수를 더한 것이 큰 앱부터, 같으면 앱 목록 차례(MAU).
+    private struct AppTile: Identifiable {
         let project: String
         let count: Int
         let names: [String]
         var id: String { project }
     }
 
-    private static func busyApps(tiles: [Tile], metrics: SectionMetrics) -> [BusyApp] {
+    private static func apps(tiles: [Tile], metrics: SectionMetrics) -> [AppTile] {
         let sections = tiles.map(\.section)
-        return SectionMetrics.keywordProjects(metrics.store).compactMap { app in
+        return SectionMetrics.keywordProjects(metrics.store).enumerated().map { index, app in
             let hits = sections.compactMap { section -> (String, Int)? in
                 guard let badge = metrics.badge(section, project: app) else { return nil }
                 return (section.rawValue, badge.count)
             }
-            let total = hits.reduce(0) { $0 + $1.1 }
-            return total > 0 ? BusyApp(project: app, count: total, names: hits.map(\.0)) : nil
+            return (index, AppTile(project: app, count: hits.reduce(0) { $0 + $1.1 }, names: hits.map(\.0)))
         }
-        .sorted { ($0.count, $1.project) > ($1.count, $0.project) }
-        .prefix(5)
-        .map { $0 }
+        .sorted { ($0.1.count, -$0.0) > ($1.1.count, -$1.0) }
+        .map(\.1)
     }
 
-    private func appsBlock(_ apps: [BusyApp]) -> some View {
+    private func appsBlock(_ apps: [AppTile]) -> some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("손볼 앱")
+            Text("앱 \(apps.count)개")
                 .font(.body.weight(.semibold))
                 .foregroundStyle(.secondary)
-            VStack(spacing: 6) {
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 200), spacing: 8)], spacing: 8) {
                 ForEach(apps) { app in
                     Button {
                         store.open(project: app.project, section: nil)
                     } label: {
                         HStack(spacing: 8) {
-                            AppIcon(url: icons.url(for: app.project, keywords: keywords), size: 28)
-                            VStack(alignment: .leading, spacing: 0) {
+                            AppIcon(url: icons.url(for: app.project, keywords: keywords), size: 32)
+                            VStack(alignment: .leading, spacing: 1) {
                                 Text(store.displayName(for: app.project))
                                     .font(.body)
                                     .lineLimit(1)
-                                Text(app.names.joined(separator: " · "))
+                                Text(app.names.isEmpty ? "손볼 것 없음" : app.names.joined(separator: " · "))
                                     .font(.hubCaption)
                                     .foregroundStyle(.secondary)
                                     .lineLimit(1)
                             }
                             Spacer(minLength: 4)
-                            Text("\(app.count)")
-                                .font(.body.weight(.semibold).monospacedDigit())
-                                .foregroundStyle(.red)
+                            if app.count > 0 {
+                                Text("\(app.count)")
+                                    .font(.body.weight(.semibold).monospacedDigit())
+                                    .foregroundStyle(.red)
+                            }
                         }
                         .padding(8)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                         .background(RoundedRectangle(cornerRadius: 10).fill(.quaternary.opacity(0.45)))
                         .contentShape(RoundedRectangle(cornerRadius: 10))
                     }
                     .buttonStyle(.plain)
+                    .accessibilityElement(children: .combine)
                 }
             }
         }
     }
 
     private func card(_ tile: Tile) -> some View {
-        let isCurrent = store.projectSection == tile.section
+        let isCurrent = project != nil && store.projectSection == tile.section
         return VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 6) {
                 Image(systemName: tile.section.systemImage)

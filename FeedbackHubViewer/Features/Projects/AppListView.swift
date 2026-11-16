@@ -119,6 +119,8 @@ struct AppListView: View {
                 let hasBadge = project.flatMap { metrics.badge(section, project: $0) ?? visitBadge($0) } != nil
                 held = hasBadge ? project : nil
                 store.selectedProject = project
+                // 전체 앱을 다시 누르면 대시보드로 돌아온다.
+                if project == nil { store.showsAllAppsDashboard = true }
             } label: { content }
                 .buttonStyle(.plain)
                 .listRowBackground(Rectangle().fill(isSelected ? AnyShapeStyle(.tint.opacity(0.14)) : AnyShapeStyle(.clear)))
