@@ -20,7 +20,7 @@ extension AppStoreConnectStore {
     }
 
     private static var scansFile: URL? { CacheFile.url("analytics-scans") }
-    private static var coverageFile: URL? { CacheFile.url("analytics-coverage") }
+    static var coverageFile: URL? { CacheFile.url("analytics-coverage") }
 
     func forgetStoreAnalytics() {
         storeAnalytics = [:]
@@ -149,8 +149,7 @@ extension AppStoreConnectStore {
             analyticsCoverage = .loaded(stored)
         }
         let key = "analytics-coverage"
-        if !force, refreshed.contains(key) { return }
-        refreshed.insert(key)
+        guard await shouldFetch(key, force: force, has: analyticsCoverage?.value != nil) else { return }
         if analyticsCoverage?.value == nil { analyticsCoverage = .loading }
         do {
             let coverage = try await client.analyticsCoverage()

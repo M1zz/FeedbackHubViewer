@@ -107,6 +107,8 @@ struct FeedbackHubViewerApp: App {
                         keywords.pullFromCloud()
                         charts.pullFromCloud()
                         Task { await purchases.viewedReviewsCloud.pull(minimumInterval: 60) }
+                        // 다른 기기가 받아 둔 App Store Connect 것 — 판매 · 상품 · 리뷰 · 분석 결과.
+                        purchases.pullCachesFromCloud()
                         news.collect()
                         syncKeywordFieldsIfDue()
                     }

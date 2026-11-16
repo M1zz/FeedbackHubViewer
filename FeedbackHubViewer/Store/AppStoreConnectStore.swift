@@ -32,7 +32,7 @@ final class AppStoreConnectStore: ObservableObject {
     /// 최근 30일 판매(계정 전체). nil이면 아직 안 받았다.
     @Published private(set) var sales: SalesWindow?
     /// 수익금을 원화 · 달러로 모으는 환율(`ExchangeRates`). 없으면 통화별로만 보인다.
-    @Published private(set) var rates: ExchangeRates?
+    @Published var rates: ExchangeRates?
     @Published private(set) var isLoadingSales = false
     @Published private(set) var salesError: String?
 
@@ -66,6 +66,16 @@ final class AppStoreConnectStore: ObservableObject {
         current: { [weak self] in self?.viewedReviewIDs },
         adopt: { [weak self] merged in self?.adoptViewedReviews(merged) },
         merge: { local, remote in local.merging(remote) { $0.union($1) } })
+    /// App Store Connect 에서 받은 캐시 파일을 iCloud 로 기기 사이에서 하나로
+    /// (`AppStoreConnectStore+CloudCache.swift`). 한 기기가 받으면 나머지는 다시 받지 않는다.
+    private(set) lazy var cacheCloud = SyncedBlob<CacheFileBundle>(
+        name: "connect-cache",
+        current: { CacheFileBundle.read(Self.syncedCacheFiles) },
+        adopt: { [weak self] merged in self?.adoptSyncedCaches(merged) },
+        merge: { local, remote in CacheFileBundle.merge(local, remote) })
+    /// 켤 때 iCloud 에서 받아 오는 일. 끝날 때까지 네트워크로 새로 받지 않는다(`shouldFetch`).
+    var initialCloudPull: Task<Void, Never>?
+    var cacheWriteObserver: NSObjectProtocol?
     /// 번들 ID → 알림을 이미 보낸(또는 처음 받을 때 있던) 리뷰 id. 확인과 따로 센다 -
     /// 리뷰 탭을 안 열었다고 같은 리뷰로 30분마다 다시 알리면 안 된다.
     var alertedReviewIDs: [String: Set<String>] = [:]
@@ -134,7 +144,7 @@ final class AppStoreConnectStore: ObservableObject {
     private static var salesFile: URL? { CacheFile.url("sales-days") }
     static var subscriptionEventsFile: URL? { CacheFile.url("subscription-event-days") }
     private static var fetchedAtFile: URL? { CacheFile.url("connect-fetched-at") }
-    private static var ratesFile: URL? { CacheFile.url("exchange-rates") }
+    static var ratesFile: URL? { CacheFile.url("exchange-rates") }
 
     /// 디스크의 상품 목록 한 앱치.
     private struct StoredCatalog: Codable {
@@ -150,9 +160,10 @@ final class AppStoreConnectStore: ObservableObject {
         restoreStability()
         restoreReferralLedger()
         if credentials != nil { restoreStoreCaches() }
+        startCacheSync()
     }
 
-    private func restoreStoreCaches() {
+    func restoreStoreCaches() {
         CacheFile.remove(CacheFile.url("connect-apps"))
         CacheFile.remove(CacheFile.url("store-catalogs"))
         apps = CacheFile.read([String: ConnectApp].self, at: Self.appsFile) ?? [:]
@@ -269,8 +280,8 @@ final class AppStoreConnectStore: ObservableObject {
     func loadMetadata(bundleID: String, force: Bool = false) async {
         guard let client else { return }
         let key = "metadata:\(bundleID)"
-        if !force, refreshed.contains(key) || metadata[bundleID]?.isLoading == true { return }
-        refreshed.insert(key)
+        if metadata[bundleID]?.isLoading == true { return }
+        guard await shouldFetch(key, force: force, has: metadata[bundleID]?.value != nil) else { return }
         if force || metadata[bundleID]?.value == nil { metadata[bundleID] = .loading }
         do {
             let app = try await resolveApp(bundleID)
@@ -320,6 +331,7 @@ final class AppStoreConnectStore: ObservableObject {
         let key = "\(kind):\(bundleID)"
         if !force, refreshed.contains(key) { return }
         refreshed.insert(key)
+        if !force { await initialCloudPull?.value }
 
         if self[keyPath: state][bundleID]?.value == nil, let app = apps[bundleID],
            let cached = try? await read(client, nil, app.id), self[keyPath: state][bundleID]?.value == nil {
@@ -370,10 +382,9 @@ final class AppStoreConnectStore: ObservableObject {
     func loadCatalog(bundleID: String, force: Bool = false) async {
         guard let client else { return }
         let key = "catalog:\(bundleID)"
-        if !force, refreshed.contains(key) { return }
-        refreshed.insert(key)
         let hasStored: Bool
         if case .loaded? = catalogs[bundleID] { hasStored = true } else { hasStored = false }
+        guard await shouldFetch(key, force: force, has: hasStored) else { return }
         if force || !hasStored { catalogs[bundleID] = .loading }
         do {
             let app = try await client.app(bundleID: bundleID)
@@ -428,6 +439,8 @@ final class AppStoreConnectStore: ObservableObject {
     /// "30일 중 30일 못 받음" 이 저장돼 다시 받지도 않았다. 여기서는 부른 쪽이 취소돼도
     /// 받기는 끝까지 간다.
     func loadSales(force: Bool = false) async {
+        // 다른 기기가 받아 둔 날들부터 들인다 — 빠진 날만 받게.
+        if !force { await initialCloudPull?.value }
         Task { await loadRates() }
         if let running = salesTask {
             await running.value
@@ -447,16 +460,9 @@ final class AppStoreConnectStore: ObservableObject {
         salesError = nil
         defer { isLoadingSales = false }
 
-        let calendar = Calendar(identifier: .gregorian)
-        let window = (1...Self.salesDays).compactMap { offset -> (key: String, date: Date)? in
-            guard let date = calendar.date(byAdding: .day, value: -offset, to: Date()) else { return nil }
-            return (AppStoreConnect.day.string(from: date), date)
-        }
+        let window = Self.reportWindow()
         // 디스크에 있던 날들로 먼저 그린다. 빠진 날(대개 어제 하루)만 받고 나서 다시 그린다.
-        if sales == nil {
-            let stored = window.compactMap { day in reportCache[day.key].map { (key: day.key, lines: $0) } }
-            if !stored.isEmpty { sales = SalesWindow(daily: stored, days: Self.salesDays, missingDays: 0) }
-        }
+        if sales == nil { sales = salesFromCache() }
         defer { CacheFile.write(reportCache.filter { Self.keepsDay($0.key, $0.value) }, to: Self.salesFile) }
 
         var days: [(key: String, lines: [SalesLine])] = []
@@ -496,6 +502,32 @@ final class AppStoreConnectStore: ObservableObject {
         }
         sales = SalesWindow(daily: days, days: Self.salesDays, missingDays: missingDays)
         markFetched("sales")
+    }
+
+    /// 판매 창의 날짜들 — 어제부터 거꾸로.
+    static func reportWindow() -> [(key: String, date: Date)] {
+        let calendar = Calendar(identifier: .gregorian)
+        return (1...salesDays).compactMap { offset in
+            guard let date = calendar.date(byAdding: .day, value: -offset, to: Date()) else { return nil }
+            return (AppStoreConnect.day.string(from: date), date)
+        }
+    }
+
+    /// 디스크에 있는 날들로 그린 판매. 하루도 없으면 nil.
+    func salesFromCache() -> SalesWindow? {
+        let stored = Self.reportWindow().compactMap { day in reportCache[day.key].map { (key: day.key, lines: $0) } }
+        return stored.isEmpty ? nil : SalesWindow(daily: stored, days: Self.salesDays, missingDays: 0)
+    }
+
+    /// 다른 기기에서 받은 날들까지 들인 뒤 판매 · 구독 이벤트를 다시 그린다. 받는 중이면 그쪽이 그린다.
+    func redrawReportsFromCache() {
+        if !isLoadingSales, let fresh = salesFromCache() { sales = fresh }
+        if !isLoadingSubscriptionEvents, subscriptionEvents != nil {
+            let stored = Self.reportWindow().compactMap { subscriptionReportCache[$0.key] }
+            if !stored.isEmpty {
+                subscriptionEvents = SubscriptionEventWindow(lines: stored.flatMap { $0 }, days: Self.salesDays, missingDays: 0)
+            }
+        }
     }
 
     /// 최근 30일 판매를 Apple Identifier별로 접은 것.
