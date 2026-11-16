@@ -322,9 +322,9 @@
   "kind": "cardNews",
   "channel": "인스타그램",
   "title": "타이머가 울리면 이미 늦다",
-  "angle": "발표·수업·회의 진행자에게. 끝나고 울리는 타이머의 한계를 짚고, 끝나기 전에 미리 알려 주는 장면으로 안심을 준다.",
+  "angle": "발표·수업·회의 진행자에게. 끝나고 울리는 타이머의 한계를 짚고, 끝나기 전에 미리 알려 주는 장면으로 안심을 준다. 2026-11-16 영어판 올림(빛번짐 glow.swift 6장, 덱 scripts/cardnews/decks/2026-11-16-두번알림-예비알림-en.json, 자료 app-portfolio marketing/cardnews/2026-11-16-rereminder-prealerts-en/) 인스타 https://www.instagram.com/p/DfzknDFCThE/",
   "plannedAt": "2026-12-03T01:00:00Z",
-  "stage": "ready",
+  "stage": "posted",
   "slides": [
    {
     "id": "0aa36a39-25fb-5b07-92e6-e8d119985e40",
