@@ -1,0 +1,50 @@
+{
+ "name": "Not My Tempo",
+ "icon": "/Users/hyunholee/Documents/workspace/개발중/FeedbackHubViewer/scripts/cardnews/decks/icons/낫마템포-1024.png",
+ "accent": "0E7FA6",
+ "accent2": "F25C54",
+ "kicker": "Did you know? · Not My Tempo",
+ "cover": "Still letting go\nof your guitar\nto change tempo?",
+ "features": [
+  {
+   "label": "The usual way",
+   "headline": "Changing tempo\nbreaks your flow",
+   "text": "Let go, grab the phone, get back in position.\nBy then your practice has already stopped.",
+   "screen": "/Users/hyunholee/Documents/workspace/Auto/낫마템포/docs/screenshots/raw/en/01-playing.png",
+   "top": 0.0
+  },
+  {
+   "label": "Just say it",
+   "headline": "Say faster.\nIt speeds up.",
+   "text": "Say start and it starts.\nSay tempo 120 and you are at 120.",
+   "screen": "/Users/hyunholee/Documents/workspace/Auto/낫마템포/docs/screenshots/raw/en/04-voice.png",
+   "top": 0.2
+  },
+  {
+   "label": "No setup",
+   "headline": "It listens\non your iPhone",
+   "text": "Understood on device.\nNo need to turn on Voice Control.",
+   "screen": "/Users/hyunholee/Documents/workspace/Auto/낫마템포/docs/screenshots/raw/en/03-count.png",
+   "top": 0.0
+  },
+  {
+   "label": "Forgot a command?",
+   "headline": "Say help",
+   "text": "Everything you can say\nshows up on screen.",
+   "screen": "/Users/hyunholee/Documents/workspace/Auto/낫마템포/docs/screenshots/raw/en/04-voice.png",
+   "top": 0.6
+  }
+ ],
+ "outro": "Keep both hands\non your instrument",
+ "points": [
+  "The basic metronome is free",
+  "1 to 8 beats, triplets and sixteenths",
+  "Tap tempo and a timing check"
+ ],
+ "search": "Search “Not My Tempo” on the App Store",
+ "coverScreens": [
+  "/Users/hyunholee/Documents/workspace/Auto/낫마템포/docs/screenshots/raw/en/01-playing.png",
+  "/Users/hyunholee/Documents/workspace/Auto/낫마템포/docs/screenshots/raw/en/04-voice.png",
+  "/Users/hyunholee/Documents/workspace/Auto/낫마템포/docs/screenshots/raw/en/03-count.png"
+ ]
+}
