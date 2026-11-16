@@ -169,7 +169,7 @@ final class CloudKitService {
     static let snapshotRecordType = "UsageSnapshot"
     static let eventRecordType = "UsageEvent"
     /// MetricKit diagnostics, uploaded by the apps' `DiagnosticsService`.
-    static let crashRecordType = "CrashReport"
+    nonisolated static let crashRecordType = "CrashReport"
 
     struct FetchOutcome {
         var feedback: [Feedback]

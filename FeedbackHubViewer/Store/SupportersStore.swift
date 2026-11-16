@@ -51,7 +51,7 @@ struct Supporter: Codable, Identifiable, Hashable {
 @MainActor
 final class SupportersStore: ObservableObject {
     static let shared = SupportersStore()
-    static let defaultsKey = "supporters"
+    nonisolated static let defaultsKey = "supporters"
 
     @Published private(set) var all: [Supporter] = []
 

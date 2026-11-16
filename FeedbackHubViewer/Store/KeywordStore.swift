@@ -73,7 +73,7 @@ final class KeywordStore: ObservableObject {
         }
     }
 
-    private static let countriesKey = "keywordCountries"
+    private nonisolated static let countriesKey = "keywordCountries"
     private static let lastCheckDayKey = "keywordLastCheckDay"
     /// 스토어 이름 · 아이콘을 마지막으로 다시 읽은 때(초).
     private static let lastListingRefreshKey = "keywordLastListingRefreshAt"

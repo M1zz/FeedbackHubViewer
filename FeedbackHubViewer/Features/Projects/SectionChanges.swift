@@ -38,10 +38,10 @@ final class SectionChanges: ObservableObject {
 
     private static let defaultsKey = "section-seen-signatures"
     private static let recentKey = "section-recent-changes"
-    static let releaseAckKey = "release-red-acknowledged"
-    static let keywordDueAckKey = "keyword-refresh-acknowledged"
+    nonisolated static let releaseAckKey = "release-red-acknowledged"
+    nonisolated static let keywordDueAckKey = "keyword-refresh-acknowledged"
     /// 기기 사이에서 맞추는 칸 · 앱마다 본 말과 그 시각(`Mark`).
-    static let marksKey = "section-seen-marks"
+    nonisolated static let marksKey = "section-seen-marks"
 
     /// 본 말 하나와 본 시각. 두 기기가 같은 칸을 따로 봤으면 늦게 본 쪽이 이긴다.
     struct Mark: Codable, Equatable {

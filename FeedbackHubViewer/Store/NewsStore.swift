@@ -227,7 +227,7 @@ final class NewsStore: ObservableObject {
     }
 
     /// 다른 기기에서 소식을 읽은 시각(`SyncedDefaults`). 늦은 쪽이 이긴다.
-    private static let lastReadKey = "newsLastReadAt"
+    private nonisolated static let lastReadKey = "newsLastReadAt"
     private var readObserver: NSObjectProtocol?
 
     private func adoptSyncedRead() {

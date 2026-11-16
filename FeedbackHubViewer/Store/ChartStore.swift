@@ -40,7 +40,7 @@ final class ChartStore: ObservableObject {
         }
     }
 
-    private static let countriesKey = "chartCountries"
+    private nonisolated static let countriesKey = "chartCountries"
     private static let fileName = "chart-ranks"
     /// 저절로 다시 볼 때까지의 간격. 순위도 숫자라 하루에 한 번이면 된다("지금 확인"은 언제든).
     var autoInterval: TimeInterval { 24 * 60 * 60 }

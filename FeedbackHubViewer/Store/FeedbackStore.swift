@@ -1339,10 +1339,10 @@ final class FeedbackStore: ObservableObject {
     // MARK: - Notifications
 
     private static let notificationsEnabledKey = "notificationsEnabled"
-    private static let badgeKindsKey = "badgeKinds"
-    private static let alertKindsKey = "alertKinds"
+    private nonisolated static let badgeKindsKey = "badgeKinds"
+    private nonisolated static let alertKindsKey = "alertKinds"
     private static let reviewAlertMigratedKey = "alertKinds.reviewAdded"
-    private static let activityOverridesKey = "activityDefinitions"
+    private nonisolated static let activityOverridesKey = "activityDefinitions"
     private static let seenFeedbackIDsKey = "seenFeedbackIDs"
     private static let seenCrashIDsKey = "seenCrashIDs"
 
@@ -1748,7 +1748,7 @@ final class FeedbackStore: ObservableObject {
     /// the records stay in the hub and come back the moment the project is
     /// shown again. Persisted per device.
     @Published private(set) var hiddenProjects: Set<String> = [] { didSet { invalidateDerived() } }
-    private static let hiddenProjectsKey = "hiddenProjects"
+    private nonisolated static let hiddenProjectsKey = "hiddenProjects"
 
     func isHidden(_ project: String) -> Bool { hiddenProjects.contains(project) }
 
