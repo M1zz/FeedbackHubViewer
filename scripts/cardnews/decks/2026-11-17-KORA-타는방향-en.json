@@ -1,0 +1,49 @@
+{
+ "name": "KORA",
+ "icon": "/Users/hyunholee/Documents/workspace/Auto/한국길찾기/KORA/Assets.xcassets/AppIcon.appiconset/AppIcon.png",
+ "accent": "CD2E3A",
+ "kicker": "Did you know? · KORA",
+ "cover": "Seoul subway:\nwhich side\ndo you board?",
+ "features": [
+  {
+   "label": "The usual way",
+   "headline": "Two platforms.\nWhich one?",
+   "text": "Reading the map is the easy part.\nOn the platform, you freeze.",
+   "screen": "/Users/hyunholee/Documents/workspace/Auto/한국길찾기/docs/screenshots/raw/en-US/route.png",
+   "top": 0.0
+  },
+  {
+   "label": "Read the sign",
+   "headline": "Toward\nSeoul Station",
+   "text": "KORA names the direction exactly\nas the train's sign shows it.",
+   "screen": "/Users/hyunholee/Documents/workspace/Auto/한국길찾기/docs/screenshots/raw/en-US/board.png",
+   "top": 0.0
+  },
+  {
+   "label": "Double check",
+   "headline": "Next stop\nconfirms it",
+   "text": "See the next station in Korean and English,\nor point the camera at the platform sign.",
+   "screen": "/Users/hyunholee/Documents/workspace/Auto/한국길찾기/docs/screenshots/raw/en-US/board.png",
+   "top": 0.05
+  },
+  {
+   "label": "Bonus",
+   "headline": "A buzz before\nyour stop",
+   "text": "It counts the stops while you ride\nand tells you when to get ready.",
+   "screen": "/Users/hyunholee/Documents/workspace/Auto/한국길찾기/docs/screenshots/raw/en-US/ride.png",
+   "top": 0.1
+  }
+ ],
+ "outro": "Board the right\ntrain the first time",
+ "points": [
+  "23 languages",
+  "Route search works offline",
+  "No sign up, no ads"
+ ],
+ "coverScreens": [
+  "/Users/hyunholee/Documents/workspace/Auto/한국길찾기/docs/screenshots/raw/en-US/search.png",
+  "/Users/hyunholee/Documents/workspace/Auto/한국길찾기/docs/screenshots/raw/en-US/board.png",
+  "/Users/hyunholee/Documents/workspace/Auto/한국길찾기/docs/screenshots/raw/en-US/ride.png"
+ ],
+ "search": "Search “KORA” on the App Store"
+}
