@@ -25,7 +25,7 @@ struct NewsView: View {
     @State private var readMark: Date?
     /// 최근 `NewsStore.recentDays` 일보다 오래된 기록까지 펼쳤나.
     @State private var showsOlder = false
-    /// 펼친 줄(같은 앱 · 같은 종류 묶음, 하루의 "그 밖에").
+    /// 펼친 하루의 "그 밖에".
     @State private var expanded: Set<String> = []
 
     var body: some View {
@@ -152,64 +152,30 @@ struct NewsView: View {
         }
     }
 
-    /// 한 줄 — 아이콘과 제목 하나. 제목에 앱 이름이 들어 있어 따로 적지 않는다.
-    /// 여러 건이거나 덧붙일 말이 있으면 오른쪽 단추로 펼친다.
-    @ViewBuilder
+    /// 한 줄 — 아이콘과 제목, 오른쪽에 언제 일인지. 제목에 앱 이름이 들어 있어 따로 적지 않는다.
     private func groupRow(_ group: NewsGroup) -> some View {
-        let isOpen = expanded.contains(group.id)
-        let canOpen = group.count > 1 || !group.first.body.isEmpty
-        HStack(alignment: .center, spacing: 10) {
-            Button { open(group.first) } label: {
-                HStack(alignment: .center, spacing: 10) {
-                    newsIcon(project: group.first.project, kind: group.first.kind, size: 32)
-                    Text(title(group))
-                        .font(.body)
-                        .foregroundStyle(group.first.kind.tone == .bad ? Color.red : Color.primary)
-                        .lineLimit(2)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                }
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            if isNew(group) {
-                Circle().fill(Color.accentColor).frame(width: 8, height: 8)
-                    .accessibilityLabel("새 소식")
-            }
-            if canOpen {
-                Button {
-                    if isOpen { expanded.remove(group.id) } else { expanded.insert(group.id) }
-                } label: {
-                    Image(systemName: isOpen ? "chevron.up" : "chevron.down")
-                        .foregroundStyle(.secondary)
-                        .frame(width: 28, height: 22)
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel(isOpen ? "접기" : "자세히")
-            }
-        }
-        .padding(.vertical, 2)
-        if isOpen {
-            ForEach(group.count > 1 ? group.items : []) { item in
-                Button { open(item) } label: {
-                    Text(store.currentWording(item.title, project: item.project))
-                        .font(.body)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(2)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.leading, 42)
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-            }
-            if group.count == 1, !group.first.body.isEmpty {
-                Text(group.first.body)
+        Button { open(group.first) } label: {
+            HStack(alignment: .center, spacing: 10) {
+                newsIcon(project: group.first.project, kind: group.first.kind, size: 32)
+                Text(title(group))
                     .font(.body)
+                    .foregroundStyle(group.first.kind.tone == .bad ? Color.red : Color.primary)
+                    .lineLimit(2)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                if isNew(group) {
+                    Circle().fill(Color.accentColor).frame(width: 8, height: 8)
+                        .accessibilityLabel("새 소식")
+                }
+                Text(AppFormat.relative(group.first.date))
+                    .font(.footnote)
                     .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.leading, 42)
+                    .monospacedDigit()
+                    .fixedSize()
             }
+            .padding(.vertical, 2)
+            .contentShape(Rectangle())
         }
+        .buttonStyle(.plain)
     }
 
     /// 브리핑에 오르지 않는 일(심사 시작 · 차트에서 빠짐 · 새 나라 설치)은 하루에 한 줄로 접는다.
