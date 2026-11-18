@@ -55,11 +55,21 @@ struct SectionMetrics {
     /// 설정 → 알림에서 끈 종류는 뱃지를 달지 않는다(기본: 진단은 안 단다).
     /// 목록에 선 칸의 뱃지 — 그 칸에 사는 탭들(`members`)의 뱃지를 더한다. 하나뿐이면 그 뱃지 그대로.
     func hostBadge(_ section: FeedbackStore.ProjectSection, project: String?) -> Badge? {
-        let badges = section.members.compactMap { badge($0, project: project) }
+        let badges = section.members.compactMap { countedBadge($0, project: project) }
         guard let first = badges.first else { return nil }
         guard badges.count > 1 else { return first }
         return Badge(count: badges.reduce(0) { $0 + $1.count }, systemImage: first.systemImage,
                      tint: first.tint, name: badges.map(\.name).joined(separator: " · "))
+    }
+
+    /// 숫자로 세는 뱃지 — 칸 줄과 탭 이름 옆에 서는 것. 앱 한 줄의 "다시 짤 때" 는 다시 짜기 전까지
+    /// 남는 말이라(`Badge.action`), 그대로 세면 앱 하나로 볼 때 유입 칸에 지워지지 않는 1이 선다.
+    /// 아직 알아보지 않은 동안만 센다 — 키워드 탭을 열면 지워지고, 줄의 말은 남는다.
+    func countedBadge(_ section: FeedbackStore.ProjectSection, project: String?) -> Badge? {
+        guard let badge = badge(section, project: project) else { return nil }
+        guard badge.action != nil, section == .keywords, let project else { return badge }
+        let due = keywords.refreshDue(projects: [project])
+        return SectionChanges.shared.unacknowledgedDue(due).isEmpty ? nil : badge
     }
 
     func badge(_ section: FeedbackStore.ProjectSection, project: String?) -> Badge? {

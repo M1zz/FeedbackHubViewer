@@ -31,6 +31,8 @@ struct AppHomeView: View {
     @EnvironmentObject private var charts: ChartStore
     @EnvironmentObject private var news: NewsStore
     @ObservedObject private var icons = StoreIcons.shared
+    /// 칸을 열어 알아본 뱃지가 돌아왔을 때 지워져 있게.
+    @ObservedObject private var changes = SectionChanges.shared
     let project: String
 
     var body: some View {

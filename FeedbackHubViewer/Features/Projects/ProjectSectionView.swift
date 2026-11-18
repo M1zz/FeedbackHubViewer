@@ -18,6 +18,8 @@ struct ProjectSectionView: View {
     @EnvironmentObject private var charts: ChartStore
     @EnvironmentObject private var news: NewsStore
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// 탭 이름 옆 숫자가 알아본 순간 지워지게.
+    @ObservedObject private var changes = SectionChanges.shared
     /// nil == 전체 앱.
     let project: String?
     /// 어느 기능의 화면인가. 아이폰은 탭마다 다른 기능이 열려 있으므로 가게의 "지금 기능"
@@ -98,7 +100,7 @@ struct ProjectSectionView: View {
             })) {
                 // 칸 뱃지는 탭들의 합이라, 어느 탭에서 온 수인지 탭 이름 옆에 적는다.
                 ForEach(members) { member in
-                    let count = metrics.badge(member, project: project)?.count ?? 0
+                    let count = metrics.countedBadge(member, project: project)?.count ?? 0
                     Text(count > 0 ? "\(member.rawValue) \(count)" : member.rawValue).tag(member)
                 }
             }
