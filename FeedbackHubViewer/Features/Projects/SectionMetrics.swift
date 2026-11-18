@@ -88,7 +88,8 @@ struct SectionMetrics {
         return Badge(count: count, systemImage: "sparkles", tint: .red, name: "본 뒤 바뀐 것")
     }
 
-    private func itemBadge(_ section: FeedbackStore.ProjectSection, project: String?) -> Badge? {
+    /// 한 건 한 건을 세는 뱃지(본 뒤 바뀐 것은 빼고). 칸을 열면 맨 위에 어디서 온 뱃지인지 적는다.
+    func itemBadge(_ section: FeedbackStore.ProjectSection, project: String?) -> Badge? {
         switch section {
         case .inbox:
             let count = inboxCount

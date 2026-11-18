@@ -34,6 +34,9 @@ struct ProjectSectionView: View {
     /// 그려 둔 화면의 "앱|칸". 다르면 먼저 로딩 표시를 띄우고 다음 순간에 그린다 — 무거운 칸(유입 ·
     /// 통계)을 누른 순간 사이드바 선택조차 바뀌지 않은 채 멈춰 보이던 것. 누르면 바로 반응한다.
     @State private var drawnKey: String?
+    /// 이 화면을 열 때 선 뱃지 — "앱|칸" 과 함께. 열자마자 읽음으로 넘어가 뱃지가 사라져도
+    /// 보는 동안은 맨 위에 어디서 온 뱃지였는지 남긴다.
+    @State private var openedBadge: (key: String, badge: SectionMetrics.Badge?) = ("", nil)
 
     init(project: String?, section: FeedbackStore.ProjectSection,
          selection: Binding<Feedback.ID?> = .constant(nil)) {
@@ -69,6 +72,7 @@ struct ProjectSectionView: View {
             .safeAreaInset(edge: .top, spacing: 0) {
                 VStack(spacing: 0) {
                     memberTabs
+                    badgeSource
                     SectionChangesBanner(section: section, project: project)
                 }
             }
@@ -110,6 +114,34 @@ struct ProjectSectionView: View {
         }
     }
 
+    /// 뱃지가 어디서 왔나 — 사이드바 · 앱 목록에서 본 숫자가 이 칸의 무엇인지 맨 위에 한 줄로.
+    /// 본 뒤 바뀐 것은 아래 띠(`SectionChangesBanner`)가 말하므로 여기서는 한 건씩 세는 뱃지만.
+    @ViewBuilder
+    private var badgeSource: some View {
+        let current = metrics.itemBadge(section, project: project)
+        if let badge = current ?? (openedBadge.key == freshKey ? openedBadge.badge : nil) {
+            HStack(spacing: 8) {
+                Image(systemName: badge.systemImage)
+                    .foregroundStyle(badge.tint)
+                Text("뱃지 \(AppFormat.count(badge.count)) · \(badge.name)")
+                    .font(.body.weight(.semibold))
+                    .foregroundStyle(badge.tint)
+                Spacer(minLength: 8)
+                if current == nil {
+                    Text("열어서 확인함")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background(badge.tint.opacity(0.08), in: RoundedRectangle(cornerRadius: 10))
+            .padding(.horizontal, 12)
+            .padding(.top, 8)
+            .accessibilityElement(children: .combine)
+        }
+    }
+
     private func syncStore() {
         if store.projectSection != section { store.projectSection = section }
         if section.usesAppList, store.selectedProject != project { store.selectedProject = project }
@@ -129,6 +161,9 @@ struct ProjectSectionView: View {
 
     /// 확인한 것으로 넘기기 전에 새것이던 것을 적어 둔다 — 보고 있는 동안 새로 들어온 것도 더한다.
     private func markViewed() {
+        if openedBadge.key != freshKey {
+            openedBadge = (freshKey, metrics.itemBadge(section, project: project))
+        }
         var ids = fresh.key == freshKey ? fresh.ids : []
         switch section {
         case .crashes:
