@@ -77,6 +77,9 @@ struct ProjectSectionView: View {
                 }
             }
             .onChange(of: requested) { section = requested }
+            .onChange(of: section) {
+                if !store.usesStackNavigation, store.projectSection != section { store.projectSection = section }
+            }
             // 띠를 얹은 화면은 "띠 + 내용" 높이를 우겨 맥 창보다 커졌고, 넘친 만큼 위아래로
             // 삐져 띠 윗부분이 툴바 밑에 깔렸다. 높이는 창이 주는 만큼만 — 띠 아래 내용이 준다.
             .frame(minHeight: 0, maxHeight: .infinity)
@@ -98,10 +101,10 @@ struct ProjectSectionView: View {
     private var memberTabs: some View {
         let members = section.members
         if members.count > 1 {
-            Picker("보기", selection: Binding(get: { section }, set: { new in
-                section = new
-                if !store.usesStackNavigation { store.projectSection = new }
-            })) {
+            // 가게에는 여기서 쓰지 않는다 — 탭 이름의 숫자가 바뀌면 맥의 세그먼트가 다시 만들어지며
+            // 그리는 도중에 선택을 다시 써 넣는데, 그때 `@Published` 를 바꾸면 경고가 난다.
+            // 가게는 `onChange(of: section)` 이 그린 뒤에 맞춘다.
+            Picker("보기", selection: $section) {
                 // 칸 뱃지는 탭들의 합이라, 어느 탭에서 온 수인지 탭 이름 옆에 적는다.
                 ForEach(members) { member in
                     let count = metrics.countedBadge(member, project: project)?.count ?? 0
