@@ -1,0 +1,77 @@
+{
+ "name": "Dalbit",
+ "icon": "/Users/hyunholee/Documents/workspace/Auto/달빛/Dalbit/App/Assets/Assets.xcassets/AppIcon.appiconset/1024.png",
+ "accent": "7B6CF6",
+ "accent2": "3A4FD8",
+ "kicker": "Did you know? · Dalbit",
+ "cover": "Still hunting\nfor the right\nsleep sound?",
+ "coverScreen": "/Users/hyunholee/Documents/workspace/Auto/달빛/docs/screenshots/raw/en/01-moon.png",
+ "coverTop": 0.22,
+ "coverCallout": {
+  "symbol": "moon.fill",
+  "text": "One tap on the moon",
+  "x": 0.62,
+  "y": 0.3
+ },
+ "features": [
+  {
+   "label": "The usual way",
+   "headline": "An hour of\nscrolling sounds",
+   "text": "Rain, then waves, then rain again.\nNone of them feels quite like yours.",
+   "screen": "/Users/hyunholee/Documents/workspace/Auto/달빛/docs/screenshots/raw/en/03-library.png",
+   "top": 0.0,
+   "callout": {
+    "symbol": "magnifyingglass",
+    "text": "Still searching…",
+    "x": 0.62,
+    "y": 0.12
+   }
+  },
+  {
+   "label": "Layer it",
+   "headline": "Rain below,\nwater drops above",
+   "text": "Stack rain, water drops, birdsong\nand singing bowls into one sound.",
+   "screen": "/Users/hyunholee/Documents/workspace/Auto/달빛/docs/screenshots/raw/en/02-studio.png",
+   "top": 0.0,
+   "callout": {
+    "symbol": "square.3.layers.3d",
+    "text": "Soft Rain + Water Drop",
+    "x": 0.6,
+    "y": 0.4
+   }
+  },
+  {
+   "label": "Tune each layer",
+   "headline": "Volume, rhythm\nand space",
+   "text": "Set how loud each layer is, how often it plays\nand where you hear it.",
+   "screen": "/Users/hyunholee/Documents/workspace/Auto/달빛/docs/screenshots/raw/en/02-studio.png",
+   "top": 0.45,
+   "callout": {
+    "symbol": "hand.tap.fill",
+    "text": "Tap a rhythm",
+    "x": 0.64,
+    "y": 0.3
+   }
+  },
+  {
+   "label": "Bonus",
+   "headline": "Save it once.\nOne tap after that",
+   "text": "Name your mix and it waits in your library.\nTomorrow night, just tap the moon.",
+   "screen": "/Users/hyunholee/Documents/workspace/Auto/달빛/docs/screenshots/raw/en/03-library.png",
+   "top": 0.0,
+   "callout": {
+    "symbol": "bookmark.fill",
+    "text": "Saved Sounds",
+    "x": 0.64,
+    "y": 0.2
+   }
+  }
+ ],
+ "outro": "Your sleep sound,\nmade by you",
+ "points": [
+  "Keeps playing with the screen off",
+  "Sleep timer fades out, never cuts",
+  "Save up to 3 mixes free"
+ ],
+ "search": "Search “Dalbit” on the App Store"
+}
