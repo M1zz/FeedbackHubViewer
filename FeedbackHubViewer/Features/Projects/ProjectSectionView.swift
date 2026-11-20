@@ -130,8 +130,9 @@ struct ProjectSectionView: View {
                     .font(.body.weight(.semibold))
                     .foregroundStyle(badge.tint)
                 Spacer(minLength: 8)
+                // 누르는 것이 아니라 상태 — "열어서 …" 는 단추 이름처럼 읽혔다.
                 if current == nil {
-                    Text("열어서 확인함")
+                    Label("확인함", systemImage: "checkmark")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 }
