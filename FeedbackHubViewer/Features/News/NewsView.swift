@@ -111,10 +111,9 @@ struct NewsView: View {
             NewsGroup(id: key + "|" + (value.first.map { NewsDetector.day($0.foundAt) } ?? ""),
                   items: value.sorted { $0.date > $1.date })
         }
-        .sorted {
-            let (a, b) = ($0.first.kind.category.rank, $1.first.kind.category.rank)
-            return a == b ? $0.first.foundAt > $1.first.foundAt : a < b
-        }
+        // 하루 안에서는 최근 일이 위. 종류 차례로 세우면 아침에 난 경고가 방금 일 위에 눌러앉는다 —
+        // 급한 것은 맨 위 브리핑과 빨간 글씨가 이미 말한다.
+        .sorted { $0.first.date > $1.first.date }
         return (all.filter { $0.first.kind.briefingRank != nil }, all.filter { $0.first.kind.briefingRank == nil })
     }
 
@@ -152,30 +151,56 @@ struct NewsView: View {
         }
     }
 
-    /// 한 줄 — 아이콘과 제목, 오른쪽에 언제 일인지. 제목에 앱 이름이 들어 있어 따로 적지 않는다.
+    /// 한 줄 — 위는 무슨 일인지(굵게)와 언제인지, 아래는 그 안의 것들(여러 건이면 무엇무엇인지,
+    /// 경고면 할 일). 제목에 앱 이름이 들어 있어 따로 적지 않는다.
     private func groupRow(_ group: NewsGroup) -> some View {
         Button { open(group.first) } label: {
-            HStack(alignment: .center, spacing: 10) {
+            HStack(alignment: .top, spacing: 10) {
                 newsIcon(project: group.first.project, kind: group.first.kind, size: 32)
-                Text(title(group))
-                    .font(.body)
-                    .foregroundStyle(group.first.kind.tone == .bad ? Color.red : Color.primary)
-                    .lineLimit(2)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                if isNew(group) {
-                    Circle().fill(Color.accentColor).frame(width: 8, height: 8)
-                        .accessibilityLabel("새 소식")
+                VStack(alignment: .leading, spacing: 3) {
+                    HStack(alignment: .firstTextBaseline, spacing: 8) {
+                        Text(title(group))
+                            .font(.body.weight(.semibold))
+                            .foregroundStyle(group.first.kind.tone == .bad ? Color.red : Color.primary)
+                            .lineLimit(2)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                        if isNew(group) {
+                            Circle().fill(Color.accentColor).frame(width: 8, height: 8)
+                                .accessibilityLabel("새 소식")
+                        }
+                        Text(AppFormat.relative(group.first.date))
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                            .monospacedDigit()
+                            .fixedSize()
+                    }
+                    if let detail = detail(group) {
+                        Text(detail)
+                            .font(.callout)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(2)
+                    }
                 }
-                Text(AppFormat.relative(group.first.date))
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-                    .monospacedDigit()
-                    .fixedSize()
             }
-            .padding(.vertical, 2)
+            .padding(.vertical, 4)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+    }
+
+    /// 둘째 줄. 묶인 줄은 낱낱의 요지("'UI패턴' 검색 1위 · '내비게이션바' 검색 3위"),
+    /// 한 건이면 경고일 때만 할 일. 나머지 한 건짜리 설명은 제목을 되풀이할 뿐이라 싣지 않는다.
+    private func detail(_ group: NewsGroup) -> String? {
+        if group.count > 1 {
+            return group.items.map { item in
+                let title = store.currentWording(item.title, project: item.project)
+                guard let range = title.range(of: " · ") else { return title }
+                return String(title[range.upperBound...])
+            }
+            .joined(separator: " · ")
+        }
+        guard group.first.kind.tone == .bad, !group.first.body.isEmpty else { return nil }
+        return group.first.body
     }
 
     /// 브리핑에 오르지 않는 일(심사 시작 · 차트에서 빠짐 · 새 나라 설치)은 하루에 한 줄로 접는다.
