@@ -1,0 +1,45 @@
+{
+ "name": "CoolTime",
+ "icon": "/Users/hyunholee/Documents/workspace/Auto/쿨타임/CoolTime/Assets.xcassets/AppIcon.appiconset/image6232.png",
+ "accent": "4F7CF0",
+ "kicker": "Did you know? · CoolTime's cooldowns",
+ "cover": "Holiday sales\nare here.\nHow's your wallet?",
+ "coverScreens": ["/Users/hyunholee/Documents/workspace/Auto/쿨타임/docs/screenshots/raw/en/02-break.png", "/Users/hyunholee/Documents/workspace/Auto/쿨타임/docs/screenshots/raw/en/01-home.png", "/Users/hyunholee/Documents/workspace/Auto/쿨타임/docs/screenshots/raw/en/03-stats.png"],
+ "features": [
+  {
+   "label": "Why it happens",
+   "headline": "The urge fades.\nThe receipt doesn't",
+   "text": "Most impulse buys feel less urgent\na few days later. We just don't wait.",
+   "screen": "/Users/hyunholee/Documents/workspace/Auto/쿨타임/docs/screenshots/raw/en/01-home.png",
+   "top": 0.0
+  },
+  {
+   "label": "Put a cooldown on it",
+   "headline": "Like a skill\nin a game",
+   "text": "Shopping, takeout, desserts. Pick how long\nto wait before you can use it again.",
+   "screen": "/Users/hyunholee/Documents/workspace/Auto/쿨타임/docs/screenshots/raw/en/01-home.png",
+   "top": 0.5
+  },
+  {
+   "label": "Breaking it?",
+   "headline": "One more pause\nbefore you pay",
+   "text": "It shows the time left and warns that\nyour compliance rate will drop.",
+   "screen": "/Users/hyunholee/Documents/workspace/Auto/쿨타임/docs/screenshots/raw/en/02-break.png",
+   "top": 0.45
+  },
+  {
+   "label": "Bonus",
+   "headline": "See what\nwaiting saved you",
+   "text": "Compliance by item and category,\nplus your estimated savings this month.",
+   "screen": "/Users/hyunholee/Documents/workspace/Auto/쿨타임/docs/screenshots/raw/en/03-stats.png",
+   "top": 0.0
+  }
+ ],
+ "outro": "Want it now?\nWait it out first",
+ "points": [
+  "Time left on Home and Lock Screen widgets",
+  "Records stay on your iPhone, no account",
+  "Up to 5 cooldowns free"
+ ],
+ "search": "Search “CoolTime” on the App Store"
+}
