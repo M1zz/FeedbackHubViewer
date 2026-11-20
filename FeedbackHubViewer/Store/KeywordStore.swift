@@ -114,6 +114,17 @@ final class KeywordStore: ObservableObject {
     init() {
         let saved = UserDefaults.standard.stringArray(forKey: Self.countriesKey)
         countries = saved?.isEmpty == false ? saved! : ["kr"]
+        // 한 번만: en · ja · zh-Hans 키워드도 처방했으니(2026-11-20) 미국 · 일본 · 중국도 매일 잰다.
+        // init 에서는 didSet 이 돌지 않아 저장도 직접 한다(iCloud 로 다른 기기까지).
+        let addedKey = "keywordCountries.added-us-jp-cn"
+        if !UserDefaults.standard.bool(forKey: addedKey) {
+            UserDefaults.standard.set(true, forKey: addedKey)
+            let missing = ["us", "jp", "cn"].filter { !countries.contains($0) }
+            if !missing.isEmpty {
+                countries += missing
+                SyncedDefaults.set(countries, forKey: Self.countriesKey)
+            }
+        }
         // 다른 기기에서 고른 나라(`SyncedDefaults`).
         countriesObserver = NotificationCenter.default.addObserver(forName: SyncedDefaults.changed, object: nil,
                                                                    queue: .main) { [weak self] note in
