@@ -109,6 +109,7 @@ struct KeywordsView: View {
         if let project, linkedApp != nil {
             if !standings.isEmpty { RankTrendCard(project: project) }
             StoreMetadataCard(project: project)
+            InAppNamesCard(project: project)
             StoreFunnelCard(project: project)
         }
         // Shown even when empty. Competitors are read out of the
