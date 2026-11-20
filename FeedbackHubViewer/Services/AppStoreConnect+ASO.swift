@@ -142,14 +142,17 @@ extension AppStoreConnect {
 
     func metadata(appID: String) async throws -> StoreMetadata {
         let infos = try await list("v1/apps/\(appID)/appInfos", ["fields[appInfos]": "state"])
+        // 플랫폼을 거르지 않는다 — iOS 만 읽던 때는 맥 전용 앱(무지개 공방 · TetraTint · 탭클립키보드)의
+        // 키워드 · 프로모션 텍스트가 모든 언어에서 비어 보였다. iOS 판이 있으면 그것을, 없으면 있는 판을 본다.
         let versions = try await list("v1/apps/\(appID)/appStoreVersions", [
-            "filter[platform]": "IOS",
-            "fields[appStoreVersions]": "versionString,appVersionState,createdDate",
-            "limit": "10"
+            "fields[appStoreVersions]": "versionString,appVersionState,createdDate,platform",
+            "limit": "20"
         ])
+        let iOSVersions = versions.data.filter { $0.string("platform") == "IOS" }
+        let platformVersions = iOSVersions.isEmpty ? versions.data : iOSVersions
 
         let liveStates: Set<String> = ["READY_FOR_DISTRIBUTION", "READY_FOR_SALE"]
-        let sortedVersions = versions.data.sorted { ($0.string("createdDate") ?? "") > ($1.string("createdDate") ?? "") }
+        let sortedVersions = platformVersions.sorted { ($0.string("createdDate") ?? "") > ($1.string("createdDate") ?? "") }
         let liveVersion = sortedVersions.first { liveStates.contains($0.string("appVersionState") ?? "") } ?? sortedVersions.first
         let draftVersion = sortedVersions.first { StoreMetadata.editableStates.contains($0.string("appVersionState") ?? "") }
 
