@@ -180,6 +180,9 @@ struct FeedbackListView: View {
                         Label(option.label, systemImage: option.systemImage).tag(option)
                     }
                 }
+                // 하위 메뉴로 두면 "처리 완료" 로 비스듬히 옮겨 가는 사이 아래 일괄 처리 줄을 스쳐
+                // 하위 메뉴가 닫혔다. 이 칸 안에 바로 펼친다.
+                .pickerStyle(.inline)
                 if !store.filteredFeedback.isEmpty {
                     Button {
                         bulkStatus = .applied
