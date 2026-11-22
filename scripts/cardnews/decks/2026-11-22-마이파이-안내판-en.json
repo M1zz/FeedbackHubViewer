@@ -1,0 +1,77 @@
+{
+ "name": "MyFi",
+ "icon": "/Users/hyunholee/Documents/workspace/Auto/마이파이/WifiSnap/Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png",
+ "accent": "1E90FF",
+ "accent2": "14B8A6",
+ "kicker": "Did you know? · MyFi",
+ "cover": "Guests keep\nasking for your\nWi-Fi password?",
+ "coverScreen": "/Users/hyunholee/Documents/workspace/Auto/마이파이/docs/screenshots/raw/en/03-poster-card.png",
+ "coverTop": 0.12,
+ "coverCallout": {
+  "symbol": "qrcode",
+  "text": "Point, scan, connected",
+  "x": 0.62,
+  "y": 0.42
+ },
+ "features": [
+  {
+   "label": "The usual way",
+   "headline": "Capital K,\nzero, not O…",
+   "text": "A handwritten note by the till,\nspelled out again for every table.",
+   "screen": "/Users/hyunholee/Documents/workspace/Auto/마이파이/docs/screenshots/raw/en/05-saved.png",
+   "top": 0.0,
+   "callout": {
+    "symbol": "ellipsis.bubble.fill",
+    "text": "What was it again?",
+    "x": 0.62,
+    "y": 0.3
+   }
+  },
+  {
+   "label": "Make a sign",
+   "headline": "Your Wi-Fi,\non one sign",
+   "text": "Pick your network and MyFi lays out\nthe QR code, name and password.",
+   "screen": "/Users/hyunholee/Documents/workspace/Auto/마이파이/docs/screenshots/raw/en/02-qr.png",
+   "top": 0.25,
+   "callout": {
+    "symbol": "printer.fill",
+    "text": "Print or share a guest sign",
+    "x": 0.6,
+    "y": 0.55
+   }
+  },
+  {
+   "label": "Make it yours",
+   "headline": "7 themes,\nyour shop name",
+   "text": "Add your logo and a line like opening hours.\nCard size or an A4 poster.",
+   "screen": "/Users/hyunholee/Documents/workspace/Auto/마이파이/docs/screenshots/raw/en/04-poster-a4.png",
+   "top": 0.1,
+   "callout": {
+    "symbol": "paintpalette.fill",
+    "text": "Midnight, Sunset, Mint…",
+    "x": 0.6,
+    "y": 0.6
+   }
+  },
+  {
+   "label": "Bonus",
+   "headline": "Print it now\nwith AirPrint",
+   "text": "Or save it as an image. Keep one sign\nper shop or table and edit any time.",
+   "screen": "/Users/hyunholee/Documents/workspace/Auto/마이파이/docs/screenshots/raw/en/03-poster-card.png",
+   "top": 0.3,
+   "callout": {
+    "symbol": "doc.on.doc.fill",
+    "text": "One sign per table",
+    "x": 0.62,
+    "y": 0.4
+   }
+  }
+ ],
+ "outro": "Stop spelling it out.\nLet the sign do it",
+ "points": [
+  "Snap a Wi-Fi sign to connect",
+  "Share your Wi-Fi as one QR code",
+  "Wi-Fi details stay on your device"
+ ],
+ "search": "Search “MyFi” on the App Store"
+}

@@ -6128,5 +6128,53 @@
   "slides": [],
   "body": "",
   "bodyEn": "Which days off give you the longest break?\n\nGoldweek pairs public holidays with weekends and shows which days to take.\nMLK Day 2027: 2 days of leave, 5 days off in a row.\n\nHolidays for 42 countries. Pick your state or region.\nSearch \"Goldweek\" on the App Store.\n\n#indiedev #iosdev"
+ },
+ {
+  "id": "eb399053-bdb9-474e-b008-9103114904b4",
+  "project": "com.leeo.wifisnap",
+  "kind": "cardNews",
+  "channel": "인스타그램",
+  "title": "Guests keep asking for your Wi-Fi password?",
+  "angle": "영어 · 해외 대상 한 기능 깊이형(빛번짐 glow.swift, 6장). 손님용 안내판: 비번 불러 주기 → 안내판 만들기 → 테마 7개·가게 이름 → AirPrint. 덱 scripts/cardnews/decks/2026-11-22-마이파이-안내판-en.json 카드 app-portfolio marketing/cardnews/2026-11-22-myfi-guestsign-en/ https://www.instagram.com/lee25_ios/p/DgCzJkKn76Q/",
+  "plannedAt": "2026-11-22T00:00:00Z",
+  "stage": "posted",
+  "slides": [],
+  "script": "",
+  "scriptEn": "",
+  "body": "",
+  "bodyEn": "Guests keep asking for your Wi-Fi password?\n\nMyFi puts the QR code, network name and password on one sign. Pick from 7 themes, add your shop name and opening hours, then print it with AirPrint or save it as an image. Keep one sign per shop or table.\n\nSearch \"MyFi\" on the App Store\n\n#wifi #qrcode #cafeowner #smallbusiness #airbnbhost #iphoneapps",
+  "theme": null
+ },
+ {
+  "id": "6830fa49-c02a-4fc4-b69a-435d36d2a0f5",
+  "project": "com.leeo.wifisnap",
+  "kind": "cardNews",
+  "channel": "스레드",
+  "title": "Guests keep asking for your Wi-Fi password?",
+  "angle": "영어 · 해외 대상 한 기능 깊이형(빛번짐 glow.swift, 6장). 손님용 안내판: 비번 불러 주기 → 안내판 만들기 → 테마 7개·가게 이름 → AirPrint. 덱 scripts/cardnews/decks/2026-11-22-마이파이-안내판-en.json 카드 app-portfolio marketing/cardnews/2026-11-22-myfi-guestsign-en/ https://www.threads.com/@lee25_ios/post/DgCy-H_n13E",
+  "plannedAt": "2026-11-22T00:00:00Z",
+  "stage": "posted",
+  "slides": [],
+  "script": "",
+  "scriptEn": "",
+  "body": "",
+  "bodyEn": "Guests keep asking for your Wi-Fi password?\n\nMyFi puts the QR code, network name and password on one sign. Pick from 7 themes, add your shop name and opening hours, then print it with AirPrint or save it as an image. Keep one sign per shop or table.\n\nSearch \"MyFi\" on the App Store",
+  "theme": null
+ },
+ {
+  "id": "e9f7bfc5-c8fa-4b3e-9d7b-75ee82310db2",
+  "project": "com.leeo.wifisnap",
+  "kind": "post",
+  "channel": "X",
+  "title": "Guests keep asking for your Wi-Fi password?",
+  "angle": "영어 · 해외 대상 한 기능 깊이형(빛번짐 glow.swift, 6장). 손님용 안내판: 비번 불러 주기 → 안내판 만들기 → 테마 7개·가게 이름 → AirPrint. 덱 scripts/cardnews/decks/2026-11-22-마이파이-안내판-en.json 카드 app-portfolio marketing/cardnews/2026-11-22-myfi-guestsign-en/ https://x.com/leeoios/status/2124478554566205529",
+  "plannedAt": "2026-11-22T00:00:00Z",
+  "stage": "posted",
+  "slides": [],
+  "script": "",
+  "scriptEn": "",
+  "body": "",
+  "bodyEn": "Guests keep asking for your Wi-Fi password?\n\nMyFi puts the QR code, network name and password on one sign. Pick from 7 themes, add your shop name and opening hours, then print it with AirPrint or save it as an image.\n\nSearch \"MyFi\" on the App Store\n\n#indiedev #iosdev #smallbusiness",
+  "theme": null
  }
 ]
