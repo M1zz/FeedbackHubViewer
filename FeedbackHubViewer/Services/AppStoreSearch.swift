@@ -41,16 +41,42 @@ struct StoreApp: Identifiable, Codable, Hashable {
     /// is filed under. Stable across renames, unlike the name.
     let id: Int
     let bundleId: String?
-    let name: String
+    /// 가게마다 다르다 — 같은 앱이 한국 가게에서는 "무지개 공방", 중국 가게에서는 "彩虹工坊" 이다.
+    /// 어느 가게 것인지는 `country` 에 적는다.
+    var name: String
     let sellerName: String?
-    let genres: [String]
+    /// 이것도 그 가게 말로 온다("게임" · "游戏").
+    var genres: [String]
     let averageRating: Double?
     let ratingCount: Int
     let version: String?
     let releasedAt: Date?
     let iconURL: URL?
+    /// 이름 · 장르를 읽어 온 가게("kr"). 이 칸이 생기기 전에 적힌 것은 nil — 어느 가게 말인지 모른다.
+    var country: String? = nil
 
     var storeURL: URL? { URL(string: "https://apps.apple.com/app/id\(id)") }
+
+    /// 이름을 읽을 가게의 차례. 보는 사람이 한국어를 읽으니 한국 가게 이름이 먼저고, 한국
+    /// 가게에 없는 앱은 영어(미국 가게). 그 밖의 가게 이름은 둘 다 없을 때만 쓴다.
+    static let nameStorefronts = ["kr", "us"]
+
+    /// 작을수록 앞선다. 모르는 가게(nil)가 맨 뒤 — 무엇이 와도 그보다는 낫다.
+    static func nameRank(_ country: String?) -> Int {
+        guard let country = country?.lowercased() else { return nameStorefronts.count + 1 }
+        return nameStorefronts.firstIndex(of: country) ?? nameStorefronts.count
+    }
+
+    /// 이 앱을 `known` 위에 새로 적을 때의 모습. 숫자(평점 · 버전)는 새 것이고, 이름 · 장르는
+    /// 더 앞선 가게의 것을 지킨다 — 중국 가게 검색 결과가 한국어 이름을 덮어쓰지 않게.
+    func keepingBetterName(of known: StoreApp?) -> StoreApp {
+        guard let known, Self.nameRank(known.country) < Self.nameRank(country) else { return self }
+        var app = self
+        app.name = known.name
+        app.genres = known.genres
+        app.country = known.country
+        return app
+    }
 }
 
 /// The iTunes Search API, rate-limited and decoded.
@@ -101,11 +127,16 @@ actor AppStoreDirectory {
 
     /// App Store id 로 바로. 번들 ID 가 어긋난 앱을 스토어 링크로 이을 때 쓴다.
     func lookup(ids: [Int], country: String) async throws -> [StoreApp] {
-        guard !ids.isEmpty else { return [] }
-        return try await get(path: "lookup", query: [
-            "id": ids.map(String.init).joined(separator: ","),
-            "country": country,
-        ])
+        var results: [StoreApp] = []
+        for chunk in stride(from: 0, to: ids.count, by: 100).map({
+            Array(ids[$0..<min($0 + 100, ids.count)])
+        }) {
+            results.append(contentsOf: try await get(path: "lookup", query: [
+                "id": chunk.map(String.init).joined(separator: ","),
+                "country": country,
+            ]))
+        }
+        return results
     }
 
     /// The store's search results for a term, in the order the store returns
@@ -135,7 +166,7 @@ actor AppStoreDirectory {
             if http.statusCode == 403 { await ITunesGate.shared.backOff() }
             throw http.statusCode == 403 ? Failure.throttled : Failure.badResponse(http.statusCode)
         }
-        return try Self.decode(data)
+        return try Self.decode(data, country: query["country"])
     }
 
     /// 차트 피드와 같은 줄에 선다(`ITunesGate`).
@@ -150,7 +181,7 @@ actor AppStoreDirectory {
     /// all, and a strict decoder that threw on any of it would drop the whole
     /// page of results over one odd app. Everything here is optional-tolerant
     /// on purpose — a result missing a name is skipped, and nothing else is.
-    private static func decode(_ data: Data) throws -> [StoreApp] {
+    private static func decode(_ data: Data, country: String?) throws -> [StoreApp] {
         let root = try JSONSerialization.jsonObject(with: data) as? [String: Any]
         let results = root?["results"] as? [[String: Any]] ?? []
         return results.compactMap { item in
@@ -166,7 +197,8 @@ actor AppStoreDirectory {
                 ratingCount: item["userRatingCount"] as? Int ?? 0,
                 version: item["version"] as? String,
                 releasedAt: (item["currentVersionReleaseDate"] as? String).flatMap(iso.date(from:)),
-                iconURL: (item["artworkUrl100"] as? String).flatMap(URL.init(string:)))
+                iconURL: (item["artworkUrl100"] as? String).flatMap(URL.init(string:)),
+                country: country?.lowercased())
         }
     }
 

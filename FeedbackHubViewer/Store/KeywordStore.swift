@@ -77,6 +77,7 @@ final class KeywordStore: ObservableObject {
     private static let lastCheckDayKey = "keywordLastCheckDay"
     /// 스토어 이름 · 아이콘을 마지막으로 다시 읽은 때(초).
     private static let lastListingRefreshKey = "keywordLastListingRefreshAt"
+    private static let namesLocalizedKey = "keywordNamesLocalized.v1"
     private static let recommendationsFile = "keyword-recommendations"
     static let fieldLogFile = "keyword-fields"
 
@@ -218,13 +219,20 @@ final class KeywordStore: ObservableObject {
             // 다시 묻지 않아서, 스토어에서 이름을 바꾼 앱이 옛 이름으로 영영 남았다
             // ("벅터벅터" → "벅뚜벅뚜"). 이름은 허브 전체의 앱 이름이 되므로 낡으면 안 된다.
             // 키워드가 없어도 돈다 - 요청은 앱 20개당 하나다.
-            if self.needsListingRefresh {
+            // 가게 표시가 생기기 전 기록에는 다른 나라 가게 이름이 섞여 있다 — 한 번은 꼭 다시 읽는다.
+            let namesFixed = UserDefaults.standard.bool(forKey: Self.namesLocalizedKey)
+            if self.needsListingRefresh || !namesFixed {
+                UserDefaults.standard.set(true, forKey: Self.namesLocalizedKey)
                 UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: Self.lastListingRefreshKey)
                 await self.linkTask?.value
                 self.refreshLinks(bundleIds: Array(Set(bundleIds).union(self.history.links.keys))
                     .filter { $0 != Feedback.unclassifiedProject })
             }
-            guard self.needsDailyCheck else { return }
+            // 확인이 돌면 그 끝에 이름을 맞춘다(`runCheck`). 안 도는 날은 여기서.
+            guard self.needsDailyCheck else {
+                await self.localizeNames()
+                return
+            }
             self.check(bundleIds: bundleIds)
         }
     }
@@ -327,6 +335,8 @@ final class KeywordStore: ObservableObject {
             if done % 10 == 0 { persist(); savePopularity() }
         }
         savePopularity()
+        // 다른 나라 가게에서 처음 본 경쟁 앱은 그 나라 말 이름으로 적힌다 — 한국어, 없으면 영어로.
+        await localizeNames()
         guard done > 0 else { return }
 
         history.lastCheckedAt = Date()
@@ -426,9 +436,8 @@ final class KeywordStore: ObservableObject {
         if retryUnanswered { askedLinks.removeAll() }
         let unlinked = bundleIds.filter(needsLink)
         guard !unlinked.isEmpty else { return }
-        let country = countries.first ?? "kr"
         do {
-            let apps = try await directory.lookup(bundleIds: unlinked, country: country)
+            let apps = try await listings(bundleIds: unlinked)
             // Asked *and answered* — the ids the store said nothing about are
             // in here too, and that silence is the answer. Only recorded when
             // the request itself came back: a throttled one is not an answer
@@ -437,26 +446,80 @@ final class KeywordStore: ObservableObject {
             for app in apps {
                 guard let bundleId = app.bundleId else { continue }
                 history.links[Self.hubKey(for: bundleId, among: unlinked)] = app.id
-                history.apps[String(app.id)] = app
+                history.remember(app)
             }
         } catch {
             errorMessage = error.localizedDescription
         }
     }
 
+    /// 번들 ID 들의 스토어 정보 — 한국 가게에서 먼저, 거기 없는 앱만 미국 가게에서
+    /// (`StoreApp.nameStorefronts`). 허브의 앱 이름이 여기서 나오므로 한국어 이름이 먼저고
+    /// 없으면 영어다. 첫 가게가 답하지 않으면 던진다 — 그 뒤 가게의 실패는 "없음" 으로 둔다.
+    private func listings(bundleIds: [String]) async throws -> [StoreApp] {
+        var found: [StoreApp] = []
+        for (index, country) in StoreApp.nameStorefronts.enumerated() {
+            let have = Set(found.compactMap { $0.bundleId?.lowercased() })
+            let left = bundleIds.filter { !have.contains($0.lowercased()) }
+            guard !left.isEmpty else { break }
+            if index == 0 {
+                found += try await directory.lookup(bundleIds: left, country: country)
+            } else if let more = try? await directory.lookup(bundleIds: left, country: country) {
+                found += more
+            }
+        }
+        return found
+    }
+
+    /// App Store id 들의 스토어 정보 — 같은 차례로.
+    private func listings(ids: [Int]) async throws -> [StoreApp] {
+        var found: [StoreApp] = []
+        for (index, country) in StoreApp.nameStorefronts.enumerated() {
+            let have = Set(found.map(\.id))
+            let left = ids.filter { !have.contains($0) }
+            guard !left.isEmpty else { break }
+            if index == 0 {
+                found += try await directory.lookup(ids: left, country: country)
+            } else if let more = try? await directory.lookup(ids: left, country: country) {
+                found += more
+            }
+        }
+        return found
+    }
+
+    /// 한국 · 미국 가게 이름이 아닌 앱(다른 나라 검색 결과에서 처음 본 경쟁 앱, 가게 표시가
+    /// 생기기 전에 적힌 앱)의 이름을 한국 가게, 없으면 미국 가게에서 다시 읽는다. 두 가게에
+    /// 다 없는 앱만 본 가게의 이름으로 남는다. 한 번 물은 앱은 이번 실행에서 다시 묻지 않는다.
+    private func localizeNames() async {
+        let ids = history.foreignNamed.filter { !askedNames.contains($0) }
+        guard !ids.isEmpty else { return }
+        guard let apps = try? await listings(ids: ids) else { return }
+        askedNames.formUnion(ids)
+        guard !apps.isEmpty else { return }
+        for app in apps { history.remember(app) }
+        persist()
+    }
+
+    private var askedNames: Set<Int> = []
+
     /// Re-read every app's store listing, whether or not it is already linked —
     /// what the 새로고침 button does when a name or rating has moved.
     func refreshLinks(bundleIds: [String]) {
         Task { [weak self] in
             guard let self else { return }
-            let country = self.countries.first ?? "kr"
             do {
-                let apps = try await self.directory.lookup(bundleIds: bundleIds, country: country)
+                let apps = try await self.listings(bundleIds: bundleIds)
                 self.askedLinks.formUnion(bundleIds)
                 for app in apps {
                     guard let bundleId = app.bundleId else { continue }
                     self.history.links[Self.hubKey(for: bundleId, among: bundleIds)] = app.id
-                    self.history.apps[String(app.id)] = app
+                    self.history.remember(app)
+                }
+                // 손으로 이은 앱은 번들 ID 가 스토어와 달라 위에서 안 잡힌다 — id 로 다시 읽는다.
+                let seen = Set(apps.map(\.id))
+                let byHand = Set(self.history.links.values).subtracting(seen).sorted()
+                if let more = try? await self.listings(ids: byHand) {
+                    for app in more { self.history.remember(app) }
                 }
                 self.persist()
             } catch {
@@ -481,12 +544,12 @@ final class KeywordStore: ObservableObject {
             .map { String(storeLink[$0].dropFirst(2)) } ?? storeLink.trimmingCharacters(in: .whitespacesAndNewlines)
         guard let id = Int(digits) else { return "링크에서 App Store id(id 뒤의 숫자)를 찾지 못했습니다." }
         do {
-            let apps = try await directory.lookup(ids: [id], country: countries.first ?? "kr")
+            let apps = try await listings(ids: [id])
             guard let app = apps.first(where: { $0.id == id }) ?? apps.first else {
                 return "App Store 가 이 id 의 앱을 모른다고 합니다."
             }
             history.links[project] = app.id
-            history.apps[String(app.id)] = app
+            history.remember(app)
             persist()
             return nil
         } catch {

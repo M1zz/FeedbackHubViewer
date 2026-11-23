@@ -204,10 +204,23 @@ struct KeywordHistory: Codable, Equatable {
             }
             if position <= Self.competitorDepth {
                 check.top.append(app.id)
-                apps[String(app.id)] = app
+                remember(app)
             }
         }
         checks[keyword.id, default: [:]][UsageRollups.dayKey(now, calendar: calendar)] = check
+    }
+
+    /// 앱을 본 대로 적는다. 이름만은 한국 가게 것이 먼저, 없으면 미국 가게 것
+    /// (`StoreApp.keepingBetterName`) — 나라마다 순위를 재면서 마지막에 검색한 가게의
+    /// 이름(중국어 · 일본어)이 허브 전체의 앱 이름이 되던 것을 막는다.
+    mutating func remember(_ app: StoreApp) {
+        let key = String(app.id)
+        apps[key] = app.keepingBetterName(of: apps[key])
+    }
+
+    /// 한국 · 미국 가게 이름이 아닌 앱들 — 그 가게에서 이름을 다시 물어볼 것.
+    var foreignNamed: [Int] {
+        apps.values.filter { StoreApp.nameRank($0.country) >= StoreApp.nameStorefronts.count }.map(\.id).sorted()
     }
 
     // MARK: - Pruning
@@ -508,7 +521,14 @@ extension KeywordHistory {
         }
         result.checks = result.checks.filter { result.keywords[$0.key] != nil }
 
-        for (id, app) in other.apps where result.apps[id] == nil { result.apps[id] = app }
+        // 빈 칸을 채우되, 저쪽 이름이 더 앞선 가게 것이면 그 이름으로(한국 > 미국 > 그 밖).
+        for (id, app) in other.apps {
+            if let mine = result.apps[id] {
+                result.apps[id] = mine.keepingBetterName(of: app)
+            } else {
+                result.apps[id] = app
+            }
+        }
         for (project, trackId) in other.links where result.links[project] == nil { result.links[project] = trackId }
         if let theirs = other.lastCheckedAt, (result.lastCheckedAt ?? .distantPast) < theirs {
             result.lastCheckedAt = theirs
