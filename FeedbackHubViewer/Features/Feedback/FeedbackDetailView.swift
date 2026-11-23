@@ -159,7 +159,7 @@ struct FeedbackDetailView: View {
     private var shareText: String {
         var lines = ["[\(projectLabel)] \(feedback.createdAtDisplay)"]
         if let rating = feedback.rating { lines.append("별점: \(rating)/5") }
-        if let type = feedback.feedbackType, !type.isEmpty { lines.append("유형: \(type)") }
+        if let type = feedback.typeLabel { lines.append("유형: \(type)") }
         lines.append("")
         lines.append(feedback.text)
         let status = store.status(of: feedback)
@@ -239,7 +239,7 @@ struct FeedbackDetailView: View {
             HStack(spacing: 8) {
                 Label(projectLabel, systemImage: "square.grid.2x2")
                     .font(.title3.weight(.semibold))
-                if let type = feedback.feedbackType, !type.isEmpty {
+                if let type = feedback.typeLabel {
                     Tag(text: type, tint: .teal)
                 }
                 StatusChip(status: store.status(of: feedback))

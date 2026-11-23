@@ -535,7 +535,7 @@ struct FeedbackRow: View {
     @ViewBuilder
     private var metadata: some View {
         #if os(iOS)
-        let parts = [feedback.feedbackType, feedback.appVersion.map { "v\($0)" },
+        let parts = [feedback.typeLabel, feedback.appVersion.map { "v\($0)" },
                      feedback.deviceModel, feedback.contactEmail]
             .compactMap { $0 }
             .filter { !$0.isEmpty && $0 != "v" }
@@ -547,7 +547,7 @@ struct FeedbackRow: View {
         }
         #else
         FlowLayout(spacing: 6, lineSpacing: 4) {
-            if let type = feedback.feedbackType, !type.isEmpty {
+            if let type = feedback.typeLabel {
                 Tag(text: type, systemImage: "tag")
             }
             if let version = feedback.appVersion, !version.isEmpty {

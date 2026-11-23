@@ -187,7 +187,7 @@ struct PhoneOverviewView: View {
                 .sorted { ($0.createdAt ?? .distantPast) > ($1.createdAt ?? .distantPast) }
             let items = unread.map { feedback -> Finding.Item in
                 var meta: [String] = []
-                if let type = feedback.feedbackType?.trimmed, !type.isEmpty { meta.append(type) }
+                if let type = feedback.typeLabel { meta.append(type) }
                 if let rating = feedback.rating { meta.append("별 \(rating)") }
                 if let version = feedback.appVersion, !version.isEmpty { meta.append(version) }
                 if feedback.createdAt != nil { meta.append(feedback.createdAtRelative) }

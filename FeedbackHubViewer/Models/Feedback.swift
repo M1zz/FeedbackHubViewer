@@ -40,6 +40,17 @@ struct Feedback: HubRecord, Codable {
     /// disk verbatim so a relaunch can paint before CloudKit answers.
     let allFields: [RecordField]
 
+    /// 사람이 읽는 유형 이름. LeeoKit 의 한 문장 의견(`voice.*`)은 무엇을 물었는지로 적는다.
+    var typeLabel: String? {
+        guard let type = feedbackType?.trimmingCharacters(in: .whitespaces), !type.isEmpty else { return nil }
+        switch type.lowercased() {
+        case "voice.useful": return "한 문장 · 쓸모 있던 순간"
+        case "voice.unmet": return "한 문장 · 기대에 못 미친 것"
+        case "voice.wish": return "한 문장 · 바라는 것"
+        default: return type
+        }
+    }
+
     // MARK: - Construction from CKRecord
 
     init(record: CKRecord) {

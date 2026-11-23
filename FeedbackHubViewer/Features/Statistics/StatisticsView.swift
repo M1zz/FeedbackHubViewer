@@ -1654,7 +1654,7 @@ struct StatisticsDashboard: View {
         let ratingCounts = (1...5).reversed().map { (rating: $0, count: ratingBuckets[$0] ?? 0) }
         var typeBuckets: [String: Int] = [:]
         for item in items {
-            let key = item.feedbackType?.trimmingCharacters(in: .whitespaces)
+            let key = item.typeLabel
             typeBuckets[(key?.isEmpty == false ? key! : "기타"), default: 0] += 1
         }
         let types = typeBuckets.map { (type: $0.key, count: $0.value) }.sorted { $0.count > $1.count }
