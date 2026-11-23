@@ -74,16 +74,19 @@ struct AppGridHome: View {
         enum Kind: Int, CaseIterable, Identifiable {
             case crash, release, usageDrop, hang, feedback, newReview, storeIssue, unansweredReview
             case news, changed, keyword
+            /// 좋은 소식 — 손볼 일이 아니라 자라는 것. 차례(임팩트)에는 무게가 없다.
+            case usageUp, purchase, fiveStar
             var id: Int { rawValue }
 
-            /// 급한 것 · 사람이 기다리는 것 · 알아만 둘 것.
-            enum Tier { case critical, voice, chore }
+            /// 급한 것 · 사람이 기다리는 것 · 알아만 둘 것 · 좋은 소식.
+            enum Tier { case critical, voice, chore, good }
 
             var tier: Tier {
                 switch self {
                 case .crash, .release, .usageDrop: return .critical
                 case .hang, .feedback, .newReview, .storeIssue, .unansweredReview: return .voice
                 case .news, .changed, .keyword: return .chore
+                case .usageUp, .purchase, .fiveStar: return .good
                 }
             }
 
@@ -100,6 +103,9 @@ struct AppGridHome: View {
                 case .news: return "새 소식"
                 case .changed: return "본 뒤 바뀐 것"
                 case .keyword: return "키워드 다시 짤 때"
+                case .usageUp: return "사용 늘어남"
+                case .purchase: return "이번 주 구매"
+                case .fiveStar: return "별 5개 리뷰"
                 }
             }
 
@@ -116,6 +122,9 @@ struct AppGridHome: View {
                 case .news: return "newspaper.fill"
                 case .changed: return "sparkles"
                 case .keyword: return "arrow.triangle.2.circlepath"
+                case .usageUp: return "chart.line.uptrend.xyaxis"
+                case .purchase: return "cart.fill"
+                case .fiveStar: return "star.fill"
                 }
             }
 
@@ -124,6 +133,7 @@ struct AppGridHome: View {
                 case .critical: return .red
                 case .voice: return .orange
                 case .chore: return .secondary
+                case .good: return .green
                 }
             }
 
@@ -139,6 +149,8 @@ struct AppGridHome: View {
                 case .news: return .news
                 case .changed: return .stats
                 case .keyword: return .keywords
+                case .usageUp, .purchase: return .stats
+                case .fiveStar: return .reviews
                 }
             }
 
@@ -155,6 +167,7 @@ struct AppGridHome: View {
                 case .storeIssue: return (10, 30)
                 case .unansweredReview: return (4, 12)
                 case .news, .changed, .keyword: return (0.5, 1)
+                case .usageUp, .purchase, .fiveStar: return (0, 0)
                 }
             }
         }
@@ -190,6 +203,9 @@ struct AppGridHome: View {
         /// 급한 것(크래시 · 릴리즈 빨강 · 사용 급감)이 있나.
         var isCritical: Bool { signals.contains { $0.kind.tier == .critical } }
         func has(_ kind: Signal.Kind) -> Bool { signals.contains { $0.kind == kind } }
+        /// 좋은 소식과 손볼 것을 따로 — 카드에 다른 줄로 선다.
+        var good: [Signal] { signals.filter { $0.kind.tier == .good } }
+        var issues: [Signal] { signals.filter { $0.kind.tier != .good } }
 
         /// 쓰는 사람 수 — 7일 활성, 없으면 7일 다운로드.
         var reach: Int { max(activity?.current ?? 0, downloads?.current ?? 0) }
@@ -240,6 +256,7 @@ struct AppGridHome: View {
             VStack(alignment: .leading, spacing: 16) {
                 summary(all)
                 urgent(all)
+                growing(all)
                 controls(all)
                 if shown.isEmpty {
                     Text(all.isEmpty ? "아직 앱이 없습니다. 새로고침하면 앱이 보낸 기록으로 채워집니다." : "여기에 맞는 앱이 없습니다.")
@@ -247,7 +264,7 @@ struct AppGridHome: View {
                         .foregroundStyle(.secondary)
                         .frame(maxWidth: .infinity, minHeight: 120)
                 } else {
-                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 230, maximum: 340), spacing: 12)], spacing: 12) {
+                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 300, maximum: 440), spacing: 14)], spacing: 14) {
                         ForEach(shown) { row in
                             tile(row)
                                 .modifier(HoverLift(isOff: reduceMotion))
@@ -329,6 +346,24 @@ struct AppGridHome: View {
                 counts[.usageDrop] = Int((Double(-activity.delta) / Double(activity.previous) * 100).rounded())
             }
 
+            // 좋은 소식 — 줄어든 것만 보이면 무엇이 잘되는지 놓친다.
+            let downloads = downloads(project, store: store, keywords: keywords, purchases: purchases)
+            if let trend = activity ?? downloads, trend.previous >= 5, trend.delta >= 3,
+               Double(trend.delta) / Double(trend.previous) >= 0.2 {
+                counts[.usageUp] = Int((Double(trend.delta) / Double(trend.previous) * 100).rounded())
+            }
+            let days = store.days(for: project, audience: .all)
+            let bought = UsageRollups.recentDayKeys(7).reduce(0) { sum, day in
+                sum + (days[day.key]?.byEvent ?? [:]).reduce(0) { inner, event in
+                    inner + (event.key.split(separator: ":").first == "purchase_completed" ? event.value : 0)
+                }
+            }
+            if bought > 0 { counts[.purchase] = bought }
+            let twoWeeksAgo = Date().addingTimeInterval(-14 * 86_400)
+            let fiveStars = (purchases.reviewFeeds[project]?.reviews ?? [])
+                .filter { $0.rating == 5 && $0.createdDate >= twoWeeksAgo }.count
+            if fiveStars > 0 { counts[.fiveStar] = fiveStars }
+
             // 나머지는 칸의 뱃지 그대로 — 읽으면 지워진다.
             if let badge = metrics.itemBadge(.feedback, project: project) { counts[.feedback] = badge.count }
             if let badge = metrics.itemBadge(.reviews, project: project) {
@@ -352,7 +387,7 @@ struct AppGridHome: View {
                        name: store.displayName(for: project),
                        usage: store.usage(for: project),
                        activity: activity,
-                       downloads: downloads(project, store: store, keywords: keywords, purchases: purchases),
+                       downloads: downloads,
                        signals: Signal.Kind.allCases.compactMap { kind in
                            counts[kind].map { Signal(kind: kind, count: $0) }
                        })
@@ -477,6 +512,16 @@ struct AppGridHome: View {
             if let downloads = totalDownloads(rows) {
                 figure(downloads, tint: Self.downloadTint)
             }
+            let growing = rows.filter { !$0.good.isEmpty }
+            figure("좋은 소식", value: growing.isEmpty ? "없음" : "\(growing.count)개 앱") {
+                let kinds = Signal.Kind.allCases.filter { $0.tier == .good }.compactMap { kind -> String? in
+                    let apps = rows.filter { $0.has(kind) }.count
+                    return apps > 0 ? "\(kind.label) \(apps)" : nil
+                }
+                Text(kinds.isEmpty ? "이번 주는 아직" : kinds.joined(separator: " · "))
+                    .foregroundStyle(growing.isEmpty ? AnyShapeStyle(.secondary) : AnyShapeStyle(.green))
+                    .lineLimit(2)
+            }
             figure("급한 앱", value: critical.isEmpty ? "없음" : "\(critical.count)개") {
                 Text(critical.isEmpty ? "크래시 · 릴리즈 빨강 · 사용 급감 없음" : criticalKinds.joined(separator: " · "))
                     .foregroundStyle(critical.isEmpty ? AnyShapeStyle(.secondary) : AnyShapeStyle(.red))
@@ -565,7 +610,28 @@ struct AppGridHome: View {
         }
     }
 
-    private func urgentRow(_ row: Row, _ signal: Signal) -> some View {
+    /// 좋은 소식 — 사용이 늘었거나, 이번 주 구매가 있었거나, 별 5개가 온 앱. 급한 것 바로 아래에
+    /// 초록으로 — 줄어든 숫자만 보이는 날에도 무엇이 자라는지 같은 자리에서 보인다.
+    @ViewBuilder
+    private func growing(_ rows: [Row]) -> some View {
+        let items = rows.sorted { $0.reach > $1.reach }.flatMap { row in row.good.map { (row: row, signal: $0) } }
+        if !items.isEmpty {
+            VStack(alignment: .leading, spacing: 8) {
+                Label("좋은 소식 \(items.count)", systemImage: "sparkles")
+                    .font(.body.weight(.semibold))
+                    .foregroundStyle(.green)
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 300), spacing: 10)], spacing: 10) {
+                    ForEach(Array(items.enumerated()), id: \.offset) { _, item in
+                        urgentRow(item.row, item.signal, tint: .green)
+                            .background(RoundedRectangle(cornerRadius: 12).fill(.green.opacity(0.08)))
+                            .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(.green.opacity(0.3), lineWidth: 1))
+                    }
+                }
+            }
+        }
+    }
+
+    private func urgentRow(_ row: Row, _ signal: Signal, tint: Color = .red) -> some View {
         let kind = signal.kind
         let lines = SignalEvidence.lines(signal, row: row, store: store, purchases: purchases)
         return Button {
@@ -578,11 +644,9 @@ struct AppGridHome: View {
                         Text(row.name)
                             .font(.body.weight(.semibold))
                             .lineLimit(1)
-                        Label(kind == .usageDrop ? "\(kind.label) ▼\(signal.count)%"
-                                                 : "\(kind.label) \(AppFormat.count(signal.count))건",
-                              systemImage: kind.systemImage)
+                        Label(Self.chipText(signal, named: true), systemImage: kind.systemImage)
                             .font(.body.weight(.semibold))
-                            .foregroundStyle(.red)
+                            .foregroundStyle(tint)
                             .lineLimit(1)
                         if row.reach > 0 {
                             Text("쓰는 사람 \(AppFormat.count(row.reach))")
@@ -699,11 +763,11 @@ struct AppGridHome: View {
     // MARK: - Tile
 
     private func tile(_ row: Row) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 10) {
-                AppIcon(url: icons.url(for: row.project, keywords: keywords), size: 36)
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 12) {
+                AppIcon(url: icons.url(for: row.project, keywords: keywords), size: 44)
                 Text(row.name)
-                    .font(.headline)
+                    .font(.title3.weight(.semibold))
                     .lineLimit(1)
                 Spacer(minLength: 4)
             }
@@ -717,16 +781,18 @@ struct AppGridHome: View {
                 Text("사용 · 다운로드 기록 없음")
                     .font(.body)
                     .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, minHeight: 86, alignment: .leading)
+                    .frame(maxWidth: .infinity, minHeight: 100, alignment: .leading)
             }
 
+            goodRow(row)
             signalRow(row)
         }
-        .padding(12)
+        .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(RoundedRectangle(cornerRadius: 12).fill(.quaternary.opacity(0.45)))
         .overlay(RoundedRectangle(cornerRadius: 12)
-            .strokeBorder(row.isCritical ? AnyShapeStyle(.red.opacity(0.5)) : AnyShapeStyle(.clear), lineWidth: 1))
+            .strokeBorder(row.isCritical ? AnyShapeStyle(.red.opacity(0.5))
+                          : row.good.isEmpty ? AnyShapeStyle(.clear) : AnyShapeStyle(.green.opacity(0.45)), lineWidth: 1))
         .contentShape(RoundedRectangle(cornerRadius: 12))
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(.isButton)
@@ -734,54 +800,76 @@ struct AppGridHome: View {
 
     /// 카드 맨 아래 — 종류마다 따로 선 표시. 급한 것 · 목소리는 이름까지, 알아만 둘 것은 기호와
     /// 수만. 자리가 모자라면 전부 기호와 수로 줄인다. 누르면 그 칸으로 바로 간다.
+    /// 좋은 소식 줄 — 늘 이름까지 적은 초록 뱃지. 없으면 자리를 차지하지 않는다.
+    @ViewBuilder
+    private func goodRow(_ row: Row) -> some View {
+        if !row.good.isEmpty {
+            ViewThatFits(in: .horizontal) {
+                chips(row.good, project: row.project, compact: false)
+                chips(row.good, project: row.project, compact: true)
+            }
+            .frame(height: 28, alignment: .leading)
+        }
+    }
+
     @ViewBuilder
     private func signalRow(_ row: Row) -> some View {
-        if row.signals.isEmpty {
+        if row.issues.isEmpty {
             Text("볼 것 없음")
                 .font(.body)
                 .foregroundStyle(.tertiary)
                 .frame(height: 26, alignment: .leading)
         } else {
             ViewThatFits(in: .horizontal) {
-                signalChips(row, compact: false)
-                signalChips(row, compact: true)
-                signalChips(row, compact: true, limit: 5)
+                chips(row.issues, project: row.project, compact: false)
+                chips(row.issues, project: row.project, compact: true)
+                chips(row.issues, project: row.project, compact: true, limit: 5)
             }
-            .frame(height: 26, alignment: .leading)
+            .frame(height: 28, alignment: .leading)
         }
     }
 
-    private func signalChips(_ row: Row, compact: Bool, limit: Int? = nil) -> some View {
-        let shown = limit.map { Array(row.signals.prefix($0)) } ?? row.signals
+    /// 뱃지의 수 — 사용 변화는 비율, 나머지는 건수.
+    static func chipText(_ signal: Signal, named: Bool) -> String {
+        let value: String
+        switch signal.kind {
+        case .usageDrop: value = "▼\(signal.count)%"
+        case .usageUp: value = "▲\(signal.count)%"
+        default: value = AppFormat.count(signal.count) + (named ? "건" : "")
+        }
+        return named ? "\(signal.kind.label) \(value)" : value
+    }
+
+    private func chips(_ signals: [Signal], project: String, compact: Bool, limit: Int? = nil) -> some View {
+        let shown = limit.map { Array(signals.prefix($0)) } ?? signals
         return HStack(spacing: 6) {
             ForEach(shown) { signal in
                 let kind = signal.kind
                 let named = !compact && kind.tier != .chore
+                let filled = kind.tier == .critical || kind.tier == .good
                 Button {
-                    store.open(project: row.project, section: kind.section)
+                    store.open(project: project, section: kind.section)
                 } label: {
                     HStack(spacing: 4) {
                         Image(systemName: kind.systemImage)
-                        if named { Text(kind.label) }
-                        Text(kind == .usageDrop ? "▼\(signal.count)%" : AppFormat.count(signal.count))
+                        Text(Self.chipText(signal, named: named))
                             .monospacedDigit()
                     }
-                    .font(.body.weight(kind.tier == .critical ? .semibold : .regular))
+                    .font(.body.weight(filled ? .semibold : .regular))
                     .lineLimit(1)
                     .fixedSize()
-                    .foregroundStyle(kind.tier == .critical ? AnyShapeStyle(.white) : AnyShapeStyle(kind.tint))
-                    .padding(.horizontal, 7)
-                    .padding(.vertical, 2)
-                    .background(Capsule().fill(kind.tier == .critical ? AnyShapeStyle(Color.red)
-                                               : AnyShapeStyle(kind.tint.opacity(0.14))))
+                    .foregroundStyle(filled ? AnyShapeStyle(.white) : AnyShapeStyle(kind.tint))
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(Capsule().fill(filled ? AnyShapeStyle(kind.tint) : AnyShapeStyle(kind.tint.opacity(0.14))))
                     .contentShape(Capsule())
                 }
                 .buttonStyle(.plain)
-                .help("\(kind.label) \(kind == .usageDrop ? "\(signal.count)%" : AppFormat.count(signal.count)) — 눌러서 보기")
-                .accessibilityLabel("\(kind.label) \(signal.count)")
+                .help("\(Self.chipText(signal, named: true)) — 눌러서 보기")
+                .accessibilityLabel(Self.chipText(signal, named: true))
             }
-            if let limit, row.signals.count > limit {
-                Text("+\(row.signals.count - limit)")
+            if let limit, signals.count > limit {
+                Text("+\(signals.count - limit)")
                     .font(.body.monospacedDigit())
                     .foregroundStyle(.secondary)
             }
@@ -806,7 +894,7 @@ struct AppGridHome: View {
                 }
                 .lineLimit(1)
                 Sparkline(points: metric.points, tint: tint)
-                    .frame(height: 30)
+                    .frame(height: 44)
                     .padding(.top, 4)
             }
             .frame(maxWidth: .infinity, alignment: .leading)

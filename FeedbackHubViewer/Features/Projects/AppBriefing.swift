@@ -35,7 +35,7 @@ struct AppBriefing: View {
         let metrics = SectionMetrics(store: store, keywords: keywords, purchases: purchases,
                                      design: design, charts: charts, news: news)
         let row = AppGridHome.row(project, store: store, metrics: metrics, keywords: keywords, purchases: purchases)
-        let problems = row.signals.filter { $0.kind.tier != .chore }
+        let problems = row.signals.filter { $0.kind.tier != .chore && $0.kind.tier != .good }
         let chores = row.signals.filter { $0.kind.tier == .chore }
 
         ScrollView {
@@ -53,6 +53,17 @@ struct AppBriefing: View {
                     group("문제") {
                         ForEach(problems) { signal in
                             problem(signal, row: row, metrics: metrics)
+                        }
+                    }
+                }
+
+                if !row.good.isEmpty {
+                    group("좋은 소식") {
+                        ForEach(row.good) { signal in
+                            line(systemImage: signal.kind.systemImage, tint: .green,
+                                 title: signal.kind.label,
+                                 value: AppGridHome.chipText(signal, named: false),
+                                 section: signal.kind.section)
                         }
                     }
                 }
@@ -317,6 +328,21 @@ enum SignalEvidence {
         case .storeIssue:
             guard case .ready(let analytics)? = purchases.storeAnalytics[project]?.value else { return [] }
             return analytics.insights?.findings.filter { $0.level == .bad }.prefix(2).map(\.title) ?? []
+        case .usageUp:
+            guard let trend = row.activity ?? row.downloads else { return [] }
+            return ["\(trend.title) \(AppFormat.count(trend.previous)) → \(AppFormat.count(trend.current))"]
+        case .purchase:
+            return ["최근 7일 구매 완료 \(AppFormat.count(signal.count))건"]
+        case .fiveStar:
+            let since = Date().addingTimeInterval(-14 * 86_400)
+            return (purchases.reviewFeeds[project]?.reviews ?? [])
+                .filter { $0.rating == 5 && $0.createdDate >= since }
+                .sorted { $0.createdDate > $1.createdDate }
+                .prefix(2).map { review in
+                    let text = [review.title, review.body].compactMap { $0 }
+                        .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.first { !$0.isEmpty } ?? ""
+                    return "\(review.territory) · \(text)"
+                }
         case .news, .changed, .keyword:
             return []
         }
