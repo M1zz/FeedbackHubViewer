@@ -269,16 +269,30 @@ struct SplitRootView: View {
             EnvironmentBadge()
         }
 
-        // 모든 앱을 카드로 편 첫 화면으로.
+        // 모든 앱을 카드로 편 첫 화면으로 — 앱 화면에서는 "‹ 모든 앱" 으로 글자까지 세운다.
+        // 기호(▦)만 있을 때는 카드 · 좋은 소식을 눌러 들어온 뒤 돌아갈 길로 읽히지 않았다.
+        // 맥의 뒤로 가기 키(⌘[)도 같은 일을 한다.
         ToolbarItem(placement: .navigation) {
-            Button {
-                store.showsHome = true
-            } label: {
-                Label("홈", systemImage: "square.grid.2x2")
+            if store.showsHome {
+                Label("모든 앱", systemImage: "square.grid.2x2")
+                    .labelStyle(.iconOnly)
+                    .foregroundStyle(.secondary)
+            } else {
+                Button {
+                    store.showsHome = true
+                } label: {
+                    Label("모든 앱", systemImage: "chevron.backward")
+                        .labelStyle(.titleAndIcon)
+                }
+                .help("모든 앱 한눈에로 돌아가기 (⌘[ · ⇧⌘H)")
+                .keyboardShortcut("[", modifiers: .command)
+                .background {
+                    // 예전 단축키도 그대로 — 단추 하나에 키는 하나라 숨은 단추로 받는다.
+                    Button("") { store.showsHome = true }
+                        .keyboardShortcut("h", modifiers: [.command, .shift])
+                        .hidden()
+                }
             }
-            .help("모든 앱 한눈에 (⇧⌘H)")
-            .keyboardShortcut("h", modifiers: [.command, .shift])
-            .disabled(store.showsHome)
         }
 
         // 누르면 무엇을 언제 받았는지가 열린다.
