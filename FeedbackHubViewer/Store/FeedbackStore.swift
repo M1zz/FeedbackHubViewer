@@ -413,6 +413,7 @@ final class FeedbackStore: ObservableObject {
     /// moves, so pushing (iPhone) and re-scoping the column (Mac/iPad) don't
     /// have to be spelled out at each call site.
     func open(project: String?, section: ProjectSection? = nil) {
+        showsHome = false
         // 맥 · 아이패드: 앱이 걸린 링크는 늘 그 앱 하나로 보는 상태로 연다 — 어느 모드로 갈지
         // 헤아리지 않아도 되게. 전체(nil)로 가는 링크면 앱 하나로 보기를 푼다.
         if !usesStackNavigation, focusedApp != project {
@@ -446,6 +447,9 @@ final class FeedbackStore: ObservableObject {
     /// 맥 · 아이패드에서 "전체 앱"을 고르면 가운데가 모든 앱 대시보드다(`AppDashboardPanel`).
     /// 칸을 고르면(사이드바 · 카드) 그 칸의 전체 모아보기로 넘어간다 — 맨 위 전환으로 오간다.
     @Published var showsAllAppsDashboard = true
+    /// 맥 · 아이패드의 첫 화면 — 사이드바를 걷고 모든 앱을 카드로 편 홈(`AppGridHome`).
+    /// 카드 · 링크 · 사이드바 어느 것으로든 어딘가로 들어가면 꺼진다.
+    @Published var showsHome = true
     @Published var selectedVersion: String? = nil     // nil == all versions
     @Published var minimumRating: Int = 0             // 0 == any rating
     /// Which triage decisions the list shows (see `FeedbackTriage.swift`).

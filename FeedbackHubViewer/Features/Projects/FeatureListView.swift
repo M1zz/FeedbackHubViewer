@@ -65,6 +65,17 @@ struct FeatureListView: View {
             }
 
             Section {
+                // 모든 앱을 카드로 편 첫 화면(`AppGridHome`)으로 — 아이패드에는 툴바의 홈 단추가 없다.
+                if !store.usesStackNavigation {
+                    Button {
+                        store.showsHome = true
+                    } label: {
+                        Label("홈 · 모든 앱 한눈에", systemImage: "square.grid.2x2")
+                            .font(.body)
+                    }
+                    .buttonStyle(.borderless)
+                    .disabled(store.showsHome)
+                }
                 AppFocusPicker()
             }
 
@@ -93,6 +104,7 @@ struct FeatureListView: View {
                 ForEach(entry.sections) { section in
                     let isSelected = store.projectSection.host == section
                     Button {
+                        store.showsHome = false
                         store.selectedProject = app
                         store.projectSection = section
                     } label: {
@@ -127,6 +139,7 @@ struct FeatureListView: View {
     private func row(_ section: FeedbackStore.ProjectSection, metrics: SectionMetrics) -> some View {
         let isSelected = store.projectSection.host == section
         return Button {
+            store.showsHome = false
             store.projectSection = section
         } label: {
             FeatureRow(section: section,

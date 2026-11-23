@@ -37,6 +37,16 @@ struct AppDashboardPanel: View {
     }
 
     var body: some View {
+        // 앱 하나면 브리핑(`AppBriefing`) — 문제부터, 그 안의 것과 함께. 칸을 다 세우는 아래 모양은
+        // 전체 앱일 때만 쓴다.
+        if let project {
+            AppBriefing(project: project, onClose: onClose)
+        } else {
+            overview
+        }
+    }
+
+    private var overview: some View {
         let metrics = SectionMetrics(store: store, keywords: keywords, purchases: purchases,
                                      design: design, charts: charts, news: news)
         let tiles = AppScopedSections.groups().flatMap(\.sections).flatMap(\.members).map { section in
@@ -48,7 +58,7 @@ struct AppDashboardPanel: View {
         let rest = tiles.filter { !$0.needsLook }
         let apps = project == nil ? Self.apps(tiles: tiles, metrics: metrics) : []
 
-        ScrollView {
+        return ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 header
                 if !urgent.isEmpty {

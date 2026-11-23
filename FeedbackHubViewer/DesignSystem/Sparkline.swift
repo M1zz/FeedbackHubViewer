@@ -17,6 +17,8 @@ import Charts
 
 struct Sparkline: View {
     let points: [FeedbackStore.DayCount]
+    /// 한 카드에 선이 둘 설 때 무엇의 선인지 색으로 가른다.
+    var tint: Color = .accentColor
 
     /// 끝난 날들만.
     private var settled: [FeedbackStore.DayCount] {
@@ -29,10 +31,10 @@ struct Sparkline: View {
         Chart(points) { point in
             AreaMark(x: .value("날짜", point.date, unit: .day),
                      y: .value("건수", point.count))
-                .foregroundStyle(Color.accentColor.opacity(0.18))
+                .foregroundStyle(tint.opacity(0.18))
             LineMark(x: .value("날짜", point.date, unit: .day),
                      y: .value("건수", point.count))
-                .foregroundStyle(Color.accentColor)
+                .foregroundStyle(tint)
                 .interpolationMethod(.monotone)
         }
         .chartXAxis(.hidden)

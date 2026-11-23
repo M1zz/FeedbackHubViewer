@@ -23,14 +23,49 @@ struct SplitRootView: View {
     @AppStorage("app-dashboard-shown") private var showsDashboard = true
     /// 동작 줄이기를 켠 사람에게는 상세가 미끄러지지 않고 바로 나타난다.
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// 홈(`AppGridHome`)에서는 사이드바를 걷는다 — 어딘가로 들어가면 편다. 그 사이에 손으로
+    /// 접고 편 것은 다음에 홈을 드나들 때까지 그대로 둔다.
+    @State private var columnVisibility: NavigationSplitViewVisibility = .detailOnly
+    /// 홈에서 누른 카드의 자리 — 홈과 앱 화면이 이 점을 축으로 커지고 줄어든다.
+    @State private var zoomAnchor: UnitPoint = .center
+    /// 다가오기가 끝난 화면이 홈인가. `store.showsHome` 과 다른 동안이 "막 바뀐 순간" 이다 —
+    /// 그때 새 화면은 살짝 작게(홈으로 올 때는 살짝 크게) · 투명하게 서 있다가 제자리로 온다.
+    @State private var arrivedHome = true
 
     var body: some View {
-        NavigationSplitView {
+        NavigationSplitView(columnVisibility: $columnVisibility) {
             FeatureListView()
                 .navigationSplitViewColumnWidth(min: 190, ideal: 210, max: Self.sidebarMaxWidth)
         } detail: {
-            contentColumn
+            // 홈 ↔ 앱 화면은 **그 자리에서 바로** 바뀌고, 새로 선 화면만 누른 카드 자리에서 다가온다.
+            //
+            // 예전에는 둘을 `.transition` 으로 바꿨다 — 나가는 화면을 애니메이션이 끝날 때까지
+            // 살려 두는 방식이다. 그 화면 안에는 `NavigationStack` · 툴바 · AppKit 컨트롤
+            // (세그먼트 · 진행 표시 · 글 상자)이 있고, 같은 순간 분할 칸은 사이드바를 펴느라 너비를
+            // 다시 셈한다. 그 둘이 겹치면 AttributeGraph 가 "precondition failure: invalid type
+            // ID: 0" 으로 앱을 죽였다. 지금은 화면을 넣고 빼는 데에는 애니메이션이 없고, 이미 선
+            // 화면의 크기 · 투명도만 움직인다 — 그래프에서 빠지는 중인 것을 건드릴 일이 없다.
+            Group {
+                if store.showsHome {
+                    home
+                } else {
+                    contentColumn
+                }
+            }
+            .scaleEffect(arrivalScale, anchor: zoomAnchor)
+            .opacity(hasArrived ? 1 : 0)
         }
+        .onChange(of: store.showsHome) { _, isHome in
+            // 사이드바는 애니메이션 없이 — 분할 칸의 너비 셈과 화면 바꾸기가 한 박자에 끝나게.
+            columnVisibility = isHome ? .detailOnly : .all
+            withAnimation(reduceMotion ? .easeOut(duration: 0.15) : .snappy(duration: 0.34)) {
+                arrivedHome = isHome
+            }
+        }
+        // 사이드바에서 칸이나 앱을 고르면 홈에서 나간다. 같은 칸을 다시 누른 것은 줄의 단추가
+        // 직접 끈다(`FeatureListView`).
+        .onChange(of: store.projectSection) { store.showsHome = false }
+        .onChange(of: store.focusedApp) { store.showsHome = false }
         // The app screen sits beside the app list here rather than on top of
         // it, so cross-screen links re-scope the column instead of pushing
         // (see `FeedbackStore.open(project:section:)`).
@@ -40,6 +75,26 @@ struct SplitRootView: View {
         }
         #if os(macOS)
         .toolbar { macToolbarContent }
+        #endif
+    }
+
+    private var hasArrived: Bool { arrivedHome == store.showsHome }
+
+    private var arrivalScale: CGFloat {
+        guard !hasArrived, !reduceMotion else { return 1 }
+        return store.showsHome ? 1.05 : 0.94
+    }
+
+    /// 첫 화면 — 모든 앱의 카드. 아이패드는 칸마다 제 툴바가 있어야 사이드바 단추가 선다.
+    private var home: some View {
+        #if os(macOS)
+        AppGridHome(zoomAnchor: $zoomAnchor)
+        #else
+        NavigationStack {
+            AppGridHome(zoomAnchor: $zoomAnchor)
+                .navigationBarTitleDisplayMode(.inline)
+                .hubToolbar()
+        }
         #endif
     }
 
@@ -212,6 +267,18 @@ struct SplitRootView: View {
         // 어느 환경의 데이터인가 — 창이 몇 개든 늘 같은 자리에.
         ToolbarItem(placement: .navigation) {
             EnvironmentBadge()
+        }
+
+        // 모든 앱을 카드로 편 첫 화면으로.
+        ToolbarItem(placement: .navigation) {
+            Button {
+                store.showsHome = true
+            } label: {
+                Label("홈", systemImage: "square.grid.2x2")
+            }
+            .help("모든 앱 한눈에 (⇧⌘H)")
+            .keyboardShortcut("h", modifiers: [.command, .shift])
+            .disabled(store.showsHome)
         }
 
         // 누르면 무엇을 언제 받았는지가 열린다.
