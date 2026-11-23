@@ -68,7 +68,7 @@ struct KeywordsView: View {
     private var isRefreshDue: Bool {
         guard let project else { return false }
         let states = keywords.refreshStates(for: project, withRanks: false)
-        return !states.isEmpty && states.allSatisfy(\.isSettled)
+        return !states.isEmpty && states.allSatisfy(\.isSettled) && !states.contains(where: \.awaitingRelease)
     }
 
     private var moreToggle: some View {

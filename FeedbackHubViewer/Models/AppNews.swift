@@ -379,7 +379,8 @@ enum NewsDetector {
     static func keywordRefresh(project: String, name: String, states: [KeywordRefreshState], now: Date) -> NewsBatch {
         let group = "kwrefresh:\(project)"
         guard !states.isEmpty else { return NewsBatch(group: group, ready: false, items: []) }
-        let settled = states.filter(\.isSettled)
+        // 레포에서 이미 다시 짜 출시를 기다리는 칸은 소식거리가 아니다(`isDue`).
+        let settled = states.filter(\.isDue)
         guard let oldest = settled.max(by: { $0.days < $1.days }) else { return NewsBatch(group: group, ready: true, items: []) }
         let ranked = settled.map(\.ranked).reduce(0, +)
         let total = settled.map(\.terms.count).reduce(0, +)

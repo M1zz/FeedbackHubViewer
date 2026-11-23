@@ -90,7 +90,8 @@ extension KeywordStore {
             guard let country = KeywordField.storefront(for: locale), countries.contains(country) else { return nil }
             guard withRanks else {
                 return KeywordRefreshState(project: project, locale: locale, country: country,
-                                           current: current, terms: [], now: now)
+                                           current: current, terms: [], now: now,
+                                           repoTerms: repoTerms(project: project, locale: locale))
             }
             let changeDay = current.isBaseline ? nil : UsageRollups.dayKey(current.seenAt)
             let terms = current.terms.map { term -> KeywordRefreshState.Term in
@@ -106,18 +107,28 @@ extension KeywordStore {
                              checkedBefore: before != nil, best: standing.best)
             }
             return KeywordRefreshState(project: project, locale: locale, country: country,
-                                       current: current, terms: terms, now: now)
+                                       current: current, terms: terms, now: now,
+                                       repoTerms: repoTerms(project: project, locale: locale))
         }
         .sorted { (countries.firstIndex(of: $0.country) ?? .max, $0.locale) < (countries.firstIndex(of: $1.country) ?? .max, $1.locale) }
     }
 
     /// 다시 짤 때가 된 앱 — 순위를 보는 칸이 하나라도 두 주를 넘겼다. 오래된 것부터.
+    /// 레포에 새로 짠 말이 출시를 기다리는 칸은 뺀다(`KeywordRefreshState.isDue`).
     /// `since` 는 그 칸을 바꾼 때 — 다시 짜기 전까지 변하지 않아 "알아봤다" 를 적는 열쇠가 된다.
     func refreshDue(projects: [String], now: Date = Date()) -> [(project: String, days: Int, since: Date)] {
         projects.compactMap { project in
-            let oldest = refreshStates(for: project, now: now, withRanks: false).filter(\.isSettled).max { $0.days < $1.days }
+            let oldest = refreshStates(for: project, now: now, withRanks: false).filter(\.isDue).max { $0.days < $1.days }
             return oldest.map { (project, $0.days, $0.current.seenAt) }
         }
         .sorted { $0.days > $1.days }
+    }
+
+    /// 새로 짠 키워드가 출시를 기다리는 앱 — 레포 줄이 스토어 칸과 다른 칸이 있고, 다시 짤 때는 아니다.
+    func awaitingRelease(projects: [String], now: Date = Date()) -> [String] {
+        projects.filter { project in
+            let states = refreshStates(for: project, now: now, withRanks: false)
+            return states.contains(where: \.awaitingRelease) && !states.contains(where: \.isDue)
+        }
     }
 }

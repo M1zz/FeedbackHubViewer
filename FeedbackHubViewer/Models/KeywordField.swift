@@ -110,6 +110,8 @@ struct KeywordRefreshState: Identifiable {
     /// 칸에 걸린 말마다 지금 순위와 바꿀 때 순위.
     let terms: [Term]
     let now: Date
+    /// 레포 `APPSTORE.md` 에 적힌 이 칸의 말. 레포를 못 읽었으면 nil.
+    var repoTerms: [String]? = nil
 
     struct Term: Hashable {
         let term: String
@@ -128,6 +130,14 @@ struct KeywordRefreshState: Identifiable {
     var changedAt: Date? { current.isBaseline ? nil : current.seenAt }
     var days: Int { max(0, Calendar.current.dateComponents([.day], from: current.seenAt, to: now).day ?? 0) }
     var isSettled: Bool { days >= KeywordField.settleDays }
+    /// 레포에 새로 짠 말이 있고 아직 스토어에 안 나갔다 — 다음 출시 때 바뀐다.
+    var awaitingRelease: Bool {
+        guard let repoTerms else { return false }
+        func normalized(_ terms: [String]) -> Set<String> { Set(terms.map { $0.lowercased() }) }
+        return normalized(repoTerms) != normalized(current.terms)
+    }
+    /// 다시 짤 때 — 자리 잡을 만큼 지났고, 이미 새로 짠 말이 출시를 기다리는 중도 아니다.
+    var isDue: Bool { isSettled && !awaitingRelease }
 
     var ranked: Int { terms.filter { $0.rank != nil }.count }
     var topTen: Int { terms.filter { ($0.rank ?? .max) <= 10 }.count }

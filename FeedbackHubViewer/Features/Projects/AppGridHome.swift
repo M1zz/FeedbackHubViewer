@@ -338,7 +338,8 @@ struct AppGridHome: View {
                 counts[.storeIssue] = metrics.count(.storeAnalytics, project: project)
             }
             if let badge = metrics.itemBadge(.news, project: project) { counts[.news] = badge.count }
-            if let badge = metrics.itemBadge(.keywords, project: project) { counts[.keyword] = badge.count }
+            if let badge = metrics.itemBadge(.keywords, project: project),
+               badge.action == SectionMetrics.keywordDueAction { counts[.keyword] = badge.count }
             // 본 뒤 바뀐 것 — 한 건씩 세는 뱃지가 없는 칸에 선 것만.
             let changed = sections.reduce(0) { sum, section in
                 guard metrics.itemBadge(section, project: project) == nil,

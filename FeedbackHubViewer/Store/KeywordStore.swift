@@ -62,6 +62,12 @@ final class KeywordStore: ObservableObject {
     /// 스토어 키워드 칸의 기록 — `KeywordField.key(project:locale:)` → 본 값들, 오래된 것부터.
     /// `syncStoreFields` 만 쓴다(`KeywordStore+StoreField.swift`).
     @Published var fieldLog: [String: [KeywordFieldSnapshot]] = [:]
+    /// 앱 레포 `APPSTORE.md` 의 키워드 줄 — `RepoKeywords.key(project:locale:)` → 말들.
+    /// 스토어 칸과 다르면 새 키워드가 출시를 기다리는 중이다(`KeywordStore+Repo.swift`).
+    @Published var repoKeywords: [String: [String]] = [:]
+    /// 레포들이 든 폴더(`workspace/Auto`). 샌드박스라 한 번 골라 받은 허락으로 읽는다. nil 이면 아직 안 골랐다.
+    @Published var repoFolder: URL?
+    var repoActiveObserver: NSObjectProtocol?
 
     /// Storefronts offered when adding a term. Seeded from what is already
     /// tracked so the picker matches the data, and persisted as a plain
@@ -136,6 +142,7 @@ final class KeywordStore: ObservableObject {
                 self.countries = saved
             }
         }
+        startRepoKeywords()
     }
 
     private var countriesObserver: NSObjectProtocol?

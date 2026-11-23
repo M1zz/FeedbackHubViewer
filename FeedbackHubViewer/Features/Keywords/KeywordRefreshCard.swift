@@ -28,11 +28,20 @@ struct KeywordRefreshCard: View {
                     .fixedSize(horizontal: false, vertical: true)
             } else {
                 let settled = states.allSatisfy(\.isSettled)
-                Text(headline(states, settled: settled))
+                let waiting = states.contains(where: \.awaitingRelease) && !states.contains(where: \.isDue)
+                Text(waiting ? "새로 짠 키워드가 출시를 기다려요 — 레포에는 있고 스토어에는 아직 옛 말이에요"
+                             : headline(states, settled: settled))
                     .font(.title3.weight(.semibold))
                     .foregroundStyle(settled ? Color.primary : Color.secondary)
                     .fixedSize(horizontal: false, vertical: true)
-                if settled {
+                if waiting {
+                    Text("다음 배포가 심사를 통과하면 스토어 칸이 바뀌고, 그날부터 다시 두 주를 잽니다. 지금은 할 일이 없어요.")
+                        .font(.body)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                RepoFolderNote()
+                if settled && !waiting {
                     // 할 일은 이것 하나 — 순위를 읽고 판단할 필요는 없다. 그건 Claude 가 한다.
                     Text("할 일: 아래 단추로 글을 복사해 이 앱 리포에서 연 Claude 에 붙여넣으세요. 순위를 근거로 키워드 줄을 다시 짜서 커밋하고, 스토어에는 다음 배포 때 올라갑니다.")
                         .font(.body)
@@ -40,7 +49,7 @@ struct KeywordRefreshCard: View {
                 }
                 let copy = CopyButton(text: KeywordRefreshPrompt.make([promptApp(project, states: states)]),
                                       title: "Claude에게 맡길 글 복사")
-                if settled { copy.buttonStyle(.borderedProminent) } else { copy.buttonStyle(.bordered) }
+                if settled && !waiting { copy.buttonStyle(.borderedProminent) } else { copy.buttonStyle(.bordered) }
                 DisclosureGroup("나라마다 지금 순위") {
                     ForEach(states) { state in stateRow(state) }
                 }
@@ -63,6 +72,9 @@ struct KeywordRefreshCard: View {
                 Text(state.changedAt.map { "\($0.formatted(.dateTime.month().day())) 바뀜" } ?? "바뀐 날 모름")
                     .font(.body)
                     .foregroundStyle(.secondary)
+                if state.awaitingRelease {
+                    Tag(text: SectionMetrics.keywordWaitingAction, isCompact: true)
+                }
             }
             Text(summary(state))
                 .font(.body)
@@ -105,6 +117,7 @@ struct KeywordRefreshOverviewCard: View {
         let projects = store.allProjectKeys.filter { $0 != Feedback.unclassifiedProject && !store.hiddenProjects.contains($0) }
         let due = keywords.refreshDue(projects: projects)
         let watched = projects.filter { !keywords.refreshStates(for: $0, withRanks: false).isEmpty }
+        let waiting = keywords.awaitingRelease(projects: projects)
         Card(title: "키워드 다시 짜기", systemImage: "arrow.triangle.2.circlepath") {
             if watched.isEmpty {
                 Text("스토어에 걸린 키워드 칸을 아직 읽지 못했습니다. App Store Connect 키가 있으면 하루 한 번 모든 앱의 칸을 읽습니다.")
@@ -112,13 +125,23 @@ struct KeywordRefreshOverviewCard: View {
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             } else if due.isEmpty {
-                Text("다시 짤 앱이 없어요 — 칸을 지켜보는 앱 \(watched.count)개 모두 바꾼 지 \(KeywordField.settleDays)일이 안 됐어요.")
+                Text(waiting.isEmpty
+                     ? "다시 짤 앱이 없어요 — 칸을 지켜보는 앱 \(watched.count)개 모두 바꾼 지 \(KeywordField.settleDays)일이 안 됐어요."
+                     : "다시 짤 앱이 없어요 — 새로 짠 키워드가 출시를 기다리는 앱 \(waiting.count)개: " + waiting.map(store.displayName(for:)).joined(separator: ", "))
                     .font(.body)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
+                RepoFolderNote()
             } else {
                 Text("다시 짤 때가 된 앱 \(due.count)개")
                     .font(.title3.weight(.semibold))
+                if !waiting.isEmpty {
+                    Text("새로 짠 키워드가 출시를 기다리는 앱 \(waiting.count)개는 뺐어요: " + waiting.map(store.displayName(for:)).joined(separator: ", "))
+                        .font(.body)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                RepoFolderNote()
                 Text("할 일: 아래 단추로 한꺼번에 맡기거나, 앱을 눌러 하나씩 맡기세요. 순위는 Claude 가 읽고 판단합니다.")
                     .font(.body)
                     .fixedSize(horizontal: false, vertical: true)
@@ -159,5 +182,25 @@ struct KeywordRefreshOverviewCard: View {
                 }
             }
         }
+    }
+}
+
+/// 레포 폴더를 아직 안 골랐으면 고르게 하는 한 줄. 골라야 "출시 기다림" 을 가린다.
+struct RepoFolderNote: View {
+    @EnvironmentObject private var keywords: KeywordStore
+
+    var body: some View {
+        #if os(macOS)
+        if keywords.repoFolder == nil {
+            HStack(spacing: 8) {
+                Button("레포 폴더 연결") { keywords.chooseRepoFolder() }
+                    .buttonStyle(.bordered)
+                Text("workspace/Auto 를 한 번 고르면, 레포에서 이미 다시 짠 앱은 \"출시 기다림\" 으로 따로 보여요.")
+                    .font(.body)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        #endif
     }
 }

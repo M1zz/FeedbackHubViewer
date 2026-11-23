@@ -49,6 +49,10 @@ struct SectionMetrics {
         var action: String? = nil
     }
 
+    /// 앱 한 줄에 적는 키워드 말 — 할 일(다시 짤 때)과 기다리는 상태(출시 기다림).
+    static let keywordDueAction = "다시 짤 때"
+    static let keywordWaitingAction = "출시 기다림"
+
     // MARK: - Badge
 
     /// 우선순위: 안 읽은 피드백 → 새 진단 → 새 리뷰 → 답 안 한 리뷰.
@@ -127,8 +131,14 @@ struct SectionMetrics {
             // — 칸을 열어 보면 지워지고, 새로 때가 된 앱이 생겨야 다시 선다.
             let due = keywords.refreshDue(projects: projects)
             if project != nil {
-                return due.isEmpty ? nil : Badge(count: 1, systemImage: "arrow.triangle.2.circlepath", tint: .orange,
-                                                 name: "키워드 다시 짤 때", action: "다시 짤 때")
+                if !due.isEmpty {
+                    return Badge(count: 1, systemImage: "arrow.triangle.2.circlepath", tint: .orange,
+                                 name: "키워드 다시 짤 때", action: Self.keywordDueAction)
+                }
+                // 이미 레포에서 다시 짰고 출시를 기다린다 — 할 일이 아니라 상태라 흐리게.
+                return keywords.awaitingRelease(projects: projects).isEmpty ? nil
+                    : Badge(count: 1, systemImage: "hourglass", tint: .secondary,
+                            name: "새 키워드 출시 기다림", action: Self.keywordWaitingAction)
             }
             let fresh = SectionChanges.shared.unacknowledgedDue(due).count
             return fresh > 0 ? Badge(count: fresh, systemImage: "arrow.triangle.2.circlepath", tint: .orange,
