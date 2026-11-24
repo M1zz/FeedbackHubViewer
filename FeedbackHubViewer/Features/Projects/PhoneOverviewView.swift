@@ -188,11 +188,13 @@ struct PhoneOverviewView: View {
             let items = unread.map { feedback -> Finding.Item in
                 var meta: [String] = []
                 if let type = feedback.typeLabel { meta.append(type) }
+                if let usefulness = feedback.usefulnessLabel { meta.append(usefulness) }
                 if let rating = feedback.rating { meta.append("별 \(rating)") }
                 if let version = feedback.appVersion, !version.isEmpty { meta.append(version) }
                 if feedback.createdAt != nil { meta.append(feedback.createdAtRelative) }
                 return Finding.Item(id: "feedback|\(feedback.id)", title: name(feedback.projectKey),
-                                    meta: meta.joined(separator: " · "), lines: [feedback.snippet],
+                                    meta: meta.joined(separator: " · "),
+                                    lines: feedback.voiceQuestion.map { ["물음  \($0)", feedback.snippet] } ?? [feedback.snippet],
                                     translatesLines: true,
                                     route: .feedback(feedback))
             }

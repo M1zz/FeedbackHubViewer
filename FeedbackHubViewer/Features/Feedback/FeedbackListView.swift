@@ -489,6 +489,9 @@ struct FeedbackRow: View {
                     StarRatingView(rating: rating)
                 }
                 StatusChip(status: status)
+                if feedback.isVoice {
+                    VoiceTags(feedback: feedback)
+                }
                 if isReplied {
                     Tag(text: isReplyRead ? "답변 읽음" : "답변함",
                         systemImage: isReplyRead ? "checkmark.bubble.fill" : "arrowshape.turn.up.left.fill",
@@ -503,6 +506,10 @@ struct FeedbackRow: View {
                     .font(.hubFootnote)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
+            }
+
+            if let question = feedback.voiceQuestion {
+                VoiceQuestionLine(question: question)
             }
 
             KoreanText(feedback.snippet)
@@ -535,7 +542,7 @@ struct FeedbackRow: View {
     @ViewBuilder
     private var metadata: some View {
         #if os(iOS)
-        let parts = [feedback.typeLabel, feedback.appVersion.map { "v\($0)" },
+        let parts = [feedback.isVoice ? nil : feedback.typeLabel, feedback.appVersion.map { "v\($0)" },
                      feedback.deviceModel, feedback.contactEmail]
             .compactMap { $0 }
             .filter { !$0.isEmpty && $0 != "v" }
@@ -547,7 +554,7 @@ struct FeedbackRow: View {
         }
         #else
         FlowLayout(spacing: 6, lineSpacing: 4) {
-            if let type = feedback.typeLabel {
+            if !feedback.isVoice, let type = feedback.typeLabel {
                 Tag(text: type, systemImage: "tag")
             }
             if let version = feedback.appVersion, !version.isEmpty {

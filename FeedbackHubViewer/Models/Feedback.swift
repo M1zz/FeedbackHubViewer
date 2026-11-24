@@ -44,10 +44,43 @@ struct Feedback: HubRecord, Codable {
     var typeLabel: String? {
         guard let type = feedbackType?.trimmingCharacters(in: .whitespaces), !type.isEmpty else { return nil }
         switch type.lowercased() {
-        case "voice.useful": return "한 문장 · 쓸모 있던 순간"
-        case "voice.unmet": return "한 문장 · 기대에 못 미친 것"
-        case "voice.wish": return "한 문장 · 바라는 것"
+        case "voice.useful": return "한 문장 · 쓸모"
+        case "voice.unmet": return "한 문장 · 아쉬움"
+        case "voice.wish": return "한 문장 · 바람"
         default: return type
+        }
+    }
+
+    // MARK: - 한 문장 의견 (LeeoVoice)
+
+    /// 앱이 먼저 물어 받은 한 문장. 사용자가 스스로 쓴 피드백과 다르게 보인다.
+    var isVoice: Bool { feedbackType?.lowercased().hasPrefix("voice.") == true }
+
+    /// 그 사람이 받은 질문 — 답을 질문과 함께 읽어야 뜻이 선다. LeeoKit `LeeoVoiceQuestion` 과 같은 문장.
+    var voiceQuestion: String? {
+        switch feedbackType?.lowercased() {
+        case "voice.useful": return "이 앱이 어떤 순간에 얼마나 쓸모 있었나요?"
+        case "voice.unmet": return "기대했는데 안 돼서 아쉬웠던 게 있나요?"
+        case "voice.wish": return "딱 하나 더 생긴다면 무엇이면 좋겠어요?"
+        default: return nil
+        }
+    }
+
+    /// 쓸모 질문에서 고른 정도(1 조금 · 2 꽤 · 3 없으면 안 돼요). LeeoKit 이 `쓸모: n/3` 줄로 보낸다.
+    var usefulness: Int? {
+        for line in attachedInfoLines where line.hasPrefix("쓸모:") {
+            let value = line.dropFirst("쓸모:".count).split(separator: "/").first
+            if let n = value.flatMap({ Int($0.trimmingCharacters(in: .whitespaces)) }), (1...3).contains(n) { return n }
+        }
+        return nil
+    }
+
+    var usefulnessLabel: String? {
+        switch usefulness {
+        case 1: return "조금 쓸모"
+        case 2: return "꽤 쓸모"
+        case 3: return "없으면 안 돼요"
+        default: return nil
         }
     }
 

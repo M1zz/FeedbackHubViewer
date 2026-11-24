@@ -646,6 +646,8 @@ struct AppGridHome: View {
         let label: String
         let text: String
         let rating: Int?
+        /// 한 문장 의견이면 그 사람이 받은 질문 — 답만으로는 뜻이 서지 않는다.
+        var question: String? = nil
     }
 
     private func recentVoices(_ rows: [Row]) -> [Voice] {
@@ -668,8 +670,9 @@ struct AppGridHome: View {
                 let text = item.text.trimmingCharacters(in: .whitespacesAndNewlines)
                 guard !text.isEmpty else { continue }
                 items.append(Voice(id: "f-" + item.id, row: row, date: date, isReview: false,
-                                   label: item.typeLabel.map { "피드백 · \($0)" } ?? "피드백",
-                                   text: text, rating: item.rating))
+                                   label: item.isVoice ? (item.usefulnessLabel.map { "한 문장 의견 · \($0)" } ?? "한 문장 의견")
+                                                       : item.typeLabel.map { "피드백 · \($0)" } ?? "피드백",
+                                   text: text, rating: item.rating, question: item.voiceQuestion))
             }
         }
         return items.filter { !seen.contains($0.id) }.sorted { $0.date > $1.date }
@@ -741,6 +744,9 @@ struct AppGridHome: View {
                         .lineLimit(1)
                 }
                 .font(.callout)
+                if let question = voice.question {
+                    VoiceQuestionLine(question: question, font: .callout)
+                }
                 Text(voice.text)
                     .font(.body)
                     .lineLimit(3)
@@ -749,8 +755,8 @@ struct AppGridHome: View {
             }
             .padding(12)
             .frame(maxWidth: .infinity, minHeight: 110, alignment: .topLeading)
-            .background(RoundedRectangle(cornerRadius: 12).fill(.blue.opacity(0.06)))
-            .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(.blue.opacity(0.25), lineWidth: 1))
+            .background(RoundedRectangle(cornerRadius: 12).fill((voice.question == nil ? Color.blue : .voice).opacity(0.06)))
+            .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder((voice.question == nil ? Color.blue : .voice).opacity(0.25), lineWidth: 1))
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

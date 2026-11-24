@@ -43,9 +43,12 @@ struct FeedbackDetailView: View {
                 triageSection
 
                 if !feedback.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                    section(title: "내용", accessory: {
+                    section(title: feedback.isVoice ? "답" : "내용", accessory: {
                         CopyButton(text: feedback.text, title: "내용 복사")
                     }) {
+                        if let question = feedback.voiceQuestion {
+                            VoiceQuestionLine(question: question, font: .body)
+                        }
                         // Feedback comes in whatever language its writer speaks;
                         // it is shown in Korean, with the original one tap away.
                         KoreanText(feedback.text)
@@ -245,7 +248,9 @@ struct FeedbackDetailView: View {
             HStack(spacing: 8) {
                 Label(projectLabel, systemImage: "square.grid.2x2")
                     .font(.title3.weight(.semibold))
-                if let type = feedback.typeLabel {
+                if feedback.isVoice {
+                    VoiceTags(feedback: feedback, font: .hubSubheadline)
+                } else if let type = feedback.typeLabel {
                     Tag(text: type, tint: .teal)
                 }
                 StatusChip(status: store.status(of: feedback))
