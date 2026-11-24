@@ -43,6 +43,9 @@ struct AppGridHome: View {
     @State private var query = ""
     /// "지금 급한 것" 을 끝까지 펼쳤나.
     @State private var showsAllUrgent = false
+    @State private var showsAllVoices = false
+    /// 첫 화면에서 연 리뷰 · 피드백 — 한 번 본 것은 다시 펴지 않는다. 줄마다 하나, 최근 500개만 둔다.
+    @AppStorage("home-voices-seen") private var seenVoicesRaw = ""
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// 누른 카드의 자리(화면 안 비율) — 그 카드로 빨려 들어가듯 넘어가게(`SplitRootView`).
     @Binding var zoomAnchor: UnitPoint
@@ -257,6 +260,7 @@ struct AppGridHome: View {
                 summary(all)
                 urgent(all)
                 growing(all)
+                voices(all)
                 controls(all)
                 if shown.isEmpty {
                     Text(all.isEmpty ? "아직 앱이 없습니다. 새로고침하면 앱이 보낸 기록으로 채워집니다." : "여기에 맞는 앱이 없습니다.")
@@ -629,6 +633,128 @@ struct AppGridHome: View {
                 }
             }
         }
+    }
+
+    /// 사람이 직접 남긴 말 — 스토어 리뷰와 앱 안 피드백. 숫자 뱃지만으로는 무슨 말인지 모르니
+    /// 48시간 안의 것을 글 그대로 첫 화면에 펴 둔다. 누르면 그 앱의 리뷰 · 피드백 칸이 열리고,
+    /// 한 번 연 것, 답을 단 리뷰, 반영했거나 답장한 피드백은 다시 펴지 않는다.
+    private struct Voice: Identifiable {
+        let id: String
+        let row: Row
+        let date: Date
+        let isReview: Bool
+        let label: String
+        let text: String
+        let rating: Int?
+    }
+
+    private func recentVoices(_ rows: [Row]) -> [Voice] {
+        let since = Date().addingTimeInterval(-48 * 3600)
+        let seen = seenVoices
+        var items: [Voice] = []
+        for row in rows {
+            // 답을 단 리뷰 · 반영했거나 답장한 피드백은 이미 손댄 것이라 다시 펴지 않는다.
+            for review in purchases.reviewFeeds[row.project]?.reviews ?? []
+            where review.createdDate >= since && review.response == nil {
+                let words = [review.title, review.body].compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines) }
+                    .filter { !$0.isEmpty }.joined(separator: " · ")
+                items.append(Voice(id: "r-" + review.id, row: row, date: review.createdDate, isReview: true,
+                                   label: "리뷰 · \(review.territory)",
+                                   text: words, rating: review.rating))
+            }
+            for item in store.feedback(for: row.project) {
+                guard let date = item.createdAt, date >= since,
+                      !store.status(of: item).isHandled, !store.isReplied(item) else { continue }
+                let text = item.text.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !text.isEmpty else { continue }
+                items.append(Voice(id: "f-" + item.id, row: row, date: date, isReview: false,
+                                   label: item.typeLabel.map { "피드백 · \($0)" } ?? "피드백",
+                                   text: text, rating: item.rating))
+            }
+        }
+        return items.filter { !seen.contains($0.id) }.sorted { $0.date > $1.date }
+    }
+
+    private var seenVoices: Set<String> {
+        Set(seenVoicesRaw.split(separator: "\n").map(String.init))
+    }
+
+    private func markSeen(_ ids: [String]) {
+        var list = seenVoicesRaw.split(separator: "\n").map(String.init)
+        list.append(contentsOf: ids.filter { !list.contains($0) })
+        seenVoicesRaw = list.suffix(500).joined(separator: "\n")
+    }
+
+    @ViewBuilder
+    private func voices(_ rows: [Row]) -> some View {
+        let items = recentVoices(rows)
+        if !items.isEmpty {
+            let limit = 6
+            let shown = showsAllVoices ? Array(items.prefix(30)) : Array(items.prefix(limit))
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Label("48시간 안의 리뷰 · 피드백 \(items.count)", systemImage: "text.bubble.fill")
+                        .font(.body.weight(.semibold))
+                        .foregroundStyle(.blue)
+                    Spacer()
+                    Button("모두 봤어요") { withAnimation { markSeen(items.map(\.id)) } }
+                        .buttonStyle(.borderless)
+                        .font(.body)
+                    if items.count > limit {
+                        Button(showsAllVoices ? "접기" : "\(min(items.count, 30) - limit)건 더 보기") { showsAllVoices.toggle() }
+                            .buttonStyle(.borderless)
+                            .font(.body)
+                    }
+                }
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 300), spacing: 10)], spacing: 10) {
+                    ForEach(shown) { voiceCard($0) }
+                }
+            }
+        }
+    }
+
+    private func voiceCard(_ voice: Voice) -> some View {
+        Button {
+            markSeen([voice.id])
+            store.open(project: voice.row.project, section: voice.isReview ? .reviews : .feedback)
+        } label: {
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(spacing: 8) {
+                    AppIcon(url: icons.url(for: voice.row.project, keywords: keywords), size: 24)
+                    Text(voice.row.name)
+                        .font(.body.weight(.semibold))
+                        .lineLimit(1)
+                    Spacer(minLength: 4)
+                    Text(voice.date, format: .relative(presentation: .named))
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+                HStack(spacing: 6) {
+                    if let rating = voice.rating, (1...5).contains(rating) {
+                        Text(String(repeating: "★", count: rating) + String(repeating: "☆", count: 5 - rating))
+                            .foregroundStyle(rating >= 4 ? .orange : (rating <= 2 ? .red : .secondary))
+                            .accessibilityLabel("별 \(rating)개")
+                    }
+                    Text(voice.label)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+                .font(.callout)
+                Text(voice.text)
+                    .font(.body)
+                    .lineLimit(3)
+                    .multilineTextAlignment(.leading)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .padding(12)
+            .frame(maxWidth: .infinity, minHeight: 110, alignment: .topLeading)
+            .background(RoundedRectangle(cornerRadius: 12).fill(.blue.opacity(0.06)))
+            .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(.blue.opacity(0.25), lineWidth: 1))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityElement(children: .combine)
     }
 
     private func urgentRow(_ row: Row, _ signal: Signal, tint: Color = .red) -> some View {
