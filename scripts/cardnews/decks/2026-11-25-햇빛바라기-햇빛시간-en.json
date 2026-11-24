@@ -1,0 +1,77 @@
+{
+ "name": "Sunny Sunflower",
+ "icon": "/Users/hyunholee/Documents/workspace/Auto/햇빛바라기/SunlightTracker/Assets.xcassets/AppIcon.appiconset/AppIcon.png",
+ "accent": "F59E0B",
+ "accent2": "22C55E",
+ "kicker": "Did you know? · Sunny Sunflower",
+ "cover": "Did you actually\nsee the sun\ntoday?",
+ "coverScreen": "/Users/hyunholee/Documents/workspace/Auto/햇빛바라기/docs/screenshots/raw/en/01-today.png",
+ "coverTop": 0.1,
+ "coverCallout": {
+  "symbol": "sun.max.fill",
+  "text": "24 / 30 min today",
+  "x": 0.62,
+  "y": 0.5
+ },
+ "features": [
+  {
+   "label": "The usual way",
+   "headline": "Short days,\nindoor hours",
+   "text": "In winter it's easy to go a whole day\nwithout real daylight and not notice.",
+   "screen": "/Users/hyunholee/Documents/workspace/Auto/햇빛바라기/docs/screenshots/raw/en/01-today.png",
+   "top": 0.45,
+   "callout": {
+    "symbol": "cloud.fill",
+    "text": "Was that 5 minutes or 50?",
+    "x": 0.6,
+    "y": 0.35
+   }
+  },
+  {
+   "label": "Counts itself",
+   "headline": "Step outside,\nthe minutes add up",
+   "text": "It reads the brightness around you\nfrom camera exposure. No photos taken.",
+   "screen": "/Users/hyunholee/Documents/workspace/Auto/햇빛바라기/docs/screenshots/raw/en/04-goal.png",
+   "top": 0.4,
+   "callout": {
+    "symbol": "camera.metering.center.weighted",
+    "text": "Outdoors starts at 300 lux",
+    "x": 0.6,
+    "y": 0.55
+   }
+  },
+  {
+   "label": "See your days",
+   "headline": "A goal from\n10 to 120 min",
+   "text": "Each day keeps its sun time, a mood\nand a note. Watch the weeks fill in.",
+   "screen": "/Users/hyunholee/Documents/workspace/Auto/햇빛바라기/docs/screenshots/raw/en/02-calendar.png",
+   "top": 0.1,
+   "callout": {
+    "symbol": "calendar",
+    "text": "Your sunny days at a glance",
+    "x": 0.6,
+    "y": 0.5
+   }
+  },
+  {
+   "label": "Bonus",
+   "headline": "Your sunflower\ngrows with you",
+   "text": "Sun time charges a battery you give\nto your sunflower. Skip days, it wilts.",
+   "screen": "/Users/hyunholee/Documents/workspace/Auto/햇빛바라기/docs/screenshots/raw/en/01-today.png",
+   "top": 0.05,
+   "callout": {
+    "symbol": "leaf.fill",
+    "text": "Thriving, energy 84%",
+    "x": 0.6,
+    "y": 0.4
+   }
+  }
+ ],
+ "outro": "Stop guessing.\nLet the light count itself",
+ "points": [
+  "Apple Watch daylight from Health counts too",
+  "Widgets, Lock Screen and Dynamic Island",
+  "No server. Your days stay on your device"
+ ],
+ "search": "Search “Sunny Sunflower” on the App Store"
+}

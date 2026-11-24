@@ -6176,5 +6176,53 @@
   "body": "",
   "bodyEn": "Guests keep asking for your Wi-Fi password?\n\nMyFi puts the QR code, network name and password on one sign. Pick from 7 themes, add your shop name and opening hours, then print it with AirPrint or save it as an image.\n\nSearch \"MyFi\" on the App Store\n\n#indiedev #iosdev #smallbusiness",
   "theme": null
+ },
+ {
+  "id": "f5cad2bd-7d0b-41f0-a938-dfe0ed917dc9",
+  "project": "com.leeo.sunflower",
+  "kind": "cardNews",
+  "channel": "인스타그램",
+  "title": "Did you actually see the sun today?",
+  "angle": "영어 · 해외 대상 한 기능 깊이형(빛번짐 glow.swift, 6장). 햇빛 시간 저절로 세기: 겨울 실내 → 카메라 밝기로 바깥 시간 세기(300 lux) → 목표 10~120분 · 기록 → 해바라기 돌보기. 블랙 프라이데이 첫 구독 할인 한 줄. 덱 scripts/cardnews/decks/2026-11-25-햇빛바라기-햇빛시간-en.json 카드 app-portfolio marketing/cardnews/2026-11-25-sunnysunflower-suntime-en/ https://www.instagram.com/lee25_ios/p/DgIfoUYEpm9/",
+  "plannedAt": "2026-11-25T00:00:00Z",
+  "stage": "posted",
+  "slides": [],
+  "script": "",
+  "scriptEn": "",
+  "body": "",
+  "bodyEn": "Did you actually see the sun today?\n\nIn winter it's easy to spend a whole day indoors and not notice. Sunny Sunflower counts outdoor light on its own: step outside with the app open and it reads the brightness from camera exposure. No photos are taken. Outdoors starts at 300 lux.\n\nSet a goal from 10 to 120 minutes, keep a mood and a note for each day, and give your sun time to a little sunflower that wilts if you skip days.\n\nBlack Friday: first subscription to Pro is on sale Nov 27 to Dec 4.\n\nSearch \"Sunny Sunflower\" on the App Store.\n\n#sunlight #morninglight #wellbeing #wintersun #selfcare #indiedev #iosapp",
+  "theme": null
+ },
+ {
+  "id": "47d5e61c-a5a8-44f5-9e08-5d50edc8aeb0",
+  "project": "com.leeo.sunflower",
+  "kind": "cardNews",
+  "channel": "스레드",
+  "title": "Did you actually see the sun today?",
+  "angle": "영어 · 해외 대상 한 기능 깊이형(빛번짐 glow.swift, 6장). 햇빛 시간 저절로 세기: 겨울 실내 → 카메라 밝기로 바깥 시간 세기(300 lux) → 목표 10~120분 · 기록 → 해바라기 돌보기. 블랙 프라이데이 첫 구독 할인 한 줄. 덱 scripts/cardnews/decks/2026-11-25-햇빛바라기-햇빛시간-en.json 카드 app-portfolio marketing/cardnews/2026-11-25-sunnysunflower-suntime-en/ https://www.threads.com/@lee25_ios/post/DgIfVlCH9xs",
+  "plannedAt": "2026-11-25T00:00:00Z",
+  "stage": "posted",
+  "slides": [],
+  "script": "",
+  "scriptEn": "",
+  "body": "",
+  "bodyEn": "Did you actually see the sun today?\n\nIn winter it's easy to spend a whole day indoors and not notice. So my app Sunny Sunflower counts outdoor light on its own: step outside with it open and it reads the brightness from camera exposure (no photos taken). Outdoors starts at 300 lux.\n\nSet a goal from 10 to 120 min, and give your sun time to a little sunflower that wilts if you skip days.\n\nBlack Friday: first subscription to Pro is on sale Nov 27 to Dec 4.",
+  "theme": null
+ },
+ {
+  "id": "85298d87-293b-45f6-b476-6b078d32954f",
+  "project": "com.leeo.sunflower",
+  "kind": "post",
+  "channel": "X",
+  "title": "Did you actually see the sun today?",
+  "angle": "영어 · 해외 대상 한 기능 깊이형(빛번짐 glow.swift, 6장). 햇빛 시간 저절로 세기: 겨울 실내 → 카메라 밝기로 바깥 시간 세기(300 lux) → 목표 10~120분 · 기록 → 해바라기 돌보기. 블랙 프라이데이 첫 구독 할인 한 줄. 덱 scripts/cardnews/decks/2026-11-25-햇빛바라기-햇빛시간-en.json 카드 app-portfolio marketing/cardnews/2026-11-25-sunnysunflower-suntime-en/ https://x.com/leeoios/status/2125280324292952093",
+  "plannedAt": "2026-11-25T00:00:00Z",
+  "stage": "posted",
+  "slides": [],
+  "script": "",
+  "scriptEn": "",
+  "body": "",
+  "bodyEn": "Did you actually see the sun today?\n\nSunny Sunflower counts outdoor light on its own: step outside and it reads brightness from camera exposure (no photos taken). Your sun time keeps a little sunflower alive.\n\nBlack Friday: first Pro subscription on sale Nov 27 to Dec 4.",
+  "theme": null
  }
 ]
