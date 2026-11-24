@@ -228,9 +228,15 @@ struct FeedbackDetailView: View {
     private var statusBinding: Binding<FeedbackStatus> {
         Binding(get: { store.status(of: feedback) },
                 set: { status in
-                    // Animated because the list behind this screen drops the
-                    // row as soon as the decision lands.
-                    withAnimation { store.setStatus(status, note: noteDraft, for: feedback) }
+                    // 맥의 세그먼트 Picker 는 화면을 그리는 도중에도 바인딩을 쓴다 — 바뀐 것만,
+                    // 그리기가 끝난 뒤에 스토어로 넘긴다.
+                    guard status != store.status(of: feedback) else { return }
+                    let note = noteDraft, target = feedback
+                    Task { @MainActor in
+                        // Animated because the list behind this screen drops the
+                        // row as soon as the decision lands.
+                        withAnimation { store.setStatus(status, note: note, for: target) }
+                    }
                 })
     }
 

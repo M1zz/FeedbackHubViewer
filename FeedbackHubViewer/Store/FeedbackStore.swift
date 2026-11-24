@@ -1614,6 +1614,10 @@ final class FeedbackStore: ObservableObject {
 
     private func apply(status: FeedbackStatus, note: String?, to id: String) {
         let existing = triage[id]
+        // 같은 판단을 다시 쓰지 않는다. 맥의 세그먼트 Picker 는 화면을 다시 그리는 중에 같은 값을
+        // 바인딩에 한 번 더 넘기는데, 그때마다 시각을 새로 찍어 `triage` 를 바꾸면 "view update 중
+        // publish" 경고가 나고 iCloud 로 괜히 올라간다.
+        if let existing, existing.status == status, note == nil || note == existing.note { return }
         let entry = FeedbackTriageEntry(status: status,
                                         note: note ?? existing?.note ?? "",
                                         decidedAt: Date())
