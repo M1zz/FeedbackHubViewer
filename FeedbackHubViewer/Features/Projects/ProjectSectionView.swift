@@ -316,6 +316,8 @@ struct ProjectSectionView: View {
 struct FadeIn<Key: Hashable>: ViewModifier {
     let enabled: Bool
     let key: Key
+    /// 여러 카드를 차례로 띄울 때 — 뒤의 것일수록 조금 늦게.
+    var delay: Double = 0
     @State private var shown = false
 
     func body(content: Content) -> some View {
@@ -325,7 +327,7 @@ struct FadeIn<Key: Hashable>: ViewModifier {
             .task(id: key) {
                 guard enabled else { return }
                 shown = false
-                withAnimation(.snappy(duration: 0.28)) { shown = true }
+                withAnimation(.snappy(duration: 0.28).delay(delay)) { shown = true }
             }
     }
 }
