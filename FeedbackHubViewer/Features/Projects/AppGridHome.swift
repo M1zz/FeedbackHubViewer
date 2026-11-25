@@ -39,6 +39,8 @@ struct AppGridHome: View {
     @ObservedObject private var changes = SectionChanges.shared
 
     @AppStorage("home-grid-sort") private var sortRaw = Sort.impact.rawValue
+    /// 홈의 두 얼굴 — 지금 무슨 일이 났나(`now`) · 어느 앱에 시간을 더 들일까(`potential`).
+    @AppStorage("home-mode") private var modeRaw = HomeMode.now.rawValue
     @State private var filter: Filter = .all
     @State private var query = ""
     /// "지금 급한 것" 을 끝까지 펼쳤나.
@@ -257,6 +259,17 @@ struct AppGridHome: View {
         GeometryReader { viewport in
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
+                Picker("보기", selection: $modeRaw) {
+                    ForEach(HomeMode.allCases) { Text($0.rawValue).tag($0.rawValue) }
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+                .fixedSize()
+                .frame(maxWidth: .infinity)
+
+                if modeRaw == HomeMode.potential.rawValue {
+                    PotentialBoard()
+                } else {
                 summary(all)
                 urgent(all)
                 growing(all)
@@ -292,6 +305,7 @@ struct AppGridHome: View {
                     }
                     // 거르기 · 차례를 바꾸면 카드가 제자리를 찾아 미끄러진다.
                     .animation(reduceMotion ? nil : .snappy(duration: 0.3), value: shown.map(\.id))
+                }
                 }
             }
             .padding(20)
@@ -1037,6 +1051,15 @@ struct AppGridHome: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }
     }
+}
+
+/// 홈에서 무엇을 볼까.
+enum HomeMode: String, CaseIterable, Identifiable {
+    /// 급한 것 · 바뀐 것 · 앱마다의 지금.
+    case now = "지금"
+    /// 깔때기를 업계 평균과 견줘 어느 앱에 시간을 더 들일지(`PotentialBoard`).
+    case potential = "잠재력"
+    var id: String { rawValue }
 }
 
 /// 마우스를 올린 카드가 살짝 뜬다. 올린 상태를 카드마다 따로 쥔다 — 홈이 쥐면 마우스가
