@@ -636,7 +636,7 @@ struct AppGridHome: View {
                                                            to: Calendar.current.startOfDay(for: Date())).day ?? 0
                 return days == 0 ? "오늘" : days == 1 ? "어제" : "\(days)일 전"
             }
-            return date.formatted(.relative(presentation: .named))
+            return date.formatted(.relative(presentation: .named).locale(AppFormat.locale))
         }
         switch signal.kind {
         case .usageUp, .usageDrop: return "지난 7일"
@@ -1003,7 +1003,7 @@ struct AppGridHome: View {
                     Text(voice.row.name)
                         .font(.body.weight(.semibold))
                     Spacer(minLength: 4)
-                    Text(voice.date, format: .relative(presentation: .named))
+                    Text(voice.date, format: .relative(presentation: .named).locale(AppFormat.locale))
                         .font(.callout)
                         .foregroundStyle(.secondary)
                         .fixedSize()
