@@ -317,6 +317,8 @@ struct AppGridHome: View {
                 }
                 }
             }
+            // 급한 것 · 좋은 소식 칸이 통째로 생기거나 사라질 때도 부드럽게.
+            .animation(listAnimation, value: Self.signalFingerprint(all))
             .padding(20)
         }
         }
@@ -679,7 +681,7 @@ struct AppGridHome: View {
     private func dismiss(_ items: [(row: Row, signal: Signal)]) {
         var map = dismissed
         for item in items { map[Self.dismissKey(item.row.project, item.signal.kind)] = item.signal.count }
-        saveDismissed(map)
+        withAnimation(listAnimation) { saveDismissed(map) }
     }
 
     /// 표시가 사라진 것은 기록을 지우고, 수가 줄어든 것은 줄어든 수로 내린다 — 7일 창에서 옛 크래시가
@@ -747,7 +749,7 @@ struct AppGridHome: View {
                 Label("읽은 것 \(count)개 — 새로 올라오면 다시 보입니다", systemImage: "checkmark.circle")
                     .font(.body)
                     .foregroundStyle(.secondary)
-                Button("다시 보기") { dismissedRaw = "" }
+                Button("다시 보기") { withAnimation(listAnimation) { dismissedRaw = "" } }
                     .buttonStyle(.borderless)
                     .font(.body)
             }
@@ -767,7 +769,8 @@ struct AppGridHome: View {
         var id: Signal.Kind { kind }
     }
 
-    /// `order` 의 차례로 종류를 세우고, 한 종류 안에서는 `rank` 가 큰 앱부터. 빈 종류는 뺀다.
+    /// `order` 의 차례로 종류를 세우고, 한 종류 안에서는 가장 최근에 일이 난 앱부터.
+    /// 날짜가 같거나 없으면(사용 추이) `rank` 가 큰 앱부터. 빈 종류는 뺀다.
     private func grouped(_ rows: [Row], order: [Signal.Kind],
                          rank: (Row, Signal) -> Double) -> [SignalGroup] {
         let dismissed = dismissed
@@ -777,10 +780,25 @@ struct AppGridHome: View {
             }
             .filter { !Self.isDismissed($0.signal, project: $0.row.project, in: dismissed) }
             .filter { Self.isFresh($0.signal, row: $0.row) }
-            .sorted { rank($0.row, $0.signal) > rank($1.row, $1.signal) }
+            .sorted { a, b in
+                let dateA = a.row.latest[kind] ?? .distantPast, dateB = b.row.latest[kind] ?? .distantPast
+                return dateA != dateB ? dateA > dateB : rank(a.row, a.signal) > rank(b.row, b.signal)
+            }
             return items.isEmpty ? nil : SignalGroup(kind: kind, items: items)
         }
     }
+
+    /// 칸 안의 줄이 바뀌었나 — 앱 · 수가 달라지면 줄이 들고 나며 움직인다.
+    private static func motionKey(_ groups: [SignalGroup]) -> [String] {
+        groups.flatMap { group in group.items.map { "\(group.kind.rawValue)|\($0.row.project)|\($0.signal.count)" } }
+    }
+
+    private var listAnimation: Animation? { reduceMotion ? nil : .snappy(duration: 0.35) }
+
+    /// 줄이 새로 서면 위에서 내려앉고, 읽음 · 사라짐은 옅어지며 줄어든다.
+    private static let rowTransition: AnyTransition = .asymmetric(
+        insertion: .opacity.combined(with: .move(edge: .top)),
+        removal: .opacity.combined(with: .scale(scale: 0.96, anchor: .leading)))
 
     /// 종류 이름 한 줄 — "크래시 · 3개 앱".
     private func groupHeader(_ group: SignalGroup, tint: Color) -> some View {
@@ -827,17 +845,24 @@ struct AppGridHome: View {
                         VStack(alignment: .leading, spacing: 0) {
                             groupHeader(group, tint: .red)
                             ForEach(Array(shown.enumerated()), id: \.element.row.project) { index, item in
-                                if index > 0 { Divider().padding(.leading, 50) }
-                                dismissibleRow(item.row, item.signal, tint: .red)
+                                VStack(spacing: 0) {
+                                    if index > 0 { Divider().padding(.leading, 50) }
+                                    dismissibleRow(item.row, item.signal, tint: .red)
+                                }
+                                .transition(Self.rowTransition)
                             }
                         }
                         .padding(.bottom, 4)
                         .frame(maxWidth: .infinity, alignment: .topLeading)
                         .background(RoundedRectangle(cornerRadius: 12).fill(.red.opacity(0.07)))
                         .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(.red.opacity(0.35), lineWidth: 1))
+                        .transition(.opacity.combined(with: .scale(scale: 0.97)))
                     }
                 }
             }
+            .transition(.opacity)
+            .animation(listAnimation, value: Self.motionKey(groups))
+            .animation(listAnimation, value: showsAllUrgent)
         }
     }
 
@@ -867,17 +892,23 @@ struct AppGridHome: View {
                         VStack(alignment: .leading, spacing: 0) {
                             groupHeader(group, tint: .green)
                             ForEach(Array(group.items.enumerated()), id: \.element.row.project) { index, item in
-                                if index > 0 { Divider().padding(.leading, 50) }
-                                dismissibleRow(item.row, item.signal, tint: .green)
+                                VStack(spacing: 0) {
+                                    if index > 0 { Divider().padding(.leading, 50) }
+                                    dismissibleRow(item.row, item.signal, tint: .green)
+                                }
+                                .transition(Self.rowTransition)
                             }
                         }
                         .padding(.bottom, 4)
                         .frame(maxWidth: .infinity, alignment: .topLeading)
                         .background(RoundedRectangle(cornerRadius: 12).fill(.green.opacity(0.08)))
                         .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(.green.opacity(0.3), lineWidth: 1))
+                        .transition(.opacity.combined(with: .scale(scale: 0.97)))
                     }
                 }
             }
+            .transition(.opacity)
+            .animation(listAnimation, value: Self.motionKey(groups))
         }
     }
 
