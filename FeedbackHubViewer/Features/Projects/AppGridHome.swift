@@ -208,6 +208,8 @@ struct AppGridHome: View {
         let downloads: Metric?
         /// 이 앱에 선 표시들, 무거운 것부터.
         let signals: [Signal]
+        /// 종류마다 가장 최근 일이 난 때. 사용 추이처럼 기간으로 보는 것 · 모르는 것은 없다.
+        var latest: [Signal.Kind: Date] = [:]
         var id: String { project }
 
         /// 급한 것(크래시 · 릴리즈 빨강 · 사용 급감)이 있나.
@@ -388,10 +390,21 @@ struct AppGridHome: View {
                 }
             }
             if bought > 0 { counts[.purchase] = bought }
+            var latest: [Signal.Kind: Date] = [:]
+            latest[.crash] = recent.crashes.compactMap(\.happenedAt).max()
+            latest[.hang] = recent.hangs.compactMap(\.happenedAt).max()
+            latest[.oldCrash] = recent.old.compactMap(\.happenedAt).max()
+            // 릴리즈 빨강은 지금 버전의 가장 최근 사고로 날짜를 단다.
+            latest[.release] = (recent.crashes + recent.hangs).compactMap(\.happenedAt).max()
+            latest[.purchase] = UsageRollups.recentDayKeys(7).last { day in
+                (days[day.key]?.byEvent ?? [:]).contains { $0.key.split(separator: ":").first == "purchase_completed" && $0.value > 0 }
+            }?.date
             let twoWeeksAgo = Date().addingTimeInterval(-14 * 86_400)
             let fiveStars = (purchases.reviewFeeds[project]?.reviews ?? [])
                 .filter { $0.rating == 5 && $0.createdDate >= twoWeeksAgo }.count
             if fiveStars > 0 { counts[.fiveStar] = fiveStars }
+            latest[.fiveStar] = (purchases.reviewFeeds[project]?.reviews ?? [])
+                .filter { $0.rating == 5 && $0.createdDate >= twoWeeksAgo }.map(\.createdDate).max()
 
             // 나머지는 칸의 뱃지 그대로 — 읽으면 지워진다.
             if let badge = metrics.itemBadge(.feedback, project: project) { counts[.feedback] = badge.count }
@@ -419,7 +432,8 @@ struct AppGridHome: View {
                        downloads: downloads,
                        signals: Signal.Kind.allCases.compactMap { kind in
                            counts[kind].map { Signal(kind: kind, count: $0) }
-                       })
+                       },
+                       latest: latest)
         }
     }
 
@@ -602,6 +616,34 @@ struct AppGridHome: View {
         .accessibilityElement(children: .combine)
     }
 
+    // MARK: - 언제
+
+    /// 급한 것 · 좋은 소식에 세우는 것은 이 안에 일어난 것만 — 지난주 크래시 · 구매는 이미 지난 소식이다.
+    static let freshWindow: TimeInterval = 3 * 86_400
+
+    /// 가장 최근 일이 `freshWindow` 안인가. 날짜가 없는 것(사용 추이 · 날짜 모르는 릴리즈 판정)은 지금 상태라 남긴다.
+    static func isFresh(_ signal: Signal, row: Row, now: Date = Date()) -> Bool {
+        guard let date = row.latest[signal.kind] else { return true }
+        return now.timeIntervalSince(date) <= freshWindow
+    }
+
+    /// 줄 끝에 적을 때 — "3시간 전" · "어제", 사용 추이는 "지난 7일".
+    static func whenText(_ signal: Signal, row: Row) -> String? {
+        if let date = row.latest[signal.kind] {
+            if signal.kind == .purchase {
+                // 구매는 날짜 단위로만 안다.
+                let days = Calendar.current.dateComponents([.day], from: Calendar.current.startOfDay(for: date),
+                                                           to: Calendar.current.startOfDay(for: Date())).day ?? 0
+                return days == 0 ? "오늘" : days == 1 ? "어제" : "\(days)일 전"
+            }
+            return date.formatted(.relative(presentation: .named))
+        }
+        switch signal.kind {
+        case .usageUp, .usageDrop: return "지난 7일"
+        default: return nil
+        }
+    }
+
     // MARK: - 가리기
 
     /// 사용 추이(%)는 날마다 조금씩 흔들린다 — 가린 뒤 이만큼(%p) 더 움직여야 새 일로 본다.
@@ -734,6 +776,7 @@ struct AppGridHome: View {
                 row.signals.first { $0.kind == kind }.map { (row: row, signal: $0) }
             }
             .filter { !Self.isDismissed($0.signal, project: $0.row.project, in: dismissed) }
+            .filter { Self.isFresh($0.signal, row: $0.row) }
             .sorted { rank($0.row, $0.signal) > rank($1.row, $1.signal) }
             return items.isEmpty ? nil : SignalGroup(kind: kind, items: items)
         }
@@ -1000,6 +1043,13 @@ struct AppGridHome: View {
                     }
                 }
                 Spacer(minLength: 8)
+                if let when = Self.whenText(signal, row: row) {
+                    Text(when)
+                        .font(.body.monospacedDigit())
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .fixedSize()
+                }
                 Image(systemName: "chevron.right")
                     .foregroundStyle(.tertiary)
             }
