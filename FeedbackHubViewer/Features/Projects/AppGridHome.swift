@@ -666,11 +666,11 @@ struct AppGridHome: View {
         Button {
             dismiss(groups.flatMap(\.items))
         } label: {
-            Label("모두 가리기", systemImage: "eye.slash")
+            Label("모두 읽음", systemImage: "checkmark.circle")
         }
         .buttonStyle(.borderless)
         .font(.body)
-        .help("새로 올라오기 전까지 숨깁니다")
+        .help("읽음으로 — 새로 올라오기 전까지 숨깁니다")
     }
 
     /// 줄 하나와 그 줄을 가리는 단추.
@@ -680,14 +680,14 @@ struct AppGridHome: View {
             Button {
                 dismiss([(row: row, signal: signal)])
             } label: {
-                Image(systemName: "eye.slash")
+                Image(systemName: "checkmark.circle")
                     .foregroundStyle(.secondary)
                     .frame(width: 32, height: 32)
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .help("가리기 — 새로 올라오면 다시 보입니다")
-            .accessibilityLabel("\(row.name) \(signal.kind.label) 가리기")
+            .help("읽음 — 새로 올라오면 다시 보입니다")
+            .accessibilityLabel("\(row.name) \(signal.kind.label) 읽음")
             .padding(.trailing, 4)
         }
     }
@@ -702,7 +702,7 @@ struct AppGridHome: View {
         }
         if count > 0 {
             HStack(spacing: 8) {
-                Label("가린 것 \(count)개 — 새로 올라오면 다시 보입니다", systemImage: "eye.slash")
+                Label("읽은 것 \(count)개 — 새로 올라오면 다시 보입니다", systemImage: "checkmark.circle")
                     .font(.body)
                     .foregroundStyle(.secondary)
                 Button("다시 보기") { dismissedRaw = "" }
