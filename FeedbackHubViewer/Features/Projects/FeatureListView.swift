@@ -49,6 +49,21 @@ struct FeatureListView: View {
                 }
             }
 
+            // 모든 앱을 카드로 편 첫 화면(`AppGridHome`) — 맨 위, 다른 칸과 같은 줄 모양 · 같은 선택 표시.
+            // 예전에는 앱 고르기 옆의 작은 글자 단추였고, 홈에 있으면 흐리게 꺼져 눌리지 않았다.
+            if !store.usesStackNavigation {
+                Section {
+                    Button {
+                        store.showsHome = true
+                    } label: {
+                        HomeRow(appCount: store.projectCounts.filter { $0.key != Feedback.unclassifiedProject }.count,
+                                isSelected: store.showsHome)
+                    }
+                    .buttonStyle(.plain)
+                    .listRowBackground(Rectangle().fill(store.showsHome ? AnyShapeStyle(.tint.opacity(0.14)) : AnyShapeStyle(.clear)))
+                }
+            }
+
             // 읽어서 사라지는 뱃지를 한 번에(`BadgeReset`). 할 일 · 올렸나요는 남는다.
             let readable = BadgeReset.readableCount(metrics)
             if readable > 0 {
@@ -65,17 +80,6 @@ struct FeatureListView: View {
             }
 
             Section {
-                // 모든 앱을 카드로 편 첫 화면(`AppGridHome`)으로 — 아이패드에는 툴바의 홈 단추가 없다.
-                if !store.usesStackNavigation {
-                    Button {
-                        store.showsHome = true
-                    } label: {
-                        Label("홈 · 모든 앱 한눈에", systemImage: "square.grid.2x2")
-                            .font(.body)
-                    }
-                    .buttonStyle(.borderless)
-                    .disabled(store.showsHome)
-                }
                 AppFocusPicker()
             }
 
@@ -102,7 +106,7 @@ struct FeatureListView: View {
         ForEach(AppScopedSections.groups(), id: \.group) { entry in
             Section(entry.group.rawValue) {
                 ForEach(entry.sections) { section in
-                    let isSelected = store.projectSection.host == section
+                    let isSelected = !store.showsHome && store.projectSection.host == section
                     Button {
                         store.showsHome = false
                         store.selectedProject = app
@@ -137,7 +141,7 @@ struct FeatureListView: View {
     }
 
     private func row(_ section: FeedbackStore.ProjectSection, metrics: SectionMetrics) -> some View {
-        let isSelected = store.projectSection.host == section
+        let isSelected = !store.showsHome && store.projectSection.host == section
         return Button {
             store.showsHome = false
             store.projectSection = section
@@ -217,6 +221,34 @@ struct AppFocusPicker: View {
 }
 
 /// 기능 한 줄: 아이콘 · 이름 · 전체 앱 기준 한마디 · 손볼 것 뱃지.
+/// 사이드바 맨 위 "모든 앱 한눈에" — `FeatureRow` 와 같은 자리 · 같은 크기.
+private struct HomeRow: View {
+    let appCount: Int
+    let isSelected: Bool
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "square.grid.2x2")
+                .font(.body)
+                .foregroundStyle(isSelected ? AnyShapeStyle(.tint) : AnyShapeStyle(.secondary))
+                .frame(width: 22)
+            VStack(alignment: .leading, spacing: 1) {
+                Text("모든 앱 한눈에")
+                    .font(.body)
+                    .fontWeight(isSelected ? .semibold : .regular)
+                Text("앱 \(AppFormat.count(appCount))개")
+                    .font(.hubCaption.monospacedDigit())
+                    .foregroundStyle(.secondary)
+            }
+            Spacer(minLength: 4)
+        }
+        .padding(.vertical, 3)
+        .contentShape(Rectangle())
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(isSelected ? [.isSelected] : [])
+    }
+}
+
 struct FeatureRow: View {
     let section: FeedbackStore.ProjectSection
     let detail: String

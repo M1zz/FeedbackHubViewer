@@ -6,7 +6,7 @@
 //
 //  읽음 · 처리(`ReviewStateSync`)와 같은 저장소, 다른 키다. 여기 오는 것은 사람이 고친
 //  것 중 작은 것 — 숨긴 앱, 활동 정의, 뱃지 · 알림 종류, 키워드 · 차트 나라, 칸마다 확인한
-//  뱃지, 소식을 읽은 시각. 큰 기록(키워드 순위 · 차트 · 리뷰 확인)은 비공개 DB 로
+//  뱃지, 소식을 읽은 시각, 홈에서 확인해 가린 신호 · 본 의견, 별 단 의견. 큰 기록(키워드 순위 · 차트 · 리뷰 확인)은 비공개 DB 로
 //  (`ViewerStateSync`).
 //
 //  `UserDefaults` 는 그대로 로컬 미러다. 가게들은 지금처럼 `UserDefaults` 에서 읽고, 쓸
@@ -45,7 +45,18 @@ enum SyncedDefaults {
         SupportersStore.defaultsKey: nil,
         // 캠페인 링크의 제공자 토큰(pt) — 계정에 하나.
         CampaignProvider.defaultsKey: nil,
+        // 홈에서 확인해 가린 신호 — "다시 보기" 로 비울 수 있어 합치지 않고 마지막 쓰기가 이긴다.
+        "home-dismissed-signals": nil,
+        // 홈에서 본 한 문장 의견 — 기기마다 최근 500개로 자르므로 합치면 끝없이 늘어난다. 마지막 쓰기.
+        "home-voices-seen": nil,
+        // 스토어 문구 후보로 별을 단 의견 — 뗄 수 있어 마지막 쓰기가 이긴다.
+        "voice-store-copy": nil,
     ]
+
+    /// `@AppStorage` 로 바로 쓰는 키 — 화면이 `SyncedDefaults.set` 을 부르지 않으니
+    /// `UserDefaults` 가 바뀌는 것을 보고 저장소로 올린다.
+    private static let watched: Set<String> = ["home-dismissed-signals", "home-voices-seen", "voice-store-copy"]
+    private static var localObserver: NSObjectProtocol?
 
     private static var store: NSUbiquitousKeyValueStore { .default }
     private static var observer: NSObjectProtocol?
@@ -76,6 +87,24 @@ enum SyncedDefaults {
                 guard !ours.isEmpty else { return }
                 reconcile(ours, notify: true)
             }
+        }
+        localObserver = NotificationCenter.default.addObserver(
+            forName: UserDefaults.didChangeNotification, object: nil, queue: .main
+        ) { _ in
+            Task { @MainActor in pushWatched() }
+        }
+    }
+
+    /// 이 기기에서 바뀐 `@AppStorage` 값을 저장소로. 같으면 아무것도 하지 않는다 —
+    /// 저장소에서 내려받아 미러를 고친 것도 여기로 오지만 그때는 이미 같다.
+    private static func pushWatched() {
+        guard isAvailable else { return }
+        for name in watched {
+            let local = defaults.object(forKey: name)
+            let remote = store.object(forKey: prefix + name)
+            guard !same(local, remote) else { continue }
+            let result = (keys[name] ?? nil).map { $0(local, remote) } ?? local
+            if let result { store.set(result, forKey: prefix + name) } else { store.removeObject(forKey: prefix + name) }
         }
     }
 

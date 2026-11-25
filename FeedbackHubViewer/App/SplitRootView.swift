@@ -272,26 +272,22 @@ struct SplitRootView: View {
         // 모든 앱을 카드로 편 첫 화면으로 — 앱 화면에서는 "‹ 모든 앱" 으로 글자까지 세운다.
         // 기호(▦)만 있을 때는 카드 · 좋은 소식을 눌러 들어온 뒤 돌아갈 길로 읽히지 않았다.
         // 맥의 뒤로 가기 키(⌘[)도 같은 일을 한다.
+        // 늘 같은 자리 · 같은 모양의 단추 — 홈에 있으면 뒤로 가기처럼 꺼질 뿐 모양이 바뀌어 툴바가 흔들리지 않는다.
         ToolbarItem(placement: .navigation) {
-            if store.showsHome {
-                Label("모든 앱", systemImage: "square.grid.2x2")
-                    .labelStyle(.iconOnly)
-                    .foregroundStyle(.secondary)
-            } else {
-                Button {
-                    store.showsHome = true
-                } label: {
-                    Label("모든 앱", systemImage: "chevron.backward")
-                        .labelStyle(.titleAndIcon)
-                }
-                .help("모든 앱 한눈에로 돌아가기 (⌘[ · ⇧⌘H)")
-                .keyboardShortcut("[", modifiers: .command)
-                .background {
-                    // 예전 단축키도 그대로 — 단추 하나에 키는 하나라 숨은 단추로 받는다.
-                    Button("") { store.showsHome = true }
-                        .keyboardShortcut("h", modifiers: [.command, .shift])
-                        .hidden()
-                }
+            Button {
+                store.showsHome = true
+            } label: {
+                Label("모든 앱", systemImage: "chevron.backward")
+                    .labelStyle(.titleAndIcon)
+            }
+            .disabled(store.showsHome)
+            .help("모든 앱 한눈에로 돌아가기 (⌘[ · ⇧⌘H)")
+            .keyboardShortcut("[", modifiers: .command)
+            .background {
+                // 예전 단축키도 그대로 — 단추 하나에 키는 하나라 숨은 단추로 받는다.
+                Button("") { store.showsHome = true }
+                    .keyboardShortcut("h", modifiers: [.command, .shift])
+                    .hidden()
             }
         }
 
