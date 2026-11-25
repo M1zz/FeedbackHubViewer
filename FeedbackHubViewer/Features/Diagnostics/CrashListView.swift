@@ -24,6 +24,7 @@ import SwiftUI
 struct CrashListView: View {
     let project: String?
     @AppStorage("crashViewMode") private var mode = Mode.issues.rawValue
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     enum Mode: String, CaseIterable, Identifiable {
         case issues, reports
@@ -39,6 +40,8 @@ struct CrashListView: View {
                 CrashIssueListView(project: project)
             }
         }
+        // 이슈 ↔ 한 건씩을 바꾸면 툭 갈아 끼우지 않고 번져 들어온다.
+        .modifier(FadeIn(enabled: !reduceMotion, key: mode))
         .toolbar {
             ToolbarItem(placement: .automatic) {
                 Picker("보기", selection: $mode) {

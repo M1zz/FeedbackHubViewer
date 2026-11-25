@@ -122,7 +122,27 @@ struct NewsView: View {
         let olderCount = items.filter { $0.foundAt <= cutoff }.count
         let visible = showsOlder ? items : items.filter { $0.foundAt > cutoff }
         let days = Dictionary(grouping: visible) { Calendar.current.startOfDay(for: $0.foundAt) }
+        // 화면을 열 때 새로 와 있던 것 — 뱃지가 센 그것들. 날짜 기록 속에 점 하나로 묻히거나
+        // "그 밖에" 로 접히면 뱃지 수만 보이고 어느 것인지 찾을 수 없었다. 맨 위에 따로 모은다.
+        let fresh = readMark.map { mark in items.filter { $0.foundAt > mark } } ?? []
+        let freshGroups = { () -> [NewsGroup] in
+            let split = groups(fresh)
+            return (split.main + split.quiet)
+                .sorted { $0.first.date > $1.first.date }
+                .map { NewsGroup(id: "new|" + $0.id, items: $0.items) }
+        }()
         return List {
+            if !freshGroups.isEmpty {
+                Section {
+                    ForEach(freshGroups) { group in
+                        groupRow(group)
+                    }
+                } header: {
+                    Label("새로 온 소식 \(AppFormat.count(fresh.count))", systemImage: "sparkle")
+                        .font(.body.weight(.semibold))
+                        .foregroundStyle(.purple)
+                }
+            }
             Section {
                 BriefingCard(briefing: news.briefing())
                     .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))

@@ -310,9 +310,10 @@ struct ProjectSectionView: View {
     }
 }
 
-/// 새 화면을 0 → 1 불투명도로 짧게 번지게 한다. 뷰를 바꾸지 않고 값만 움직여서
-/// 사이드바가 움직이는 중에도 안전하다. `key` 가 바뀌면 다시 번진다.
-private struct FadeIn<Key: Hashable>: ViewModifier {
+/// 새 화면이 살짝 아래에서 떠오르며 번져 들어온다(불투명도 0 → 1, 6pt 위로). 뷰를 갈아 끼우지 않고
+/// 값만 움직여서 사이드바가 움직이는 중에도 안전하다(`.transition` 크래시 꼴을 피한다).
+/// `key` 가 바뀌면 다시 들어온다 — 칸 탭 · 화면 안 세그먼트가 같이 쓴다.
+struct FadeIn<Key: Hashable>: ViewModifier {
     let enabled: Bool
     let key: Key
     @State private var shown = false
@@ -320,10 +321,11 @@ private struct FadeIn<Key: Hashable>: ViewModifier {
     func body(content: Content) -> some View {
         content
             .opacity(enabled && !shown ? 0 : 1)
+            .offset(y: enabled && !shown ? 6 : 0)
             .task(id: key) {
                 guard enabled else { return }
                 shown = false
-                withAnimation(.easeOut(duration: 0.18)) { shown = true }
+                withAnimation(.snappy(duration: 0.28)) { shown = true }
             }
     }
 }
