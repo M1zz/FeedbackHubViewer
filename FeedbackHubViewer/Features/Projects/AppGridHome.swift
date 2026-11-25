@@ -1023,6 +1023,7 @@ struct AppGridHome: View {
                 }
                 Text(voice.text)
                     .font(.body)
+                    .lineLimit(2)
                     .multilineTextAlignment(.leading)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
@@ -1045,16 +1046,20 @@ struct AppGridHome: View {
             HStack(alignment: .top, spacing: 10) {
                 AppIcon(url: icons.url(for: row.project, keywords: keywords), size: 30)
                 VStack(alignment: .leading, spacing: 2) {
-                    // 한 글로 이어 써서, 좁으면 잘리지 않고 다음 줄로 넘어간다.
-                    let reach = row.reach > 0
-                        ? Text("   쓰는 사람 \(AppFormat.count(row.reach))").font(.body.monospacedDigit()).foregroundStyle(.secondary)
-                        : Text("")
-                    Text("\(Text(row.name))   \(Text("\(Image(systemName: kind.systemImage)) \(Self.chipText(signal, named: true))").foregroundStyle(tint))\(reach)")
+                    // 앱 이름과 무슨 일인지는 잘리지 않게 이어 쓰고(좁으면 다음 줄로), 쓰는 사람은 그 아래 따로.
+                    Text("\(Text(row.name))   \(Text("\(Image(systemName: kind.systemImage)) \(Self.chipText(signal, named: true))").foregroundStyle(tint))")
                         .font(.body.weight(.semibold))
+                    if row.reach > 0 {
+                        Text("쓰는 사람 \(AppFormat.count(row.reach))")
+                            .font(.body.monospacedDigit())
+                            .foregroundStyle(.secondary)
+                    }
+                    // 세부 내용은 두 줄까지 — 넘치면 … 으로 줄인다.
                     if !lines.isEmpty {
                         Text(lines.joined(separator: "  ·  "))
                             .font(.body)
                             .foregroundStyle(.secondary)
+                            .lineLimit(2)
                             .multilineTextAlignment(.leading)
                     }
                 }
