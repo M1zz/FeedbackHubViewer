@@ -72,6 +72,7 @@ struct ProjectSectionView: View {
             .safeAreaInset(edge: .top, spacing: 0) {
                 VStack(spacing: 0) {
                     memberTabs
+                    badgeTrail
                     badgeSource
                     SectionChangesBanner(section: section, project: project)
                 }
@@ -106,8 +107,12 @@ struct ProjectSectionView: View {
             // 가게는 `onChange(of: section)` 이 그린 뒤에 맞춘다.
             Picker("보기", selection: $section) {
                 // 칸 뱃지는 탭들의 합이라, 어느 탭에서 온 수인지 탭 이름 옆에 적는다.
+                //
+                // 사이드바와 **같은 범위**로 센다(`sidebarScope`). 모든 앱으로 보는 중이면 사이드바의
+                // 숫자는 모든 앱의 합인데, 여기서 고른 앱 하나로 세면 그 앱에 없을 때 탭에 아무것도
+                // 서지 않아 사이드바의 1 이 어느 탭 것인지 알 수 없었다.
                 ForEach(members) { member in
-                    let count = metrics.countedBadge(member, project: project)?.count ?? 0
+                    let count = metrics.countedBadge(member, project: sidebarScope)?.count ?? 0
                     Text(count > 0 ? "\(member.rawValue) \(count)" : member.rawValue).tag(member)
                 }
             }
@@ -115,6 +120,79 @@ struct ProjectSectionView: View {
             .labelsHidden()
             .hubHeaderBar(verticalPadding: 8)
         }
+    }
+
+    /// 사이드바가 뱃지를 세는 범위 — 앱 하나로 보는 중이면 그 앱, 모든 앱으로 보는 중이면 nil.
+    /// 아이폰은 밀려 들어온 화면의 앱 그대로.
+    private var sidebarScope: String? {
+        store.usesStackNavigation ? project : store.focusedApp
+    }
+
+    /// 뱃지가 선 곳으로 가는 길 — 사이드바의 숫자가 지금 보는 탭 · 앱이 아닌 곳의 것일 때, 어느
+    /// 탭의 어느 앱인지 적고 누르면 바로 거기로 간다. 지금 화면에 있는 것은 적지 않는다
+    /// (바로 아래 줄과 앱 목록이 이미 말한다).
+    @ViewBuilder
+    private var badgeTrail: some View {
+        if !store.usesStackNavigation {
+            let elsewhere = metrics.badgeTrail(section.host, scope: sidebarScope).filter { stop in
+                !(stop.section == section && (project == nil || stop.project == nil || stop.project == project))
+            }
+            if !elsewhere.isEmpty {
+                let limit = 3
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        Label("뱃지가 선 곳", systemImage: "arrow.turn.down.right")
+                            .font(.body.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                        ForEach(elsewhere.prefix(limit)) { stop in
+                            Button {
+                                go(to: stop)
+                            } label: {
+                                HStack(spacing: 5) {
+                                    Image(systemName: stop.badge.systemImage)
+                                    Text(trailTitle(stop))
+                                    Text(AppFormat.count(stop.badge.count))
+                                        .monospacedDigit()
+                                        .fontWeight(.semibold)
+                                    Image(systemName: "chevron.right")
+                                        .imageScale(.small)
+                                }
+                                .font(.body)
+                                .foregroundStyle(stop.badge.tint)
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 5)
+                                .background(stop.badge.tint.opacity(0.12), in: Capsule())
+                                .contentShape(Capsule())
+                            }
+                            .buttonStyle(.plain)
+                            .help("\(stop.badge.name) — 눌러서 보러 가기")
+                        }
+                        if elsewhere.count > limit {
+                            Text("외 \(elsewhere.count - limit)곳")
+                                .font(.body)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                }
+                .background(.bar)
+            }
+        }
+    }
+
+    /// "키워드 · 모찌모" — 지금 탭의 것이면 앱 이름만, 지금 앱의 것이면 탭 이름만.
+    private func trailTitle(_ stop: SectionMetrics.BadgeStop) -> String {
+        var parts: [String] = []
+        if stop.section != section { parts.append(stop.section.rawValue) }
+        if let app = stop.project, app != project { parts.append(store.displayName(for: app)) }
+        return parts.isEmpty ? stop.badge.name : parts.joined(separator: " · ")
+    }
+
+    /// 그 탭의 그 앱으로. 모든 앱으로 보는 중이면 그 모드 그대로 앱 목록에서 앱만 바꾼다.
+    private func go(to stop: SectionMetrics.BadgeStop) {
+        if let app = stop.project, app != project { store.selectedProject = app }
+        if stop.section != section { section = stop.section }
     }
 
     /// 뱃지가 어디서 왔나 — 사이드바 · 앱 목록에서 본 숫자가 이 칸의 무엇인지 맨 위에 한 줄로.

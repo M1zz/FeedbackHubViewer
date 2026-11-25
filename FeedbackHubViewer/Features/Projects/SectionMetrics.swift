@@ -76,6 +76,41 @@ struct SectionMetrics {
         return SectionChanges.shared.unacknowledgedDue(due).isEmpty ? nil : badge
     }
 
+    /// 뱃지가 선 자리 하나 — 어느 탭의 어느 앱인가.
+    struct BadgeStop: Identifiable {
+        let section: FeedbackStore.ProjectSection
+        /// nil 이면 앱으로 가를 수 없는 뱃지(전체에만 서는 것).
+        let project: String?
+        let badge: Badge
+        var id: String { "\(section.rawValue)|\(project ?? "\u{1}")" }
+    }
+
+    /// 사이드바 칸의 뱃지가 **어디에** 서 있나 — 탭마다, 앱마다. 사이드바의 숫자는 탭들과 앱들의
+    /// 합이라, 칸을 열어도 그 숫자가 어느 탭 · 어느 앱의 것인지 보이지 않으면 길을 잃는다
+    /// (유입에 1 이 섰는데 그것이 키워드 탭의 다른 앱 것일 때). 큰 것부터.
+    ///
+    /// `scope` 는 사이드바가 보는 범위 — 앱 하나로 보는 중이면 그 앱, 아니면 nil(모든 앱).
+    func badgeTrail(_ host: FeedbackStore.ProjectSection, scope: String?) -> [BadgeStop] {
+        var stops: [BadgeStop] = []
+        for member in host.members {
+            if let scope {
+                if let badge = countedBadge(member, project: scope) {
+                    stops.append(BadgeStop(section: member, project: scope, badge: badge))
+                }
+                continue
+            }
+            let perApp = member.usesAppList ? Self.keywordProjects(store).compactMap { app in
+                countedBadge(member, project: app).map { BadgeStop(section: member, project: app, badge: $0) }
+            } : []
+            if !perApp.isEmpty {
+                stops += perApp
+            } else if let badge = countedBadge(member, project: nil) {
+                stops.append(BadgeStop(section: member, project: nil, badge: badge))
+            }
+        }
+        return stops.sorted { $0.badge.count > $1.badge.count }
+    }
+
     func badge(_ section: FeedbackStore.ProjectSection, project: String?) -> Badge? {
         let key = Self.memoKey(section, project)
         if let cached = memo.badges[key] { return cached }
