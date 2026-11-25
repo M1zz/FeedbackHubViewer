@@ -301,6 +301,14 @@ struct PotentialBoard: View {
                     .foregroundStyle(.green)
             }
 
+            // 사용자가 직접 답한 "없으면 안 돼요" 몫 — 깔때기 숫자가 못 보는, 이 앱을 꼭 필요로 하는가.
+            let voice = VoiceDigest(project: input.project, feedback: store.feedback(for: input.project))
+            if voice.ratedCount > 0 {
+                Label(voice.mustHaveLine, systemImage: "heart.fill")
+                    .font(.body.monospacedDigit())
+                    .foregroundStyle(voice.mustHaveShare.map { $0 >= VoiceDigest.mustHaveBar ? Color.green : .orange } ?? .secondary)
+            }
+
             if input.downloads > 0 {
                 Text(goal.reading(downloads: input.downloads))
                     .font(.body)

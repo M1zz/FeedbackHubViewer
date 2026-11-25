@@ -75,6 +75,12 @@ struct AppBriefing: View {
                     }
                 }
 
+                if store.feedback(for: project).contains(where: \.isVoice) {
+                    group("한 문장 의견") {
+                        VoiceDigestCard(project: project)
+                    }
+                }
+
                 if !chores.isEmpty {
                     group("알아 둘 것") {
                         ForEach(chores) { signal in
