@@ -27,6 +27,8 @@ struct PotentialBoard: View {
     @AppStorage("potential-target-man") private var targetMan = 100
     @AppStorage("potential-price") private var price = 5_000
     @State private var filter: AppPotential.Kind?
+    /// 앱마다 리포트를 받는 동안만 참. 키가 없거나 받을 것이 없는 앱 때문에 "읽는 중" 이 영원히 서지 않게.
+    @State private var isFetching = false
 
     private var apps: [String] { SectionMetrics.keywordProjects(store) }
 
@@ -37,7 +39,10 @@ struct PotentialBoard: View {
     var body: some View {
         let ranked = AppPotential.rank(apps.map(input))
         let shown = filter.map { kind in ranked.filter { $0.kind == kind } } ?? ranked
-        let loading = apps.filter { connect.funnels[$0] == nil || connect.funnels[$0]?.isLoading == true }.count
+        let loading = connect.isConfigured && isFetching
+            ? apps.filter { connect.funnels[$0] == nil || connect.funnels[$0]?.isLoading == true }.count
+            : 0
+        let failed = apps.filter { if case .failed? = connect.funnels[$0] { return true } else { return false } }
 
         VStack(alignment: .leading, spacing: 16) {
             if !connect.isConfigured {
@@ -52,6 +57,13 @@ struct PotentialBoard: View {
                     .font(.body)
                     .foregroundStyle(.secondary)
             }
+            if !failed.isEmpty {
+                // 받기에 실패한 앱은 판정이 "모름" 이나 "작은 수요" 로만 보여 실패인 줄 모른다.
+                Label("리포트를 받지 못한 앱 \(failed.count)개 — \(failed.prefix(3).map { store.displayName(for: $0) }.joined(separator: " · "))\(failed.count > 3 ? " 외" : ""). 이 앱들의 판정은 믿기 어렵습니다",
+                      systemImage: "exclamationmark.triangle")
+                    .font(.body)
+                    .foregroundStyle(.orange)
+            }
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 360, maximum: 560), spacing: 14)], spacing: 14) {
                 ForEach(shown) { app in
                     Button {
@@ -65,6 +77,8 @@ struct PotentialBoard: View {
             footnote
         }
         .task(id: apps) {
+            isFetching = true
+            defer { isFetching = false }
             await icons.resolve(apps, keywords: keywords)
             await connect.loadSales()
             // 깔때기는 디스크에 둔 리포트로 먼저 그려진다. 상품 목록은 결제 건수를 앱에 잇는 데 쓴다.

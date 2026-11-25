@@ -665,7 +665,7 @@ struct AppGridHome: View {
                         let shown = showsAllUrgent ? group.items : Array(group.items.prefix(perKind))
                         VStack(alignment: .leading, spacing: 0) {
                             groupHeader(group, tint: .red)
-                            ForEach(Array(shown.enumerated()), id: \.offset) { index, item in
+                            ForEach(Array(shown.enumerated()), id: \.element.row.project) { index, item in
                                 if index > 0 { Divider().padding(.leading, 50) }
                                 urgentRow(item.row, item.signal)
                             }
@@ -701,7 +701,7 @@ struct AppGridHome: View {
                     ForEach(groups) { group in
                         VStack(alignment: .leading, spacing: 0) {
                             groupHeader(group, tint: .green)
-                            ForEach(Array(group.items.enumerated()), id: \.offset) { index, item in
+                            ForEach(Array(group.items.enumerated()), id: \.element.row.project) { index, item in
                                 if index > 0 { Divider().padding(.leading, 50) }
                                 urgentRow(item.row, item.signal, tint: .green)
                             }
@@ -781,7 +781,8 @@ struct AppGridHome: View {
                         .font(.body.weight(.semibold))
                         .foregroundStyle(.blue)
                     Spacer()
-                    Button("모두 봤어요") { withAnimation { markSeen(items.map(\.id)) } }
+                    // 애니메이션 없이 지운다 — 그리드가 크기를 바꾸는 중의 애니메이션은 AttributeGraph 를 죽일 수 있다.
+                    Button("모두 봤어요") { markSeen(items.map(\.id)) }
                         .buttonStyle(.borderless)
                         .font(.body)
                     if items.count > limit {

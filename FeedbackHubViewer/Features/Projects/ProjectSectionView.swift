@@ -47,19 +47,19 @@ struct ProjectSectionView: View {
     }
 
     var body: some View {
+        // 갈아 끼우기는 애니메이션 없이 — `.transition` 을 단 if/else 를 사이드바 크기가 바뀌는
+        // 중에 애니메이션으로 바꾸면 AttributeGraph 가 죽는다(홈 ↔ 앱 전환 때와 같은 크래시).
+        // 번져 들어오는 느낌은 새 화면의 불투명도만 움직여 낸다.
         Group {
             if drawnKey == freshKey {
                 content
-                    .transition(.opacity)
+                    .modifier(FadeIn(enabled: !reduceMotion, key: freshKey))
             } else {
                 ProgressView()
                     .controlSize(.small)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .transition(.opacity)
             }
         }
-            // 칸 · 앱을 바꾸면 새 화면이 툭 갈아 끼워지지 않고 짧게 번져 들어온다.
-            .animation(reduceMotion ? nil : .easeOut(duration: 0.18), value: drawnKey == freshKey)
             // 로딩 표시가 한 번 그려질 틈을 준 뒤 화면을 그린다.
             .task(id: freshKey) {
                 guard drawnKey != freshKey else { return }
@@ -307,5 +307,23 @@ struct ProjectSectionView: View {
         case .experience:
             ExperienceView(project: project)
         }
+    }
+}
+
+/// 새 화면을 0 → 1 불투명도로 짧게 번지게 한다. 뷰를 바꾸지 않고 값만 움직여서
+/// 사이드바가 움직이는 중에도 안전하다. `key` 가 바뀌면 다시 번진다.
+private struct FadeIn<Key: Hashable>: ViewModifier {
+    let enabled: Bool
+    let key: Key
+    @State private var shown = false
+
+    func body(content: Content) -> some View {
+        content
+            .opacity(enabled && !shown ? 0 : 1)
+            .task(id: key) {
+                guard enabled else { return }
+                shown = false
+                withAnimation(.easeOut(duration: 0.18)) { shown = true }
+            }
     }
 }
