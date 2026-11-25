@@ -6224,5 +6224,53 @@
   "body": "",
   "bodyEn": "Did you actually see the sun today?\n\nSunny Sunflower counts outdoor light on its own: step outside and it reads brightness from camera exposure (no photos taken). Your sun time keeps a little sunflower alive.\n\nBlack Friday: first Pro subscription on sale Nov 27 to Dec 4.",
   "theme": null
+ },
+ {
+  "id": "a5ea1cf9-0374-4234-8850-a87776fd89a0",
+  "project": "com.leeo.PixelMe",
+  "kind": "cardNews",
+  "channel": "인스타그램",
+  "title": "Your dog in beads. But which colors, and how many?",
+  "angle": "영어 · 해외 대상 한 기능 깊이형(크림 feature.swift, 6장). 사진 → 진짜 비즈 색 번호와 개수: 눈대중 색 고르기 → Perler · Hama Midi · Artkal S · DMC 실제 색 → 3364 beads in 18 colors · 29×29 판 → 쇼핑 목록 10% 여유분. 블랙 프라이데이 첫 구독 할인 한 줄. 덱 scripts/cardnews/decks/2026-11-25-한땀-색개수-en.json 카드 app-portfolio marketing/cardnews/2026-11-25-hantam-colorcount-en/ https://www.instagram.com/lee25_ios/p/DgKdbOmiU9K/",
+  "plannedAt": "2026-11-25T00:00:00Z",
+  "stage": "posted",
+  "slides": [],
+  "script": "",
+  "scriptEn": "",
+  "body": "",
+  "bodyEn": "Turning a photo of your dog into fuse beads? The hard part is knowing which colors to buy, and how many of each.\n\nHantam matches your photo to real Perler, Hama Midi and Artkal S bead colors, or DMC floss for cross-stitch. Every color number comes with its exact count, and big patterns are split into 29 by 29 pegboards.\n\nCopy the shopping list in one tap. Bead counts get 10% extra so you don't run short halfway through.\n\nBlack Friday: your first subscription period is discounted from Nov 27 to Dec 4.\n\nSearch \"Hantam\" on the App Store.\n\n#perlerbeads #hamabeads #fusebeads #crossstitch #pixelart #beadpattern #iosapp #indiedev",
+  "theme": null
+ },
+ {
+  "id": "9fd30b4a-fd57-4505-aac6-0c376f80da4e",
+  "project": "com.leeo.PixelMe",
+  "kind": "cardNews",
+  "channel": "스레드",
+  "title": "Your dog in beads. But which colors, and how many?",
+  "angle": "영어 · 해외 대상 한 기능 깊이형(크림 feature.swift, 6장). 사진 → 진짜 비즈 색 번호와 개수: 눈대중 색 고르기 → Perler · Hama Midi · Artkal S · DMC 실제 색 → 3364 beads in 18 colors · 29×29 판 → 쇼핑 목록 10% 여유분. 블랙 프라이데이 첫 구독 할인 한 줄. 덱 scripts/cardnews/decks/2026-11-25-한땀-색개수-en.json 카드 app-portfolio marketing/cardnews/2026-11-25-hantam-colorcount-en/ https://www.threads.com/@lee25_ios/post/DgKdhE-Hxoi",
+  "plannedAt": "2026-11-25T00:00:00Z",
+  "stage": "posted",
+  "slides": [],
+  "script": "",
+  "scriptEn": "",
+  "body": "",
+  "bodyEn": "Turning a photo of your dog into fuse beads? The hard part is knowing which colors to buy, and how many of each.\n\nHantam matches your photo to real Perler, Hama Midi and Artkal S colors, or DMC floss for cross-stitch. Every color number comes with its exact count.\n\nThe shopping list adds 10% extra beads so you don't run short.\n\nBlack Friday: first subscription period discounted Nov 27 to Dec 4. Search \"Hantam\" on the App Store.",
+  "theme": null
+ },
+ {
+  "id": "651c97f4-dcf6-4929-8e22-6c274b8f89c6",
+  "project": "com.leeo.PixelMe",
+  "kind": "post",
+  "channel": "X",
+  "title": "Your dog in beads. But which colors, and how many?",
+  "angle": "영어 · 해외 대상 한 기능 깊이형(크림 feature.swift, 6장). 사진 → 진짜 비즈 색 번호와 개수: 눈대중 색 고르기 → Perler · Hama Midi · Artkal S · DMC 실제 색 → 3364 beads in 18 colors · 29×29 판 → 쇼핑 목록 10% 여유분. 블랙 프라이데이 첫 구독 할인 한 줄. 덱 scripts/cardnews/decks/2026-11-25-한땀-색개수-en.json 카드 app-portfolio marketing/cardnews/2026-11-25-hantam-colorcount-en/ https://x.com/leeoios/status/2125557790496481669",
+  "plannedAt": "2026-11-25T00:00:00Z",
+  "stage": "posted",
+  "slides": [],
+  "script": "",
+  "scriptEn": "",
+  "body": "",
+  "bodyEn": "Turning a photo of your dog into fuse beads? Hantam matches it to real Perler, Hama and Artkal colors and tells you how many of each. The shopping list adds 10% spare beads.\n\nBlack Friday: first subscription period discounted Nov 27 to Dec 4.\n\n#perlerbeads",
+  "theme": null
  }
 ]

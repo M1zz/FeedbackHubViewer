@@ -1,0 +1,45 @@
+{
+ "name": "Hantam",
+ "icon": "/Users/hyunholee/Documents/workspace/Auto/한땀/Hantam/Assets.xcassets/AppIcon.appiconset/appstore.png",
+ "accent": "D9433A",
+ "kicker": "Did you know? · Hantam's color counts",
+ "cover": "Your dog in beads.\nBut which colors,\nand how many?",
+ "coverScreens": ["/Users/hyunholee/Documents/workspace/Auto/한땀/docs/screenshots/raw/en/maker.png", "/Users/hyunholee/Documents/workspace/Auto/한땀/docs/screenshots/raw/en/detail.png", "/Users/hyunholee/Documents/workspace/Auto/한땀/docs/screenshots/raw/en/pdf.png"],
+ "features": [
+  {
+   "label": "The usual way",
+   "headline": "Squint, guess,\nbuy one more bag",
+   "text": "Matching a photo to beads by eye ends\nwith spare bags and one missing shade.",
+   "screen": "/Users/hyunholee/Documents/workspace/Auto/한땀/docs/screenshots/raw/en/maker.png",
+   "top": 0.0
+  },
+  {
+   "label": "Real colors",
+   "headline": "Pick a photo,\npick your beads",
+   "text": "Perler, Hama Midi, Artkal S or DMC floss.\nThe pattern uses only colors they sell.",
+   "screen": "/Users/hyunholee/Documents/workspace/Auto/한땀/docs/screenshots/raw/en/maker.png",
+   "top": 0.45
+  },
+  {
+   "label": "Every count",
+   "headline": "3364 beads\nin 18 colors",
+   "text": "Each color number with its count, and\nthe pattern split into 29 by 29 pegboards.",
+   "screen": "/Users/hyunholee/Documents/workspace/Auto/한땀/docs/screenshots/raw/en/pdf.png",
+   "top": 0.38
+  },
+  {
+   "label": "Bonus",
+   "headline": "A shopping list\nwith spares added",
+   "text": "Copy it in one tap. Bead counts get\n10% extra so you don't run short.",
+   "screen": "/Users/hyunholee/Documents/workspace/Auto/한땀/docs/screenshots/raw/en/detail.png",
+   "top": 0.55
+  }
+ ],
+ "outro": "Know the count\nbefore you shop",
+ "points": [
+  "Cross-stitch with 11 to 18 count fabric",
+  "Printable PDF with a symbol chart",
+  "Photos and patterns stay on your iPhone"
+ ],
+ "search": "Search “Hantam” on the App Store"
+}
