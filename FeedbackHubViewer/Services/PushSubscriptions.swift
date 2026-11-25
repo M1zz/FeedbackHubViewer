@@ -61,4 +61,36 @@ enum PushSubscriptions {
         }
         return active
     }
+
+    /// 결제 알림. Apple 이 결제를 알리면 서버(`app-portfolio/services/purchase-notify`)가
+    /// `Purchase` 를 남기고, 이 구독이 그 제목 · 내용을 그대로 띄운다 — 문구는 서버가 만든다.
+    /// 알림을 켜 두면 늘 건다. 결제는 놓치고 싶은 사람이 없다.
+    static let purchaseRecordType = "Purchase"
+    private static let purchaseSubscriptionID = "hub-new-purchase"
+
+    static func syncPurchases(_ enabled: Bool) async {
+        do {
+            if enabled {
+                let subscription = CKQuerySubscription(recordType: purchaseRecordType,
+                                                       predicate: NSPredicate(value: true),
+                                                       subscriptionID: purchaseSubscriptionID,
+                                                       options: [.firesOnRecordCreation])
+                let info = CKSubscription.NotificationInfo()
+                // 레코드 칸을 그대로 쓰려면 지역화 키를 거쳐야 한다. 키 "%1$@" 는 Localizable.strings 에 있다.
+                info.titleLocalizationKey = "%1$@"
+                info.titleLocalizationArgs = ["title"]
+                info.alertLocalizationKey = "%1$@"
+                info.alertLocalizationArgs = ["message"]
+                info.soundName = "default"
+                subscription.notificationInfo = info
+                _ = try await database.save(subscription)
+            } else {
+                _ = try await database.deleteSubscription(withID: purchaseSubscriptionID)
+            }
+        } catch let error as CKError where error.code == .unknownItem {
+            // 지울 구독이 처음부터 없었다.
+        } catch {
+            print("❌ [PushSubscriptions.syncPurchases] \(error)")
+        }
+    }
 }

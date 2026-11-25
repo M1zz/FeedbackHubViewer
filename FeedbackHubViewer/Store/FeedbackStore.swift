@@ -1412,9 +1412,11 @@ final class FeedbackStore: ObservableObject {
     func syncPushSubscriptions() {
         let wanted = notificationsEnabled ? alertKinds : []
         let recordType = resolvedRecordType ?? "Feedback"
+        let purchases = notificationsEnabled
         pushSyncTask?.cancel()
         pushSyncTask = Task { [weak self] in
             let active = await PushSubscriptions.sync(wanted, feedbackRecordType: recordType)
+            await PushSubscriptions.syncPurchases(purchases)
             guard !Task.isCancelled else { return }
             self?.pushKinds = active
         }
