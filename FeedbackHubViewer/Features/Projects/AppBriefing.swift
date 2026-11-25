@@ -289,16 +289,18 @@ enum SignalEvidence {
         let project = row.project
         let weekAgo = Date().addingTimeInterval(-7 * 86_400)
         switch signal.kind {
-        case .crash, .hang:
-            let wantsCrash = signal.kind == .crash
-            let reports = store.crashes(for: project)
-                .filter { ($0.receivedAt ?? .distantPast) >= weekAgo && ($0.kind == "crash") == wantsCrash }
-                .sorted { ($0.receivedAt ?? .distantPast) > ($1.receivedAt ?? .distantPast) }
-            // 어느 버전에 몰렸나가 먼저 — 고칠 곳을 가른다.
-            let versions = Dictionary(grouping: reports, by: \.appVersion).mapValues(\.count)
+        case .crash, .hang, .oldCrash:
+            let recent = RecentDiagnostics(project: project, store: store, since: weekAgo)
+            let picked = signal.kind == .crash ? recent.crashes : signal.kind == .hang ? recent.hangs : recent.old
+            let reports = picked.sorted { ($0.receivedAt ?? .distantPast) > ($1.receivedAt ?? .distantPast) }
+            // 어느 버전에 몰렸나가 먼저 — 고칠 곳을 가른다. 이름표가 아니라 **난 버전**으로 센다.
+            let versions = Dictionary(grouping: reports, by: recent.version).mapValues(\.count)
                 .sorted { $0.value > $1.value }.prefix(2)
                 .map { "\($0.key.isEmpty ? "버전 모름" : $0.key) \($0.value)건" }
-            var lines = ["최근 7일 · " + versions.joined(separator: " · ")]
+            var lines = ["최근 7일 도착 · " + versions.joined(separator: " · ")]
+            if signal.kind == .oldCrash, let current = recent.currentVersion {
+                lines[0] += " — 지금 버전(\(current)) 것은 아님"
+            }
             if let latest = reports.first {
                 let when = latest.receivedAt.map { AppFormat.relative($0) + " · " } ?? ""
                 let detail = latest.detail.trimmingCharacters(in: .whitespacesAndNewlines)

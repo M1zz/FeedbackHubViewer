@@ -78,7 +78,7 @@ struct AppGridHome: View {
         /// 무거운 것부터.
         enum Kind: Int, CaseIterable, Identifiable {
             case crash, release, usageDrop, hang, feedback, newReview, storeIssue, unansweredReview
-            case news, changed, keyword
+            case news, changed, keyword, oldCrash
             /// 좋은 소식 — 손볼 일이 아니라 자라는 것. 차례(임팩트)에는 무게가 없다.
             case usageUp, purchase, fiveStar
             var id: Int { rawValue }
@@ -90,7 +90,7 @@ struct AppGridHome: View {
                 switch self {
                 case .crash, .release, .usageDrop: return .critical
                 case .hang, .feedback, .newReview, .storeIssue, .unansweredReview: return .voice
-                case .news, .changed, .keyword: return .chore
+                case .news, .changed, .keyword, .oldCrash: return .chore
                 case .usageUp, .purchase, .fiveStar: return .good
                 }
             }
@@ -108,6 +108,7 @@ struct AppGridHome: View {
                 case .news: return "새 소식"
                 case .changed: return "본 뒤 바뀐 것"
                 case .keyword: return "키워드 다시 짤 때"
+                case .oldCrash: return "옛 버전 크래시"
                 case .usageUp: return "사용 늘어남"
                 case .purchase: return "이번 주 구매"
                 case .fiveStar: return "별 5개 리뷰"
@@ -127,6 +128,7 @@ struct AppGridHome: View {
                 case .news: return "newspaper.fill"
                 case .changed: return "sparkles"
                 case .keyword: return "arrow.triangle.2.circlepath"
+                case .oldCrash: return "clock.arrow.circlepath"
                 case .usageUp: return "chart.line.uptrend.xyaxis"
                 case .purchase: return "cart.fill"
                 case .fiveStar: return "star.fill"
@@ -145,7 +147,7 @@ struct AppGridHome: View {
             /// 누르면 갈 칸.
             var section: FeedbackStore.ProjectSection {
                 switch self {
-                case .crash, .hang: return .crashes
+                case .crash, .hang, .oldCrash: return .crashes
                 case .release: return .release
                 case .usageDrop: return .stats
                 case .feedback: return .feedback
@@ -171,7 +173,7 @@ struct AppGridHome: View {
                 case .newReview: return (12, 36)
                 case .storeIssue: return (10, 30)
                 case .unansweredReview: return (4, 12)
-                case .news, .changed, .keyword: return (0.5, 1)
+                case .news, .changed, .keyword, .oldCrash: return (0.5, 1)
                 case .usageUp, .purchase, .fiveStar: return (0, 0)
                 }
             }
@@ -354,9 +356,13 @@ struct AppGridHome: View {
             var counts: [Signal.Kind: Int] = [:]
 
             // 급한 것은 "안 읽음" 이 아니라 **지금 상태**로 센다 — 읽었다고 크래시가 멎지는 않는다.
-            for report in store.crashes(for: project) where (report.receivedAt ?? .distantPast) >= weekAgo {
-                counts[report.kind == "crash" ? .crash : .hang, default: 0] += 1
-            }
+            // 다만 **지금 버전에서 난 것만** 급하다. 보고는 하루 넘게 늦게 오고, 그사이 업데이트한
+            // 기기의 옛 크래시가 새 버전 이름표를 달고 온다(`RecentDiagnostics`). 이미 고친 옛 버전의
+            // 크래시를 급한 것으로 세면 앱마다 빨강이 서서 정말 급한 것을 가린다.
+            let recent = RecentDiagnostics(project: project, store: store, since: weekAgo)
+            if !recent.crashes.isEmpty { counts[.crash] = recent.crashes.count }
+            if !recent.hangs.isEmpty { counts[.hang] = recent.hangs.count }
+            if !recent.old.isEmpty { counts[.oldCrash] = recent.old.count }
             if store.releaseLevel(for: project) == .red { counts[.release] = 1 }
             // 지난주에 스무 명은 넘게 쓰던 앱이 3할 넘게 줄었으면 급한 일이다.
             if let activity, activity.previous >= 20, activity.delta < 0,
@@ -1049,6 +1055,44 @@ struct AppGridHome: View {
                 .font(.body)
                 .foregroundStyle(.tertiary)
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        }
+    }
+}
+
+/// 최근에 도착한 진단을 **난 버전**으로 가른 것 — 지금 버전의 크래시 · 멈춤과, 옛 버전의 것.
+///
+/// 진단의 `appVersion` 은 배달될 때 깔려 있던 버전이라 죽은 버전이 아닐 수 있다. 죽은 빌드는
+/// `buildNumber` 가 가리키고, 같은 빌드의 보고들이 가장 많이 적은 버전이 그 빌드의 버전이다
+/// (`ReleaseHealth.versionResolver`). 지금 버전은 사용 이벤트로 본 최신 버전(릴리즈 판정과 같은 값),
+/// 없으면 진단들 가운데 가장 새 버전이다.
+struct RecentDiagnostics {
+    var crashes: [CrashReport] = []
+    var hangs: [CrashReport] = []
+    /// 지금 버전보다 옛 버전에서 난 것(크래시 · 멈춤 모두).
+    var old: [CrashReport] = []
+    /// 난 버전을 돌려주는 함수.
+    let version: (CrashReport) -> String
+    let currentVersion: String?
+
+    @MainActor
+    init(project: String, store: FeedbackStore, since: Date) {
+        let all = store.crashes(for: project)
+        let resolve = ReleaseHealth.versionResolver(for: all)
+        version = resolve
+        let known = all.map(resolve).filter(ReleaseHealth.isRealVersion)
+        let current = store.releaseHealth(for: project)?.latest.version
+            ?? known.max { ReleaseHealth.isOlder($0, than: $1) }
+        currentVersion = current
+        for report in all where (report.receivedAt ?? .distantPast) >= since {
+            let reported = resolve(report)
+            // 버전을 못 읽는 보고는 지금 것으로 본다 — 모르는 것을 옛것으로 치우지 않는다.
+            if let current, ReleaseHealth.isRealVersion(reported), ReleaseHealth.isOlder(reported, than: current) {
+                old.append(report)
+            } else if report.kind == "crash" {
+                crashes.append(report)
+            } else {
+                hangs.append(report)
+            }
         }
     }
 }
