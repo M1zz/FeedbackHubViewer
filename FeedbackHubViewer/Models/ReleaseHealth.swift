@@ -350,16 +350,20 @@ enum ReleaseHealth {
     /// 보고는 죽은 그 버전에서 배달되므로 다수결이 맞고, 업데이트 뒤에 배달된 몇 건만
     /// 제자리로 돌아온다. 빌드 번호가 없는 옛 보고는 `appVersion` 그대로다.
     static func versionResolver(for crashes: [CrashReport]) -> (CrashReport) -> String {
+        // 빌드 번호는 앱마다 따로 센다 — 모든 앱을 한 목록에 모으면 번호가 겹친다.
+        func key(_ report: CrashReport) -> String? {
+            normalizedBuild(report.buildNumber).map { "\(report.appId ?? "")|\($0)" }
+        }
         var votes: [String: [String: Int]] = [:]
         for report in crashes {
-            guard let build = normalizedBuild(report.buildNumber), isRealVersion(report.appVersion) else { continue }
+            guard let build = key(report), isRealVersion(report.appVersion) else { continue }
             votes[build, default: [:]][report.appVersion, default: 0] += 1
         }
         let byBuild = votes.compactMapValues { tally in
             tally.max { $0.value == $1.value ? isOlder($1.key, than: $0.key) : $0.value < $1.value }?.key
         }
         return { report in
-            guard let build = normalizedBuild(report.buildNumber), let version = byBuild[build] else {
+            guard let build = key(report), let version = byBuild[build] else {
                 return report.appVersion
             }
             return version

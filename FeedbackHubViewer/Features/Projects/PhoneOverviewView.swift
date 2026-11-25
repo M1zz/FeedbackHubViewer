@@ -146,7 +146,7 @@ struct PhoneOverviewView: View {
             let reports = store.crashes(for: nil).filter { fresh.contains($0.id) }
                 .sorted { ($0.occurredAt ?? $0.receivedAt ?? .distantPast) > ($1.occurredAt ?? $1.receivedAt ?? .distantPast) }
             let items = reports.map { report -> Finding.Item in
-                var meta = [report.kindLabel, report.appVersion]
+                var meta = [report.kindLabel, report.versionLabel]
                 if let date = report.occurredAt ?? report.receivedAt { meta.append(AppFormat.relative(date)) }
                 return Finding.Item(id: "crash|\(report.id)", title: name(report.projectKey),
                                     meta: meta.filter { !$0.isEmpty }.joined(separator: " · "),
