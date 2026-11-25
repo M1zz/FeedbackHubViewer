@@ -48,6 +48,9 @@ struct AppGridHome: View {
     @State private var showsAllVoices = false
     /// 첫 화면에서 연 리뷰 · 피드백 — 한 번 본 것은 다시 펴지 않는다. 줄마다 하나, 최근 500개만 둔다.
     @AppStorage("home-voices-seen") private var seenVoicesRaw = ""
+    /// 가린 급한 것 · 좋은 소식 — "앱|종류|가릴 때의 수" 를 줄마다. 수가 그보다 커지면(새로 올라오면)
+    /// 다시 선다. 그 표시가 사라지면 기록도 지운다(`pruneDismissed`).
+    @AppStorage("home-dismissed-signals") private var dismissedRaw = ""
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// 누른 카드의 자리(화면 안 비율) — 그 카드로 빨려 들어가듯 넘어가게(`SplitRootView`).
     @Binding var zoomAnchor: UnitPoint
@@ -268,6 +271,7 @@ struct AppGridHome: View {
                 .labelsHidden()
                 .fixedSize()
                 .frame(maxWidth: .infinity)
+                .task(id: Self.signalFingerprint(all)) { pruneDismissed(all) }
 
                 if modeRaw == HomeMode.potential.rawValue {
                     PotentialBoard()
@@ -275,6 +279,7 @@ struct AppGridHome: View {
                 summary(all)
                 urgent(all)
                 growing(all)
+                dismissedNotice(all)
                 voices(all)
                 controls(all)
                 if shown.isEmpty {
@@ -597,6 +602,116 @@ struct AppGridHome: View {
         .accessibilityElement(children: .combine)
     }
 
+    // MARK: - 가리기
+
+    /// 사용 추이(%)는 날마다 조금씩 흔들린다 — 가린 뒤 이만큼(%p) 더 움직여야 새 일로 본다.
+    private static let trendStep = 10
+
+    private var dismissed: [String: Int] {
+        var map: [String: Int] = [:]
+        for line in dismissedRaw.split(separator: "\n") {
+            let parts = line.split(separator: "|", omittingEmptySubsequences: false)
+            guard parts.count == 3, let count = Int(parts[2]) else { continue }
+            map["\(parts[0])|\(parts[1])"] = count
+        }
+        return map
+    }
+
+    private func saveDismissed(_ map: [String: Int]) {
+        dismissedRaw = map.sorted { $0.key < $1.key }.suffix(500)
+            .map { "\($0.key)|\($0.value)" }.joined(separator: "\n")
+    }
+
+    private static func dismissKey(_ project: String, _ kind: Signal.Kind) -> String {
+        "\(project.replacingOccurrences(of: "|", with: "/"))|\(kind.rawValue)"
+    }
+
+    /// 가린 뒤 새로 올라온 것이 없으면 가린 채로 — 크래시 · 구매 · 리뷰는 한 건이라도 늘면,
+    /// 사용 추이는 `trendStep` 넘게 더 움직이면 다시 선다.
+    private static func isDismissed(_ signal: Signal, project: String, in map: [String: Int]) -> Bool {
+        guard let stored = map[dismissKey(project, signal.kind)] else { return false }
+        let isTrend = signal.kind == .usageUp || signal.kind == .usageDrop
+        return signal.count < stored + (isTrend ? trendStep : 1)
+    }
+
+    private func dismiss(_ items: [(row: Row, signal: Signal)]) {
+        var map = dismissed
+        for item in items { map[Self.dismissKey(item.row.project, item.signal.kind)] = item.signal.count }
+        saveDismissed(map)
+    }
+
+    /// 표시가 사라진 것은 기록을 지우고, 수가 줄어든 것은 줄어든 수로 내린다 — 7일 창에서 옛 크래시가
+    /// 빠져 3 → 2 가 된 뒤 새 크래시로 3 이 되면 새로 올라온 것이다(사용 추이는 흔들려서 내리지 않는다).
+    private func pruneDismissed(_ rows: [Row]) {
+        let old = dismissed
+        guard !old.isEmpty else { return }
+        var current: [String: Int] = [:]
+        for row in rows { for signal in row.signals { current[Self.dismissKey(row.project, signal.kind)] = signal.count } }
+        var map: [String: Int] = [:]
+        for (key, stored) in old {
+            guard let now = current[key] else { continue }
+            let isTrend = key.hasSuffix("|\(Signal.Kind.usageUp.rawValue)") || key.hasSuffix("|\(Signal.Kind.usageDrop.rawValue)")
+            map[key] = isTrend ? stored : min(stored, now)
+        }
+        if map != old { saveDismissed(map) }
+    }
+
+    /// 지금 선 표시 전부를 한 줄로 — 바뀌면 가린 기록을 다시 맞춘다.
+    private static func signalFingerprint(_ rows: [Row]) -> String {
+        rows.map { row in row.project + ":" + row.signals.map { "\($0.kind.rawValue)=\($0.count)" }.joined(separator: ",") }
+            .joined(separator: ";")
+    }
+
+    private func dismissAllButton(_ groups: [SignalGroup]) -> some View {
+        Button {
+            dismiss(groups.flatMap(\.items))
+        } label: {
+            Label("모두 가리기", systemImage: "eye.slash")
+        }
+        .buttonStyle(.borderless)
+        .font(.body)
+        .help("새로 올라오기 전까지 숨깁니다")
+    }
+
+    /// 줄 하나와 그 줄을 가리는 단추.
+    private func dismissibleRow(_ row: Row, _ signal: Signal, tint: Color) -> some View {
+        HStack(spacing: 0) {
+            urgentRow(row, signal, tint: tint)
+            Button {
+                dismiss([(row: row, signal: signal)])
+            } label: {
+                Image(systemName: "eye.slash")
+                    .foregroundStyle(.secondary)
+                    .frame(width: 32, height: 32)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .help("가리기 — 새로 올라오면 다시 보입니다")
+            .accessibilityLabel("\(row.name) \(signal.kind.label) 가리기")
+            .padding(.trailing, 4)
+        }
+    }
+
+    /// 가린 것이 있으면 한 줄 — 몇 개인지와 다시 보기.
+    @ViewBuilder
+    private func dismissedNotice(_ rows: [Row]) -> some View {
+        let map = dismissed
+        let kinds = Set(Signal.Kind.allCases.filter { $0.tier == .critical } + [.purchase, .usageUp, .fiveStar])
+        let count = rows.reduce(0) { sum, row in
+            sum + row.signals.filter { kinds.contains($0.kind) && Self.isDismissed($0, project: row.project, in: map) }.count
+        }
+        if count > 0 {
+            HStack(spacing: 8) {
+                Label("가린 것 \(count)개 — 새로 올라오면 다시 보입니다", systemImage: "eye.slash")
+                    .font(.body)
+                    .foregroundStyle(.secondary)
+                Button("다시 보기") { dismissedRaw = "" }
+                    .buttonStyle(.borderless)
+                    .font(.body)
+            }
+        }
+    }
+
     // MARK: - Urgent
 
     /// 지금 급한 것 — 모든 앱의 크래시 · 릴리즈 빨강 · 사용 급감을 한 줄씩, 임팩트가 큰 앱부터.
@@ -613,10 +728,12 @@ struct AppGridHome: View {
     /// `order` 의 차례로 종류를 세우고, 한 종류 안에서는 `rank` 가 큰 앱부터. 빈 종류는 뺀다.
     private func grouped(_ rows: [Row], order: [Signal.Kind],
                          rank: (Row, Signal) -> Double) -> [SignalGroup] {
-        order.compactMap { kind in
+        let dismissed = dismissed
+        return order.compactMap { kind in
             let items = rows.compactMap { row in
                 row.signals.first { $0.kind == kind }.map { (row: row, signal: $0) }
             }
+            .filter { !Self.isDismissed($0.signal, project: $0.row.project, in: dismissed) }
             .sorted { rank($0.row, $0.signal) > rank($1.row, $1.signal) }
             return items.isEmpty ? nil : SignalGroup(kind: kind, items: items)
         }
@@ -658,6 +775,7 @@ struct AppGridHome: View {
                             .buttonStyle(.borderless)
                             .font(.body)
                     }
+                    dismissAllButton(groups)
                 }
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 360), spacing: 10, alignment: .top)],
                           alignment: .leading, spacing: 10) {
@@ -667,7 +785,7 @@ struct AppGridHome: View {
                             groupHeader(group, tint: .red)
                             ForEach(Array(shown.enumerated()), id: \.element.row.project) { index, item in
                                 if index > 0 { Divider().padding(.leading, 50) }
-                                urgentRow(item.row, item.signal)
+                                dismissibleRow(item.row, item.signal, tint: .red)
                             }
                         }
                         .padding(.bottom, 4)
@@ -693,9 +811,13 @@ struct AppGridHome: View {
         let total = groups.reduce(0) { $0 + $1.items.count }
         if total > 0 {
             VStack(alignment: .leading, spacing: 8) {
-                Label("좋은 소식 \(total)", systemImage: "sparkles")
-                    .font(.body.weight(.semibold))
-                    .foregroundStyle(.green)
+                HStack {
+                    Label("좋은 소식 \(total)", systemImage: "sparkles")
+                        .font(.body.weight(.semibold))
+                        .foregroundStyle(.green)
+                    Spacer()
+                    dismissAllButton(groups)
+                }
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 360), spacing: 10, alignment: .top)],
                           alignment: .leading, spacing: 10) {
                     ForEach(groups) { group in
@@ -703,7 +825,7 @@ struct AppGridHome: View {
                             groupHeader(group, tint: .green)
                             ForEach(Array(group.items.enumerated()), id: \.element.row.project) { index, item in
                                 if index > 0 { Divider().padding(.leading, 50) }
-                                urgentRow(item.row, item.signal, tint: .green)
+                                dismissibleRow(item.row, item.signal, tint: .green)
                             }
                         }
                         .padding(.bottom, 4)
