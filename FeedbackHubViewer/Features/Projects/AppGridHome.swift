@@ -565,12 +565,10 @@ struct AppGridHome: View {
                 }
                 Text(kinds.isEmpty ? "이번 주는 아직" : kinds.joined(separator: " · "))
                     .foregroundStyle(growing.isEmpty ? AnyShapeStyle(.secondary) : AnyShapeStyle(.green))
-                    .lineLimit(2)
             }
             figure("급한 앱", value: critical.isEmpty ? "없음" : "\(critical.count)개") {
                 Text(critical.isEmpty ? "크래시 · 릴리즈 빨강 · 사용 급감 없음" : criticalKinds.joined(separator: " · "))
                     .foregroundStyle(critical.isEmpty ? AnyShapeStyle(.secondary) : AnyShapeStyle(.red))
-                    .lineLimit(2)
             }
         }
     }
@@ -1004,12 +1002,11 @@ struct AppGridHome: View {
                     AppIcon(url: icons.url(for: voice.row.project, keywords: keywords), size: 24)
                     Text(voice.row.name)
                         .font(.body.weight(.semibold))
-                        .lineLimit(1)
                     Spacer(minLength: 4)
                     Text(voice.date, format: .relative(presentation: .named))
                         .font(.callout)
                         .foregroundStyle(.secondary)
-                        .lineLimit(1)
+                        .fixedSize()
                 }
                 HStack(spacing: 6) {
                     if let rating = voice.rating, (1...5).contains(rating) {
@@ -1019,7 +1016,6 @@ struct AppGridHome: View {
                     }
                     Text(voice.label)
                         .foregroundStyle(.secondary)
-                        .lineLimit(1)
                 }
                 .font(.callout)
                 if let question = voice.question {
@@ -1027,7 +1023,6 @@ struct AppGridHome: View {
                 }
                 Text(voice.text)
                     .font(.body)
-                    .lineLimit(3)
                     .multilineTextAlignment(.leading)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
@@ -1050,26 +1045,16 @@ struct AppGridHome: View {
             HStack(alignment: .top, spacing: 10) {
                 AppIcon(url: icons.url(for: row.project, keywords: keywords), size: 30)
                 VStack(alignment: .leading, spacing: 2) {
-                    HStack(spacing: 8) {
-                        Text(row.name)
-                            .font(.body.weight(.semibold))
-                            .lineLimit(1)
-                        Label(Self.chipText(signal, named: true), systemImage: kind.systemImage)
-                            .font(.body.weight(.semibold))
-                            .foregroundStyle(tint)
-                            .lineLimit(1)
-                        if row.reach > 0 {
-                            Text("쓰는 사람 \(AppFormat.count(row.reach))")
-                                .font(.body.monospacedDigit())
-                                .foregroundStyle(.secondary)
-                                .lineLimit(1)
-                        }
-                    }
+                    // 한 글로 이어 써서, 좁으면 잘리지 않고 다음 줄로 넘어간다.
+                    let reach = row.reach > 0
+                        ? Text("   쓰는 사람 \(AppFormat.count(row.reach))").font(.body.monospacedDigit()).foregroundStyle(.secondary)
+                        : Text("")
+                    Text("\(Text(row.name))   \(Text("\(Image(systemName: kind.systemImage)) \(Self.chipText(signal, named: true))").foregroundStyle(tint))\(reach)")
+                        .font(.body.weight(.semibold))
                     if !lines.isEmpty {
                         Text(lines.joined(separator: "  ·  "))
                             .font(.body)
                             .foregroundStyle(.secondary)
-                            .lineLimit(2)
                             .multilineTextAlignment(.leading)
                     }
                 }
@@ -1185,7 +1170,6 @@ struct AppGridHome: View {
                 AppIcon(url: icons.url(for: row.project, keywords: keywords), size: 44)
                 Text(row.name)
                     .font(.title3.weight(.semibold))
-                    .lineLimit(1)
                 Spacer(minLength: 4)
             }
 
@@ -1301,7 +1285,6 @@ struct AppGridHome: View {
                 Text(metric.title)
                     .font(.body)
                     .foregroundStyle(.secondary)
-                    .lineLimit(1)
                 HStack(alignment: .firstTextBaseline, spacing: 6) {
                     Text(AppFormat.count(metric.current))
                         .font(.title3.weight(.semibold).monospacedDigit())
@@ -1309,7 +1292,7 @@ struct AppGridHome: View {
                     HomeDelta(current: metric.current, previous: metric.previous)
                         .font(.body.monospacedDigit())
                 }
-                .lineLimit(1)
+                .fixedSize()
                 Sparkline(points: metric.points, tint: tint)
                     .frame(height: 44)
                     .padding(.top, 4)
