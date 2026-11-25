@@ -602,53 +602,114 @@ struct AppGridHome: View {
     /// 지금 급한 것 — 모든 앱의 크래시 · 릴리즈 빨강 · 사용 급감을 한 줄씩, 임팩트가 큰 앱부터.
     /// 카드를 훑어 빨간 것을 찾지 않아도 되게, 무슨 일인지(어느 버전 · 최근 사고 · 판정 까닭)를
     /// 그 줄에 적는다. 누르면 그 앱의 그 칸이 바로 열린다. 급한 것이 없으면 자리를 차지하지 않는다.
+    /// 종류 하나에 모인 줄들 — 급한 것 · 좋은 소식을 종류마다 따로 묶어 보인다.
+    /// 크래시 옆에 사용 급감이, 결제 옆에 사용 늘어남이 섞여 있으면 무슨 일인지 줄마다 다시 읽어야 했다.
+    private struct SignalGroup: Identifiable {
+        let kind: Signal.Kind
+        let items: [(row: Row, signal: Signal)]
+        var id: Signal.Kind { kind }
+    }
+
+    /// `order` 의 차례로 종류를 세우고, 한 종류 안에서는 `rank` 가 큰 앱부터. 빈 종류는 뺀다.
+    private func grouped(_ rows: [Row], order: [Signal.Kind],
+                         rank: (Row, Signal) -> Double) -> [SignalGroup] {
+        order.compactMap { kind in
+            let items = rows.compactMap { row in
+                row.signals.first { $0.kind == kind }.map { (row: row, signal: $0) }
+            }
+            .sorted { rank($0.row, $0.signal) > rank($1.row, $1.signal) }
+            return items.isEmpty ? nil : SignalGroup(kind: kind, items: items)
+        }
+    }
+
+    /// 종류 이름 한 줄 — "크래시 · 3개 앱".
+    private func groupHeader(_ group: SignalGroup, tint: Color) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: group.kind.systemImage)
+            Text(group.kind.label)
+            Text("· \(group.items.count)개 앱")
+                .foregroundStyle(.secondary)
+        }
+        .font(.body.weight(.semibold))
+        .foregroundStyle(tint)
+        .padding(.horizontal, 10)
+        .padding(.top, 10)
+        .padding(.bottom, 2)
+        .accessibilityAddTraits(.isHeader)
+    }
+
     @ViewBuilder
     private func urgent(_ rows: [Row]) -> some View {
-        let items = rows.sorted { $0.impact > $1.impact }.flatMap { row in
-            row.signals.filter { $0.kind.tier == .critical }.map { (row: row, signal: $0) }
-        }
-        if !items.isEmpty {
-            let limit = 5
-            let shown = showsAllUrgent ? items : Array(items.prefix(limit))
+        let groups = grouped(rows, order: Signal.Kind.allCases.filter { $0.tier == .critical },
+                             rank: { row, _ in row.impact })
+        let total = groups.reduce(0) { $0 + $1.items.count }
+        if total > 0 {
+            // 접어 둔 동안은 종류마다 세 줄까지 — 한 종류가 다른 종류를 밀어내지 않게.
+            let perKind = 3
+            let hidden = groups.reduce(0) { $0 + max(0, $1.items.count - perKind) }
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
-                    Label("지금 급한 것 \(items.count)", systemImage: "exclamationmark.triangle.fill")
+                    Label("지금 급한 것 \(total)", systemImage: "exclamationmark.triangle.fill")
                         .font(.body.weight(.semibold))
                         .foregroundStyle(.red)
                     Spacer()
-                    if items.count > limit {
-                        Button(showsAllUrgent ? "접기" : "\(items.count - limit)건 더 보기") { showsAllUrgent.toggle() }
+                    if hidden > 0 {
+                        Button(showsAllUrgent ? "접기" : "\(hidden)건 더 보기") { showsAllUrgent.toggle() }
                             .buttonStyle(.borderless)
                             .font(.body)
                     }
                 }
-                VStack(spacing: 0) {
-                    ForEach(Array(shown.enumerated()), id: \.offset) { index, item in
-                        if index > 0 { Divider().padding(.leading, 50) }
-                        urgentRow(item.row, item.signal)
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 360), spacing: 10, alignment: .top)],
+                          alignment: .leading, spacing: 10) {
+                    ForEach(groups) { group in
+                        let shown = showsAllUrgent ? group.items : Array(group.items.prefix(perKind))
+                        VStack(alignment: .leading, spacing: 0) {
+                            groupHeader(group, tint: .red)
+                            ForEach(Array(shown.enumerated()), id: \.offset) { index, item in
+                                if index > 0 { Divider().padding(.leading, 50) }
+                                urgentRow(item.row, item.signal)
+                            }
+                        }
+                        .padding(.bottom, 4)
+                        .frame(maxWidth: .infinity, alignment: .topLeading)
+                        .background(RoundedRectangle(cornerRadius: 12).fill(.red.opacity(0.07)))
+                        .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(.red.opacity(0.35), lineWidth: 1))
                     }
                 }
-                .background(RoundedRectangle(cornerRadius: 12).fill(.red.opacity(0.07)))
-                .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(.red.opacity(0.35), lineWidth: 1))
             }
         }
     }
 
-    /// 좋은 소식 — 사용이 늘었거나, 이번 주 구매가 있었거나, 별 5개가 온 앱. 급한 것 바로 아래에
+    /// 좋은 소식 — 이번 주 구매 · 사용 늘어남 · 별 5개를 종류마다 따로. 급한 것 바로 아래에
     /// 초록으로 — 줄어든 숫자만 보이는 날에도 무엇이 자라는지 같은 자리에서 보인다.
+    /// 돈이 들어온 것을 맨 앞에 둔다.
     @ViewBuilder
     private func growing(_ rows: [Row]) -> some View {
-        let items = rows.sorted { $0.reach > $1.reach }.flatMap { row in row.good.map { (row: row, signal: $0) } }
-        if !items.isEmpty {
+        let groups = grouped(rows, order: [.purchase, .usageUp, .fiveStar],
+                             rank: { row, signal in
+                                 // 구매 · 별은 건수, 사용 늘어남은 쓰는 사람 수가 큰 앱부터.
+                                 signal.kind == .usageUp ? Double(row.reach) : Double(signal.count) * 1_000_000 + Double(row.reach)
+                             })
+        let total = groups.reduce(0) { $0 + $1.items.count }
+        if total > 0 {
             VStack(alignment: .leading, spacing: 8) {
-                Label("좋은 소식 \(items.count)", systemImage: "sparkles")
+                Label("좋은 소식 \(total)", systemImage: "sparkles")
                     .font(.body.weight(.semibold))
                     .foregroundStyle(.green)
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 300), spacing: 10)], spacing: 10) {
-                    ForEach(Array(items.enumerated()), id: \.offset) { _, item in
-                        urgentRow(item.row, item.signal, tint: .green)
-                            .background(RoundedRectangle(cornerRadius: 12).fill(.green.opacity(0.08)))
-                            .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(.green.opacity(0.3), lineWidth: 1))
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 360), spacing: 10, alignment: .top)],
+                          alignment: .leading, spacing: 10) {
+                    ForEach(groups) { group in
+                        VStack(alignment: .leading, spacing: 0) {
+                            groupHeader(group, tint: .green)
+                            ForEach(Array(group.items.enumerated()), id: \.offset) { index, item in
+                                if index > 0 { Divider().padding(.leading, 50) }
+                                urgentRow(item.row, item.signal, tint: .green)
+                            }
+                        }
+                        .padding(.bottom, 4)
+                        .frame(maxWidth: .infinity, alignment: .topLeading)
+                        .background(RoundedRectangle(cornerRadius: 12).fill(.green.opacity(0.08)))
+                        .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(.green.opacity(0.3), lineWidth: 1))
                     }
                 }
             }
