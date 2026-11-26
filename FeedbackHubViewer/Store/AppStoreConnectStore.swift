@@ -526,6 +526,17 @@ final class AppStoreConnectStore: ObservableObject {
         }
     }
 
+    /// 모든 앱의 최근 결제 · 환불, 최근 것부터 — 종(새 소식)과 할 일의 "결제" 칸이 쓴다.
+    var recentReceipts: [PurchaseReceipt] {
+        receipts.values.flatMap { $0 }.sorted { $0.occurredAt > $1.occurredAt }
+    }
+
+    /// 마지막으로 할 일을 연 뒤에 들어온 결제 수. 한 번도 안 열었으면 0(처음부터 쌓인 것을 새것으로 치지 않는다).
+    func newReceiptCount(seenAt: Double) -> Int {
+        guard seenAt > 0 else { return 0 }
+        return recentReceipts.filter { $0.occurredAt.timeIntervalSince1970 > seenAt }.count
+    }
+
     /// 최근 `days` 일(어제까지)의 돈을 낸 인앱 결제 줄 — 날짜("yyyy-MM-dd")와 함께, 최근 날부터.
     /// 디스크에 받아 둔 리포트만 읽는다(새로 받지 않는다).
     func recentPurchaseLines(appleIDs: Set<String>, days: Int = 7) -> [(day: String, line: SalesLine)] {

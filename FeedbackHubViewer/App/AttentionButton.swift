@@ -16,9 +16,11 @@ import SwiftUI
 struct AttentionButton: View {
     @EnvironmentObject private var store: FeedbackStore
     @EnvironmentObject private var connect: AppStoreConnectStore
+    /// 할 일을 마지막으로 연 때 — 그 뒤에 들어온 결제를 새 소식으로 센다(`InboxView` 가 고친다).
+    @AppStorage(InboxView.purchasesSeenKey) private var purchasesSeenAt: Double = 0
 
     var body: some View {
-        let total = store.attentionCount
+        let total = store.attentionCount + connect.newReceiptCount(seenAt: purchasesSeenAt)
         // 누르면 할 일로 — 볼 것을 모아 둔 곳은 거기 하나다(손볼 것 + 맨 위 "알아 둘 것").
         Button {
             if store.usesStackNavigation {
@@ -43,6 +45,7 @@ struct AttentionButton: View {
                     }
                 }
         }
+        .task { await connect.loadReceipts() }
         .help(total > 0 ? "새로 온 것 \(total)건" : "새로 온 것이 없습니다")
         .accessibilityLabel(total > 0 ? "새 소식 \(total)건" : "새 소식 없음")
     }
