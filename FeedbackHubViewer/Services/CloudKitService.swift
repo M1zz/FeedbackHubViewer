@@ -59,6 +59,9 @@ final class CloudKitService {
 
     /// The CloudKit container that backs the feedback data.
     nonisolated static let containerIdentifier = "iCloud.com.Ysoup.FeedbackHub"
+    /// 결제 알림만 사는 컨테이너. 허브만 쓴다 — FeedbackHub 컨테이너는 LeeoKit 앱들도 써서,
+    /// 거기 걸린 푸시는 그 앱들에도 떴다(결제 한 건이 여섯 앱 알림으로, 2026-11-26).
+    nonisolated static let purchasesContainerIdentifier = "iCloud.com.Ysoup.HubPurchases"
 
     /// The environment this build reads. See `CloudKitEnvironment`.
     static var environment: CloudKitEnvironment { .current }

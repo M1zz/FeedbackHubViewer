@@ -13,6 +13,7 @@
 	<key>com.apple.developer.icloud-container-identifiers</key>
 	<array>
 		<string>iCloud.com.Ysoup.FeedbackHub</string>
+		<string>iCloud.com.Ysoup.HubPurchases</string>
 	</array>
 	<key>com.apple.developer.icloud-services</key>
 	<array>

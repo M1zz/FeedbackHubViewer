@@ -18,6 +18,11 @@ enum PushSubscriptions {
         CKContainer(identifier: CloudKitService.containerIdentifier).publicCloudDatabase
     }
 
+    /// 결제는 따로 사는 컨테이너에 — 허브만 쓰니 푸시가 허브에만 온다.
+    private static var purchasesDatabase: CKDatabase {
+        CKContainer(identifier: CloudKitService.purchasesContainerIdentifier).publicCloudDatabase
+    }
+
     private static func subscriptionID(_ kind: AttentionKind) -> String { "hub-new-\(kind.rawValue)" }
 
     /// 푸시로 받을 수 있는 종류. 리뷰는 App Store Connect 에 있어서 CloudKit 이 모른다.
@@ -70,8 +75,10 @@ enum PushSubscriptions {
 
     /// 걸었으면 nil, 못 걸었으면 그 까닭. 끄면 늘 nil.
     static func syncPurchases(_ enabled: Bool) async -> String? {
+        // 예전에 FeedbackHub 컨테이너에 건 구독은 치운다(레코드가 더는 거기 오지 않는다).
+        _ = try? await database.deleteSubscription(withID: purchaseSubscriptionID)
         guard enabled else {
-            _ = try? await database.deleteSubscription(withID: purchaseSubscriptionID)
+            _ = try? await purchasesDatabase.deleteSubscription(withID: purchaseSubscriptionID)
             return nil
         }
         // 레코드의 제목 · 내용을 그대로 띄우려면 지역화 키를 거친다(키 "%1$@" 는 Localizable.strings).
@@ -95,7 +102,7 @@ enum PushSubscriptions {
                                                    options: [.firesOnRecordCreation])
             subscription.notificationInfo = info
             do {
-                _ = try await database.save(subscription)
+                _ = try await purchasesDatabase.save(subscription)
                 // 자세한 쪽이 거절됐으면 왜였는지 남긴다(`defaults read … purchase-push-detail`).
                 UserDefaults.standard.set(reasons.isEmpty ? "detailed" : "plain: " + reasons.joined(separator: " / "),
                                           forKey: "purchase-push-detail")
