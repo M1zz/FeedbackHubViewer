@@ -68,7 +68,8 @@ enum PushSubscriptions {
     static let purchaseRecordType = "Purchase"
     static let purchaseSubscriptionID = "hub-new-purchase"
 
-    static func syncPurchases(_ enabled: Bool) async {
+    /// 걸었으면 nil, 못 걸었으면 그 까닭. 끄면 늘 nil.
+    static func syncPurchases(_ enabled: Bool) async -> String? {
         do {
             if enabled {
                 let subscription = CKQuerySubscription(recordType: purchaseRecordType,
@@ -87,10 +88,12 @@ enum PushSubscriptions {
             } else {
                 _ = try await database.deleteSubscription(withID: purchaseSubscriptionID)
             }
-        } catch let error as CKError where error.code == .unknownItem {
-            // 지울 구독이 처음부터 없었다.
+            return nil
+        } catch let error as CKError where error.code == .unknownItem && !enabled {
+            return nil // 지울 구독이 처음부터 없었다.
         } catch {
             print("❌ [PushSubscriptions.syncPurchases] \(error)")
+            return error.localizedDescription
         }
     }
 }

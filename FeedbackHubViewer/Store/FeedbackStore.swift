@@ -517,6 +517,8 @@ final class FeedbackStore: ObservableObject {
     /// CloudKit 푸시가 실제로 걸린 종류(`PushSubscriptions`). 이것들은 앱이 꺼져 있어도 Apple 이
     /// 알려 주므로, 새로고침에서 찾았을 때 로컬 알림을 또 띄우지 않는다.
     @Published private(set) var pushKinds: Set<AttentionKind> = []
+    /// 결제 푸시 구독을 못 걸었을 때의 까닭. nil 이면 걸렸다(또는 알림이 꺼져 있다).
+    @Published private(set) var purchasePushProblem: String?
     private var pushSyncTask: Task<Void, Never>?
     /// False when the system denied notifications — the toggle stays on but the
     /// UI can explain why nothing shows up.
@@ -1422,8 +1424,9 @@ final class FeedbackStore: ObservableObject {
         pushSyncTask?.cancel()
         pushSyncTask = Task { [weak self] in
             let active = await PushSubscriptions.sync(wanted, feedbackRecordType: recordType)
-            await PushSubscriptions.syncPurchases(purchases)
+            let purchaseProblem = await PushSubscriptions.syncPurchases(purchases)
             guard !Task.isCancelled else { return }
+            self?.purchasePushProblem = purchaseProblem
             self?.pushKinds = active
         }
     }

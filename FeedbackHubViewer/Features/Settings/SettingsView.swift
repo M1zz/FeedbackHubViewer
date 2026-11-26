@@ -194,9 +194,10 @@ private struct PurchaseAlertRow: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             Label("결제", systemImage: "creditcard")
-            Text("구매 · 구독 · 갱신 · 환불을 푸시로 받습니다. 앱이 꺼져 있어도 옵니다.")
+            Text(store.purchasePushProblem.map { "푸시를 걸지 못했습니다: \($0)" }
+                 ?? "구매 · 구독 · 갱신 · 환불을 푸시로 받습니다. 앱이 꺼져 있어도 옵니다.")
                 .font(.body)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(store.purchasePushProblem == nil ? AnyShapeStyle(.secondary) : AnyShapeStyle(.orange))
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.leading, 28)
             HStack(spacing: 8) {
