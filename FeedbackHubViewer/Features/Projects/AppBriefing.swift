@@ -341,16 +341,6 @@ enum SignalEvidence {
             return ["\(trend.title) \(AppFormat.count(trend.previous)) → \(AppFormat.count(trend.current))"]
         case .purchase:
             return ["최근 7일 구매 완료 \(AppFormat.count(signal.count))건"]
-        case .fiveStar:
-            let since = Date().addingTimeInterval(-14 * 86_400)
-            return (purchases.reviewFeeds[project]?.reviews ?? [])
-                .filter { $0.rating == 5 && $0.createdDate >= since }
-                .sorted { $0.createdDate > $1.createdDate }
-                .prefix(2).map { review in
-                    let text = [review.title, review.body].compactMap { $0 }
-                        .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.first { !$0.isEmpty } ?? ""
-                    return "\(review.territory) · \(text)"
-                }
         case .news, .changed, .keyword:
             return []
         }

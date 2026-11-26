@@ -115,7 +115,6 @@ private struct AttentionSettings: View {
                     .padding(.leading, 20)
                 }
                 PurchaseAlertRow()
-                    .disabled(!store.notificationsEnabled)
                     .padding(.leading, 20)
                 VStack(alignment: .leading, spacing: 2) {
                     Toggle(isOn: $news.alertsEnabled) {

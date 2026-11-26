@@ -83,7 +83,7 @@ struct AppGridHome: View {
             case crash, release, usageDrop, hang, feedback, newReview, storeIssue, unansweredReview
             case news, changed, keyword, oldCrash
             /// 좋은 소식 — 손볼 일이 아니라 자라는 것. 차례(임팩트)에는 무게가 없다.
-            case usageUp, purchase, fiveStar
+            case usageUp, purchase
             var id: Int { rawValue }
 
             /// 급한 것 · 사람이 기다리는 것 · 알아만 둘 것 · 좋은 소식.
@@ -94,7 +94,7 @@ struct AppGridHome: View {
                 case .crash, .release, .usageDrop: return .critical
                 case .hang, .feedback, .newReview, .storeIssue, .unansweredReview: return .voice
                 case .news, .changed, .keyword, .oldCrash: return .chore
-                case .usageUp, .purchase, .fiveStar: return .good
+                case .usageUp, .purchase: return .good
                 }
             }
 
@@ -104,17 +104,16 @@ struct AppGridHome: View {
                 case .release: return "릴리즈 빨강"
                 case .usageDrop: return "사용 급감"
                 case .hang: return "멈춤 · 디스크"
-                case .feedback: return "안 읽은 피드백"
-                case .newReview: return "새 리뷰"
+                case .feedback: return "볼 피드백"
+                case .newReview: return "볼 리뷰"
                 case .storeIssue: return "스토어 문제"
-                case .unansweredReview: return "답 안 한 리뷰"
+                case .unansweredReview: return "답할 리뷰"
                 case .news: return "새 소식"
                 case .changed: return "본 뒤 바뀐 것"
                 case .keyword: return "키워드 다시 짤 때"
                 case .oldCrash: return "옛 버전 크래시"
                 case .usageUp: return "사용 늘어남"
                 case .purchase: return "이번 주 구매"
-                case .fiveStar: return "별 5개 리뷰"
                 }
             }
 
@@ -134,7 +133,6 @@ struct AppGridHome: View {
                 case .oldCrash: return "clock.arrow.circlepath"
                 case .usageUp: return "chart.line.uptrend.xyaxis"
                 case .purchase: return "cart.fill"
-                case .fiveStar: return "star.fill"
                 }
             }
 
@@ -160,7 +158,6 @@ struct AppGridHome: View {
                 case .changed: return .stats
                 case .keyword: return .keywords
                 case .usageUp, .purchase: return .stats
-                case .fiveStar: return .reviews
                 }
             }
 
@@ -177,7 +174,7 @@ struct AppGridHome: View {
                 case .storeIssue: return (10, 30)
                 case .unansweredReview: return (4, 12)
                 case .news, .changed, .keyword, .oldCrash: return (0.5, 1)
-                case .usageUp, .purchase, .fiveStar: return (0, 0)
+                case .usageUp, .purchase: return (0, 0)
                 }
             }
         }
@@ -401,18 +398,16 @@ struct AppGridHome: View {
             latest[.purchase] = UsageRollups.recentDayKeys(7).last { day in
                 (days[day.key]?.byEvent ?? [:]).contains { $0.key.split(separator: ":").first == "purchase_completed" && $0.value > 0 }
             }?.date
-            let twoWeeksAgo = Date().addingTimeInterval(-14 * 86_400)
-            let fiveStars = (purchases.reviewFeeds[project]?.reviews ?? [])
-                .filter { $0.rating == 5 && $0.createdDate >= twoWeeksAgo }.count
-            if fiveStars > 0 { counts[.fiveStar] = fiveStars }
-            latest[.fiveStar] = (purchases.reviewFeeds[project]?.reviews ?? [])
-                .filter { $0.rating == 5 && $0.createdDate >= twoWeeksAgo }.map(\.createdDate).max()
 
             // 나머지는 칸의 뱃지 그대로 — 읽으면 지워진다.
             if let badge = metrics.itemBadge(.feedback, project: project) { counts[.feedback] = badge.count }
-            if let badge = metrics.itemBadge(.reviews, project: project) {
-                counts[badge.name == "새 리뷰" ? .newReview : .unansweredReview] = badge.count
+            // 리뷰는 둘 다 따로 — 새로 온 것(볼 리뷰)과 답해야 할 것(답할 리뷰). 새 리뷰가 있다고
+            // 답할 리뷰가 가려지면 답장할 일이 카드에서 사라진다.
+            if let badge = metrics.itemBadge(.reviews, project: project), badge.name == "새 리뷰" {
+                counts[.newReview] = badge.count
             }
+            let unanswered = purchases.unansweredReviews(for: project)
+            if unanswered > 0 { counts[.unansweredReview] = unanswered }
             if metrics.isAlarming(.storeAnalytics, project: project) {
                 counts[.storeIssue] = metrics.count(.storeAnalytics, project: project)
             }
@@ -744,7 +739,7 @@ struct AppGridHome: View {
     @ViewBuilder
     private func dismissedNotice(_ rows: [Row]) -> some View {
         let map = dismissed
-        let kinds = Set(Signal.Kind.allCases.filter { $0.tier == .critical } + [.purchase, .usageUp, .fiveStar])
+        let kinds = Set(Signal.Kind.allCases.filter { $0.tier == .critical } + [.purchase, .usageUp])
         let count = rows.reduce(0) { sum, row in
             sum + row.signals.filter { kinds.contains($0.kind) && Self.isDismissed($0, project: row.project, in: map) }.count
         }
@@ -875,7 +870,7 @@ struct AppGridHome: View {
     /// 돈이 들어온 것을 맨 앞에 둔다.
     @ViewBuilder
     private func growing(_ rows: [Row]) -> some View {
-        let groups = grouped(rows, order: [.purchase, .usageUp, .fiveStar],
+        let groups = grouped(rows, order: [.purchase, .usageUp],
                              rank: { row, signal in
                                  // 구매 · 별은 건수, 사용 늘어남은 쓰는 사람 수가 큰 앱부터.
                                  signal.kind == .usageUp ? Double(row.reach) : Double(signal.count) * 1_000_000 + Double(row.reach)

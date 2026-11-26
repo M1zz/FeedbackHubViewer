@@ -750,6 +750,7 @@ final class FeedbackStore: ObservableObject {
             let restored = await restore.value
             // 피드백 레코드 타입은 캐시에서 알게 된다 - 그다음에 푸시 구독을 맞춘다.
             if self.notificationsEnabled { self.syncPushSubscriptions() }
+            self.syncPurchasePush()
             // 그 다음이 iCloud의 마지막 요약본이다. 이 기기의 캐시가 먼저
             // 그려지고 나서 오는 것이라 첫 프레임을 붙잡지 않고, 다른 기기가
             // 방금 새로고침해 뒀다면 이 기기는 읽을 것이 없다 — 아이폰이
@@ -1420,14 +1421,24 @@ final class FeedbackStore: ObservableObject {
     func syncPushSubscriptions() {
         let wanted = notificationsEnabled ? alertKinds : []
         let recordType = resolvedRecordType ?? "Feedback"
-        let purchases = notificationsEnabled
         pushSyncTask?.cancel()
         pushSyncTask = Task { [weak self] in
             let active = await PushSubscriptions.sync(wanted, feedbackRecordType: recordType)
-            let purchaseProblem = await PushSubscriptions.syncPurchases(purchases)
             guard !Task.isCancelled else { return }
-            self?.purchasePushProblem = purchaseProblem
             self?.pushKinds = active
+        }
+    }
+
+    /// 결제 알림은 알림 스위치와 따로 늘 건다 — 결제는 놓치고 싶은 사람이 없고, 스위치가 처음에
+    /// 꺼져 있어서 결제 알림도 함께 꺼져 있던 것을 아무도 몰랐다. 허락을 아직 안 물었으면 여기서 묻는다.
+    func syncPurchasePush() {
+        Task { [weak self] in
+            let authorized = await NotificationService.requestAuthorization()
+            let problem = await PushSubscriptions.syncPurchases(true)
+            let shown = problem ?? (authorized ? nil : "이 기기에서 알림이 허용되지 않았습니다(시스템 설정 ▸ 알림)")
+            self?.purchasePushProblem = shown
+            // 화면을 못 볼 때 상태를 꺼내 볼 수 있게(`defaults read … purchase-push-status`).
+            self?.defaults.set(shown ?? "ok", forKey: "purchase-push-status")
         }
     }
 
