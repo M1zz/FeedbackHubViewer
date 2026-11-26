@@ -72,6 +72,8 @@ struct QualityBoard: View {
             }
         }
 
+        input.deviceTest = keywords.deviceTests[project.lowercased()]
+
         if let app = keywords.storeApp(for: project) {
             input.rating = app.averageRating
             input.ratingCount = app.ratingCount
@@ -94,7 +96,7 @@ struct QualityBoard: View {
         case .stability?: return .crashes
         case .rating?: return .reviews
         case .support?: return .feedback
-        case .launch?, .hang?, nil: return .release
+        case .launch?, .hang?, .deviceTest?, nil: return .release
         }
     }
 
@@ -225,6 +227,7 @@ struct QualityBoard: View {
             ForEach(AppQuality.Dimension.allCases) { dimension in
                 Text("\(dimension.rawValue): \(dimension.standard)")
             }
+            Text("기기 테스트는 연결한 아이폰에서 scripts/device-qa.sh 가 돌린 결과입니다(맥에서 workspace/Auto 폴더를 골라 둔 경우).")
             Text("안정성 · 성능은 판정할 만큼 설치가 모인 가장 새 버전, 지원 응답은 최근 90일 중 받은 지 3일 지난 피드백입니다.")
         }
         .font(.body)

@@ -19,6 +19,8 @@
 //             좋음 ≥ 4.5 · 나쁨 < 4.0  업계 관례(4점 아래는 받기 전환이 크게 떨어진다)
 //    지원 응답 (서비스 품질)          3일 넘은 피드백 중 처리(반영 · 답장)한 몫
 //             좋음 ≥ 90% · 나쁨 < 50%  공인 기준 없음 — 허브 기준
+//    기기 테스트 (25010 기능 적합성)  연결한 아이폰에서 단위 · UI 테스트와 설치하고 켜 보기
+//             좋음 켜지고 실패 0 · 나쁨 못 켜짐이나 실패 1개 이상 · 주의 빌드 못 함  허브 기준
 //
 //  모르는 것은 nil 이다. 표본이 모자라면 "데이터 없음" 이지 0 이나 100% 가 아니다.
 //  종합은 가장 나쁜 항목을 따른다 — 평균을 내면 크래시 나는 앱이 별점으로 가려진다.
@@ -70,6 +72,8 @@ struct AppQuality: Identifiable {
         var supportTotal = 0
         /// 허브가 본 7일 활성 — 같은 등급이면 쓰는 사람이 많은 앱부터.
         var active7 = 0
+        /// 연결한 아이폰에서 돌린 테스트(`scripts/device-qa.sh`). 안 돌렸으면 nil.
+        var deviceTest: DeviceTestResult?
     }
 
     // MARK: - 판정
@@ -95,6 +99,7 @@ struct AppQuality: Identifiable {
         case hang = "멈춤"
         case rating = "만족도"
         case support = "지원 응답"
+        case deviceTest = "기기 테스트"
         var id: String { rawValue }
 
         /// 기준 한 줄 — 화면의 각 줄에 작게.
@@ -105,6 +110,7 @@ struct AppQuality: Identifiable {
             case .hang: return "시간당 좋음 1초 아래 · 나쁨 5초 이상 (허브 기준, Apple 은 문턱 미공개)"
             case .rating: return "좋음 4.5 이상 · 나쁨 4.0 아래 (업계 관례)"
             case .support: return "좋음 90% 이상 · 나쁨 50% 아래 (허브 기준)"
+            case .deviceTest: return "좋음 켜지고 실패 0 · 나쁨 못 켜짐이나 테스트 실패 · 주의 아이폰용 빌드 못 함 (허브 기준)"
             }
         }
 
@@ -115,6 +121,7 @@ struct AppQuality: Identifiable {
             case .hang: return "hourglass"
             case .rating: return "star"
             case .support: return "bubble.left.and.bubble.right"
+            case .deviceTest: return "iphone.gen3"
             }
         }
     }
@@ -184,7 +191,30 @@ struct AppQuality: Identifiable {
                          grade: higherIsBetter(share, good: Standard.supportGood, bad: Standard.supportBad),
                          value: "\(Int((share * 100).rounded()))%",
                          basis: "\(input.supportTotal)건 중 \(input.supportHandled)건")
+        case .deviceTest:
+            guard let test = input.deviceTest else { return unknown(dimension) }
+            return deviceTestScore(test)
         }
+    }
+
+    /// 못 켜짐 · 테스트 실패가 나쁨이다. 빌드를 못 하면(서명 등) 앱이 아니라 준비가 문제라 주의.
+    private static func deviceTestScore(_ test: DeviceTestResult) -> Score {
+        let date = test.testedAt.map { $0.formatted(.dateTime.month().day()) }
+        let lead = Array(test.failures.prefix(1))
+        func basis(_ parts: [String]) -> String { (parts + [date].compactMap { $0 }).joined(separator: " · ") }
+
+        guard test.built else {
+            return Score(dimension: .deviceTest, grade: .warning, value: "빌드 못 함", basis: basis(lead))
+        }
+        if test.launched == false {
+            return Score(dimension: .deviceTest, grade: .bad, value: "켜지지 않음", basis: basis(lead))
+        }
+        if test.failedCount > 0 {
+            return Score(dimension: .deviceTest, grade: .bad, value: "실패 \(test.failedCount)개", basis: basis(lead))
+        }
+        let counts = [test.unit.map { "단위 \($0.passed)" }, test.ui.map { "UI \($0.passed)" }].compactMap { $0 }
+        let value = test.passedCount > 0 ? "통과 \(test.passedCount)개" : "켜짐 확인"
+        return Score(dimension: .deviceTest, grade: .good, value: value, basis: basis(counts.isEmpty ? ["테스트 없음"] : counts))
     }
 
     private static func higherIsBetter(_ value: Double, good: Double, bad: Double) -> Grade {

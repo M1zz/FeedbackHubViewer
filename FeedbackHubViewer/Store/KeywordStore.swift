@@ -65,6 +65,8 @@ final class KeywordStore: ObservableObject {
     /// 앱 레포 `APPSTORE.md` 의 키워드 줄 — `RepoKeywords.key(project:locale:)` → 말들.
     /// 스토어 칸과 다르면 새 키워드가 출시를 기다리는 중이다(`KeywordStore+Repo.swift`).
     @Published var repoKeywords: [String: [String]] = [:]
+    /// 같은 폴더의 `docs/quality-tests.json` — 번들 id(소문자) → 아이폰에서 돌린 테스트 결과(`DeviceTests.swift`).
+    @Published var deviceTests: [String: DeviceTestResult] = [:]
     /// 레포들이 든 폴더(`workspace/Auto`). 샌드박스라 한 번 골라 받은 허락으로 읽는다. nil 이면 아직 안 골랐다.
     @Published var repoFolder: URL?
     var repoActiveObserver: NSObjectProtocol?

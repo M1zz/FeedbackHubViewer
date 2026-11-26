@@ -128,9 +128,11 @@ extension KeywordStore {
         let projects = Array(Set(fieldLog.keys.compactMap { $0.split(separator: "|").first.map(String.init) }))
         Task.detached(priority: .utility) {
             let found = RepoKeywords.scan(folder, projects: projects)
+            let tests = DeviceTestReport.load(from: folder)
             await MainActor.run { [weak self] in
-                guard let self, self.repoKeywords != found else { return }
-                self.repoKeywords = found
+                guard let self else { return }
+                if self.repoKeywords != found { self.repoKeywords = found }
+                if self.deviceTests != tests { self.deviceTests = tests }
             }
         }
     }
