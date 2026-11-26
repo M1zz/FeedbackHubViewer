@@ -450,6 +450,12 @@ final class FeedbackStore: ObservableObject {
     /// 맥 · 아이패드의 첫 화면 — 사이드바를 걷고 모든 앱을 카드로 편 홈(`AppGridHome`).
     /// 카드 · 링크 · 사이드바 어느 것으로든 어딘가로 들어가면 꺼진다.
     @Published var showsHome = true
+
+    /// 홈으로. 앱 하나로 보던 중이면 그 고름도 푼다 — 모든 앱을 펴 놓고 한 앱이 골라진 채 남지 않게.
+    func goHome() {
+        focusedApp = nil
+        showsHome = true
+    }
     @Published var selectedVersion: String? = nil     // nil == all versions
     @Published var minimumRating: Int = 0             // 0 == any rating
     /// Which triage decisions the list shows (see `FeedbackTriage.swift`).

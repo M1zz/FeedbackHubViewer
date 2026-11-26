@@ -54,7 +54,7 @@ struct FeatureListView: View {
             if !store.usesStackNavigation {
                 Section {
                     Button {
-                        store.showsHome = true
+                        store.goHome()
                     } label: {
                         HomeRow(appCount: store.projectCounts.filter { $0.key != Feedback.unclassifiedProject }.count,
                                 isSelected: store.showsHome)

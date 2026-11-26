@@ -65,7 +65,8 @@ struct SplitRootView: View {
         // 사이드바에서 칸이나 앱을 고르면 홈에서 나간다. 같은 칸을 다시 누른 것은 줄의 단추가
         // 직접 끈다(`FeatureListView`).
         .onChange(of: store.projectSection) { store.showsHome = false }
-        .onChange(of: store.focusedApp) { store.showsHome = false }
+        // 앱을 고를 때만 — 고름을 푸는 것은 홈으로 가는 길이기도 하다(`goHome`).
+        .onChange(of: store.focusedApp) { _, app in if app != nil { store.showsHome = false } }
         // The app screen sits beside the app list here rather than on top of
         // it, so cross-screen links re-scope the column instead of pushing
         // (see `FeedbackStore.open(project:section:)`).
@@ -275,7 +276,7 @@ struct SplitRootView: View {
         // 늘 같은 자리 · 같은 모양의 단추 — 홈에 있으면 뒤로 가기처럼 꺼질 뿐 모양이 바뀌어 툴바가 흔들리지 않는다.
         ToolbarItem(placement: .navigation) {
             Button {
-                store.showsHome = true
+                store.goHome()
             } label: {
                 Label("모든 앱", systemImage: "chevron.backward")
                     .labelStyle(.titleAndIcon)
@@ -285,7 +286,7 @@ struct SplitRootView: View {
             .keyboardShortcut("[", modifiers: .command)
             .background {
                 // 예전 단축키도 그대로 — 단추 하나에 키는 하나라 숨은 단추로 받는다.
-                Button("") { store.showsHome = true }
+                Button("") { store.goHome() }
                     .keyboardShortcut("h", modifiers: [.command, .shift])
                     .hidden()
             }
