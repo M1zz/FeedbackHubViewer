@@ -19,8 +19,7 @@ struct ThisWeekPurchasesCard: View {
     let app: ConnectApp
     let products: [StoreProduct]
 
-    @State private var receipts: [PurchaseReceipt] = []
-    @State private var receiptError: String?
+    private var receipts: [PurchaseReceipt] { purchases.receipts[project, default: []] }
 
     var body: some View {
         Card(title: "이번 주 구매", systemImage: "cart.fill") {
@@ -86,20 +85,13 @@ struct ThisWeekPurchasesCard: View {
                 }
             }
 
-            if let receiptError {
-                Text("바로 들어온 결제를 읽지 못했습니다: \(receiptError)")
+            if let problem = purchases.receiptsProblem {
+                Text("바로 들어온 결제를 읽지 못했습니다: \(problem)")
                     .font(.hubCaption)
                     .foregroundStyle(.orange)
             }
         }
-        .task(id: project) {
-            do {
-                receipts = try await PurchaseFeed.recent(bundleID: project)
-                receiptError = nil
-            } catch {
-                receiptError = error.localizedDescription
-            }
-        }
+        .task(id: project) { await purchases.loadReceipts() }
     }
 
     // MARK: - 셈
@@ -116,7 +108,7 @@ struct ThisWeekPurchasesCard: View {
     private var storeSales: [SaleRow] {
         let names = Dictionary(products.map { ($0.id, $0.name) }, uniquingKeysWith: { a, _ in a })
         var grouped: [String: (day: String, product: String, country: String, units: Int, proceeds: [String: Double])] = [:]
-        for (day, line) in purchases.recentPurchaseLines(appleIDs: Set(products.map(\.id))) {
+        for (day, line) in purchases.recentPurchaseLines(appleIDs: Set(products.map(\.id) + [app.id])) {
             let product = names[line.appleID] ?? line.appleID
             let key = "\(day)|\(product)|\(line.countryCode)"
             var entry = grouped[key] ?? (day, product, line.countryCode, 0, [:])

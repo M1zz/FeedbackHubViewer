@@ -328,6 +328,7 @@ struct AppGridHome: View {
         }
         // 다운로드 선의 재료. 연결이 없으면 아무 일도 하지 않고, 받아 둔 날은 다시 받지 않는다.
         .task { await purchases.loadSales() }
+        .task { await purchases.loadReceipts() }
     }
 
     /// 누른 자리를 적고 연다 — 앱 화면이 그 자리에서 다가온다(`SplitRootView`).
@@ -383,22 +384,16 @@ struct AppGridHome: View {
                Double(trend.delta) / Double(trend.previous) >= 0.2 {
                 counts[.usageUp] = Int((Double(trend.delta) / Double(trend.previous) * 100).rounded())
             }
-            let days = store.days(for: project, audience: .all)
-            let bought = UsageRollups.recentDayKeys(7).reduce(0) { sum, day in
-                sum + (days[day.key]?.byEvent ?? [:]).reduce(0) { inner, event in
-                    inner + (event.key.split(separator: ":").first == "purchase_completed" ? event.value : 0)
-                }
-            }
-            if bought > 0 { counts[.purchase] = bought }
+            // 구매는 Apple 이 확인한 결제만 — 앱이 스스로 보낸 "구매 완료" 는 무료 체험 시작 · 시험 결제도 센다.
+            let paid = purchases.receipts[project, default: []].filter(\.isPaid)
+            if !paid.isEmpty { counts[.purchase] = paid.count }
             var latest: [Signal.Kind: Date] = [:]
             latest[.crash] = recent.crashes.compactMap(\.happenedAt).max()
             latest[.hang] = recent.hangs.compactMap(\.happenedAt).max()
             latest[.oldCrash] = recent.old.compactMap(\.happenedAt).max()
             // 릴리즈 빨강은 지금 버전의 가장 최근 사고로 날짜를 단다.
             latest[.release] = (recent.crashes + recent.hangs).compactMap(\.happenedAt).max()
-            latest[.purchase] = UsageRollups.recentDayKeys(7).last { day in
-                (days[day.key]?.byEvent ?? [:]).contains { $0.key.split(separator: ":").first == "purchase_completed" && $0.value > 0 }
-            }?.date
+            latest[.purchase] = paid.map(\.occurredAt).max()
 
             // 나머지는 칸의 뱃지 그대로 — 읽으면 지워진다.
             if let badge = metrics.itemBadge(.feedback, project: project) { counts[.feedback] = badge.count }

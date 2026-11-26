@@ -29,6 +29,9 @@ final class AppStoreConnectStore: ObservableObject {
     @Published var isShowingSettings = false
     /// 번들 ID → 그 앱의 상품 상태.
     @Published private(set) var catalogs: [String: CatalogState] = [:]
+    /// 최근 7일, Apple 이 결제 순간 알려 준 결제 · 환불(`PurchaseFeed`) — 번들 ID 별, 최근 것부터.
+    @Published private(set) var receipts: [String: [PurchaseReceipt]] = [:]
+    @Published private(set) var receiptsProblem: String?
     /// 최근 30일 판매(계정 전체). nil이면 아직 안 받았다.
     @Published private(set) var sales: SalesWindow?
     /// 수익금을 원화 · 달러로 모으는 환율(`ExchangeRates`). 없으면 통화별로만 보인다.
@@ -505,6 +508,17 @@ final class AppStoreConnectStore: ObservableObject {
     }
 
     /// 판매 창의 날짜들 — 어제부터 거꾸로.
+    /// 결제 서버가 남긴 이번 주 결제를 다시 읽는다. 홈의 "이번 주 구매" 가 이것을 센다.
+    func loadReceipts() async {
+        do {
+            receipts = Dictionary(grouping: try await PurchaseFeed.recent(), by: \.bundleID)
+            receiptsProblem = nil
+        } catch {
+            receiptsProblem = error.localizedDescription
+            print("❌ [AppStoreConnectStore.loadReceipts] \(error)")
+        }
+    }
+
     /// 최근 `days` 일(어제까지)의 돈을 낸 인앱 결제 줄 — 날짜("yyyy-MM-dd")와 함께, 최근 날부터.
     /// 디스크에 받아 둔 리포트만 읽는다(새로 받지 않는다).
     func recentPurchaseLines(appleIDs: Set<String>, days: Int = 7) -> [(day: String, line: SalesLine)] {

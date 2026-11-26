@@ -18,14 +18,18 @@ struct PurchaseReceipt: Identifiable, Hashable {
     let productID: String
     let occurredAt: Date
     let isSandbox: Bool
+    /// 고객이 낸 금액 × 1000(Apple 의 단위). 0 이면 코드로 받은 것 — 결제가 아니다.
+    let priceMilli: Int64
 
     var isRefund: Bool { kind == "REFUND" }
+    /// 돈이 실제로 들어온 결제.
+    var isPaid: Bool { !isRefund && priceMilli > 0 }
 }
 
 enum PurchaseFeed {
-    /// 최근 `days` 일의 실제 결제(시험 · 샌드박스 빼고), 최근 것부터.
+    /// 최근 `days` 일의 결제 · 환불(시험 · 샌드박스 · 0원 코드 빼고), 모든 앱, 최근 것부터.
     /// 레코드가 많지 않아 다 받아 앱에서 거른다 — 인덱스는 recordName 하나면 된다.
-    static func recent(bundleID: String, days: Int = 7) async throws -> [PurchaseReceipt] {
+    static func recent(days: Int = 7) async throws -> [PurchaseReceipt] {
         let database = CKContainer(identifier: CloudKitService.containerIdentifier).publicCloudDatabase
         let query = CKQuery(recordType: PushSubscriptions.purchaseRecordType, predicate: NSPredicate(value: true))
         let since = Date().addingTimeInterval(-Double(days) * 86_400)
@@ -47,8 +51,9 @@ enum PurchaseFeed {
                     kind: record["kind"] as? String ?? "",
                     productID: record["productID"] as? String ?? "",
                     occurredAt: Date(timeIntervalSince1970: Double(record["occurredAt"] as? Int64 ?? 0) / 1000),
-                    isSandbox: (record["sandbox"] as? Int64 ?? 0) == 1)
-                if receipt.bundleID == bundleID, receipt.kind != "TEST", !receipt.isSandbox, receipt.occurredAt >= since {
+                    isSandbox: (record["sandbox"] as? Int64 ?? 0) == 1,
+                    priceMilli: record["priceMilli"] as? Int64 ?? 0)
+                if receipt.isPaid || receipt.isRefund, !receipt.isSandbox, receipt.occurredAt >= since {
                     receipts.append(receipt)
                 }
             }
