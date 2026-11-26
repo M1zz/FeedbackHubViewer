@@ -505,6 +505,16 @@ final class AppStoreConnectStore: ObservableObject {
     }
 
     /// 판매 창의 날짜들 — 어제부터 거꾸로.
+    /// 최근 `days` 일(어제까지)의 돈을 낸 인앱 결제 줄 — 날짜("yyyy-MM-dd")와 함께, 최근 날부터.
+    /// 디스크에 받아 둔 리포트만 읽는다(새로 받지 않는다).
+    func recentPurchaseLines(appleIDs: Set<String>, days: Int = 7) -> [(day: String, line: SalesLine)] {
+        Self.reportWindow().prefix(days).flatMap { day in
+            (reportCache[day.key] ?? [])
+                .filter { $0.isPurchase && appleIDs.contains($0.appleID) }
+                .map { (day: day.key, line: $0) }
+        }
+    }
+
     static func reportWindow() -> [(key: String, date: Date)] {
         let calendar = Calendar(identifier: .gregorian)
         return (1...salesDays).compactMap { offset in

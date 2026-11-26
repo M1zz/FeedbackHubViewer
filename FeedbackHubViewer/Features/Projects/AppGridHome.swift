@@ -156,7 +156,8 @@ struct AppGridHome: View {
                 case .news: return .news
                 case .changed: return .stats
                 case .keyword: return .keywords
-                case .usageUp, .purchase: return .stats
+                case .usageUp: return .stats
+                case .purchase: return .purchases
                 }
             }
 
