@@ -66,7 +66,7 @@ enum PushSubscriptions {
     /// `Purchase` 를 남기고, 이 구독이 그 제목 · 내용을 그대로 띄운다 — 문구는 서버가 만든다.
     /// 알림을 켜 두면 늘 건다. 결제는 놓치고 싶은 사람이 없다.
     static let purchaseRecordType = "Purchase"
-    private static let purchaseSubscriptionID = "hub-new-purchase"
+    static let purchaseSubscriptionID = "hub-new-purchase"
 
     static func syncPurchases(_ enabled: Bool) async {
         do {
