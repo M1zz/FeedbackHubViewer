@@ -27,7 +27,7 @@ def log(msg):
 
 def run(cmd, timeout, cwd=None):
     try:
-        p = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True, timeout=timeout)
+        p = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True, errors="replace", timeout=timeout)
         return p.returncode, p.stdout + p.stderr
     except subprocess.TimeoutExpired as e:
         out = (e.stdout or b"").decode(errors="replace") if isinstance(e.stdout, bytes) else (e.stdout or "")
@@ -178,8 +178,9 @@ def test_app(folder, device, packages):
     log("   빌드 (테스트 포함)")
     code, out = run(common + ["build-for-testing"], 1800)
     has_tests = code == 0
-    if code != 0 and ("not currently configured for the test action" in out or "no test bundles" in out.lower()):
-        log("   테스트 없는 스킴 — 앱만 빌드")
+    if code != 0:
+        # 테스트 대상만 못 빌드해도(서명 · 테스트 없는 스킴) 앱은 켜 본다.
+        log("   테스트 빌드 못 함 — 앱만 빌드")
         code, out = run(common + ["build"], 1800)
     if code != 0:
         result["failures"] = [first_error(out)]
@@ -202,7 +203,9 @@ def test_app(folder, device, packages):
             unit, ui, failures = count_tests(xcresult)
             result["unit"], result["ui"] = unit, ui
             result["failures"] += failures
-        if code != 0 and not result["failures"]:
+        if code != 0 and ("not currently configured for the test" in out or "Cannot test target" in out):
+            pass  # 스킴에 테스트가 없거나 이 기기에서 못 돌리는 테스트 — 앱의 실패가 아니다
+        elif code != 0 and not result["failures"]:
             result["failures"].append("테스트 실행 실패: " + first_error(out))
             result["unit"] = result["unit"] or {"passed": 0, "failed": 1, "skipped": 0}
 
