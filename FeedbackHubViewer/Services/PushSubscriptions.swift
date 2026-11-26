@@ -70,30 +70,43 @@ enum PushSubscriptions {
 
     /// 걸었으면 nil, 못 걸었으면 그 까닭. 끄면 늘 nil.
     static func syncPurchases(_ enabled: Bool) async -> String? {
-        do {
-            if enabled {
-                let subscription = CKQuerySubscription(recordType: purchaseRecordType,
-                                                       predicate: NSPredicate(value: true),
-                                                       subscriptionID: purchaseSubscriptionID,
-                                                       options: [.firesOnRecordCreation])
-                let info = CKSubscription.NotificationInfo()
-                // 레코드 칸을 그대로 쓰려면 지역화 키를 거쳐야 한다. 키 "%1$@" 는 Localizable.strings 에 있다.
-                info.titleLocalizationKey = "%1$@"
-                info.titleLocalizationArgs = ["title"]
-                info.alertLocalizationKey = "%1$@"
-                info.alertLocalizationArgs = ["message"]
-                info.soundName = "default"
-                subscription.notificationInfo = info
-                _ = try await database.save(subscription)
-            } else {
-                _ = try await database.deleteSubscription(withID: purchaseSubscriptionID)
-            }
+        guard enabled else {
+            _ = try? await database.deleteSubscription(withID: purchaseSubscriptionID)
             return nil
-        } catch let error as CKError where error.code == .unknownItem && !enabled {
-            return nil // 지울 구독이 처음부터 없었다.
-        } catch {
-            print("❌ [PushSubscriptions.syncPurchases] \(error)")
-            return error.localizedDescription
         }
+        // 레코드의 제목 · 내용을 그대로 띄우려면 지역화 키를 거친다(키 "%1$@" 는 Localizable.strings).
+        let detailed = CKSubscription.NotificationInfo()
+        detailed.titleLocalizationKey = "%1$@"
+        detailed.titleLocalizationArgs = ["title"]
+        detailed.alertLocalizationKey = "%1$@"
+        detailed.alertLocalizationArgs = ["message"]
+        detailed.soundName = "default"
+        // 그게 거절되면 고정 문구로라도 — 결제가 들어왔다는 것만은 알아야 한다.
+        let plain = CKSubscription.NotificationInfo()
+        plain.title = "💰 결제가 들어왔습니다"
+        plain.alertBody = "허브에서 자세히 보세요"
+        plain.soundName = "default"
+
+        var reasons: [String] = []
+        for info in [detailed, plain] {
+            let subscription = CKQuerySubscription(recordType: purchaseRecordType,
+                                                   predicate: NSPredicate(value: true),
+                                                   subscriptionID: purchaseSubscriptionID,
+                                                   options: [.firesOnRecordCreation])
+            subscription.notificationInfo = info
+            do {
+                _ = try await database.save(subscription)
+                // 자세한 쪽이 거절됐으면 왜였는지 남긴다(`defaults read … purchase-push-detail`).
+                UserDefaults.standard.set(reasons.isEmpty ? "detailed" : "plain: " + reasons.joined(separator: " / "),
+                                          forKey: "purchase-push-detail")
+                return nil
+            } catch {
+                let ck = error as NSError
+                let server = ck.userInfo["ServerErrorDescription"] as? String ?? ck.localizedDescription
+                reasons.append(server)
+                print("❌ [PushSubscriptions.syncPurchases] \(error)")
+            }
+        }
+        return reasons.joined(separator: " / ")
     }
 }

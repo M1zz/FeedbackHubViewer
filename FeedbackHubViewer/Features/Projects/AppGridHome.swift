@@ -314,6 +314,8 @@ struct AppGridHome: View {
             }
             // 급한 것 · 좋은 소식 칸이 통째로 생기거나 사라질 때도 부드럽게.
             .animation(listAnimation, value: Self.signalFingerprint(all))
+            // 이번 주 구매가 있는 앱은 누르기 전에 미리 받아 둔다 — 열었을 때 기다리지 않게.
+            .task(id: Self.buyingApps(all)) { await prefetch(Self.buyingApps(all)) }
             .padding(20)
         }
         }
@@ -634,6 +636,26 @@ struct AppGridHome: View {
         switch signal.kind {
         case .usageUp, .usageDrop: return "지난 7일"
         default: return nil
+        }
+    }
+
+    // MARK: - 미리 받기
+
+    /// 이번 주에 한 건이라도 팔린 앱 — 가장 들어가 볼 앱들이다.
+    private static func buyingApps(_ rows: [Row]) -> [String] {
+        rows.filter { row in row.signals.contains { $0.kind == .purchase } }.map(\.project).sorted()
+    }
+
+    /// 앱 화면이 열 때 받는 것(상품 · 리뷰 · 버전 · 버전 기록)을 미리. 모두 디스크에 남고,
+    /// 이미 새것이면 건너뛴다. 시간당 한도가 있어 한 앱씩 차례로.
+    private func prefetch(_ projects: [String]) async {
+        guard purchases.isConfigured, !projects.isEmpty else { return }
+        for project in projects {
+            guard !Task.isCancelled else { return }
+            await purchases.loadCatalog(bundleID: project)
+            await purchases.loadReviews(bundleID: project)
+            await purchases.loadVersion(bundleID: project)
+            await purchases.loadStability(bundleID: project)
         }
     }
 

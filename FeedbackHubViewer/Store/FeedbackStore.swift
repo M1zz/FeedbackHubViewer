@@ -1433,8 +1433,9 @@ final class FeedbackStore: ObservableObject {
     /// 꺼져 있어서 결제 알림도 함께 꺼져 있던 것을 아무도 몰랐다. 허락을 아직 안 물었으면 여기서 묻는다.
     func syncPurchasePush() {
         Task { [weak self] in
-            let authorized = await NotificationService.requestAuthorization()
+            // 구독부터 — 허락 창은 사람이 답할 때까지 기다리므로 그 뒤에 묻는다.
             let problem = await PushSubscriptions.syncPurchases(true)
+            let authorized = await NotificationService.requestAuthorization()
             let shown = problem ?? (authorized ? nil : "이 기기에서 알림이 허용되지 않았습니다(시스템 설정 ▸ 알림)")
             self?.purchasePushProblem = shown
             // 화면을 못 볼 때 상태를 꺼내 볼 수 있게(`defaults read … purchase-push-status`).
