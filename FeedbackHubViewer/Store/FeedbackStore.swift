@@ -88,13 +88,12 @@ final class FeedbackStore: ObservableObject {
 
         /// 이 칸이 들어가 사는 칸. 같은 물음에 답하는 칸끼리 묶어 목록에는 하나만 세우고, 나머지는
         /// 그 화면 위의 탭으로 넘긴다 — 칸 16개를 오가며 숫자 하나를 찾지 않게.
-        ///  - 릴리즈 ← 진단: 빨강의 까닭은 대개 크래시에 있다.
         ///  - 통계 ← 스토어 분석: 설치 · 사용과 스토어 쪽 숫자.
         ///  - 유입 ← 키워드 · 차트: 사람들이 어떻게 앱을 찾아오나.
         ///  - 앱 내 구입 ← 선물 코드, 설계 ← 경험.
+        /// 릴리즈와 진단은 따로 선다 — 하나는 버전의 판정, 하나는 크래시 자체라 오가며 보는 일이 잦다.
         var host: ProjectSection {
             switch self {
-            case .crashes: .release
             case .storeAnalytics: .stats
             case .keywords, .charts: .acquisition
             case .giftCodes: .purchases
