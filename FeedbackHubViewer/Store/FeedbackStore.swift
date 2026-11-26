@@ -440,10 +440,7 @@ final class FeedbackStore: ObservableObject {
     /// 기능 안에서 고른 앱. 기능을 바꿔도 그대로 남아, 한 앱을 여러 기능으로 넘겨 볼 수 있다.
     /// 할 일은 앱을 가리지 않으므로 할 일에서 앱 링크를 누르면 그 앱의 피드백으로 간다
     /// (`open(project:section:)`).
-    @Published var selectedProject: String? = nil {   // nil == all projects
-        // 앱에서 "전체 앱"으로 오면 가운데는 대시보드부터.
-        didSet { if selectedProject == nil, oldValue != nil { showsAllAppsDashboard = true } }
-    }
+    @Published var selectedProject: String? = nil   // nil == all projects
     /// 맥 · 아이패드에서 "전체 앱"을 고르면 가운데가 모든 앱 대시보드다(`AppDashboardPanel`).
     /// 칸을 고르면(사이드바 · 카드) 그 칸의 전체 모아보기로 넘어간다 — 맨 위 전환으로 오간다.
     @Published var showsAllAppsDashboard = true
