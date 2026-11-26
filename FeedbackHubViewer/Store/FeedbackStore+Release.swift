@@ -44,6 +44,25 @@ extension FeedbackStore {
         return filled
     }
 
+    /// 품질 탭의 안정성 — 버전별 전 기간 집계에서(`AppQuality.stability`). 안정화 지표와 같은 재료다.
+    func qualityStability(for project: String) -> AppQuality.Stability? {
+        let spec = releaseSpec(for: project) ?? .fallback
+        let everSeen = Set(eventTallies(for: project).keys.map {
+            String($0.split(separator: ":", maxSplits: 1, omittingEmptySubsequences: false)[0])
+        })
+        let diagnostics = crashes(for: project)
+        let sendsDiagnostics = !diagnostics.isEmpty || allMetrics.contains { $0.projectKey == project }
+        var crashReports: [String: Int]?
+        if sendsDiagnostics {
+            let resolve = ReleaseHealth.versionResolver(for: diagnostics)
+            crashReports = Dictionary(grouping: diagnostics.filter { $0.kind == "crash" }, by: resolve).mapValues(\.count)
+        }
+        return AppQuality.stability(tallies: rollups.versionTallies[project] ?? [:],
+                                    minInstalls: spec.thresholds.minInstallsForVerdict,
+                                    stabilityKnown: spec.stabilityEventsDeclared || !everSeen.isDisjoint(with: spec.stabilityEvents),
+                                    crashReports: crashReports)
+    }
+
     /// 지난 30일 새 설치의 온보딩(품질 탭). 모든 일 버킷을 훑어 처음 온 날을 가리므로 캐시한다.
     func onboarding(for project: String) -> AppQuality.Onboarding? {
         memoized(\.onboarding, project) {

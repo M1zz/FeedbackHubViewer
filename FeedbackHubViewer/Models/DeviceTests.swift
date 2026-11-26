@@ -6,7 +6,7 @@
 //
 //  `workspace/Auto/docs/quality-tests.json` 을 읽는다. 이 파일은 `scripts/device-qa.sh` 가
 //  앱을 하나씩 아이폰에 올려 단위 테스트 · UI 테스트 · 설치하고 켜 보기를 하고 쓴다.
-//  레포 폴더 허락(`KeywordStore.repoFolder`)으로 읽으니 맥만 된다.
+//  맥이 레포 폴더 허락(`KeywordStore.repoFolder`)으로 읽어 캐시로 옮기고, 아이폰은 iCloud 로 받은 그 사본을 읽는다.
 //
 
 import Foundation
@@ -19,9 +19,8 @@ struct DeviceTestReport: Decodable {
     static let relativePath = "docs/quality-tests.json"
 
     /// 번들 id(소문자) → 결과. 한 레포의 번들(위젯 등)이 모두 같은 결과를 가리킨다.
-    static func load(from root: URL) -> [String: DeviceTestResult] {
-        let url = root.appendingPathComponent(relativePath)
-        guard let data = try? Data(contentsOf: url) else { return [:] }
+    static func load(_ data: Data?) -> [String: DeviceTestResult] {
+        guard let data else { return [:] }
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
         do {

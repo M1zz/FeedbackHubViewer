@@ -25,6 +25,8 @@ extension AppStoreConnectStore {
         "sales-days", "subscription-event-days", "exchange-rates",
         "store-reviews", "store-reviews-alerted", "store-review-priority", "store-versions", "store-stability",
         "analytics-results", "analytics-coverage", "analytics-scans", "referral-ledger",
+        // 품질 탭 — 별점 합계와, 맥만 읽을 수 있는 레포의 시험 결과(`KeywordStore+Quality.swift`).
+        KeywordStore.storeRatingsFile, KeywordStore.deviceTestsFile, KeywordStore.testCoverageFile,
     ]
 
     /// 받은 지 이만큼 안 됐으면 어느 기기가 받았든 다시 묻지 않는다. 리포트 · 상품 · 문구는
@@ -73,5 +75,6 @@ extension AppStoreConnectStore {
             analyticsCoverage = .loaded(coverage)
         }
         redrawReportsFromCache()
+        NotificationCenter.default.post(name: CacheFileBundle.didAdopt, object: nil)
     }
 }

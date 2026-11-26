@@ -116,7 +116,16 @@ def count_tests(xcresult):
 def built_app(dd):
     apps = [a for a in glob.glob(os.path.join(dd, "Build/Products/*-iphoneos/*.app"))
             if not a.endswith("-Runner.app")]
-    return apps[0] if apps else None
+    # 앱 클립도 같은 자리에 나온다 — 클립의 번들 id 로 적으면 허브가 그 앱을 못 찾는다.
+    return next((a for a in apps if not is_app_clip(a)), apps[0] if apps else None)
+
+
+def is_app_clip(app):
+    try:
+        with open(os.path.join(app, "Info.plist"), "rb") as f:
+            return "NSAppClip" in plistlib.load(f)
+    except Exception:
+        return False
 
 
 def bundle_ids(app):
@@ -128,6 +137,12 @@ def bundle_ids(app):
         except Exception:
             pass
     return ids
+
+
+def project_bundle_ids(project):
+    with open(os.path.join(project, "project.pbxproj"), encoding="utf-8", errors="replace") as f:
+        found = re.findall(r'PRODUCT_BUNDLE_IDENTIFIER = "?([A-Za-z0-9.\-]+)"?;', f.read())
+    return sorted({b for b in found if not re.search(r"(?i)tests?$", b)})
 
 
 def app_version(app):
@@ -176,7 +191,8 @@ def test_app(folder, device, packages):
               "-allowProvisioningUpdates", "-skipMacroValidation", "-skipPackagePluginValidation"]
 
     log("   빌드 (테스트 포함)")
-    code, out = run(common + ["build-for-testing"], 1800)
+    # 커버리지를 켜고 빌드 · 실행한다 — 같은 xcresult 를 test-coverage.py 가 읽어 품질 탭 커버리지가 된다.
+    code, out = run(common + ["build-for-testing", "-enableCodeCoverage", "YES"], 1800)
     has_tests = code == 0
     if code != 0:
         # 테스트 대상만 못 빌드해도(서명 · 테스트 없는 스킴) 앱은 켜 본다.
@@ -184,6 +200,8 @@ def test_app(folder, device, packages):
         code, out = run(common + ["build"], 1800)
     if code != 0:
         result["failures"] = [first_error(out)]
+        # 빌드를 못 해도 어느 앱인지는 적는다 — 번들 id 가 비면 허브가 "빌드 못 함" 을 어느 앱에도 못 붙인다.
+        result["bundleIDs"] = project_bundle_ids(project)
         shutil.rmtree(dd, ignore_errors=True)
         return result
     result["built"] = True
@@ -197,7 +215,7 @@ def test_app(folder, device, packages):
         log("   단위 · UI 테스트")
         xcresult = os.path.join(WORK, "results", re.sub(r"\W", "_", folder) + ".xcresult")
         shutil.rmtree(xcresult, ignore_errors=True)
-        code, out = run(common + ["test-without-building", "-resultBundlePath", xcresult,
+        code, out = run(common + ["test-without-building", "-enableCodeCoverage", "YES", "-resultBundlePath", xcresult,
                                   "-test-timeouts-enabled", "YES", "-maximum-test-execution-time-allowance", "300"], 2700)
         if os.path.exists(xcresult):
             unit, ui, failures = count_tests(xcresult)

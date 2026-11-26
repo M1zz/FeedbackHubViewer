@@ -79,9 +79,12 @@ struct AppQuality: Identifiable {
         var crashVersion: String?
         var launchMs: Double?
         var hangPerHour: Double?
+        /// 성능 값이 어디서 왔나 — "5.2 버전" · "최근 30일 12대".
         var performanceVersion: String?
         var rating: Double?
         var ratingCount = 0
+        /// 별점을 모은 나라 수. 0 이면 한 가게(한국)만 본 값.
+        var ratingCountries = 0
         /// 처리한 피드백 · 셈에 든 피드백.
         var supportHandled = 0
         var supportTotal = 0
@@ -217,17 +220,18 @@ struct AppQuality: Identifiable {
             guard let ms = input.launchMs else { return unknown(dimension) }
             let grade: Grade = ms <= Standard.launchGoodMs ? .good : (ms >= Standard.launchBadMs ? .bad : .warning)
             let value = ms < 1_000 ? "\(Int(ms.rounded()))ms" : String(format: "%.1f초", ms / 1_000)
-            return Score(dimension: dimension, grade: grade, value: value, basis: input.performanceVersion.map { "\($0) 버전" })
+            return Score(dimension: dimension, grade: grade, value: value, basis: input.performanceVersion)
         case .hang:
             guard let hang = input.hangPerHour else { return unknown(dimension) }
             let grade: Grade = hang < Standard.hangGood ? .good : (hang >= Standard.hangBad ? .bad : .warning)
             return Score(dimension: dimension, grade: grade, value: String(format: "시간당 %.1f초", hang),
-                         basis: input.performanceVersion.map { "\($0) 버전" })
+                         basis: input.performanceVersion)
         case .rating:
             guard let rating = input.rating, input.ratingCount >= Standard.minRatings else { return unknown(dimension) }
             return Score(dimension: dimension,
                          grade: higherIsBetter(rating, good: Standard.ratingGood, bad: Standard.ratingBad),
-                         value: String(format: "★ %.1f", rating), basis: "별점 \(input.ratingCount)개")
+                         value: String(format: "★ %.1f", rating),
+                         basis: "별점 \(input.ratingCount)개" + (input.ratingCountries > 1 ? " · \(input.ratingCountries)개 나라" : ""))
         case .support:
             guard input.supportTotal >= Standard.minFeedback else { return unknown(dimension) }
             let share = Double(input.supportHandled) / Double(input.supportTotal)
@@ -304,6 +308,31 @@ struct AppQuality: Identifiable {
         }
         return Score(dimension: .core, grade: .good, value: percent(rate),
                      basis: "\(current.version) · \(core.label)")
+    }
+
+    struct Stability: Equatable {
+        var rate: Double
+        var version: String
+        var isEstimate: Bool
+    }
+
+    /// 크래시 없는 설치 — 설치가 `minInstalls` 넘게 모인 가장 새 버전에서.
+    ///
+    /// 버전별 설치는 일 버킷과 함께 쌓는 전 기간 집계(`UsageRollups.versionTallies`)다. 14일 원본
+    /// 이벤트로 세면 버전을 자주 내는 작은 앱은 어느 버전도 문턱에 못 닿았다(14일에 50대가 써도 버전마다 15대).
+    /// 불안정 이벤트를 믿을 수 있으면 그 설치를 빼고, 아니면 그 버전의 크래시 보고 한 건을 한 설치로 보고
+    /// 어림한다(아래 한계). `crashReports` 가 nil 이면 진단을 한 번도 안 보낸 앱 — 크래시 0건은 모르는 것이다.
+    static func stability(tallies: [String: UsageVersionTally], minInstalls: Int,
+                          stabilityKnown: Bool, crashReports: [String: Int]?) -> Stability? {
+        let newest = tallies.keys.sorted { ReleaseHealth.isOlder($1, than: $0) }
+        guard let version = newest.first(where: { (tallies[$0]?.installs.count ?? 0) >= minInstalls }),
+              let tally = tallies[version] else { return nil }
+        let installs = Double(tally.installs.count)
+        if stabilityKnown {
+            return Stability(rate: (installs - Double(tally.unstable.count)) / installs, version: version, isEstimate: false)
+        }
+        guard let crashReports else { return nil }
+        return Stability(rate: max(0, 1 - Double(crashReports[version] ?? 0) / installs), version: version, isEstimate: true)
     }
 
     /// 지난 `days` 일 새 설치의 온보딩 — 일 버킷에서 순수하게 센다. 키는 "yyyy-MM-dd".

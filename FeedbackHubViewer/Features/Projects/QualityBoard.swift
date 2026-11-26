@@ -50,28 +50,26 @@ struct QualityBoard: View {
         var input = AppQuality.Input(project: project, name: store.displayName(for: project))
         input.active7 = store.usage(for: project).activeInstalls7
 
+        if let stability = store.qualityStability(for: project) {
+            input.crashFree = stability.rate
+            input.crashFreeIsEstimate = stability.isEstimate
+            input.crashVersion = stability.version
+        }
+
+        let versions = store.releaseHealth(for: project).map { $0.recent.isEmpty ? [$0.latest] : $0.recent } ?? []
+        if let version = versions.first(where: { ($0.performance?.samples ?? 0) >= ReleaseHealth.performanceMinSamples }) {
+            input.launchMs = version.performance?.launchMs
+            input.hangPerHour = version.performance?.hangPerHour
+            input.performanceVersion = "\(version.version) 버전"
+        } else if let pooled = recentPerformance(project), pooled.samples >= ReleaseHealth.performanceMinSamples {
+            // 한 버전에 다섯 장이 안 모이는 앱 — 버전을 자주 내면 늘 그렇다. 최근 30일 모든 버전의 가운데 값.
+            input.launchMs = pooled.launchMs
+            input.hangPerHour = pooled.hangPerHour
+            input.performanceVersion = "최근 30일 \(pooled.samples)대"
+        }
+
         if let report = store.releaseHealth(for: project) {
-            let versions = report.recent.isEmpty ? [report.latest] : report.recent
             let minInstalls = report.spec.thresholds.minInstallsForVerdict
-            // 설치가 판정할 만큼 모인 가장 새 버전. 막 낸 버전은 표본이 적다.
-            if let version = versions.first(where: { $0.activeInstalls >= minInstalls }) {
-                if let rate = version.crashFreeRate {
-                    input.crashFree = rate
-                    input.crashVersion = version.version
-                } else if !store.crashes(for: project).isEmpty || version.performance != nil,
-                          let density = version.crashDensity {
-                    // 진단을 보내는 앱만 — 한 번도 안 보낸 앱의 "크래시 0건" 은 모르는 것이다.
-                    // 크래시 한 건이 한 설치라고 보면 크래시 없는 설치의 아래 한계다.
-                    input.crashFree = max(0, 1 - density)
-                    input.crashFreeIsEstimate = true
-                    input.crashVersion = version.version
-                }
-            }
-            if let version = versions.first(where: { ($0.performance?.samples ?? 0) >= ReleaseHealth.performanceMinSamples }) {
-                input.launchMs = version.performance?.launchMs
-                input.hangPerHour = version.performance?.hangPerHour
-                input.performanceVersion = version.version
-            }
             if let action = report.spec.coreAction {
                 let recent = report.recent.isEmpty ? [report.latest] + [report.previous].compactMap { $0 } : report.recent
                 input.core = .init(label: action.label, versions: recent,
@@ -84,7 +82,11 @@ struct QualityBoard: View {
 
         input.deviceTest = keywords.deviceTests[project.lowercased()]
 
-        if let app = keywords.storeApp(for: project) {
+        if let world = keywords.worldRating(for: project) {
+            input.rating = world.average
+            input.ratingCount = world.count
+            input.ratingCountries = world.countries
+        } else if let app = keywords.storeApp(for: project) {
             input.rating = app.averageRating
             input.ratingCount = app.ratingCount
         }
@@ -98,6 +100,14 @@ struct QualityBoard: View {
         input.supportTotal = support.count
         input.supportHandled = support.filter(store.isHandled).count
         return input
+    }
+
+    /// 최근 30일 이 앱의 성능 한 줄들(모든 버전). 한 장도 없으면 nil.
+    private func recentPerformance(_ project: String) -> ReleaseHealth.Performance? {
+        let since = Date().addingTimeInterval(-30 * 86_400)
+        return ReleaseHealth.Performance(store.allMetrics.filter {
+            $0.projectKey == project && ($0.happenedAt ?? .distantPast) >= since
+        })
     }
 
     /// 가장 나쁜 항목을 고칠 칸으로.
@@ -238,9 +248,9 @@ struct QualityBoard: View {
             ForEach(AppQuality.Dimension.allCases) { dimension in
                 Text("\(dimension.rawValue): \(dimension.standard)")
             }
-            Text("기기 테스트 · 커버리지는 scripts/device-qa.py · scripts/test-coverage.py 가 workspace/Auto/docs 에 쓴 결과입니다(맥에서 그 폴더를 골라 둔 경우).")
+            Text("기기 테스트 · 커버리지는 scripts/device-qa.py · scripts/test-coverage.py 가 workspace/Auto/docs 에 쓴 결과입니다(맥이 그 폴더에서 읽어 아이폰에도 나눕니다).")
             Text("핵심 기능은 릴리즈 건강의 핵심 행동(스펙 coreAction, 없으면 통계에서 고른 가치 행동), 온보딩은 지난 30일 새 설치가 onboarding_completed · _skipped 같은 이벤트를 보냈는지입니다.")
-            Text("안정성 · 성능은 판정할 만큼 설치가 모인 가장 새 버전, 지원 응답은 최근 90일 중 받은 지 3일 지난 피드백입니다.")
+            Text("안정성은 설치가 판정할 만큼 모인 가장 새 버전(그 버전의 전 기간 설치), 성능은 다섯 대가 모인 가장 새 버전이고 없으면 최근 30일 모든 버전, 만족도는 모든 나라 가게의 별점을 합친 것, 지원 응답은 최근 90일 중 받은 지 3일 지난 피드백입니다.")
         }
         .font(.body)
         .foregroundStyle(.tertiary)

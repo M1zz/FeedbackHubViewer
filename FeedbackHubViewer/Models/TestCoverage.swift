@@ -7,7 +7,7 @@
 //  `workspace/Auto/docs/test-coverage.json` 을 읽는다. 이 파일은 `scripts/test-coverage.py` 가
 //  테스트를 새로 돌리지 않고 DerivedData 에 남은 가장 새 .xcresult 의 줄 커버리지를 읽어 쓴다.
 //  xcresult 가 없는 앱은 테스트 함수 수만 센 정적 측정이다 — 커버리지가 아니라서 그렇게 적는다.
-//  레포 폴더 허락(`KeywordStore.repoFolder`)으로 읽으니 맥만 된다.
+//  맥이 레포 폴더 허락(`KeywordStore.repoFolder`)으로 읽어 캐시로 옮기고, 아이폰은 iCloud 로 받은 그 사본을 읽는다.
 //
 
 import Foundation
@@ -19,8 +19,8 @@ struct TestCoverageReport: Decodable {
     static let relativePath = "docs/test-coverage.json"
 
     /// 번들 id(소문자) → 결과. 한 레포의 번들(위젯 등)이 모두 같은 결과를 가리킨다.
-    static func load(from root: URL) -> [String: TestCoverage] {
-        guard let data = try? Data(contentsOf: root.appendingPathComponent(relativePath)) else { return [:] }
+    static func load(_ data: Data?) -> [String: TestCoverage] {
+        guard let data else { return [:] }
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
         do {

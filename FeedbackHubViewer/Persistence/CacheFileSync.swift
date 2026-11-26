@@ -28,6 +28,9 @@ struct CacheFileBundle: Codable, Equatable, Sendable {
 
     var files: [String: File] = [:]
 
+    /// 다른 기기에서 받은 묶음을 디스크에 들였다 — `AppStoreConnectStore` 밖에서 그 파일을 읽는 곳이 듣는다.
+    static let didAdopt = Notification.Name("CacheFileBundle.didAdopt")
+
     /// 열쇠 → 날짜 꼴이라 열쇠마다 합치는 파일.
     static let keyedDates: Set<String> = ["connect-fetched-at"]
 

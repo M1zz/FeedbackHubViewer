@@ -112,6 +112,12 @@ extension KeywordStore {
     /// 앱을 켤 때 — 남겨 둔 허락으로 폴더를 열고 읽는다. 앱으로 돌아올 때마다 다시 읽는다
     /// (Claude 가 레포에서 키워드를 고쳐 커밋하는 동안 허브는 켜져 있다).
     func startRepoKeywords() {
+        restoreQualityCaches()
+        qualityCacheObserver = NotificationCenter.default.addObserver(
+            forName: CacheFileBundle.didAdopt, object: nil, queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in self?.restoreQualityCaches() }
+        }
         #if os(macOS)
         restoreRepoFolder()
         reloadRepoKeywords()
@@ -128,13 +134,17 @@ extension KeywordStore {
         let projects = Array(Set(fieldLog.keys.compactMap { $0.split(separator: "|").first.map(String.init) }))
         Task.detached(priority: .utility) {
             let found = RepoKeywords.scan(folder, projects: projects)
-            let tests = DeviceTestReport.load(from: folder)
-            let coverage = TestCoverageReport.load(from: folder)
+            // 시험 결과는 캐시로 옮겨 읽는다 — 그 캐시가 iCloud 로 아이폰에 간다.
+            for (path, name) in [(DeviceTestReport.relativePath, KeywordStore.deviceTestsFile),
+                                 (TestCoverageReport.relativePath, KeywordStore.testCoverageFile)] {
+                if let data = try? Data(contentsOf: folder.appendingPathComponent(path)) {
+                    CacheFile.mirror(data, named: name)
+                }
+            }
             await MainActor.run { [weak self] in
                 guard let self else { return }
                 if self.repoKeywords != found { self.repoKeywords = found }
-                if self.deviceTests != tests { self.deviceTests = tests }
-                if self.testCoverage != coverage { self.testCoverage = coverage }
+                self.restoreQualityCaches()
             }
         }
     }

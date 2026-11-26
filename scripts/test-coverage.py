@@ -2,7 +2,7 @@
 """workspace/Auto 의 앱마다 테스트 커버리지를 모아 품질 탭이 읽을 파일을 쓴다.
 
 테스트를 새로 돌리지 않는다. 읽기만 한다:
-  1. 실제 커버리지 — DerivedData 에 남은 가장 새 .xcresult(`xcrun xccov view --report --json`).
+  1. 실제 커버리지 — DerivedData 와 device-qa.py 결과 중 가장 새 .xcresult(`xcrun xccov view --report --json`).
      앱 · 확장(.app · .appex)의 줄 커버리지만 센다. 테스트 번들과 패키지(LeeoKit 등)는 뺀다.
   2. 없으면 정적 측정 — 테스트 함수 수(`func test…` · `@Test`) · 테스트 파일 · 소스 파일.
      커버리지가 아니라서 화면은 "커버리지 모름" 으로 적는다(테스트가 하나도 없으면 0%).
@@ -12,11 +12,13 @@
 
     scripts/test-coverage.py
 """
-import datetime, glob, json, os, plistlib, re, subprocess
+import datetime, glob, json, os, plistlib, re, subprocess, tempfile
 
 AUTO = os.path.expanduser("~/Documents/workspace/Auto")
 OUT = os.path.join(AUTO, "docs", "test-coverage.json")
 DERIVED = os.path.expanduser("~/Library/Developer/Xcode/DerivedData")
+# device-qa.py 가 아이폰에서 커버리지를 켜고 돌린 결과(<WORK>/results/<폴더>.xcresult). 두 스크립트가 같은 자리를 본다.
+DEVICE_QA_RESULTS = os.path.join(os.environ.get("DEVICE_QA_WORK") or os.path.join(tempfile.gettempdir(), "device-qa"), "results")
 SKIP_DIRS = {".git", ".build", "build", "DerivedData", "Pods", "node_modules", "fastlane", "docs"}
 TEST_FUNC = re.compile(r"^\s*(?:@Test\b|(?:@\w+\s+)*func\s+test\w*\s*\()", re.M)
 TEST_IMPORT = re.compile(r"^\s*(?:@testable\s+)?import\s+(?:XCTest|Testing)\b", re.M)
@@ -79,6 +81,10 @@ def xcresults_by_repo():
         for name, root in repos_cache:
             if workspace.startswith(root + os.sep):
                 found.setdefault(root, []).extend(results)
+    for name, root in repos_cache:
+        device = os.path.join(DEVICE_QA_RESULTS, re.sub(r"\W", "_", name) + ".xcresult")
+        if os.path.exists(device):
+            found.setdefault(root, []).append(device)
     return {root: sorted(paths, key=os.path.getmtime, reverse=True) for root, paths in found.items()}
 
 

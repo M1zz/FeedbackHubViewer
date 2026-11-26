@@ -69,6 +69,9 @@ final class KeywordStore: ObservableObject {
     @Published var deviceTests: [String: DeviceTestResult] = [:]
     /// 같은 폴더의 `docs/test-coverage.json` — 번들 id(소문자) → 테스트 커버리지(`TestCoverage.swift`).
     @Published var testCoverage: [String: TestCoverage] = [:]
+    /// 나라 가게마다 받은 별점 — 품질 탭의 만족도(`KeywordStore+Quality.swift`).
+    @Published var storeRatings: StoreRatings?
+    var qualityCacheObserver: NSObjectProtocol?
     /// 레포들이 든 폴더(`workspace/Auto`). 샌드박스라 한 번 골라 받은 허락으로 읽는다. nil 이면 아직 안 골랐다.
     @Published var repoFolder: URL?
     var repoActiveObserver: NSObjectProtocol?
@@ -91,7 +94,7 @@ final class KeywordStore: ObservableObject {
     private static let recommendationsFile = "keyword-recommendations"
     static let fieldLogFile = "keyword-fields"
 
-    private let directory = AppStoreDirectory.shared
+    let directory = AppStoreDirectory.shared
     private var checkTask: Task<Void, Never>?
     private var restoreTask: Task<Void, Never>?
     private var linkTask: Task<Void, Never>?
@@ -238,6 +241,11 @@ final class KeywordStore: ObservableObject {
                 await self.linkTask?.value
                 self.refreshLinks(bundleIds: Array(Set(bundleIds).union(self.history.links.keys))
                     .filter { $0 != Feedback.unclassifiedProject })
+            }
+            // 품질 탭의 별점 — 나라마다 물어 하루 한 번. 키워드 확인과 같은 줄(`ITunesGate`)에 서서 따로 돈다.
+            Task { [weak self] in
+                await self?.linkTask?.value
+                await self?.refreshStoreRatings()
             }
             // 확인이 돌면 그 끝에 이름을 맞춘다(`runCheck`). 안 도는 날은 여기서.
             guard self.needsDailyCheck else {
