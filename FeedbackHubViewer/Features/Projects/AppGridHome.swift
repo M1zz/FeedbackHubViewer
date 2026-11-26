@@ -668,10 +668,13 @@ struct AppGridHome: View {
         "\(project.replacingOccurrences(of: "|", with: "/"))|\(kind.rawValue)"
     }
 
-    /// 가린 뒤 새로 올라온 것이 없으면 가린 채로 — 크래시 · 구매 · 리뷰는 한 건이라도 늘면,
+    /// 가린 뒤 새로 올라온 것이 없으면 가린 채로 — 크래시 · 리뷰는 한 건이라도 늘면,
     /// 사용 추이는 `trendStep` 넘게 더 움직이면 다시 선다.
+    /// 좋은 소식은 한 번 가리면 그 앱 · 그 종류는 계속 가린다 — 손볼 일이 아니라서, 수가 늘었다고
+    /// 다시 세우면 같은 소식을 매번 다시 치우게 된다. 되돌리려면 "다시 보기".
     private static func isDismissed(_ signal: Signal, project: String, in map: [String: Int]) -> Bool {
         guard let stored = map[dismissKey(project, signal.kind)] else { return false }
+        if signal.kind.tier == .good { return true }
         let isTrend = signal.kind == .usageUp || signal.kind == .usageDrop
         return signal.count < stored + (isTrend ? trendStep : 1)
     }
@@ -682,7 +685,7 @@ struct AppGridHome: View {
         withAnimation(listAnimation) { saveDismissed(map) }
     }
 
-    /// 표시가 사라진 것은 기록을 지우고, 수가 줄어든 것은 줄어든 수로 내린다 — 7일 창에서 옛 크래시가
+    /// 표시가 사라진 것은 기록을 지우고(좋은 소식은 남긴다), 수가 줄어든 것은 줄어든 수로 내린다 — 7일 창에서 옛 크래시가
     /// 빠져 3 → 2 가 된 뒤 새 크래시로 3 이 되면 새로 올라온 것이다(사용 추이는 흔들려서 내리지 않는다).
     private func pruneDismissed(_ rows: [Row]) {
         let old = dismissed
@@ -690,7 +693,10 @@ struct AppGridHome: View {
         var current: [String: Int] = [:]
         for row in rows { for signal in row.signals { current[Self.dismissKey(row.project, signal.kind)] = signal.count } }
         var map: [String: Int] = [:]
+        let goodKinds = Set(Signal.Kind.allCases.filter { $0.tier == .good }.map { "|\($0.rawValue)" })
         for (key, stored) in old {
+            // 좋은 소식은 지금 표시가 없어도 기록을 남긴다 — 다음 주에 다시 서도 가린 채로.
+            if goodKinds.contains(where: key.hasSuffix) { map[key] = stored; continue }
             guard let now = current[key] else { continue }
             let isTrend = key.hasSuffix("|\(Signal.Kind.usageUp.rawValue)") || key.hasSuffix("|\(Signal.Kind.usageDrop.rawValue)")
             map[key] = isTrend ? stored : min(stored, now)
