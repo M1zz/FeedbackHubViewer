@@ -129,10 +129,12 @@ extension KeywordStore {
         Task.detached(priority: .utility) {
             let found = RepoKeywords.scan(folder, projects: projects)
             let tests = DeviceTestReport.load(from: folder)
+            let coverage = TestCoverageReport.load(from: folder)
             await MainActor.run { [weak self] in
                 guard let self else { return }
                 if self.repoKeywords != found { self.repoKeywords = found }
                 if self.deviceTests != tests { self.deviceTests = tests }
+                if self.testCoverage != coverage { self.testCoverage = coverage }
             }
         }
     }

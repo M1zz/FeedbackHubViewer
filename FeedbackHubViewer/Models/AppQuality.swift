@@ -21,6 +21,14 @@
 //             좋음 ≥ 90% · 나쁨 < 50%  공인 기준 없음 — 허브 기준
 //    기기 테스트 (25010 기능 적합성)  연결한 아이폰에서 단위 · UI 테스트와 설치하고 켜 보기
 //             좋음 켜지고 실패 0 · 나쁨 못 켜짐이나 실패 1개 이상 · 주의 빌드 못 함  허브 기준
+//    핵심 기능 (25010 기능 적합성)   가장 새 버전에서도 핵심 행동이 오는가(릴리즈 건강의 핵심 행동률)
+//             나쁨 앞 버전에선 오던 것이 0명 — 우연일 확률 5% 미만  ·  주의 앞 버전보다 문턱(기본 20%) 넘게 줄었다
+//             허브 기준(릴리즈 건강과 같은 문턱)
+//    온보딩   (25010 사용 품질)      지난 30일 새 설치 중 온보딩을 끝내거나 건너뛰고 들어온 몫
+//             좋음 ≥ 80% · 나쁨 < 50%  공인 기준 없음 — 허브 기준
+//    커버리지 (25010 유지보수성)     앱 · 확장 코드의 줄 커버리지(가장 새 xcresult)
+//             좋음 ≥ 75% · 나쁨 < 60%  Google Testing Blog "Code Coverage Best Practices"(2020):
+//                                      60% 받아들일 만 · 75% 칭찬할 만 · 90% 모범
 //
 //  모르는 것은 nil 이다. 표본이 모자라면 "데이터 없음" 이지 0 이나 100% 가 아니다.
 //  종합은 가장 나쁜 항목을 따른다 — 평균을 내면 크래시 나는 앱이 별점으로 가려진다.
@@ -45,10 +53,17 @@ struct AppQuality: Identifiable {
         static let ratingBad = 4.0
         static let supportGood = 0.9
         static let supportBad = 0.5
+        static let onboardingGood = 0.8
+        static let onboardingBad = 0.5
+        static let coverageGood = 0.75
+        static let coverageBad = 0.6
+        /// 핵심 행동이 0명이 된 것을 우연이 아니라고 볼 문턱.
+        static let coreSilenceChance = 0.05
 
         /// 이보다 적은 표본으로는 판정하지 않는다.
         static let minRatings = 5
         static let minFeedback = 3
+        static let minNewInstalls = 10
     }
 
     // MARK: - 재료
@@ -74,6 +89,26 @@ struct AppQuality: Identifiable {
         var active7 = 0
         /// 연결한 아이폰에서 돌린 테스트(`scripts/device-qa.sh`). 안 돌렸으면 nil.
         var deviceTest: DeviceTestResult?
+        /// 릴리즈 건강의 버전들(새것부터)과 핵심 행동 이름 · 문턱. 핵심 행동을 안 정했으면 nil.
+        var core: Core?
+        /// 지난 30일 새 설치의 온보딩. 앱이 온보딩 이벤트를 안 보내면 nil.
+        var onboarding: Onboarding?
+        /// `scripts/test-coverage.py` 가 모은 커버리지. 안 돌렸으면 nil.
+        var coverage: TestCoverage?
+    }
+
+    struct Core {
+        var label: String
+        var versions: [ReleaseHealth.VersionMetrics]
+        var dropMax: Double
+        var minInstalls: Int
+    }
+
+    struct Onboarding: Equatable {
+        var newInstalls = 0
+        /// 끝냈거나 건너뛰고 앱에 들어온 새 설치.
+        var passed = 0
+        var skipped = 0
     }
 
     // MARK: - 판정
@@ -99,7 +134,10 @@ struct AppQuality: Identifiable {
         case hang = "멈춤"
         case rating = "만족도"
         case support = "지원 응답"
+        case core = "핵심 기능"
+        case onboarding = "온보딩"
         case deviceTest = "기기 테스트"
+        case coverage = "커버리지"
         var id: String { rawValue }
 
         /// 기준 한 줄 — 화면의 각 줄에 작게.
@@ -110,7 +148,10 @@ struct AppQuality: Identifiable {
             case .hang: return "시간당 좋음 1초 아래 · 나쁨 5초 이상 (허브 기준, Apple 은 문턱 미공개)"
             case .rating: return "좋음 4.5 이상 · 나쁨 4.0 아래 (업계 관례)"
             case .support: return "좋음 90% 이상 · 나쁨 50% 아래 (허브 기준)"
+            case .core: return "앞 버전에선 오던 핵심 행동이 0명이면 나쁨 · 문턱 넘게 줄면 주의 (허브 기준)"
+            case .onboarding: return "새 설치 중 좋음 80% 이상 · 나쁨 50% 아래가 통과 (허브 기준)"
             case .deviceTest: return "좋음 켜지고 실패 0 · 나쁨 못 켜짐이나 테스트 실패 · 주의 아이폰용 빌드 못 함 (허브 기준)"
+            case .coverage: return "좋음 75% 이상 · 나쁨 60% 아래 (Google Testing Blog 2020)"
             }
         }
 
@@ -121,7 +162,10 @@ struct AppQuality: Identifiable {
             case .hang: return "hourglass"
             case .rating: return "star"
             case .support: return "bubble.left.and.bubble.right"
+            case .core: return "checkmark.seal"
+            case .onboarding: return "figure.walk.arrival"
             case .deviceTest: return "iphone.gen3"
+            case .coverage: return "checklist"
             }
         }
     }
@@ -194,7 +238,108 @@ struct AppQuality: Identifiable {
         case .deviceTest:
             guard let test = input.deviceTest else { return unknown(dimension) }
             return deviceTestScore(test)
+        case .core:
+            guard let core = input.core else {
+                return unknown(dimension, hint: "스펙 release.coreAction 이나 통계의 가치 행동을 정하면 잽니다")
+            }
+            return coreScore(core)
+        case .onboarding:
+            guard let onboarding = input.onboarding else {
+                return unknown(dimension, hint: "onboarding_completed · onboarding_skipped 이벤트를 보내면 잽니다")
+            }
+            guard onboarding.newInstalls >= Standard.minNewInstalls else {
+                return unknown(dimension, hint: "새 설치 \(onboarding.newInstalls)대 — \(Standard.minNewInstalls)대부터 판정")
+            }
+            let share = Double(onboarding.passed) / Double(onboarding.newInstalls)
+            let skipped = onboarding.skipped > 0 ? " · 건너뜀 \(onboarding.skipped)" : ""
+            return Score(dimension: dimension,
+                         grade: higherIsBetter(share, good: Standard.onboardingGood, bad: Standard.onboardingBad),
+                         value: "\(Int((share * 100).rounded()))%",
+                         basis: "새 설치 \(onboarding.newInstalls)대 중 \(onboarding.passed)대\(skipped)")
+        case .coverage:
+            guard let coverage = input.coverage else {
+                return unknown(dimension, hint: "scripts/test-coverage.py 를 돌리면 잽니다")
+            }
+            guard let rate = coverage.lineCoverage else {
+                // 커버리지를 켜고 돌린 적이 없다 — 테스트가 하나도 없으면 0% 와 같다.
+                if coverage.testFunctions == 0 {
+                    return Score(dimension: dimension, grade: .bad, value: "테스트 없음",
+                                 basis: "소스 \(coverage.sourceFiles)개")
+                }
+                return Score(dimension: dimension, grade: .unknown, value: "커버리지 모름",
+                             basis: "테스트 \(coverage.testFunctions)개 · 커버리지 켜고 돌리면 잽니다")
+            }
+            let date = coverage.measuredAt.map { $0.formatted(.dateTime.month().day()) }
+            return Score(dimension: dimension,
+                         grade: higherIsBetter(rate, good: Standard.coverageGood, bad: Standard.coverageBad),
+                         value: "\(Int((rate * 100).rounded()))%",
+                         basis: (["테스트 \(coverage.testFunctions)개"] + [date].compactMap { $0 }).joined(separator: " · "))
         }
+    }
+
+    /// 핵심 기능이 아직 도는가. 가장 새 버전에서 핵심 행동이 0명이고, 앞 버전의 비율로는
+    /// 그럴 확률이 5% 미만이면 "동작 안 함 의심". 아니면 판정할 만큼 설치가 모인 가장 새 버전을
+    /// 그 앞 버전과 견준다 — 문턱 넘게 줄면 주의. 비율의 높낮이는 묻지 않는다(쓰임새는 앱마다 다르다).
+    private static func coreScore(_ core: Core) -> Score {
+        let versions = core.versions.filter { $0.coreActionInstalls != nil }
+        if let newest = versions.first, newest.coreActionInstalls == 0, newest.activeInstalls > 0,
+           let before = versions.dropFirst().first(where: { ($0.coreActionRate ?? 0) > 0 }),
+           let rate = before.coreActionRate,
+           pow(1 - rate, Double(newest.activeInstalls)) < Standard.coreSilenceChance {
+            return Score(dimension: .core, grade: .bad, value: "0명 · 동작 안 함 의심",
+                         basis: "\(newest.version) 설치 \(newest.activeInstalls)대 · \(before.version) 은 \(percent(rate))")
+        }
+        let enough = versions.filter { $0.activeInstalls >= core.minInstalls }
+        guard let current = enough.first, let rate = current.coreActionRate else {
+            return unknown(.core, hint: "\(core.label) — 설치 \(core.minInstalls)대 넘는 버전이 아직 없음")
+        }
+        if rate == 0 {
+            return Score(dimension: .core, grade: .warning, value: "0명",
+                         basis: "\(current.version) — \(core.label) 이벤트가 오는지 확인")
+        }
+        if let before = enough.dropFirst().first, let previous = before.coreActionRate, previous > 0,
+           rate < previous * (1 - core.dropMax) {
+            return Score(dimension: .core, grade: .warning, value: percent(rate),
+                         basis: "\(current.version) · \(before.version) 은 \(percent(previous))")
+        }
+        return Score(dimension: .core, grade: .good, value: percent(rate),
+                     basis: "\(current.version) · \(core.label)")
+    }
+
+    /// 지난 `days` 일 새 설치의 온보딩 — 일 버킷에서 순수하게 센다. 키는 "yyyy-MM-dd".
+    ///
+    /// 새 설치는 그 앱의 일 버킷에 처음 나온 날이 창 안인 설치다(기록 첫날은 빼고 — 그날은 모두가 처음이다).
+    /// 오늘 처음 온 설치는 아직 온보딩 중일 수 있어 뺀다. 이벤트별 설치 기록이 생긴 뒤의 날만 본다.
+    /// 앱이 통과 이벤트를 한 번도 안 보냈으면 nil — 0% 가 아니라 모르는 것이다.
+    static func onboarding(_ buckets: [String: UsageDayBucket], today: String, windowStart: String) -> Onboarding? {
+        let passNames: Set<String> = ["onboarding_complete", "onboarding_completed", "onboarding_done",
+                                      "onboarding_finished", "onboarding_skipped", "onboarding_skip"]
+        let skipNames: Set<String> = ["onboarding_skipped", "onboarding_skip"]
+        let keys = buckets.keys.sorted()
+        let tracked = keys.filter { buckets[$0]?.eventInstalls != nil }
+        guard let firstDay = keys.first, let firstTracked = tracked.first,
+              tracked.contains(where: { key in buckets[key]?.eventInstalls?.keys.contains(where: passNames.contains) == true })
+        else { return nil }
+
+        var firstSeen: [String: String] = [:]
+        for key in keys {
+            for install in buckets[key]?.installs ?? [] where firstSeen[install] == nil { firstSeen[install] = key }
+        }
+        let start = max(windowStart, firstTracked)
+        let fresh = Set(firstSeen.filter { $0.value > firstDay && $0.value >= start && $0.value < today }.keys)
+
+        var passed = Set<String>(), skipped = Set<String>()
+        for key in tracked where key >= start {
+            for (name, installs) in buckets[key]?.eventInstalls ?? [:] {
+                if passNames.contains(name) { passed.formUnion(installs.intersection(fresh)) }
+                if skipNames.contains(name) { skipped.formUnion(installs.intersection(fresh)) }
+            }
+        }
+        return Onboarding(newInstalls: fresh.count, passed: passed.count, skipped: skipped.count)
+    }
+
+    private static func percent(_ value: Double) -> String {
+        "\(Int((value * 100).rounded()))%"
     }
 
     /// 못 켜짐 · 테스트 실패가 나쁨이다. 빌드를 못 하면(서명 등) 앱이 아니라 준비가 문제라 주의.
@@ -221,7 +366,8 @@ struct AppQuality: Identifiable {
         value >= good ? .good : (value < bad ? .bad : .warning)
     }
 
-    private static func unknown(_ dimension: Dimension) -> Score {
-        Score(dimension: dimension, grade: .unknown, value: "데이터 없음", basis: nil)
+    /// 모름. `hint` 는 무엇을 하면 잴 수 있는지 한 줄.
+    private static func unknown(_ dimension: Dimension, hint: String? = nil) -> Score {
+        Score(dimension: dimension, grade: .unknown, value: "데이터 없음", basis: hint)
     }
 }

@@ -3,11 +3,13 @@
 //  FeedbackHubViewer
 //
 //  홈의 세 번째 얼굴 — "쓰는 사람이 겪는 것이 멀쩡한가". 앱마다 안정성 · 실행 속도 · 멈춤 ·
-//  만족도 · 지원 응답을 공개 기준과 견주고, 가장 나쁜 항목이 종합이 된다. 나쁜 앱부터.
+//  만족도 · 지원 응답 · 핵심 기능 · 온보딩 · 기기 테스트 · 커버리지를 기준과 견주고,
+//  가장 나쁜 항목이 종합이 된다. 나쁜 앱부터.
 //
 //  판정은 `AppQuality` 가 한다(순수 함수). 여기는 재료를 모으고 그린다.
 //  재료: 릴리즈 건강(`ReleaseHealth` — 크래시 없는 설치 · MetricKit 성능 한 줄) · 스토어 별점 ·
-//  피드백 처리 여부. 새로 셈하지 않고 다른 칸이 쓰는 값을 그대로 읽는다.
+//  피드백 처리 여부 · 일 버킷의 온보딩 이벤트 · 레포 폴더의 테스트 결과(`docs/*.json`).
+//  새로 셈하지 않고 다른 칸이 쓰는 값을 그대로 읽는다(온보딩만 `FeedbackStore.onboarding(for:)`).
 //
 
 import SwiftUI
@@ -70,7 +72,15 @@ struct QualityBoard: View {
                 input.hangPerHour = version.performance?.hangPerHour
                 input.performanceVersion = version.version
             }
+            if let action = report.spec.coreAction {
+                let recent = report.recent.isEmpty ? [report.latest] + [report.previous].compactMap { $0 } : report.recent
+                input.core = .init(label: action.label, versions: recent,
+                                   dropMax: report.spec.thresholds.coreActionDropMax, minInstalls: minInstalls)
+            }
         }
+
+        input.onboarding = store.onboarding(for: project)
+        input.coverage = keywords.testCoverage[project.lowercased()]
 
         input.deviceTest = keywords.deviceTests[project.lowercased()]
 
@@ -96,7 +106,8 @@ struct QualityBoard: View {
         case .stability?: return .crashes
         case .rating?: return .reviews
         case .support?: return .feedback
-        case .launch?, .hang?, .deviceTest?, nil: return .release
+        case .onboarding?: return .stats
+        case .launch?, .hang?, .core?, .deviceTest?, .coverage?, nil: return .release
         }
     }
 
@@ -223,11 +234,12 @@ struct QualityBoard: View {
 
     private var footnote: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text("틀은 ISO/IEC 25010 의 신뢰성 · 성능 효율성 · 사용 품질입니다. 종합은 가장 나쁜 항목을 따릅니다.")
+            Text("틀은 ISO/IEC 25010 의 신뢰성 · 성능 효율성 · 사용 품질 · 기능 적합성 · 유지보수성입니다. 종합은 가장 나쁜 항목을 따릅니다.")
             ForEach(AppQuality.Dimension.allCases) { dimension in
                 Text("\(dimension.rawValue): \(dimension.standard)")
             }
-            Text("기기 테스트는 연결한 아이폰에서 scripts/device-qa.sh 가 돌린 결과입니다(맥에서 workspace/Auto 폴더를 골라 둔 경우).")
+            Text("기기 테스트 · 커버리지는 scripts/device-qa.py · scripts/test-coverage.py 가 workspace/Auto/docs 에 쓴 결과입니다(맥에서 그 폴더를 골라 둔 경우).")
+            Text("핵심 기능은 릴리즈 건강의 핵심 행동(스펙 coreAction, 없으면 통계에서 고른 가치 행동), 온보딩은 지난 30일 새 설치가 onboarding_completed · _skipped 같은 이벤트를 보냈는지입니다.")
             Text("안정성 · 성능은 판정할 만큼 설치가 모인 가장 새 버전, 지원 응답은 최근 90일 중 받은 지 3일 지난 피드백입니다.")
         }
         .font(.body)

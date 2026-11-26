@@ -78,6 +78,8 @@ extension FeedbackStore {
         var carryingCapacity: [CapacityKey: CarryingCapacity?] = [:]
         // 릴리즈 건강. nil 도 결과다("창 안에 버전을 가를 이벤트가 없다").
         var releaseHealth: [String: ReleaseHealth.Report?] = [:]
+        // 품질 탭의 온보딩. nil 도 결과다("온보딩 이벤트를 안 보낸다").
+        var onboarding: [String: AppQuality.Onboarding?] = [:]
         var platformTags: [String: String]?
         var metrics: [CrashReport]?
         var stabilization: [StabilizationKey: Stabilization.Report?] = [:]

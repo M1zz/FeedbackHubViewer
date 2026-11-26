@@ -26,9 +26,31 @@ extension FeedbackStore {
                                          crashes: crashes(for: project),
                                          feedback: feedback(for: project),
                                          metrics: allMetrics.filter { $0.projectKey == project },
-                                         spec: ProjectStatsSpecCatalog.spec(for: project)?.release,
+                                         spec: releaseSpec(for: project),
                                          everSeenEvents: everSeen,
                                          coverageStart: rawEventCoverageStart)
+        }
+    }
+
+    /// 앱 스펙의 `release` 절. 핵심 행동을 안 적었으면 뷰어 · 스펙에서 고른 가치 행동
+    /// (`ActivityDefinition.valueEvents`)이 핵심 행동이 된다 — "썼다" 의 뜻은 하나다.
+    func releaseSpec(for project: String) -> ReleaseSpec? {
+        let spec = ProjectStatsSpecCatalog.spec(for: project)?.release
+        guard spec?.coreAction == nil else { return spec }
+        let valueEvents = activityDefinition(for: project).valueEvents
+        guard !valueEvents.isEmpty else { return spec }
+        var filled = spec ?? .fallback
+        filled.coreAction = .init(label: "가치 행동을 한 사람", events: valueEvents)
+        return filled
+    }
+
+    /// 지난 30일 새 설치의 온보딩(품질 탭). 모든 일 버킷을 훑어 처음 온 날을 가리므로 캐시한다.
+    func onboarding(for project: String) -> AppQuality.Onboarding? {
+        memoized(\.onboarding, project) {
+            let now = Date()
+            return AppQuality.onboarding(days(for: project, audience: .all),
+                                         today: UsageRollups.dayKey(now),
+                                         windowStart: UsageRollups.dayKey(now.addingTimeInterval(-30 * 86_400)))
         }
     }
 

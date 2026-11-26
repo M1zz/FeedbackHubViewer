@@ -500,6 +500,7 @@ final class FeedbackStore: ObservableObject {
                 SyncedDefaults.set(data, forKey: Self.activityOverridesKey)
             }
             derived.habit = [:]
+            derived.releaseHealth = [:]
         }
     }
     /// 새로고침이 새것을 찾았을 때 시스템 알림을 띄울 것(`notificationsEnabled` 가 켜져 있을 때).

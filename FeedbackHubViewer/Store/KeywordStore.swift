@@ -67,6 +67,8 @@ final class KeywordStore: ObservableObject {
     @Published var repoKeywords: [String: [String]] = [:]
     /// 같은 폴더의 `docs/quality-tests.json` — 번들 id(소문자) → 아이폰에서 돌린 테스트 결과(`DeviceTests.swift`).
     @Published var deviceTests: [String: DeviceTestResult] = [:]
+    /// 같은 폴더의 `docs/test-coverage.json` — 번들 id(소문자) → 테스트 커버리지(`TestCoverage.swift`).
+    @Published var testCoverage: [String: TestCoverage] = [:]
     /// 레포들이 든 폴더(`workspace/Auto`). 샌드박스라 한 번 골라 받은 허락으로 읽는다. nil 이면 아직 안 골랐다.
     @Published var repoFolder: URL?
     var repoActiveObserver: NSObjectProtocol?
