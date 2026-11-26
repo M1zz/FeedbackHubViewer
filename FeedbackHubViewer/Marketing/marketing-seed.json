@@ -6272,5 +6272,53 @@
   "body": "",
   "bodyEn": "Turning a photo of your dog into fuse beads? Hantam matches it to real Perler, Hama and Artkal colors and tells you how many of each. The shopping list adds 10% spare beads.\n\nBlack Friday: first subscription period discounted Nov 27 to Dec 4.\n\n#perlerbeads",
   "theme": null
+ },
+ {
+  "id": "b10e0504-6999-4d77-b10d-acf4333d4682",
+  "project": "com.devkoan.StaffSinger",
+  "kind": "cardNews",
+  "channel": "인스타그램",
+  "title": "You can sing it. Can you write it down?",
+  "angle": "영어 · 해외 대상 한 기능 깊이형(빛번짐 glow.swift, 6장). 초견(StaffSinger) 계이름 받아쓰기: 건반으로 한 음씩 찾기 → 메트로놈 네 박 뒤 do re mi 말하면 오선에 음표 → Rhythm Snap 1/4 · 1/8 · 1/16 · Free → 바로 재생(카운트인 · 지금 음 표시). 기기 안 음성 인식 · 세 번 무료 체험. 덱 scripts/cardnews/decks/2026-11-27-초견-계이름받아쓰기-en.json 카드 app-portfolio marketing/cardnews/2026-11-27-staffsinger-dictation-en/ https://www.instagram.com/lee25_ios/p/DgNZfYxCYou/",
+  "plannedAt": "2026-11-27T00:00:00Z",
+  "stage": "posted",
+  "slides": [],
+  "script": "",
+  "scriptEn": "",
+  "body": "",
+  "bodyEn": "You can sing the melody. Writing it down is the slow part.\n\nStaffSinger has Solfege Dictation: after four metronome beats, say the note names (do re mi fa sol la ti, or \"rest\" for a rest) and they land on the staff as real notes. Speak on the beat and Rhythm Snap catches the rhythm too, in quarters, eighths or sixteenths.\n\nThen press play to hear it back with a count-in and a click. Speech recognition runs on your device, and you can try dictation free three times.\n\nSearch \"StaffSinger\" on the App Store.\n\n#sightsinging #solfege #musictheory #choir #eartraining #musicstudent #iosapp #indiedev",
+  "theme": null
+ },
+ {
+  "id": "d083e50d-61ea-4a63-923e-82ad9ab63fd2",
+  "project": "com.devkoan.StaffSinger",
+  "kind": "cardNews",
+  "channel": "스레드",
+  "title": "You can sing it. Can you write it down?",
+  "angle": "영어 · 해외 대상 한 기능 깊이형(빛번짐 glow.swift, 6장). 초견(StaffSinger) 계이름 받아쓰기: 건반으로 한 음씩 찾기 → 메트로놈 네 박 뒤 do re mi 말하면 오선에 음표 → Rhythm Snap 1/4 · 1/8 · 1/16 · Free → 바로 재생(카운트인 · 지금 음 표시). 기기 안 음성 인식 · 세 번 무료 체험. 덱 scripts/cardnews/decks/2026-11-27-초견-계이름받아쓰기-en.json 카드 app-portfolio marketing/cardnews/2026-11-27-staffsinger-dictation-en/ https://www.threads.com/@lee25_ios/post/DgNZmr2n_Li",
+  "plannedAt": "2026-11-27T00:00:00Z",
+  "stage": "posted",
+  "slides": [],
+  "script": "",
+  "scriptEn": "",
+  "body": "",
+  "bodyEn": "You can sing the melody. Writing it down is the slow part.\n\nStaffSinger has Solfege Dictation: after four metronome beats, say do re mi fa sol la ti (or \"rest\") and the notes land on the staff. Speak on the beat and Rhythm Snap catches the rhythm too.\n\nPress play to hear it back with a count-in. Recognition runs on device, and you can try it free three times.\n\nSearch \"StaffSinger\" on the App Store.",
+  "theme": null
+ },
+ {
+  "id": "8ac6959e-3723-49e3-b58f-aad1c021de14",
+  "project": "com.devkoan.StaffSinger",
+  "kind": "post",
+  "channel": "X",
+  "title": "You can sing it. Can you write it down?",
+  "angle": "영어 · 해외 대상 한 기능 깊이형(빛번짐 glow.swift, 6장). 초견(StaffSinger) 계이름 받아쓰기: 건반으로 한 음씩 찾기 → 메트로놈 네 박 뒤 do re mi 말하면 오선에 음표 → Rhythm Snap 1/4 · 1/8 · 1/16 · Free → 바로 재생(카운트인 · 지금 음 표시). 기기 안 음성 인식 · 세 번 무료 체험. 덱 scripts/cardnews/decks/2026-11-27-초견-계이름받아쓰기-en.json 카드 app-portfolio marketing/cardnews/2026-11-27-staffsinger-dictation-en/ https://x.com/leeoios/status/2125971397856145480",
+  "plannedAt": "2026-11-27T00:00:00Z",
+  "stage": "posted",
+  "slides": [],
+  "script": "",
+  "scriptEn": "",
+  "body": "",
+  "bodyEn": "You can sing the melody, but writing it down is slow. In StaffSinger, say do re mi to a metronome and the notes land on the staff. Speak on the beat and the rhythm comes too. Then hit play to hear it back.\n\n#solfege #musictheory",
+  "theme": null
  }
 ]
