@@ -9,6 +9,8 @@ import SwiftUI
 
 struct FeedbackDetailView: View {
     @EnvironmentObject private var store: FeedbackStore
+    @EnvironmentObject private var purchases: AppStoreConnectStore
+    @ObservedObject private var giftPools = GiftCodePool.shared
     let feedback: Feedback
     /// Resolved project/app name (appId → appName mapping applied by the store).
     let projectLabel: String
@@ -289,7 +291,38 @@ struct FeedbackDetailView: View {
                         .disabled(replyDraft.trimmed.isEmpty || replyState == .sending
                                   || replyDraft.trimmed == sentReply)
                 }
+                giftRow
             }
+        }
+        .task(id: feedback.appId) {
+            guard let bundle = feedback.appId else { return }
+            for key in GiftCodePool.poolKeys(for: bundle) { await giftPools.refresh(key, connect: purchases) }
+        }
+    }
+
+    /// 쓸모 있는 의견을 채택하고 선물을 보낸다 — 그 사람의 첫 채택은 Plus, 그다음부터 Pro.
+    /// 답장 글과 함께 간다. 코드는 싣지 않고, 앱이 묶음에서 꺼낸다(LeeoKit `LeeoFeedbackGift`).
+    @ViewBuilder
+    private var giftRow: some View {
+        if let tier = store.gifted[feedback.id] {
+            Label("채택하고 \(tier) 선물을 보냈어요 · 사용자 앱의 보낸 의견에서 받아요", systemImage: "gift.fill")
+                .font(.body)
+                .foregroundStyle(.secondary)
+        } else if let offer = store.giftOffer(for: feedback, connect: purchases) {
+            HStack {
+                Text(store.hasBeenGifted(feedback)
+                     ? "이 사람은 전에 채택된 적이 있어 \(offer.tier) 를 보내요"
+                     : "이 사람의 첫 채택이라 \(offer.tier) 를 보내요")
+                    .font(.body)
+                    .foregroundStyle(.secondary)
+                Spacer()
+                Button("채택하고 \(offer.tier) 선물") { sendReply(gift: offer) }
+                    .disabled(replyDraft.trimmed.isEmpty || replyState == .sending)
+            }
+        } else if feedback.appId != nil {
+            Text("선물 코드 묶음이 비어 있어 채택 선물을 보낼 수 없어요 · 앱 내 구입 화면의 선물 묶음을 채우세요")
+                .font(.body)
+                .foregroundStyle(.secondary)
         }
     }
 
@@ -312,12 +345,12 @@ struct FeedbackDetailView: View {
         return false
     }
 
-    private func sendReply() {
+    private func sendReply(gift: CloudKitService.ReplyGift? = nil) {
         let message = replyDraft.trimmed
         replyState = .sending
         Task {
             do {
-                try await store.sendReply(message, for: feedback)
+                try await store.sendReply(message, for: feedback, gift: gift)
                 sentReply = message
                 replyState = .sent
             } catch {

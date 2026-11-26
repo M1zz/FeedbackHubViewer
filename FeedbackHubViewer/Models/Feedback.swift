@@ -35,6 +35,8 @@ struct Feedback: HubRecord, Codable {
     let platform: String?
     let createdAt: Date?
     let modifiedAt: Date?
+    /// 보낸 사람의 iCloud 사용자(이 컨테이너 안에서 앱이 달라도 같다). 채택 선물의 등급을 가른다.
+    var creatorID: String?
 
     /// Every field on the record, stringified, for the detail view. Carried to
     /// disk verbatim so a relaunch can paint before CloudKit answers.
@@ -93,6 +95,7 @@ struct Feedback: HubRecord, Codable {
         recordType = record.recordType
         createdAt = record.creationDate
         modifiedAt = record.modificationDate
+        creatorID = record.creatorUserRecordID?.recordName
         allFields = fields.allFields
 
         appId = fields.string("appId", "appID", "app_id", "bundleID",

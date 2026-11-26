@@ -103,6 +103,15 @@ final class CloudKitService {
     struct ReplyStatus: Equatable {
         let message: String
         var readAt: Date?
+        /// 채택하고 보낸 선물의 등급("Plus" · "Pro"). 선물이 없으면 nil.
+        var gift: String?
+    }
+
+    /// 채택 선물 — 답장에 **표시만** 싣는다. 앱(LeeoKit `LeeoFeedbackGift`)이 `pool` 묶음에서 코드를 꺼낸다.
+    struct ReplyGift {
+        let tier: String
+        let pool: String
+        let appStoreID: String?
     }
 
     /// 읽음 확인. 사용자 앱(LeeoKit)이 답장을 열어 보면 같은 타입으로 `read-<feedback recordName>`
@@ -136,11 +145,11 @@ final class CloudKitService {
         for start in stride(from: 0, to: ids.count, by: 200) {
             let batch = ids[start..<min(start + 200, ids.count)]
             let recordIDs = batch.map(Self.replyRecordID(forFeedback:)) + batch.map(Self.receiptRecordID(forFeedback:))
-            guard let results = try? await database.records(for: recordIDs, desiredKeys: ["message"]) else { continue }
+            guard let results = try? await database.records(for: recordIDs, desiredKeys: ["message", "gift"]) else { continue }
             for id in batch {
                 guard case .success(let reply)? = results[Self.replyRecordID(forFeedback: id)],
                       let message = reply["message"] as? String else { continue }
-                var status = ReplyStatus(message: message)
+                var status = ReplyStatus(message: message, gift: reply["gift"] as? String)
                 if case .success(let receipt)? = results[Self.receiptRecordID(forFeedback: id)],
                    receipt["message"] as? String == message {
                     status.readAt = receipt.modificationDate
@@ -153,13 +162,18 @@ final class CloudKitService {
 
     /// Writes (or rewrites) the reply. The sender sees it in their app under
     /// Settings > 보낸 의견, whether or not they left an email.
-    func saveReply(_ message: String, forFeedback id: String, appId: String?) async throws {
+    func saveReply(_ message: String, forFeedback id: String, appId: String?, gift: ReplyGift? = nil) async throws {
         let recordID = Self.replyRecordID(forFeedback: id)
         let record = (try? await database.record(for: recordID))
             ?? CKRecord(recordType: Self.replyRecordType, recordID: recordID)
         record["feedbackID"] = id
         record["message"] = message
         if let appId { record["appId"] = appId }
+        if let gift {
+            record["gift"] = gift.tier
+            record["giftPool"] = gift.pool
+            record["appStoreID"] = gift.appStoreID
+        }
         _ = try await database.save(record)
     }
 

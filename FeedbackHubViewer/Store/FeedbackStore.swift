@@ -547,6 +547,7 @@ final class FeedbackStore: ObservableObject {
         readIDs = Set(defaults.stringArray(forKey: Self.readIDsKey) ?? [])
         triage = Self.decodeTriage(defaults.data(forKey: Self.triageKey))
         repliedIDs = Set(defaults.stringArray(forKey: Self.repliedIDsKey) ?? [])
+        gifted = defaults.dictionary(forKey: Self.giftedKey) as? [String: String] ?? [:]
         replyReadAt = defaults.data(forKey: Self.replyReadAtKey)
             .flatMap { try? JSONDecoder().decode([String: Date].self, from: $0) } ?? [:]
         reviewsDone = defaults.data(forKey: Self.reviewsDoneKey)
@@ -1534,6 +1535,9 @@ final class FeedbackStore: ObservableObject {
     /// 사용자가 답장을 읽은 시각(허브의 읽음 확인). 답장을 고치면 지워진다 — 고친 글은 아직 안 읽은 것이다.
     @Published private(set) var replyReadAt: [String: Date] = [:]
     private static let replyReadAtKey = "feedbackReplyReadAt"
+    /// 채택하고 선물을 보낸 피드백 → 등급. 같은 사람의 다음 채택이 Pro 가 되는지 가른다.
+    @Published private(set) var gifted: [String: String] = [:]
+    private static let giftedKey = "feedbackGifted"
     private var lastReplyCheck: Date?
 
     func isReplied(_ feedback: Feedback) -> Bool { repliedIDs.contains(feedback.id) }
@@ -1554,10 +1558,30 @@ final class FeedbackStore: ObservableObject {
         return await service.fetchScreenshots(forFeedback: feedback.id, keys: keys)
     }
 
-    func sendReply(_ message: String, for feedback: Feedback) async throws {
-        try await service.saveReply(message, forFeedback: feedback.id, appId: feedback.appId)
-        apply(replies: [feedback.id: .init(message: message)])
+    func sendReply(_ message: String, for feedback: Feedback, gift: CloudKitService.ReplyGift? = nil) async throws {
+        try await service.saveReply(message, forFeedback: feedback.id, appId: feedback.appId, gift: gift)
+        apply(replies: [feedback.id: .init(message: message, gift: gift?.tier ?? gifted[feedback.id])])
         markRead(feedback)
+    }
+
+    // MARK: - 채택 선물
+
+    /// 이 사람에게 채택 선물을 준 적이 있는가 — 첫 채택은 Plus, 그다음부터 Pro.
+    func hasBeenGifted(_ feedback: Feedback) -> Bool {
+        guard let creator = feedback.creatorID else { return false }
+        return allFeedback.contains { $0.id != feedback.id && $0.creatorID == creator && gifted[$0.id] != nil }
+    }
+
+    /// 이 피드백에 보낼 선물. 첫 채택이고 Plus 묶음에 남은 장이 있으면 Plus, 아니면 Pro 묶음.
+    /// 묶음이 비었으면 nil — 허브의 선물 묶음 화면에서 채운 뒤에 보낸다.
+    func giftOffer(for feedback: Feedback, connect: AppStoreConnectStore) -> CloudKitService.ReplyGift? {
+        guard let bundle = feedback.appId, !bundle.isEmpty else { return nil }
+        let pools = GiftCodePool.shared
+        let keys = GiftCodePool.poolKeys(for: bundle).filter { (pools.statuses[$0]?.left ?? 0) > 0 }
+        let plus = keys.first { GiftCodePool.tierLabel($0) == "Plus" }
+        let pro = keys.first { GiftCodePool.tierLabel($0) == "Pro" }
+        guard let key = hasBeenGifted(feedback) ? (pro ?? plus) : (plus ?? pro) else { return nil }
+        return .init(tier: GiftCodePool.tierLabel(key), pool: key, appStoreID: connect.connectApp(for: bundle)?.id)
     }
 
     /// 아직 답장을 모르는 피드백에 답장이 달렸는지, 답장을 아직 안 읽은 피드백은 읽었는지 허브에서
@@ -1582,6 +1606,12 @@ final class FeedbackStore: ObservableObject {
         if !ids.isSubset(of: repliedIDs) {
             repliedIDs.formUnion(ids)
             defaults.set(Array(repliedIDs), forKey: Self.repliedIDsKey)
+        }
+        var gifts = gifted
+        for (id, status) in replies { if let tier = status.gift { gifts[id] = tier } }
+        if gifts != gifted {
+            gifted = gifts
+            defaults.set(gifts, forKey: Self.giftedKey)
         }
         var read = replyReadAt
         for (id, status) in replies { read[id] = status.readAt }
