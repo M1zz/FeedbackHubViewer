@@ -39,7 +39,7 @@ struct AppGridHome: View {
     @ObservedObject private var changes = SectionChanges.shared
 
     @AppStorage("home-grid-sort") private var sortRaw = Sort.impact.rawValue
-    /// 홈의 두 얼굴 — 지금 무슨 일이 났나(`now`) · 어느 앱에 시간을 더 들일까(`potential`).
+    /// 홈의 세 얼굴 — 지금 무슨 일이 났나(`now`) · 어느 앱에 시간을 더 들일까(`potential`) · 멀쩡한가(`quality`).
     @AppStorage("home-mode") private var modeRaw = HomeMode.now.rawValue
     @State private var filter: Filter = .all
     @State private var query = ""
@@ -273,6 +273,8 @@ struct AppGridHome: View {
 
                 if modeRaw == HomeMode.potential.rawValue {
                     PotentialBoard()
+                } else if modeRaw == HomeMode.quality.rawValue {
+                    QualityBoard()
                 } else {
                 summary(all)
                 urgent(all)
@@ -1374,6 +1376,8 @@ enum HomeMode: String, CaseIterable, Identifiable {
     case now = "지금"
     /// 깔때기를 업계 평균과 견줘 어느 앱에 시간을 더 들일지(`PotentialBoard`).
     case potential = "잠재력"
+    /// 안정성 · 속도 · 별점 · 지원 응답을 공개 기준과 견준 서비스 품질(`QualityBoard`).
+    case quality = "품질"
     var id: String { rawValue }
 }
 
