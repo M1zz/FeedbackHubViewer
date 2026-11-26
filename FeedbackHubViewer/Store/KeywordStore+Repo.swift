@@ -178,7 +178,16 @@ extension KeywordStore {
 
     private func restoreRepoFolder() {
         #if os(macOS)
-        guard let data = UserDefaults.standard.data(forKey: Self.repoBookmarkKey) else { return }
+        guard let data = UserDefaults.standard.data(forKey: Self.repoBookmarkKey) else {
+            // 고른 적이 없으면 늘 그 자리 — 앱이 그 폴더를 읽기 전용으로 받아 둔다(entitlements 의
+            // home-relative-path 예외). 폴더를 한 번 골라야 품질 · 출시 기다림이 보이던 것을 없앤다.
+            if let pw = getpwuid(getuid()) {
+                let auto = URL(fileURLWithPath: String(cString: pw.pointee.pw_dir))
+                    .appendingPathComponent("Documents/workspace/Auto", isDirectory: true)
+                if FileManager.default.isReadableFile(atPath: auto.path) { repoFolder = auto }
+            }
+            return
+        }
         var stale = false
         guard let url = try? URL(resolvingBookmarkData: data, options: .withSecurityScope,
                                  relativeTo: nil, bookmarkDataIsStale: &stale),
