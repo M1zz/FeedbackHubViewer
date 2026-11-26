@@ -288,24 +288,51 @@ actor AppStoreConnect {
     /// 20분이 한도라 15분짜리를 만들어 두고 돌려 쓴다.
     func bearer() throws -> String {
         if let token, token.expires > Date().addingTimeInterval(60) { return token.value }
+        let made = try makeToken()
+        token = made
+        return made.value
+    }
+
+    /// 팀 키로 서명한 JWT. App Store Server API(`requestTestNotification`)는 같은 키에
+    /// 번들 ID(`bid`)를 하나 더 붙여야 받는다.
+    private func makeToken(bundleID: String? = nil) throws -> (value: String, expires: Date) {
         let key = try P256.Signing.PrivateKey(
             pemRepresentation: credentials.privateKey.trimmingCharacters(in: .whitespacesAndNewlines))
         let now = Date()
         let expires = now.addingTimeInterval(15 * 60)
         let header = ["alg": "ES256", "kid": credentials.keyID.trimmingCharacters(in: .whitespaces), "typ": "JWT"]
-        let payload: [String: Any] = [
+        var payload: [String: Any] = [
             "iss": credentials.issuerID.trimmingCharacters(in: .whitespaces),
             "iat": Int(now.timeIntervalSince1970),
             "exp": Int(expires.timeIntervalSince1970),
             "aud": "appstoreconnect-v1"
         ]
+        if let bundleID { payload["bid"] = bundleID }
         let head = try Self.base64URL(JSONSerialization.data(withJSONObject: header))
         let body = try Self.base64URL(JSONSerialization.data(withJSONObject: payload))
         let input = Data("\(head).\(body)".utf8)
         let signature = try key.signature(for: input).rawRepresentation
-        let value = "\(head).\(body).\(Self.base64URL(signature))"
-        token = (value, expires)
-        return value
+        return ("\(head).\(body).\(Self.base64URL(signature))", expires)
+    }
+
+    // MARK: 결제 알림 시험
+
+    /// Apple 에 그 앱의 시험 알림(TEST)을 보내 달라고 한다. Apple 은 앱에 적힌 서버 알림 주소로
+    /// 보내고, 서버(app-portfolio `services/purchase-notify`)가 허브에 Purchase 를 남겨 아이폰 · 맥에
+    /// 푸시가 뜬다 — 실제 결제 없이 결제 알림 길 전체를 한 번에 시험한다. 샌드박스 쪽으로 보낸다.
+    func requestTestNotification(bundleID: String) async throws {
+        var request = URLRequest(url: URL(string: "https://api.storekit-sandbox.itunes.apple.com/inApps/v1/notifications/test")!)
+        request.httpMethod = "POST"
+        request.setValue("Bearer \(try makeToken(bundleID: bundleID).value)", forHTTPHeaderField: "Authorization")
+        let (data, response) = try await URLSession.shared.data(for: request)
+        let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+        guard !(200..<300).contains(status) else { return }
+        if status == 404 {
+            throw Failure.http(404, "이 앱에는 서버 알림 주소가 없습니다. 막 넣었다면 몇 분 뒤에 다시 해 보세요")
+        }
+        let message = (try? JSONSerialization.jsonObject(with: data) as? [String: Any])?["errorMessage"] as? String
+        if status == 401 { throw Failure.unauthorized }
+        throw Failure.http(status, message)
     }
 
     private static func base64URL(_ data: Data) -> String {

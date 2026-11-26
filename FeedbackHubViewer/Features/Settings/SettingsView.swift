@@ -114,6 +114,9 @@ private struct AttentionSettings: View {
                     }
                     .padding(.leading, 20)
                 }
+                PurchaseAlertRow()
+                    .disabled(!store.notificationsEnabled)
+                    .padding(.leading, 20)
                 VStack(alignment: .leading, spacing: 2) {
                     Toggle(isOn: $news.alertsEnabled) {
                         Label("내 앱 소식", systemImage: "newspaper")
@@ -168,6 +171,81 @@ private struct AttentionSettings: View {
             store[keyPath: keyPath].contains(kind)
         } set: { isOn in
             if isOn { store[keyPath: keyPath].insert(kind) } else { store[keyPath: keyPath].remove(kind) }
+        }
+    }
+}
+
+/// 결제 알림 — 끄고 켜는 스위치는 없다(알림을 켜 두면 늘 온다). 대신 실제 결제 없이 길 전체를
+/// 시험하는 단추: Apple 에 시험 알림을 부탁 → 서버 → 허브 → 이 기기 · 다른 기기에 푸시.
+private struct PurchaseAlertRow: View {
+    @EnvironmentObject private var store: FeedbackStore
+    @EnvironmentObject private var connect: AppStoreConnectStore
+    @State private var app = ""
+    @State private var state = Phase.idle
+
+    enum Phase: Equatable { case idle, sending, sent, failed(String) }
+
+    private var apps: [String] {
+        store.projectCounts.map(\.key)
+            .filter { $0 != Feedback.unclassifiedProject }
+            .sorted { store.displayName(for: $0).localizedStandardCompare(store.displayName(for: $1)) == .orderedAscending }
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Label("결제", systemImage: "creditcard")
+            Text("구매 · 구독 · 갱신 · 환불을 푸시로 받습니다. 앱이 꺼져 있어도 옵니다.")
+                .font(.body)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.leading, 28)
+            HStack(spacing: 8) {
+                Picker("앱", selection: $app) {
+                    ForEach(apps, id: \.self) { Text(store.displayName(for: $0)).tag($0) }
+                }
+                .labelsHidden()
+                .fixedSize()
+                Button {
+                    send()
+                } label: {
+                    Label("시험 결제 알림 보내기", systemImage: "paperplane")
+                }
+                .disabled(app.isEmpty || state == .sending || connect.client == nil)
+            }
+            .padding(.leading, 28)
+            Group {
+                switch state {
+                case .idle:
+                    Text(connect.client == nil
+                         ? "App Store Connect 키를 넣어야 시험할 수 있습니다."
+                         : "실제 결제 없이 Apple → 서버 → 허브 길을 한 번 지나 봅니다.")
+                case .sending:
+                    Text("Apple 에 부탁하는 중…")
+                case .sent:
+                    Text("Apple 이 보냈습니다. 몇 초 안에 이 기기와 다른 기기에 '결제 알림 시험' 이 떠야 합니다.")
+                        .foregroundStyle(.green)
+                case .failed(let reason):
+                    Text(reason).foregroundStyle(.orange)
+                }
+            }
+            .font(.body)
+            .foregroundStyle(.secondary)
+            .fixedSize(horizontal: false, vertical: true)
+            .padding(.leading, 28)
+        }
+        .onAppear { if app.isEmpty { app = apps.first ?? "" } }
+    }
+
+    private func send() {
+        guard let client = connect.client else { return }
+        state = .sending
+        Task {
+            do {
+                try await client.requestTestNotification(bundleID: app)
+                state = .sent
+            } catch {
+                state = .failed(error.localizedDescription)
+            }
         }
     }
 }
