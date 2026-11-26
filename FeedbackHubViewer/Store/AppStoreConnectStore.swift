@@ -134,6 +134,8 @@ final class AppStoreConnectStore: ObservableObject {
     private(set) var client: AppStoreConnect?
     /// 날짜 → 그날 판매. 디스크에 남는다.
     private var reportCache: [String: [SalesLine]] = [:]
+    /// 판매 리포트를 마지막으로 물은 때.
+    private var lastSalesFetch: Date?
     /// 이번 실행에서 네트워크로 새로 받았거나 받는 중인 것("funnel:번들 ID" 꼴).
     /// 디스크에서 채운 값은 여기 없어서, 처음 볼 때 한 번 새로 받는다.
     var refreshed: Set<String> = []
@@ -450,7 +452,12 @@ final class AppStoreConnectStore: ObservableObject {
             guard force else { return }
         }
         guard client != nil, credentials?.hasVendorNumber == true else { return }
-        guard force || sales == nil else { return }
+        // 이미 그렸어도 어제 리포트가 아직 없으면 다시 받는다 — Apple 은 어제 것을 늦게 낸다.
+        // 다만 30분에 한 번만(없는 날을 자꾸 물으면 한도만 쓴다).
+        let stale = reportCache[Self.reportWindow().first?.key ?? ""] == nil
+            && Date().timeIntervalSince(lastSalesFetch ?? .distantPast) > 30 * 60
+        guard force || sales == nil || stale else { return }
+        lastSalesFetch = Date()
         let task = Task { await self.fetchSales() }
         salesTask = task
         await task.value

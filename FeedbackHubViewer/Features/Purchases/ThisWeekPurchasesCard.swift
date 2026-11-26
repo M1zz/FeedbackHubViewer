@@ -91,7 +91,11 @@ struct ThisWeekPurchasesCard: View {
                     .foregroundStyle(.orange)
             }
         }
-        .task(id: project) { await purchases.loadReceipts() }
+        .task(id: project) {
+            await purchases.loadReceipts()
+            // 아무것도 안 팔린 것으로 보이면 판매 리포트를 새로 받아 본다 — 어제 것이 늦게 나온다.
+            if receipts.isEmpty && storeSales.isEmpty { await purchases.loadSales(force: true) }
+        }
     }
 
     // MARK: - 셈
