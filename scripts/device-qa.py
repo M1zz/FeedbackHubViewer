@@ -16,7 +16,7 @@ watchOS · visionOS · tvOS 는 그 플랫폼의 시뮬레이터.
 
     scripts/device-qa.py [--device <UDID>] [--platforms iOS,macOS] [앱 폴더 이름 ...]
 """
-import argparse, datetime, glob, json, os, plistlib, re, shutil, subprocess, sys, tempfile, time
+import argparse, datetime, glob, json, os, plistlib, re, shutil, subprocess, sys, tempfile, time, unicodedata
 
 AUTO = os.path.expanduser("~/Documents/workspace/Auto")
 OUT = os.path.join(AUTO, "docs", "quality-tests.json")
@@ -267,8 +267,11 @@ def smoke_launch_mac(app):
     if code != 0:
         return False, "켜기 실패: " + first_error(out)
     time.sleep(8)
-    code, out = run(["pgrep", "-f", exe_dir], 30)
-    pids = [p for p in out.split() if p.isdigit()]
+    # pgrep -f 는 한글 경로의 NFC · NFD 가 다르면 못 찾는다 — 둘 다 NFC 로 맞춰 견준다.
+    want = unicodedata.normalize("NFC", exe_dir)
+    code, out = run(["ps", "-axo", "pid=,command="], 30)
+    pids = [line.split(None, 1)[0] for line in out.splitlines()
+            if len(line.split(None, 1)) == 2 and want in unicodedata.normalize("NFC", line.split(None, 1)[1])]
     for pid in pids:
         run(["kill", pid], 10)
     return (True, None) if pids else (False, "켠 뒤 8초 안에 꺼짐(크래시 의심)")
@@ -382,6 +385,7 @@ def test_app(folder, device, packages, platform="iOS", scheme=None, project=None
 
 
 def save(entry, device_name):
+    entry["folder"] = unicodedata.normalize("NFC", entry["folder"])
     os.makedirs(os.path.dirname(OUT), exist_ok=True)
     try:
         with open(OUT, encoding="utf-8") as f:
@@ -389,7 +393,8 @@ def save(entry, device_name):
     except Exception:
         report = {"apps": []}
     key = (entry["folder"], entry.get("platform") or "iOS")
-    report["apps"] = [a for a in report.get("apps", []) if (a.get("folder"), a.get("platform") or "iOS") != key] + [entry]
+    report["apps"] = [a for a in report.get("apps", [])
+                      if (unicodedata.normalize("NFC", a.get("folder", "")), a.get("platform") or "iOS") != key] + [entry]
     report["apps"].sort(key=lambda a: (a["folder"], a.get("platform") or "iOS"))
     report["generatedAt"] = now_iso()
     report["device"] = device_name
