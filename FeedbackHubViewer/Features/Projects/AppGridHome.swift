@@ -286,6 +286,8 @@ struct AppGridHome: View {
                     QualityBoard()
                 } else if modeRaw == HomeMode.charts.rawValue {
                     AppChartsBoard(rows: all)
+                } else if modeRaw == HomeMode.calendar.rawValue {
+                    DeployCalendarBoard(rows: all)
                 } else {
                 summary(all)
                 urgent(all)
@@ -1452,6 +1454,8 @@ enum HomeMode: String, CaseIterable, Identifiable {
     case quality = "품질"
     /// 앱 전부를 그래프에 아이콘으로 찍어 견준다(`AppChartsBoard`).
     case charts = "차트"
+    /// 2주에 한 번, 앱마다 정해진 평일에 낸다(`DeployCalendarBoard`).
+    case calendar = "배포"
     var id: String { rawValue }
 }
 
