@@ -107,8 +107,11 @@ struct AppListView: View {
                 : project == Feedback.unclassifiedProject ? .secondary : .accentColor,
             detail: metrics.label(section, project: project),
             isAlarming: metrics.isAlarming(section, project: project),
-            badge: metrics.badge(section, project: project) ?? visitBadge(project),
-            elsewhere: elsewhere(project, metrics: metrics),
+            // 줄의 빨간 숫자는 사이드바 · 탭 뱃지가 세는 것만 — 이미 본 바뀜(`visitBadge`)과 옆 탭의
+            // 뱃지("차트 1")까지 달면 같은 일이 세 자리에 다른 수로 서서 무엇을 세는지 알 수 없었다.
+            // 본 바뀜은 화면 맨 위 "지난번 본 뒤 바뀐 것" 이, 옆 탭은 탭 이름 옆 뱃지가 말한다.
+            // (본 바뀜이 있는 앱은 목록 위쪽에 남는다 — 차례는 그대로.)
+            badge: metrics.badge(section, project: project),
             release: section == .release ? project.flatMap(store.releaseLevel(for:)) : nil,
             stats: section == .stats ? StatsGlance(traffic: traffic, cycle: project.flatMap(store.usageCycle(for:))) : nil,
             isSelected: isSelected)
@@ -125,16 +128,6 @@ struct AppListView: View {
                 .buttonStyle(.plain)
                 .listRowBackground(Rectangle().fill(isSelected ? AnyShapeStyle(.tint.opacity(0.14)) : AnyShapeStyle(.clear)))
         }
-    }
-
-    /// 이 앱의 뱃지가 **옆 탭**에 서 있으면 그 탭 이름과 수 — "키워드 1". 유입 탭의 목록만 보면
-    /// 키워드 탭에 선 뱃지가 어느 앱 것인지 알 수 없었다.
-    private func elsewhere(_ project: String?, metrics: SectionMetrics) -> String? {
-        guard let project else { return nil }
-        let parts = section.host.members.filter { $0 != section }.compactMap { member in
-            metrics.countedBadge(member, project: project).map { "\(member.rawValue) \($0.count)" }
-        }
-        return parts.isEmpty ? nil : parts.joined(separator: " · ")
     }
 
     /// 이 칸을 열자마자 본 것으로 넘어간 바뀜 — 사이드바 뱃지는 사라져도 여기 줄에는 남는다.

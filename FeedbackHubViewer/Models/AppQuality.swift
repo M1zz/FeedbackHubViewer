@@ -66,12 +66,46 @@ struct AppQuality: Identifiable {
         static let minNewInstalls = 10
     }
 
+    // MARK: - 플랫폼
+
+    enum Platform {
+        /// 보여 주는 차례 — 테스트 스크립트(`scripts/device-qa.py`)와 같다.
+        static let order = ["iOS", "macOS", "watchOS", "visionOS", "tvOS"]
+
+        /// 사용 기록 · 테스트 결과에 적힌 이름을 다섯 가지로. iPadOS 는 iOS 판이고, Mac Catalyst 는 맥에서 도는 판이다.
+        static func normalize(_ raw: String) -> String? {
+            switch raw.lowercased() {
+            case "ios", "ipados": return "iOS"
+            case "macos", "maccatalyst", "mac catalyst", "osx": return "macOS"
+            case "watchos": return "watchOS"
+            case "visionos", "xros": return "visionOS"
+            case "tvos": return "tvOS"
+            default: return nil
+            }
+        }
+
+        static func systemImage(_ platform: String) -> String {
+            switch platform {
+            case "macOS": return "macbook"
+            case "watchOS": return "applewatch"
+            case "visionOS": return "visionpro"
+            case "tvOS": return "appletv"
+            default: return "iphone"
+            }
+        }
+    }
+
     // MARK: - 재료
 
     /// 모르는 것은 nil — 0 과 다르다.
     struct Input {
         var project: String
         var name: String
+        /// 이 카드의 플랫폼 — 같은 앱이 여러 플랫폼이면 플랫폼마다 카드가 따로다. 기기 테스트 ·
+        /// 커버리지는 이 플랫폼의 것, 나머지(스토어 별점 · 피드백 · 사용 기록)는 앱 전체의 것.
+        var platform = "iOS"
+        /// 이 앱이 지원하는 플랫폼 수. 2 이상이면 화면이 플랫폼을 적는다.
+        var platformCount = 1
         /// 크래시 없는 설치 비율과 그 버전.
         var crashFree: Double?
         /// 설치 ID 가 없어 크래시 보고 건수로 어림한 값인가.
@@ -153,7 +187,7 @@ struct AppQuality: Identifiable {
             case .support: return "좋음 90% 이상 · 나쁨 50% 아래 (허브 기준)"
             case .core: return "앞 버전에선 오던 핵심 행동이 0명이면 나쁨 · 문턱 넘게 줄면 주의 (허브 기준)"
             case .onboarding: return "새 설치 중 좋음 80% 이상 · 나쁨 50% 아래가 통과 (허브 기준)"
-            case .deviceTest: return "좋음 켜지고 실패 0 · 나쁨 못 켜짐이나 테스트 실패 · 주의 아이폰용 빌드 못 함 (허브 기준)"
+            case .deviceTest: return "플랫폼마다 따로 — 좋음 켜지고 실패 0 · 나쁨 못 켜짐이나 테스트 실패 · 주의 그 플랫폼용 빌드 못 함 (허브 기준)"
             case .coverage: return "좋음 75% 이상 · 나쁨 60% 아래 (Google Testing Blog 2020)"
             }
         }
@@ -185,7 +219,7 @@ struct AppQuality: Identifiable {
 
     let input: Input
     let scores: [Score]
-    var id: String { input.project }
+    var id: String { "\(input.project)|\(input.platform)" }
 
     /// 가장 나쁜 항목. 아는 항목이 하나도 없으면 데이터 없음.
     var grade: Grade { scores.map(\.grade).min() ?? .unknown }
@@ -203,7 +237,8 @@ struct AppQuality: Identifiable {
             if $0.grade != $1.grade { return $0.grade < $1.grade }
             if $0.badCount != $1.badCount { return $0.badCount > $1.badCount }
             if $0.input.active7 != $1.input.active7 { return $0.input.active7 > $1.input.active7 }
-            return $0.input.name < $1.input.name
+            if $0.input.name != $1.input.name { return $0.input.name < $1.input.name }
+            return (Platform.order.firstIndex(of: $0.input.platform) ?? 9) < (Platform.order.firstIndex(of: $1.input.platform) ?? 9)
         }
     }
 
@@ -240,7 +275,9 @@ struct AppQuality: Identifiable {
                          value: "\(Int((share * 100).rounded()))%",
                          basis: "\(input.supportTotal)건 중 \(input.supportHandled)건")
         case .deviceTest:
-            guard let test = input.deviceTest else { return unknown(dimension) }
+            guard let test = input.deviceTest else {
+                return unknown(dimension, hint: "scripts/device-qa.py --platforms \(input.platform) 로 돌리면 잽니다")
+            }
             return deviceTestScore(test)
         case .core:
             guard let core = input.core else {

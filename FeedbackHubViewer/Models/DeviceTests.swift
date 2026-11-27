@@ -18,7 +18,12 @@ struct DeviceTestReport: Decodable {
 
     static let relativePath = "docs/quality-tests.json"
 
-    /// 번들 id(소문자) → 결과. 한 레포의 번들(위젯 등)이 모두 같은 결과를 가리킨다.
+    static func key(_ bundleID: String, _ platform: String) -> String {
+        "\(bundleID.lowercased())|\(platform)"
+    }
+
+    /// "번들 id(소문자)|플랫폼" → 결과. 한 레포의 번들(위젯 등)이 모두 같은 결과를 가리킨다.
+    /// 플랫폼이 없는 옛 결과는 iOS(아이폰에서만 돌렸다).
     static func load(_ data: Data?) -> [String: DeviceTestResult] {
         guard let data else { return [:] }
         let decoder = JSONDecoder()
@@ -27,7 +32,7 @@ struct DeviceTestReport: Decodable {
             let report = try decoder.decode(DeviceTestReport.self, from: data)
             var result: [String: DeviceTestResult] = [:]
             for app in report.apps {
-                for id in app.bundleIDs { result[id.lowercased()] = app }
+                for id in app.bundleIDs { result[key(id, app.platformName)] = app }
             }
             return result
         } catch {
@@ -45,6 +50,8 @@ struct DeviceTestResult: Decodable, Equatable {
     }
 
     var folder: String
+    /// 돌린 플랫폼 — "iOS" · "macOS" · "watchOS" · "visionOS" · "tvOS". 옛 결과에는 없다(= iOS).
+    var platform: String?
     var bundleIDs: [String]
     var testedAt: Date?
     var version: String?
@@ -57,6 +64,7 @@ struct DeviceTestResult: Decodable, Equatable {
     /// 실패한 테스트 · 실행 실패 이유, 사람이 읽을 한 줄씩.
     var failures: [String] = []
 
+    var platformName: String { platform ?? "iOS" }
     var failedCount: Int { (unit?.failed ?? 0) + (ui?.failed ?? 0) }
     var passedCount: Int { (unit?.passed ?? 0) + (ui?.passed ?? 0) }
 }

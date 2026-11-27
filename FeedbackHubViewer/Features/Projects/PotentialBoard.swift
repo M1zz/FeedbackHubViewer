@@ -92,6 +92,13 @@ struct PotentialBoard: View {
     // MARK: - 재료
 
     private func input(_ project: String) -> AppPotential.Input {
+        Self.input(project, store: store, connect: connect, keywords: keywords)
+    }
+
+    /// 한 앱의 30일 깔때기 재료. 차트 탭의 수익 4분면도 같은 재료를 쓴다(`AppChartsBoard`).
+    @MainActor
+    static func input(_ project: String, store: FeedbackStore, connect: AppStoreConnectStore,
+                      keywords: KeywordStore) -> AppPotential.Input {
         var input = AppPotential.Input(project: project, name: store.displayName(for: project))
         input.active7 = store.usage(for: project).activeInstalls7
 

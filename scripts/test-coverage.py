@@ -8,6 +8,8 @@
      커버리지가 아니라서 화면은 "커버리지 모름" 으로 적는다(테스트가 하나도 없으면 0%).
 
 결과: <Auto>/docs/test-coverage.json — 허브 품질 탭의 "커버리지" 줄(`TestCoverage.swift`).
+플랫폼마다 가장 새 xcresult 를 따로 읽어 "byPlatform" 에 적는다(iOS · macOS · watchOS · visionOS · tvOS).
+맨 위의 coveredLines · executableLines 는 예전 허브를 위한 가장 새 것 하나.
 테스트를 돌릴 때 Xcode 의 Code Coverage 를 켜 두면(스킴 ▸ Test ▸ Options) 다음 실행부터 실제 값이 잡힌다.
 
     scripts/test-coverage.py
@@ -82,10 +84,28 @@ def xcresults_by_repo():
             if workspace.startswith(root + os.sep):
                 found.setdefault(root, []).extend(results)
     for name, root in repos_cache:
-        device = os.path.join(DEVICE_QA_RESULTS, re.sub(r"\W", "_", name) + ".xcresult")
-        if os.path.exists(device):
+        # device-qa.py 결과 — iOS 는 <폴더>.xcresult, 다른 플랫폼은 <폴더>-<플랫폼>.xcresult.
+        stem = re.sub(r"\W", "_", name)
+        for device in glob.glob(os.path.join(DEVICE_QA_RESULTS, stem + ".xcresult")) + \
+                glob.glob(os.path.join(DEVICE_QA_RESULTS, stem + "-*.xcresult")):
             found.setdefault(root, []).append(device)
     return {root: sorted(paths, key=os.path.getmtime, reverse=True) for root, paths in found.items()}
+
+
+def platform_of(xcresult):
+    """xcresult 를 돌린 기기의 플랫폼 — "iOS" · "macOS" · "watchOS" · "visionOS" · "tvOS". 모르면 iOS."""
+    try:
+        out = subprocess.run(["xcrun", "xcresulttool", "get", "test-results", "summary", "--path", xcresult],
+                             capture_output=True, text=True, timeout=120).stdout
+        for config in json.loads(out).get("devicesAndConfigurations", []):
+            name = (config.get("device") or {}).get("platform") or ""
+            for key, value in (("mac", "macOS"), ("watch", "watchOS"), ("vision", "visionOS"), ("xr", "visionOS"),
+                               ("tv", "tvOS"), ("ios", "iOS"), ("ipad", "iOS"), ("iphone", "iOS")):
+                if key in name.lower():
+                    return value
+    except Exception:
+        pass
+    return "iOS"
 
 
 def coverage(xcresult):
@@ -115,13 +135,23 @@ def main():
             continue
         tests, files, sources = static_counts(root)
         app = {"folder": name, "bundleIDs": ids, "testFunctions": tests, "testFiles": files, "sourceFiles": sources}
-        for xcresult in results.get(root, []):
+        by_platform = {}
+        for xcresult in results.get(root, []):  # 새것부터 — 플랫폼마다 처음 만난 것이 가장 새 것
+            platform = platform_of(xcresult)
+            if platform in by_platform:
+                continue
             lines = coverage(xcresult)
-            if lines:
-                app.update(coveredLines=lines[0], executableLines=lines[1], measuredAt=iso(os.path.getmtime(xcresult)))
-                break
+            if not lines:
+                continue
+            entry = dict(coveredLines=lines[0], executableLines=lines[1], measuredAt=iso(os.path.getmtime(xcresult)))
+            by_platform[platform] = entry
+            if "coveredLines" not in app:
+                app.update(entry)
+        if by_platform:
+            app["byPlatform"] = by_platform
         apps.append(app)
-        kind = f"{app['coveredLines'] / app['executableLines']:.0%}" if "coveredLines" in app else f"정적 · 테스트 {tests}개"
+        kind = (" · ".join(f"{p} {v['coveredLines'] / v['executableLines']:.0%}" for p, v in app["byPlatform"].items())
+                if "byPlatform" in app else f"정적 · 테스트 {tests}개")
         print(f"{name}: {kind}", flush=True)
     os.makedirs(os.path.dirname(OUT), exist_ok=True)
     now = datetime.datetime.now(datetime.timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")

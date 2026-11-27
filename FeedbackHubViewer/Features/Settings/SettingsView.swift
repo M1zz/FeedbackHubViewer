@@ -182,7 +182,17 @@ private struct PurchaseAlertRow: View {
     @State private var app = ""
     @State private var state = Phase.idle
 
-    enum Phase: Equatable { case idle, sending, sent, failed(String) }
+    enum Phase: Equatable { case idle, sending, checking, done, failed(String) }
+
+    /// 시험이 지나간 길 — 어디서 끊겼는지 보이게.
+    struct Step: Identifiable, Equatable {
+        enum Mark { case waiting, ok, bad }
+        let id: Int
+        var title: String
+        var mark: Mark
+        var note: String?
+    }
+    @State private var steps: [Step] = []
 
     private var apps: [String] {
         store.projectCounts.map(\.key)
@@ -210,7 +220,7 @@ private struct PurchaseAlertRow: View {
                 } label: {
                     Label("시험 결제 알림 보내기", systemImage: "paperplane")
                 }
-                .disabled(app.isEmpty || state == .sending || connect.client == nil)
+                .disabled(app.isEmpty || state == .sending || state == .checking || connect.client == nil)
             }
             .padding(.leading, 28)
             Group {
@@ -221,9 +231,20 @@ private struct PurchaseAlertRow: View {
                          : "실제 결제 없이 Apple → 서버 → 허브 길을 한 번 지나 봅니다.")
                 case .sending:
                     Text("Apple 에 부탁하는 중…")
-                case .sent:
-                    Text("Apple 이 보냈습니다. 몇 초 안에 이 기기와 다른 기기에 '결제 알림 시험' 이 떠야 합니다.")
-                        .foregroundStyle(.green)
+                case .checking, .done:
+                    VStack(alignment: .leading, spacing: 4) {
+                        ForEach(steps) { step in
+                            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                                Image(systemName: step.mark == .ok ? "checkmark.circle.fill"
+                                      : step.mark == .bad ? "xmark.octagon.fill" : "circle.dotted")
+                                    .foregroundStyle(step.mark == .ok ? .green : step.mark == .bad ? .red : .secondary)
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(step.title).foregroundStyle(.primary)
+                                    if let note = step.note { Text(note) }
+                                }
+                            }
+                        }
+                    }
                 case .failed(let reason):
                     Text(reason).foregroundStyle(.orange)
                 }
@@ -239,13 +260,71 @@ private struct PurchaseAlertRow: View {
     private func send() {
         guard let client = connect.client else { return }
         state = .sending
+        let bundleID = app, started = Date()
+        steps = [
+            Step(id: 0, title: "① Apple 이 시험 알림을 보냄", mark: .waiting),
+            Step(id: 1, title: "② 결제 서버가 받음", mark: .waiting),
+            Step(id: 2, title: "③ 서버가 허브 기록(HubPurchases)에 남김", mark: .waiting),
+            Step(id: 3, title: "④ 이 기기에 푸시", mark: .waiting,
+                 note: store.purchasePushProblem.map { "이 기기는 결제 푸시를 걸지 못했습니다: \($0)" }
+                    ?? "①~③이 되면 몇 초 안에 '결제 알림 시험' 배너가 떠야 합니다. 안 뜨면 이 기기의 알림 허용 · 앱 빌드(Ad Hoc · 운영)를 봅니다."),
+        ]
         Task {
+            let token: String?
             do {
-                try await client.requestTestNotification(bundleID: app)
-                state = .sent
+                token = try await client.requestTestNotification(bundleID: bundleID)
             } catch {
                 state = .failed(error.localizedDescription)
+                return
             }
+            steps[0].mark = .ok
+            state = .checking
+            // ② Apple 이 서버에 보낸 결과 — 보통 몇 초 안에 나온다.
+            if let token {
+                var result: String?
+                for _ in 0..<10 where result == nil {
+                    try? await Task.sleep(nanoseconds: 3_000_000_000)
+                    result = try? await client.testNotificationStatus(token: token, bundleID: bundleID)
+                }
+                switch result {
+                case "SUCCESS"?:
+                    steps[1].mark = .ok
+                case let failure?:
+                    steps[1].mark = .bad
+                    steps[1].note = Self.explain(failure)
+                case nil:
+                    steps[1].note = "30초 안에 Apple 이 결과를 주지 않았습니다. 잠시 뒤 다시 해 보세요."
+                }
+            }
+            // ③ 서버가 남긴 TEST 기록.
+            if steps[1].mark != .bad {
+                var found = false
+                for _ in 0..<5 where !found {
+                    found = (try? await PurchaseFeed.hasTest(bundleID: bundleID, since: started)) ?? false
+                    if !found { try? await Task.sleep(nanoseconds: 3_000_000_000) }
+                }
+                steps[2].mark = found ? .ok : .bad
+                if !found {
+                    steps[2].note = "서버는 받았는데 기록이 없습니다 — Vercel 의 CK_CONTAINER · 서버 키가 HubPurchases 용인지, 그 컨테이너 Production 에 Purchase 타입이 배포됐는지 봅니다."
+                }
+            }
+            state = .done
+        }
+    }
+}
+
+extension PurchaseAlertRow {
+    /// Apple 의 시험 결과를 무엇을 고칠지로.
+    static func explain(_ result: String) -> String {
+        switch result {
+        case "UNSUCCESSFUL_HTTP_RESPONSE_CODE":
+            return "서버가 실패로 답했습니다(4xx · 5xx). Vercel 로그에서 '서명 확인 실패'(apps.json 에 이 앱이 없음) · 'CloudKit 기록 실패'(서버 키 · 컨테이너)를 봅니다."
+        case "NO_RESPONSE", "TIMED_OUT":
+            return "서버가 답하지 않았습니다 — Vercel 배포가 살아 있는지, 주소가 맞는지 봅니다."
+        case "SSL_ISSUE", "INVALID_RESPONSE", "CIRCULAR_REDIRECT", "PREMATURE_CLOSE":
+            return "서버 주소에 닿지 못했습니다(\(result)) — App Store Connect ▸ 앱 정보 ▸ App Store 서버 알림의 운영 주소를 봅니다."
+        default:
+            return "Apple 이 보내지 못했습니다: \(result)"
         }
     }
 }

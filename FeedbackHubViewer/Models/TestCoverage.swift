@@ -47,6 +47,30 @@ struct TestCoverage: Decodable, Equatable {
     var coveredLines: Int?
     var executableLines: Int?
     var measuredAt: Date?
+    /// 플랫폼마다 가장 새 xcresult 의 줄 수. 예전 결과에는 없다.
+    var byPlatform: [String: Lines]?
+
+    struct Lines: Decodable, Equatable {
+        var coveredLines: Int
+        var executableLines: Int
+        var measuredAt: Date?
+    }
+
+    /// 한 플랫폼의 커버리지만 남긴 것. 플랫폼별 값이 없는 옛 결과는 아이폰에서 잰 것이라 iOS 에만 준다.
+    func on(_ platform: String) -> TestCoverage {
+        var copy = self
+        if let byPlatform {
+            let lines = byPlatform[platform]
+            copy.coveredLines = lines?.coveredLines
+            copy.executableLines = lines?.executableLines
+            copy.measuredAt = lines?.measuredAt
+        } else if platform != "iOS" {
+            copy.coveredLines = nil
+            copy.executableLines = nil
+            copy.measuredAt = nil
+        }
+        return copy
+    }
 
     var lineCoverage: Double? {
         guard let coveredLines, let executableLines, executableLines > 0 else { return nil }

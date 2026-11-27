@@ -60,6 +60,8 @@ struct AppGridHome: View {
         case impact = "임팩트 큰 순"
         case change = "많이 변한 순"
         case users = "사용자 많은 순"
+        /// 배포한 지 오래된 앱부터 — 2주에 한 번 목표(`ReleaseCadence`).
+        case release = "배포 오래된 순"
         case name = "이름순"
         var id: String { rawValue }
     }
@@ -83,6 +85,8 @@ struct AppGridHome: View {
             case news, changed, keyword, oldCrash
             /// 좋은 소식 — 손볼 일이 아니라 자라는 것. 차례(임팩트)에는 무게가 없다.
             case usageUp, purchase
+            /// 새로 링크를 건 곳 · 갑자기 많이 보내는 곳(`ReferralDetection`) — 행사가 어디로 퍼졌나.
+            case referral
             var id: Int { rawValue }
 
             /// 급한 것 · 사람이 기다리는 것 · 알아만 둘 것 · 좋은 소식.
@@ -93,7 +97,7 @@ struct AppGridHome: View {
                 case .crash, .release, .usageDrop: return .critical
                 case .hang, .feedback, .newReview, .storeIssue, .unansweredReview: return .voice
                 case .news, .changed, .keyword, .oldCrash: return .chore
-                case .usageUp, .purchase: return .good
+                case .usageUp, .purchase, .referral: return .good
                 }
             }
 
@@ -113,6 +117,7 @@ struct AppGridHome: View {
                 case .oldCrash: return "옛 버전 크래시"
                 case .usageUp: return "사용 늘어남"
                 case .purchase: return "이번 주 구매"
+                case .referral: return "새 유입처"
                 }
             }
 
@@ -132,6 +137,7 @@ struct AppGridHome: View {
                 case .oldCrash: return "clock.arrow.circlepath"
                 case .usageUp: return "chart.line.uptrend.xyaxis"
                 case .purchase: return "cart.fill"
+                case .referral: return "link"
                 }
             }
 
@@ -158,6 +164,7 @@ struct AppGridHome: View {
                 case .keyword: return .keywords
                 case .usageUp: return .stats
                 case .purchase: return .purchases
+                case .referral: return .acquisition
                 }
             }
 
@@ -174,7 +181,7 @@ struct AppGridHome: View {
                 case .storeIssue: return (10, 30)
                 case .unansweredReview: return (4, 12)
                 case .news, .changed, .keyword, .oldCrash: return (0.5, 1)
-                case .usageUp, .purchase: return (0, 0)
+                case .usageUp, .purchase, .referral: return (0, 0)
                 }
             }
         }
@@ -207,6 +214,8 @@ struct AppGridHome: View {
         let signals: [Signal]
         /// 종류마다 가장 최근 일이 난 때. 사용 추이처럼 기간으로 보는 것 · 모르는 것은 없다.
         var latest: [Signal.Kind: Date] = [:]
+        /// 마지막 배포 뒤 며칠 — 2주에 한 번 목표에 견준다. 스토어에 없는 앱은 nil.
+        var cadence: ReleaseCadence? = nil
         var id: String { project }
 
         /// 급한 것(크래시 · 릴리즈 빨강 · 사용 급감)이 있나.
@@ -275,6 +284,8 @@ struct AppGridHome: View {
                     PotentialBoard()
                 } else if modeRaw == HomeMode.quality.rawValue {
                     QualityBoard()
+                } else if modeRaw == HomeMode.charts.rawValue {
+                    AppChartsBoard(rows: all)
                 } else {
                 summary(all)
                 urgent(all)
@@ -396,6 +407,14 @@ struct AppGridHome: View {
             // 릴리즈 빨강은 지금 버전의 가장 최근 사고로 날짜를 단다.
             latest[.release] = (recent.crashes + recent.hangs).compactMap(\.happenedAt).max()
             latest[.purchase] = paid.map(\.occurredAt).max()
+            // 새 유입처 — 받은 사람이 있는 곳만. 날짜는 새 곳이면 처음 본 날, 급증이면 마지막 날.
+            if case .ready(let detection, _)? = purchases.referrals[project]?.value {
+                let spreading = detection.spreading
+                if !spreading.isEmpty { counts[.referral] = spreading.count }
+                latest[.referral] = spreading.compactMap { item in
+                    AppStoreConnect.day.date(from: item.status == .new ? item.firstSeen : (item.tally.lastDate ?? item.firstSeen))
+                }.max()
+            }
 
             // 나머지는 칸의 뱃지 그대로 — 읽으면 지워진다.
             if let badge = metrics.itemBadge(.feedback, project: project) { counts[.feedback] = badge.count }
@@ -428,7 +447,11 @@ struct AppGridHome: View {
                        signals: Signal.Kind.allCases.compactMap { kind in
                            counts[kind].map { Signal(kind: kind, count: $0) }
                        },
-                       latest: latest)
+                       latest: latest,
+                       cadence: keywords.storeApp(for: project).map { app in
+                           ReleaseCadence(releasedAt: app.releasedAt, liveVersion: app.version,
+                                          latest: purchases.versions[project])
+                       })
         }
     }
 
@@ -523,6 +546,14 @@ struct AppGridHome: View {
             return rows.sorted { $0.movement != $1.movement ? $0.movement > $1.movement : byUsers($0, $1) }
         case .users:
             return rows.sorted(by: byUsers)
+        case .release:
+            // 막힘 · 넘김이 먼저, 같은 상태면 오래된 것부터. 모르는 앱은 맨 뒤.
+            return rows.sorted { a, b in
+                let sa = a.cadence?.status ?? .unknown, sb = b.cadence?.status ?? .unknown
+                if sa != sb { return sa < sb }
+                let da = a.cadence?.days ?? -1, db = b.cadence?.days ?? -1
+                return da != db ? da > db : byUsers(a, b)
+            }
         case .name:
             return rows.sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
         }
@@ -559,10 +590,33 @@ struct AppGridHome: View {
                 Text(kinds.isEmpty ? "이번 주는 아직" : kinds.joined(separator: " · "))
                     .foregroundStyle(growing.isEmpty ? AnyShapeStyle(.secondary) : AnyShapeStyle(.green))
             }
+            releaseFigure(rows)
             figure("급한 앱", value: critical.isEmpty ? "없음" : "\(critical.count)개") {
                 Text(critical.isEmpty ? "크래시 · 릴리즈 빨강 · 사용 급감 없음" : criticalKinds.joined(separator: " · "))
                     .foregroundStyle(critical.isEmpty ? AnyShapeStyle(.secondary) : AnyShapeStyle(.red))
             }
+        }
+    }
+
+    /// 배포 리듬 — 2주 안에 낸 앱이 몇 개인가. 넘긴 앱 · 길 위의 앱을 함께. 누르면 오래된 순으로.
+    @ViewBuilder
+    private func releaseFigure(_ rows: [Row]) -> some View {
+        let known = rows.compactMap(\.cadence).filter { $0.status != .unknown }
+        if !known.isEmpty {
+            let onTrack = known.filter(\.isOnTrack).count
+            let overdue = known.filter { $0.status == .overdue }.count
+            let blocked = known.filter { $0.status == .blocked }.count
+            let inFlight = known.filter { $0.status == .inFlight }.count
+            Button { sortRaw = Sort.release.rawValue } label: {
+                figure("2주 배포", value: "\(onTrack)/\(known.count)개") {
+                    let parts = [overdue > 0 ? "넘김 \(overdue)" : nil, blocked > 0 ? "거절 \(blocked)" : nil,
+                                 inFlight > 0 ? "심사 · 출시 대기 \(inFlight)" : nil].compactMap { $0 }
+                    Text(parts.isEmpty ? "모두 2주 안에 냈어요" : parts.joined(separator: " · "))
+                        .foregroundStyle(overdue + blocked > 0 ? AnyShapeStyle(.red) : AnyShapeStyle(.secondary))
+                }
+            }
+            .buttonStyle(.plain)
+            .help("마지막 배포가 \(ReleaseCadence.goalDays)일 안이거나 다음 버전이 심사 · 출시 대기인 앱. 누르면 배포 오래된 순으로")
         }
     }
 
@@ -616,7 +670,8 @@ struct AppGridHome: View {
 
     /// 가장 최근 일이 `freshWindow` 안인가. 날짜가 없는 것(사용 추이 · 날짜 모르는 릴리즈 판정)은 지금 상태라 남긴다.
     static func isFresh(_ signal: Signal, row: Row, now: Date = Date()) -> Bool {
-        guard let date = row.latest[signal.kind] else { return true }
+        // 릴리즈 빨강은 일이 아니라 지금 상태 — 날짜가 오래돼도 빨강인 동안은 세운다.
+        guard signal.kind != .release, let date = row.latest[signal.kind] else { return true }
         return now.timeIntervalSince(date) <= freshWindow
     }
 
@@ -758,7 +813,7 @@ struct AppGridHome: View {
     @ViewBuilder
     private func dismissedNotice(_ rows: [Row]) -> some View {
         let map = dismissed
-        let kinds = Set(Signal.Kind.allCases.filter { $0.tier == .critical } + [.purchase, .usageUp])
+        let kinds = Set(Signal.Kind.allCases.filter { $0.tier == .critical } + [.purchase, .referral, .usageUp])
         let count = rows.reduce(0) { sum, row in
             sum + row.signals.filter { kinds.contains($0.kind) && Self.isDismissed($0, row: row, in: map) }.count
         }
@@ -889,7 +944,7 @@ struct AppGridHome: View {
     /// 돈이 들어온 것을 맨 앞에 둔다.
     @ViewBuilder
     private func growing(_ rows: [Row]) -> some View {
-        let groups = grouped(rows, order: [.purchase, .usageUp],
+        let groups = grouped(rows, order: [.purchase, .referral, .usageUp],
                              rank: { row, signal in
                                  // 구매 · 별은 건수, 사용 늘어남은 쓰는 사람 수가 큰 앱부터.
                                  signal.kind == .usageUp ? Double(row.reach) : Double(signal.count) * 1_000_000 + Double(row.reach)
@@ -1193,8 +1248,18 @@ struct AppGridHome: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 12) {
                 AppIcon(url: icons.url(for: row.project, keywords: keywords), size: 44)
-                Text(row.name)
-                    .font(.title3.weight(.semibold))
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(row.name)
+                        .font(.title3.weight(.semibold))
+                    if let cadence = row.cadence {
+                        Label(cadence.line, systemImage: cadence.systemImage)
+                            .font(.body)
+                            .foregroundStyle(cadence.status == .fresh || cadence.status == .unknown
+                                             ? AnyShapeStyle(.secondary) : AnyShapeStyle(cadence.tint))
+                            .lineLimit(1)
+                            .help("목표: \(ReleaseCadence.goalDays)일에 한 번 배포")
+                    }
+                }
                 Spacer(minLength: 4)
             }
 
@@ -1378,6 +1443,8 @@ enum HomeMode: String, CaseIterable, Identifiable {
     case potential = "잠재력"
     /// 안정성 · 속도 · 별점 · 지원 응답을 공개 기준과 견준 서비스 품질(`QualityBoard`).
     case quality = "품질"
+    /// 앱 전부를 그래프에 아이콘으로 찍어 견준다(`AppChartsBoard`).
+    case charts = "차트"
     var id: String { rawValue }
 }
 

@@ -27,6 +27,29 @@ struct PurchaseReceipt: Identifiable, Hashable {
 }
 
 enum PurchaseFeed {
+    /// 서버가 남긴 시험 알림(TEST) 중 `since` 뒤의 것이 있나 — 설정의 "시험 결제 알림" 이 서버 → 허브까지 왔는지.
+    /// 레코드가 적어 다 받아 거른다(`recent` 와 같은 까닭).
+    static func hasTest(bundleID: String, since: Date) async throws -> Bool {
+        let database = CKContainer(identifier: CloudKitService.purchasesContainerIdentifier).publicCloudDatabase
+        let query = CKQuery(recordType: PushSubscriptions.purchaseRecordType, predicate: NSPredicate(value: true))
+        var cursor: CKQueryOperation.Cursor?
+        repeat {
+            let page = if let cursor {
+                try await database.records(continuingMatchFrom: cursor)
+            } else {
+                try await database.records(matching: query, resultsLimit: 200)
+            }
+            for (_, result) in page.matchResults {
+                guard let record = try? result.get(), record["kind"] as? String == "TEST",
+                      record["bundleID"] as? String == bundleID else { continue }
+                let at = Date(timeIntervalSince1970: Double(record["occurredAt"] as? Int64 ?? 0) / 1000)
+                if at >= since.addingTimeInterval(-120) || (record.creationDate ?? .distantPast) >= since { return true }
+            }
+            cursor = page.queryCursor
+        } while cursor != nil
+        return false
+    }
+
     /// 최근 `days` 일의 결제 · 환불(시험 · 샌드박스 · 0원 코드 빼고), 모든 앱, 최근 것부터.
     /// 레코드가 많지 않아 다 받아 앱에서 거른다 — 인덱스는 recordName 하나면 된다.
     static func recent(days: Int = 7) async throws -> [PurchaseReceipt] {

@@ -6,6 +6,10 @@
 //  만족도 · 지원 응답 · 핵심 기능 · 온보딩 · 기기 테스트 · 커버리지를 기준과 견주고,
 //  가장 나쁜 항목이 종합이 된다. 나쁜 앱부터.
 //
+//  같은 앱이 여러 애플 플랫폼(iOS · macOS · watchOS · visionOS · tvOS)을 지원하면 **플랫폼마다 카드가
+//  따로**다 — 테스트를 플랫폼마다 따로 하게. 기기 테스트 · 커버리지는 그 플랫폼의 결과, 나머지는 앱 전체.
+//  플랫폼은 사용 기록(설치마다 보낸 OS)과 테스트 결과(`scripts/device-qa.py` 가 플랫폼마다 쓴 줄)를 합쳐 안다.
+//
 //  판정은 `AppQuality` 가 한다(순수 함수). 여기는 재료를 모으고 그린다.
 //  재료: 릴리즈 건강(`ReleaseHealth` — 크래시 없는 설치 · MetricKit 성능 한 줄) · 스토어 별점 ·
 //  피드백 처리 여부 · 일 버킷의 온보딩 이벤트 · 레포 폴더의 테스트 결과(`docs/*.json`).
@@ -19,15 +23,22 @@ struct QualityBoard: View {
     @EnvironmentObject private var keywords: KeywordStore
     @ObservedObject private var icons = StoreIcons.shared
     @State private var filter: AppQuality.Grade?
+    /// nil 이면 모든 플랫폼.
+    @State private var platformFilter: String?
 
     private var apps: [String] { SectionMetrics.keywordProjects(store) }
 
     var body: some View {
-        let ranked = AppQuality.rank(apps.map(input))
+        let all = AppQuality.rank(apps.flatMap { project in
+            let platforms = platforms(for: project)
+            return platforms.map { input(project, platform: $0, platformCount: platforms.count) }
+        })
+        let ranked = platformFilter.map { p in all.filter { $0.input.platform == p } } ?? all
         let shown = filter.map { grade in ranked.filter { $0.grade == grade } } ?? ranked
 
         VStack(alignment: .leading, spacing: 16) {
             conclusion(ranked)
+            platformBar(all)
             filterBar(ranked)
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 360, maximum: 560), spacing: 14)], spacing: 14) {
                 ForEach(shown) { app in
@@ -46,8 +57,24 @@ struct QualityBoard: View {
 
     // MARK: - 재료
 
-    private func input(_ project: String) -> AppQuality.Input {
+    /// 이 앱이 지원하는 플랫폼 — 사용 기록의 OS 와 테스트 결과의 플랫폼을 합친다. 모르면 iOS 하나.
+    private func platforms(for project: String) -> [String] {
+        var found = Set(store.snapshots(for: project).compactMap { AppQuality.Platform.normalize($0.platform) })
+        let prefix = project.lowercased() + "|"
+        for key in keywords.deviceTests.keys where key.hasPrefix(prefix) {
+            found.insert(String(key.dropFirst(prefix.count)))
+        }
+        if let coverage = keywords.testCoverage[project.lowercased()] {
+            found.formUnion(coverage.byPlatform?.keys.compactMap(AppQuality.Platform.normalize) ?? [])
+        }
+        let ordered = AppQuality.Platform.order.filter(found.contains)
+        return ordered.isEmpty ? ["iOS"] : ordered
+    }
+
+    private func input(_ project: String, platform: String, platformCount: Int) -> AppQuality.Input {
         var input = AppQuality.Input(project: project, name: store.displayName(for: project))
+        input.platform = platform
+        input.platformCount = platformCount
         input.active7 = store.usage(for: project).activeInstalls7
 
         if let stability = store.qualityStability(for: project) {
@@ -78,9 +105,9 @@ struct QualityBoard: View {
         }
 
         input.onboarding = store.onboarding(for: project)
-        input.coverage = keywords.testCoverage[project.lowercased()]
+        input.coverage = keywords.testCoverage[project.lowercased()]?.on(platform)
 
-        input.deviceTest = keywords.deviceTests[project.lowercased()]
+        input.deviceTest = keywords.deviceTests[DeviceTestReport.key(project, platform)]
 
         if let world = keywords.worldRating(for: project) {
             input.rating = world.average
@@ -129,10 +156,10 @@ struct QualityBoard: View {
             counts[grade].map { "\(grade.label) \($0)개" }
         }
         return VStack(alignment: .leading, spacing: 8) {
-            Text(parts.isEmpty ? "아직 품질을 잴 만한 숫자가 모이지 않았습니다." : parts.joined(separator: " · "))
+            Text(parts.isEmpty ? "아직 품질을 잴 만한 숫자가 모이지 않았습니다." : parts.joined(separator: " · ") + " (앱 · 플랫폼마다 한 장)")
                 .font(.title3.weight(.semibold))
             if let first = ranked.first, first.grade == .bad, let worst = first.worst {
-                Label("먼저 볼 앱: \(first.input.name) — \(worst.dimension.rawValue) \(worst.value)",
+                Label("먼저 볼 앱: \(first.input.name)\(first.input.platformCount > 1 ? " (\(first.input.platform))" : "") — \(worst.dimension.rawValue) \(worst.value)",
                       systemImage: "exclamationmark.triangle.fill")
                     .font(.body.weight(.semibold))
                     .foregroundStyle(.red)
@@ -145,6 +172,45 @@ struct QualityBoard: View {
     }
 
     // MARK: - 거르기
+
+    /// 플랫폼 고르기 — 여러 플랫폼이 있을 때만.
+    @ViewBuilder
+    private func platformBar(_ all: [AppQuality]) -> some View {
+        let counts = Dictionary(grouping: all, by: \.input.platform).mapValues(\.count)
+        let platforms = AppQuality.Platform.order.filter { counts[$0] != nil }
+        if platforms.count > 1 {
+            HStack(spacing: 8) {
+                platformChip(nil, count: all.count)
+                ForEach(platforms, id: \.self) { platform in
+                    platformChip(platform, count: counts[platform] ?? 0)
+                }
+            }
+        }
+    }
+
+    private func platformChip(_ platform: String?, count: Int) -> some View {
+        let isOn = platformFilter == platform
+        return Button {
+            platformFilter = isOn ? nil : platform
+        } label: {
+            HStack(spacing: 5) {
+                Image(systemName: platform.map(AppQuality.Platform.systemImage) ?? "square.grid.2x2")
+                Text(platform ?? "모든 플랫폼")
+                Text(AppFormat.count(count))
+                    .monospacedDigit()
+                    .foregroundStyle(isOn ? AnyShapeStyle(.white.opacity(0.85)) : AnyShapeStyle(.secondary))
+            }
+            .font(.body)
+            .foregroundStyle(isOn ? AnyShapeStyle(.white) : AnyShapeStyle(.primary))
+            .padding(.horizontal, 10)
+            .padding(.vertical, 5)
+            .background(Capsule().fill(isOn ? AnyShapeStyle(Color.accentColor) : AnyShapeStyle(.quaternary.opacity(0.6))))
+            .contentShape(Capsule())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("\(platform ?? "모든 플랫폼"), 카드 \(count)개")
+        .accessibilityAddTraits(isOn ? .isSelected : [])
+    }
 
     private func filterBar(_ ranked: [AppQuality]) -> some View {
         ScrollView(.horizontal, showsIndicators: false) {
@@ -202,11 +268,20 @@ struct QualityBoard: View {
                 Text(app.input.name)
                     .font(.headline)
                     .lineLimit(1)
+                if app.input.platformCount > 1 || app.input.platform != "iOS" {
+                    Tag(text: app.input.platform, systemImage: AppQuality.Platform.systemImage(app.input.platform),
+                        isCompact: true)
+                }
                 Spacer(minLength: 4)
                 Tag(text: app.grade.label, tint: app.grade == .unknown ? nil : Self.tint(app.grade), isCompact: true)
             }
             VStack(alignment: .leading, spacing: 6) {
                 ForEach(app.scores) { score in row(score) }
+            }
+            if app.input.platformCount > 1 {
+                Text("기기 테스트 · 커버리지는 \(app.input.platform) 결과, 나머지는 앱 전체")
+                    .font(.body)
+                    .foregroundStyle(.tertiary)
             }
         }
         .padding(14)
@@ -248,7 +323,7 @@ struct QualityBoard: View {
             ForEach(AppQuality.Dimension.allCases) { dimension in
                 Text("\(dimension.rawValue): \(dimension.standard)")
             }
-            Text("기기 테스트 · 커버리지는 scripts/device-qa.py · scripts/test-coverage.py 가 workspace/Auto/docs 에 쓴 결과입니다(맥이 그 폴더에서 읽어 아이폰에도 나눕니다).")
+            Text("기기 테스트 · 커버리지는 scripts/device-qa.py · scripts/test-coverage.py 가 workspace/Auto/docs 에 쓴 결과입니다(맥이 그 폴더에서 읽어 아이폰에도 나눕니다). 플랫폼마다 따로 돌립니다 — iOS 는 연결한 아이폰, macOS 는 맥, watchOS · visionOS · tvOS 는 시뮬레이터.")
             Text("핵심 기능은 릴리즈 건강의 핵심 행동(스펙 coreAction, 없으면 통계에서 고른 가치 행동), 온보딩은 지난 30일 새 설치가 onboarding_completed · _skipped 같은 이벤트를 보냈는지입니다.")
             Text("안정성은 설치가 판정할 만큼 모인 가장 새 버전(그 버전의 전 기간 설치), 성능은 다섯 대가 모인 가장 새 버전이고 없으면 최근 30일 모든 버전, 만족도는 모든 나라 가게의 별점을 합친 것, 지원 응답은 최근 90일 중 받은 지 3일 지난 피드백입니다.")
         }

@@ -72,6 +72,7 @@ struct ProjectSectionView: View {
             .safeAreaInset(edge: .top, spacing: 0) {
                 VStack(spacing: 0) {
                     memberTabs
+                    loadingNote
                     badgeTrail
                     badgeSource
                     SectionChangesBanner(section: section, project: project)
@@ -105,21 +106,95 @@ struct ProjectSectionView: View {
             // 가게에는 여기서 쓰지 않는다 — 탭 이름의 숫자가 바뀌면 맥의 세그먼트가 다시 만들어지며
             // 그리는 도중에 선택을 다시 써 넣는데, 그때 `@Published` 를 바꾸면 경고가 난다.
             // 가게는 `onChange(of: section)` 이 그린 뒤에 맞춘다.
-            Picker("보기", selection: $section) {
-                // 칸 뱃지는 탭들의 합이라, 어느 탭에서 온 수인지 탭 이름 옆에 적는다.
-                //
-                // 사이드바와 **같은 범위**로 센다(`sidebarScope`). 모든 앱으로 보는 중이면 사이드바의
-                // 숫자는 모든 앱의 합인데, 여기서 고른 앱 하나로 세면 그 앱에 없을 때 탭에 아무것도
-                // 서지 않아 사이드바의 1 이 어느 탭 것인지 알 수 없었다.
+            // 칸 뱃지는 탭들의 합이라, 어느 탭에서 온 수인지 탭 이름 옆에 사이드바와 같은 빨간
+            // 뱃지로 단다("차트 4" 처럼 이름에 섞으면 탭 이름처럼 읽힌다). 맥의 세그먼트는 글자만
+            // 받으므로 직접 그린다.
+            //
+            // 사이드바와 **같은 범위**로 센다(`sidebarScope`). 모든 앱으로 보는 중이면 사이드바의
+            // 숫자는 모든 앱의 합인데, 여기서 고른 앱 하나로 세면 그 앱에 없을 때 탭에 아무것도
+            // 서지 않아 사이드바의 1 이 어느 탭 것인지 알 수 없었다.
+            HStack(spacing: 2) {
                 ForEach(members) { member in
                     let count = metrics.countedBadge(member, project: sidebarScope)?.count ?? 0
-                    Text(count > 0 ? "\(member.rawValue) \(count)" : member.rawValue).tag(member)
+                    memberTab(member, count: count)
                 }
             }
-            .pickerStyle(.segmented)
-            .labelsHidden()
+            .padding(2)
+            .background(RoundedRectangle(cornerRadius: 8).fill(Color.secondary.opacity(0.12)))
+            .accessibilityElement(children: .contain)
+            .accessibilityLabel("보기")
             .hubHeaderBar(verticalPadding: 8)
         }
+    }
+
+    /// 이 칸의 숫자를 아직 받는 중이면 한 줄 — 다 받으면 뱃지가 새로 설 수 있다고 미리 말한다.
+    /// 말없이 기다리다 뱃지가 하나 더 생기면 무엇이 바뀐 것인지 알 수 없다.
+    @ViewBuilder
+    private var loadingNote: some View {
+        if let note = loadingText {
+            HStack(spacing: 8) {
+                ProgressView().controlSize(.small)
+                Text(note)
+                    .font(.body)
+                    .foregroundStyle(.secondary)
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+            .background(.bar)
+            .accessibilityElement(children: .combine)
+        }
+    }
+
+    private var loadingText: String? {
+        var parts: [String] = []
+        let members = Set(section.members)
+        if members.contains(.acquisition) {
+            let n = purchases.fetching.filter { $0.hasPrefix("funnel:") || $0.hasPrefix("referral") }.count
+            if n > 0 { parts.append("유입 리포트 \(n)개 앱") }
+        }
+        if members.contains(.keywords), keywords.isChecking { parts.append("키워드 순위") }
+        if members.contains(.charts), charts.isScanning {
+            if let p = charts.progress { parts.append("차트 순위 \(p.done)/\(p.total)") } else { parts.append("차트 순위") }
+        }
+        if members.contains(where: { [.feedback, .crashes, .release, .stats].contains($0) }), store.isRefreshing {
+            parts.append("허브 기록")
+        }
+        if members.contains(where: { [.reviews, .purchases].contains($0) }), purchases.isLoadingSales {
+            parts.append("판매 기록")
+        }
+        guard !parts.isEmpty else { return nil }
+        return "\(parts.joined(separator: " · ")) 불러오는 중 — 다 받으면 숫자와 뱃지가 바뀔 수 있어요"
+    }
+
+    /// 탭 하나 — 이름과, 셀 것이 있으면 빨간 뱃지.
+    private func memberTab(_ member: FeedbackStore.ProjectSection, count: Int) -> some View {
+        let selected = member == section
+        return Button {
+            section = member
+        } label: {
+            HStack(spacing: 6) {
+                Text(member.rawValue)
+                    .font(.body.weight(selected ? .semibold : .regular))
+                if count > 0 {
+                    Text(count > 99 ? "99+" : "\(count)")
+                        .font(.body.monospacedDigit().weight(.semibold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 6)
+                        .frame(minWidth: 22, minHeight: 22)
+                        .background(Capsule().fill(.red))
+                }
+            }
+            .foregroundStyle(selected ? Color.white : Color.primary)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 4)
+            .frame(minHeight: 30)
+            .background(RoundedRectangle(cornerRadius: 6).fill(selected ? Color.accentColor : .clear))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(count > 0 ? "\(member.rawValue), 새 것 \(count)개" : member.rawValue)
+        .accessibilityAddTraits(selected ? .isSelected : [])
     }
 
     /// 사이드바가 뱃지를 세는 범위 — 앱 하나로 보는 중이면 그 앱, 모든 앱으로 보는 중이면 nil.
@@ -134,8 +209,12 @@ struct ProjectSectionView: View {
     @ViewBuilder
     private var badgeTrail: some View {
         if !store.usesStackNavigation {
+            // 옆 탭의 뱃지는 탭 이름 옆 빨간 뱃지가 이미 말한다 — 여기서 또 적으면 같은 수가 세 군데에
+            // 서서 정신없다. 지금 탭 안에서 다른 앱 것만.
+            let hasTabs = section.members.count > 1
             let elsewhere = metrics.badgeTrail(section.host, scope: sidebarScope).filter { stop in
-                !(stop.section == section && (project == nil || stop.project == nil || stop.project == project))
+                !(hasTabs && stop.section != section)
+                    && !(stop.section == section && (project == nil || stop.project == nil || stop.project == project))
             }
             if !elsewhere.isEmpty {
                 let limit = 3

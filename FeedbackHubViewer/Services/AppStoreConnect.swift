@@ -319,20 +319,42 @@ actor AppStoreConnect {
 
     /// Apple 에 그 앱의 시험 알림(TEST)을 보내 달라고 한다. Apple 은 앱에 적힌 서버 알림 주소로
     /// 보내고, 서버(app-portfolio `services/purchase-notify`)가 허브에 Purchase 를 남겨 아이폰 · 맥에
-    /// 푸시가 뜬다 — 실제 결제 없이 결제 알림 길 전체를 한 번에 시험한다. 샌드박스 쪽으로 보낸다.
-    func requestTestNotification(bundleID: String) async throws {
-        var request = URLRequest(url: URL(string: "https://api.storekit-sandbox.itunes.apple.com/inApps/v1/notifications/test")!)
+    /// 푸시가 뜬다 — 실제 결제 없이 결제 알림 길 전체를 한 번에 시험한다.
+    ///
+    /// **운영(Production) 쪽으로 보낸다.** 서버는 샌드박스 소식을 버린다(시험 구독 갱신이 몇 분마다 쏟아져서,
+    /// 2026-11-27). 샌드박스로 시험하면 서버가 받고도 버려서 푸시가 절대 오지 않았다. 운영의 TEST 는 결제가 아니다.
+    /// 돌려주는 값은 Apple 의 시험 토큰 — `testNotificationStatus` 로 서버에 닿았는지 묻는다.
+    @discardableResult
+    func requestTestNotification(bundleID: String) async throws -> String? {
+        var request = URLRequest(url: URL(string: "\(Self.storeKitServer)/inApps/v1/notifications/test")!)
         request.httpMethod = "POST"
         request.setValue("Bearer \(try makeToken(bundleID: bundleID).value)", forHTTPHeaderField: "Authorization")
         let (data, response) = try await URLSession.shared.data(for: request)
         let status = (response as? HTTPURLResponse)?.statusCode ?? 0
-        guard !(200..<300).contains(status) else { return }
+        if (200..<300).contains(status) {
+            return (try? JSONSerialization.jsonObject(with: data) as? [String: Any])?["testNotificationToken"] as? String
+        }
         if status == 404 {
             throw Failure.http(404, "이 앱에는 서버 알림 주소가 없습니다. 막 넣었다면 몇 분 뒤에 다시 해 보세요")
         }
         let message = (try? JSONSerialization.jsonObject(with: data) as? [String: Any])?["errorMessage"] as? String
         if status == 401 { throw Failure.unauthorized }
         throw Failure.http(status, message)
+    }
+
+    static let storeKitServer = "https://api.storekit.itunes.apple.com"
+
+    /// Apple 이 시험 알림을 서버에 보낸 결과 — "SUCCESS" 면 서버가 2xx 로 받았다.
+    /// 아직 보내기 전이면 nil. 실패는 Apple 의 말 그대로(TIMED_OUT · NO_RESPONSE · UNSUCCESSFUL_HTTP_RESPONSE_CODE …).
+    func testNotificationStatus(token: String, bundleID: String) async throws -> String? {
+        var request = URLRequest(url: URL(string: "\(Self.storeKitServer)/inApps/v1/notifications/test/\(token)")!)
+        request.setValue("Bearer \(try makeToken(bundleID: bundleID).value)", forHTTPHeaderField: "Authorization")
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard (response as? HTTPURLResponse)?.statusCode == 200,
+              let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] else { return nil }
+        let attempts = json["sendAttempts"] as? [[String: Any]] ?? []
+        if let last = attempts.last?["sendAttemptResult"] as? String { return last }
+        return json["firstSendAttemptResult"] as? String
     }
 
     private static func base64URL(_ data: Data) -> String {

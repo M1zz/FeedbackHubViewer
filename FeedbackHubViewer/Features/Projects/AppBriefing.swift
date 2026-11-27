@@ -341,6 +341,12 @@ enum SignalEvidence {
             return ["\(trend.title) \(AppFormat.count(trend.previous)) → \(AppFormat.count(trend.current))"]
         case .purchase:
             return ["최근 7일 구매 완료 \(AppFormat.count(signal.count))건"]
+        case .referral:
+            guard case .ready(let detection, _)? = purchases.referrals[project]?.value else { return [] }
+            return detection.spreading.prefix(3).map { item in
+                let how = item.status == .new ? "처음 링크" : "급증 \(item.previous) → \(item.recent)"
+                return "\(item.profile.name) · \(how) · \(ReferralDetection.recentDays)일 \(AppFormat.count(item.recent))명 받음"
+            }
         case .news, .changed, .keyword:
             return []
         }

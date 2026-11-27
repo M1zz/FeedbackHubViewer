@@ -43,6 +43,8 @@ final class AppStoreConnectStore: ObservableObject {
     @Published private(set) var metadata: [String: LoadState<StoreMetadata>] = [:]
     /// 번들 ID → 최근 30일 노출 · 전환.
     @Published var funnels: [String: LoadState<FunnelResult>] = [:]
+    /// 지금 네트워크로 받고 있는 리포트("funnel:번들 ID" 꼴).
+    @Published private(set) var fetching: Set<String> = []
     /// 번들 ID → 누가 링크했나(`AppStoreConnectStore+Referrals.swift`).
     @Published var referrals: [String: LoadState<ReferralResult>] = [:]
     /// 번들 ID → (출처 → 처음 본 날). 디스크에 남는다.
@@ -348,6 +350,10 @@ final class AppStoreConnectStore: ObservableObject {
         if force || self[keyPath: state][bundleID]?.value == nil {
             self[keyPath: state][bundleID] = .loading
         }
+        // 디스크에서 그린 값이 있으면 상태는 .loaded 그대로라, 네트워크로 받는 중인지는 따로 센다 —
+        // 받고 나서 숫자 · 뱃지가 바뀔 수 있다고 화면이 미리 말하게.
+        fetching.insert(key)
+        defer { fetching.remove(key) }
         do {
             let app = try await resolveApp(bundleID)
             guard let request = try await client.analyticsRequestID(appID: app.id) else {

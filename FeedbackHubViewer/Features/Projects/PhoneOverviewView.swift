@@ -336,7 +336,11 @@ struct PhoneOverviewView: View {
                             iconURL: icons.url(for: entry.key, keywords: keywords),
                             traffic: store.trafficByProject[entry.key],
                             release: store.releaseLevel(for: entry.key),
-                            metrics: metrics)
+                            metrics: metrics,
+                            cadence: keywords.storeApp(for: entry.key).map { app in
+                                ReleaseCadence(releasedAt: app.releasedAt, liveVersion: app.version,
+                                               latest: purchases.versions[entry.key])
+                            })
                 }
                 .buttonStyle(.plain)
             }
@@ -428,6 +432,8 @@ private struct AppCard: View {
     let traffic: FeedbackStore.Traffic?
     let release: ReleaseHealth.Level?
     let metrics: SectionMetrics
+    /// 마지막 배포 뒤 며칠 — 2주에 한 번 목표(`ReleaseCadence`).
+    var cadence: ReleaseCadence?
 
     /// 앱 카드가 뱃지를 보는 칸 — 카드를 누르면 뱃지가 선 첫 칸으로 연다.
     static let watched: [FeedbackStore.ProjectSection] = [
@@ -475,6 +481,13 @@ private struct AppCard: View {
                         .font(.body.monospacedDigit())
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
+                    if let cadence {
+                        Label(cadence.line, systemImage: cadence.systemImage)
+                            .font(.body)
+                            .foregroundStyle(cadence.status == .fresh || cadence.status == .unknown
+                                             ? AnyShapeStyle(.secondary) : AnyShapeStyle(cadence.tint))
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 if let release {
