@@ -74,7 +74,10 @@ struct MarketingItem: Codable, Identifiable, Hashable {
             switch self {
             case .cardNews: ["인스타그램", "스레드", "링크드인", "네이버 블로그"]
             case .video: ["유튜브 쇼츠", "인스타그램 릴스", "틱톡"]
-            case .post: ["스레드", "X", "레딧", "네이버 블로그", "브런치", "디스콰이엇", "긱뉴스"]
+            // 해외 먼저, 한국 채널(디스콰이엇 · 긱뉴스 · 네이버 블로그 · 브런치)은 뒤로 — 한국은 판매 우선순위가 낮다(2026-11-27).
+            // 할인 · 무료 행사는 r/AppHookup → V2EX · 什么值得买 · GetFree 가 행사 뒤 유입을 냈다(허브 링크 감지).
+            case .post: ["X", "레딧", "r/AppHookup", "스레드", "V2EX 分享创造", "什么值得买", "GetFree",
+                         "디스콰이엇", "긱뉴스", "네이버 블로그", "브런치"]
             }
         }
     }
@@ -236,7 +239,8 @@ enum MarketingSeed {
     /// 2026-10-30: 두번알림 인스타 글을 안 잘린 4:5 이미지로 다시 올린 대로.
     /// 2026-11-12: 10-30 뒤로 시드에만 적고 판을 안 올려 앱에 안 들어간 것들 — 한 기능 깊이형 카드뉴스(클립키보드 템플릿 · 쑥쑥용돈 저축 이자) 올림 등.
     /// 2026-11-13: 첫 영어판 — 클립키보드 Recent 탭(인스타 릴스 · 스레드 카드 6장 · X 영상).
-    static let version = "2026-11-27c"
+    /// 2026-11-27d: 다음 할인 · 무료 행사 채널(클립키보드) — r/AppHookup · V2EX · 什么值得买 · GetFree 를 "계획" 으로. 한국 채널은 뒤로.
+    static let version = "2026-11-27d"
     static let fileName = "marketing-seed"
     /// 처음 시드를 만든 날. 시드에서 온 활동의 만든 시각 · 고친 시각이 이것이다.
     static let firstStamp = ISO8601DateFormatter().date(from: "2026-10-22T00:00:00Z") ?? .distantPast

@@ -88,6 +88,8 @@ final class AppStoreConnectStore: ObservableObject {
     var onNewReviews: ((String, [CustomerReview]) -> Void)?
     /// 번들 ID → 가장 최근 App Store 버전.
     @Published var versions: [String: AppVersionStatus] = [:]
+    /// 번들 ID → 플랫폼마다 판매 중 · 다음 버전(iOS · macOS · visionOS · tvOS).
+    @Published var platformReleases: [String: [StorePlatformRelease]] = [:]
     /// 번들 ID → 제출된 버전 기록과 버전별 성능(`AppStoreConnectStore+Stabilization.swift`).
     @Published var stabilitySources: [String: Stabilization.Source] = [:]
     @Published var stabilityErrors: [String: String] = [:]

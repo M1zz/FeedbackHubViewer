@@ -201,20 +201,42 @@ extension AppStoreConnectStore {
     func loadVersion(bundleID: String) async {
         guard let client else { return }
         let key = "version:\(bundleID)"
-        guard await shouldFetch(key, force: false, has: versions[bundleID] != nil) else { return }
+        guard await shouldFetch(key, force: false,
+                                 has: versions[bundleID] != nil && platformReleases[bundleID] != nil) else { return }
         guard let app = try? await resolveApp(bundleID),
-              let version = try? await client.latestVersion(appID: app.id) else {
+              let summary = try? await client.versionSummary(appID: app.id) else {
             refreshed.remove(key)
             return
         }
-        setVersion(version, for: bundleID)
+        if let latest = summary.latest { setVersion(latest, for: bundleID) }
+        if platformReleases[bundleID] != summary.platforms {
+            platformReleases[bundleID] = summary.platforms
+            CacheFile.write(platformReleases, to: Self.platformReleasesFile)
+        }
         markFetched(key)
     }
 
     static var versionsFile: URL? { CacheFile.url("store-versions") }
 
+    static var platformReleasesFile: URL? { CacheFile.url(platformReleasesName) }
+    nonisolated static let platformReleasesName = "store-platform-releases"
+
     func restoreVersions() {
         versions = CacheFile.read([String: AppVersionStatus].self, at: Self.versionsFile) ?? [:]
+        platformReleases = CacheFile.read([String: [StorePlatformRelease]].self, at: Self.platformReleasesFile) ?? [:]
+    }
+
+    /// 앱 전부의 스토어 버전 · 플랫폼 — 홈 카드가 "무엇이 어디에 나갔나" 를 적는다. 받은 지 몇 시간 안이면 건너뛴다.
+    func loadVersions(_ bundleIDs: [String]) async {
+        guard client != nil else { return }
+        for bundleID in bundleIds(bundleIDs) {
+            guard !Task.isCancelled else { return }
+            await loadVersion(bundleID: bundleID)
+        }
+    }
+
+    private func bundleIds(_ ids: [String]) -> [String] {
+        ids.filter { $0 != Feedback.unclassifiedProject }
     }
 
     func setVersion(_ version: AppVersionStatus, for bundleID: String) {

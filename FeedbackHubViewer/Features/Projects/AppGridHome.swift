@@ -339,6 +339,10 @@ struct AppGridHome: View {
         .task(id: all.map(\.project)) {
             await icons.resolve(all.map(\.project), keywords: keywords)
         }
+        // 카드의 "무엇이 어디에 나갔나" — 앱마다 스토어 버전 · 플랫폼. 받은 지 몇 시간 안이면 건너뛴다.
+        .task(id: "versions:" + all.map(\.project).joined(separator: ",")) {
+            await purchases.loadVersions(all.map(\.project))
+        }
         // 다운로드 선의 재료. 연결이 없으면 아무 일도 하지 않고, 받아 둔 날은 다시 받지 않는다.
         .task { await purchases.loadSales() }
         .task { await purchases.loadReceipts() }
@@ -1258,6 +1262,9 @@ struct AppGridHome: View {
                                              ? AnyShapeStyle(.secondary) : AnyShapeStyle(cadence.tint))
                             .lineLimit(1)
                             .help("목표: \(ReleaseCadence.goalDays)일에 한 번 배포")
+                    }
+                    if let releases = purchases.platformReleases[row.project], !releases.isEmpty {
+                        StorePlatformsLine(releases: releases)
                     }
                 }
                 Spacer(minLength: 4)

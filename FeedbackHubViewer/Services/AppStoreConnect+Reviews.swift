@@ -68,6 +68,71 @@ struct ReviewResponse: Identifiable, Hashable, Codable {
     }
 }
 
+/// 한 플랫폼의 스토어 상태 — 판매 중인 버전과, 그 뒤에 만든 다음 버전(심사 · 출시 대기 · 거절 · 준비 중).
+struct StorePlatformRelease: Hashable, Codable, Identifiable {
+    /// App Store Connect 의 플랫폼 — IOS · MAC_OS · VISION_OS · TV_OS. 워치 앱은 iOS 버전에 실려 나간다.
+    let platform: String
+    /// 지금 판매 중인 버전. 한 번도 안 나갔으면 nil.
+    let live: String?
+    /// 판매 중인 것보다 뒤에 만든 버전. 없으면 nil.
+    let next: AppVersionStatus?
+
+    var id: String { platform }
+
+    var name: String {
+        switch platform {
+        case "IOS": return "iOS"
+        case "MAC_OS": return "macOS"
+        case "VISION_OS": return "visionOS"
+        case "TV_OS": return "tvOS"
+        default: return platform
+        }
+    }
+
+    var systemImage: String {
+        switch platform {
+        case "MAC_OS": return "macbook"
+        case "VISION_OS": return "visionpro"
+        case "TV_OS": return "appletv"
+        default: return "iphone"
+        }
+    }
+
+    /// "iOS 1.2.3 → 1.2.4 심사 대기" · "macOS 첫 출시 전 · 1.0 심사 대기".
+    var line: String {
+        var text = name + " " + (live ?? "첫 출시 전")
+        if let next {
+            text += (live == nil ? " · " : " → ") + "\(next.version) \(next.stateLabel)"
+        }
+        return text
+    }
+
+    /// 플랫폼 차례 — 아이폰 · 맥 · 비전 · TV.
+    static let order = ["IOS", "MAC_OS", "VISION_OS", "TV_OS"]
+
+    /// 버전 목록(새것부터 아니어도 된다)을 플랫폼마다로. 같은 플랫폼에서 판매 중인 가장 새 버전과,
+    /// 그보다 늦게 만든 가장 새 버전.
+    static func summarize(_ versions: [(platform: String, version: String, state: String, created: Date)]) -> [StorePlatformRelease] {
+        let live: Set<String> = ["READY_FOR_SALE", "READY_FOR_DISTRIBUTION"]
+        let gone: Set<String> = ["DEVELOPER_REMOVED_FROM_SALE", "REMOVED_FROM_SALE", "REPLACED_WITH_NEW_VERSION"]
+        return Dictionary(grouping: versions, by: \.platform).compactMap { platform, items in
+            let sorted = items.sorted { $0.created > $1.created }
+            let current = sorted.first { live.contains($0.state) }
+            let newer = sorted.first { !live.contains($0.state) && !gone.contains($0.state)
+                && $0.created > (current?.created ?? .distantPast) }
+            // 판매 중지만 남은 플랫폼은 "내림" 으로.
+            if current == nil, newer == nil, let removed = sorted.first(where: { gone.contains($0.state) && $0.state != "REPLACED_WITH_NEW_VERSION" }) {
+                return StorePlatformRelease(platform: platform, live: nil,
+                                            next: AppVersionStatus(version: removed.version, state: removed.state))
+            }
+            guard current != nil || newer != nil else { return nil }
+            return StorePlatformRelease(platform: platform, live: current?.version,
+                                        next: newer.map { AppVersionStatus(version: $0.version, state: $0.state) })
+        }
+        .sorted { (order.firstIndex(of: $0.platform) ?? 9) < (order.firstIndex(of: $1.platform) ?? 9) }
+    }
+}
+
 /// App Store 에 가장 최근에 만든 버전과 그 상태.
 struct AppVersionStatus: Hashable, Codable {
     let version: String
@@ -168,18 +233,25 @@ extension AppStoreConnect {
     /// 이 관계는 정렬을 받지 않아서 한 쪽(최대 200개)을 받아 만든 날짜로 고른다. `list` 는
     /// 다음 쪽을 끝까지 따라가므로 쓰지 않는다 — 버전이 200개를 넘는 앱은 없다.
     func latestVersion(appID: String) async throws -> AppVersionStatus? {
+        try await versionSummary(appID: appID).latest
+    }
+
+    /// 가장 최근에 만든 버전(모든 플랫폼에서)과, 플랫폼마다 판매 중 · 다음 버전. 같은 요청 한 번.
+    func versionSummary(appID: String) async throws -> (latest: AppVersionStatus?, platforms: [StorePlatformRelease]) {
         let (data, status) = try await send(url("v1/apps/\(appID)/appStoreVersions", [
-            "fields[appStoreVersions]": "versionString,appStoreState,createdDate",
+            "fields[appStoreVersions]": "versionString,appStoreState,createdDate,platform",
             "limit": "200"
         ]))
         try check(data, status)
         guard let page = try? JSONDecoder().decode(ASCDocument.self, from: data) else { throw Failure.decoding }
-        let latest = page.data.max {
-            (Self.parseDate($0.string("createdDate")) ?? .distantPast) < (Self.parseDate($1.string("createdDate")) ?? .distantPast)
+        let rows = page.data.map { item in
+            (platform: item.string("platform") ?? "IOS", version: item.string("versionString") ?? "?",
+             state: item.string("appStoreState") ?? "UNKNOWN",
+             created: Self.parseDate(item.string("createdDate")) ?? .distantPast)
         }
-        guard let latest else { return nil }
-        return AppVersionStatus(version: latest.string("versionString") ?? "?",
-                                state: latest.string("appStoreState") ?? "UNKNOWN")
+        let latest = rows.max { $0.created < $1.created }
+            .map { AppVersionStatus(version: $0.version, state: $0.state) }
+        return (latest, StorePlatformRelease.summarize(rows))
     }
 
     /// 응답을 달거나 갈아 끼운다. 스토어가 받아들인 응답을 돌려준다.

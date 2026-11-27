@@ -61,6 +61,8 @@ struct PhoneOverviewView: View {
         .navigationTitle("현황")
         .refreshable { await HubRefresh.now(store, purchases) }
         .task(id: apps.count) { await icons.resolve(apps.map(\.key), keywords: keywords) }
+        // 앱 카드의 "무엇이 어디에 나갔나" — 받은 지 몇 시간 안이면 건너뛴다.
+        .task(id: "versions:\(apps.count)") { await purchases.loadVersions(apps.map(\.key)) }
     }
 
     // MARK: - 1. 한 줄 판정
@@ -340,7 +342,8 @@ struct PhoneOverviewView: View {
                             cadence: keywords.storeApp(for: entry.key).map { app in
                                 ReleaseCadence(releasedAt: app.releasedAt, liveVersion: app.version,
                                                latest: purchases.versions[entry.key])
-                            })
+                            },
+                            releases: purchases.platformReleases[entry.key] ?? [])
                 }
                 .buttonStyle(.plain)
             }
@@ -434,6 +437,8 @@ private struct AppCard: View {
     let metrics: SectionMetrics
     /// 마지막 배포 뒤 며칠 — 2주에 한 번 목표(`ReleaseCadence`).
     var cadence: ReleaseCadence?
+    /// 플랫폼마다 판매 중 · 다음 버전.
+    var releases: [StorePlatformRelease] = []
 
     /// 앱 카드가 뱃지를 보는 칸 — 카드를 누르면 뱃지가 선 첫 칸으로 연다.
     static let watched: [FeedbackStore.ProjectSection] = [
@@ -487,6 +492,9 @@ private struct AppCard: View {
                             .foregroundStyle(cadence.status == .fresh || cadence.status == .unknown
                                              ? AnyShapeStyle(.secondary) : AnyShapeStyle(cadence.tint))
                             .fixedSize(horizontal: false, vertical: true)
+                    }
+                    if !releases.isEmpty {
+                        StorePlatformsLine(releases: releases)
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)

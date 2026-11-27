@@ -24,6 +24,7 @@ extension AppStoreConnectStore {
         "connect-fetched-at", "connect-apps-v2", "store-catalogs-v2", "store-metadata",
         "sales-days", "subscription-event-days", "exchange-rates",
         "store-reviews", "store-reviews-alerted", "store-review-priority", "store-versions", "store-stability",
+        AppStoreConnectStore.platformReleasesName,
         "analytics-results", "analytics-coverage", "analytics-scans", "referral-ledger",
         // 품질 탭 — 별점 합계와, 맥만 읽을 수 있는 레포의 시험 결과(`KeywordStore+Quality.swift`).
         KeywordStore.storeRatingsFile, KeywordStore.deviceTestsFile, KeywordStore.testCoverageFile,
@@ -69,6 +70,7 @@ extension AppStoreConnectStore {
         rates = CacheFile.read(ExchangeRates.self, at: Self.ratesFile) ?? rates
         restoreReferralLedger()
         restoreReviews()
+        restoreVersions()
         restoreStability()
         restoreStoreCaches()
         if let coverage = CacheFile.read(AnalyticsCoverage.self, at: Self.coverageFile) {
