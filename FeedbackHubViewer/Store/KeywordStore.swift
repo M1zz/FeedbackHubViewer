@@ -106,6 +106,24 @@ final class KeywordStore: ObservableObject {
     /// without anyone clearing anything.
     private var askedLinks: Set<String> = []
 
+    /// App Store 가 "없다" 고 답한 허브 앱 — 배포 전이거나 내린 앱. 허브는 이 앱들을 추적하지 않는다
+    /// (`FeedbackStore.untracked`). 디스크에 남긴다: 켤 때마다 잠깐 보였다 사라지지 않게. 스토어에 다시
+    /// 나타나면(배포 · 다시 판매) 그날의 확인에서 빠진다 — 없는 앱도 하루 한 번은 다시 묻는다.
+    @Published private(set) var storeAbsent: Set<String> =
+        Set(UserDefaults.standard.stringArray(forKey: KeywordStore.storeAbsentKey) ?? [])
+    nonisolated static let storeAbsentKey = "store-absent-projects"
+
+    /// 물어본 것 중 답이 온 것은 있음, 안 온 것은 없음. 요청 자체가 실패하면 부르지 않는다.
+    private func noteStore(asked: some Sequence<String>, found: Set<String>) {
+        var absent = storeAbsent
+        for key in asked where key != Feedback.unclassifiedProject {
+            if found.contains(key) { absent.remove(key) } else { absent.insert(key) }
+        }
+        guard absent != storeAbsent else { return }
+        storeAbsent = absent
+        UserDefaults.standard.set(Array(absent).sorted(), forKey: Self.storeAbsentKey)
+    }
+
     /// How far along a check is. Searches are the only slow part and there are
     /// exactly as many as there are distinct terms, so unlike the CloudKit
     /// refresh this one really does have a denominator.
@@ -304,7 +322,8 @@ final class KeywordStore: ObservableObject {
         // `syncLinks` has in flight, so the two never ask the same question at
         // the same time.
         await linkTask?.value
-        await resolveLinks(bundleIds: bundleIds, retryUnanswered: true)
+        // 추적하지 않는 앱(스토어에 없던 앱)도 다시 묻는다 — 오늘 배포됐으면 다시 추적한다.
+        await resolveLinks(bundleIds: Array(Set(bundleIds).union(storeAbsent)), retryUnanswered: true)
         let mine = Set(history.links.values)
         // Every rank this pass could record would be empty, and it would then
         // mark today as checked and not try again until tomorrow. Better to do
@@ -462,11 +481,15 @@ final class KeywordStore: ObservableObject {
             // the request itself came back: a throttled one is not an answer
             // about anything, and must not be read as one.
             askedLinks.formUnion(unlinked)
+            var found = Set<String>()
             for app in apps {
                 guard let bundleId = app.bundleId else { continue }
-                history.links[Self.hubKey(for: bundleId, among: unlinked)] = app.id
+                let key = Self.hubKey(for: bundleId, among: unlinked)
+                history.links[key] = app.id
                 history.remember(app)
+                found.insert(key)
             }
+            noteStore(asked: unlinked, found: found)
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -527,19 +550,30 @@ final class KeywordStore: ObservableObject {
         Task { [weak self] in
             guard let self else { return }
             do {
+                let bundleIds = Array(Set(bundleIds).union(self.storeAbsent))
                 let apps = try await self.listings(bundleIds: bundleIds)
                 self.askedLinks.formUnion(bundleIds)
+                var found = Set<String>()
                 for app in apps {
                     guard let bundleId = app.bundleId else { continue }
-                    self.history.links[Self.hubKey(for: bundleId, among: bundleIds)] = app.id
+                    let key = Self.hubKey(for: bundleId, among: bundleIds)
+                    self.history.links[key] = app.id
                     self.history.remember(app)
+                    found.insert(key)
                 }
                 // 손으로 이은 앱은 번들 ID 가 스토어와 달라 위에서 안 잡힌다 — id 로 다시 읽는다.
                 let seen = Set(apps.map(\.id))
                 let byHand = Set(self.history.links.values).subtracting(seen).sorted()
                 if let more = try? await self.listings(ids: byHand) {
                     for app in more { self.history.remember(app) }
+                    let back = Set(more.map(\.id))
+                    for (key, id) in self.history.links where back.contains(id) { found.insert(key) }
+                } else {
+                    // 다시 읽기에 실패했으면 손으로 이은 앱은 모른다 — 없다고 적지 않는다.
+                    for (key, id) in self.history.links where byHand.contains(id) { found.insert(key) }
                 }
+                // 이어진 앱이 오늘 스토어에서 안 나오면 내린 앱이다.
+                self.noteStore(asked: bundleIds, found: found)
                 self.persist()
             } catch {
                 self.errorMessage = error.localizedDescription

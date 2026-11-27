@@ -208,7 +208,7 @@ final class NewsStore: ObservableObject {
     }
 
     private func projects(_ store: FeedbackStore) -> [String] {
-        store.allProjectKeys.filter { $0 != Feedback.unclassifiedProject && !store.hiddenProjects.contains($0) }
+        store.allProjectKeys.filter { $0 != Feedback.unclassifiedProject && !store.isExcluded($0) }
     }
 
     // MARK: - 읽음

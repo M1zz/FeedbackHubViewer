@@ -190,7 +190,7 @@ extension FeedbackStore {
         }
 
         var result: [String: Traffic] = [:]
-        for key in rollups.projectKeys.subtracting(hiddenProjects).union(installs.keys) {
+        for key in rollups.projectKeys.subtracting(excludedProjects).union(installs.keys) {
             let days = rollups.days(for: key)
             var total = 0
             var events7 = 0

@@ -114,7 +114,7 @@ struct KeywordRefreshOverviewCard: View {
     @State private var copied = false
 
     var body: some View {
-        let projects = store.allProjectKeys.filter { $0 != Feedback.unclassifiedProject && !store.hiddenProjects.contains($0) }
+        let projects = store.allProjectKeys.filter { $0 != Feedback.unclassifiedProject && !store.isExcluded($0) }
         let due = keywords.refreshDue(projects: projects)
         let watched = projects.filter { !keywords.refreshStates(for: $0, withRanks: false).isEmpty }
         let waiting = keywords.awaitingRelease(projects: projects)

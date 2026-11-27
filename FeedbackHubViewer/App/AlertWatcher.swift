@@ -66,7 +66,7 @@ final class AlertWatcher: ObservableObject {
         guard let store, let purchases, store.notificationsEnabled else { return }
         await store.load(mode: .incremental)
         guard store.alertKinds.contains(.review), purchases.isConfigured else { return }
-        let apps = store.allProjectKeys.filter { !store.hiddenProjects.contains($0) }
+        let apps = store.allProjectKeys.filter { !store.isExcluded($0) }
         await purchases.loadReviews(bundleIDs: apps)
     }
 

@@ -312,7 +312,7 @@ extension FeedbackStore {
     /// (머리말). 아무도 안 남는 날은 통째로 빠지므로 "그 무리가 없던 날"이 0으로
     /// 남지 않는다.
     func days(for project: String?, audience: Audience) -> [String: UsageDayBucket] {
-        let days = rollups.days(for: project, excluding: hiddenProjects)
+        let days = rollups.days(for: project, excluding: excludedProjects)
         guard let ids = installIDs(for: project, audience: audience) else { return days }
         return days.compactMapValues { bucket in
             let installs = bucket.installs.intersection(ids)
@@ -330,7 +330,7 @@ extension FeedbackStore {
     func periodBuckets(_ granularity: UsageRollups.Granularity,
                        for project: String?,
                        audience: Audience) -> [String: UsagePeriodBucket] {
-        let buckets = rollups.buckets(granularity, for: project, excluding: hiddenProjects)
+        let buckets = rollups.buckets(granularity, for: project, excluding: excludedProjects)
         guard let ids = installIDs(for: project, audience: audience) else { return buckets }
         return buckets.compactMapValues { bucket in
             let installs = bucket.installs.intersection(ids)
@@ -348,7 +348,7 @@ extension FeedbackStore {
     /// 안 보낸다"와 "이 무리에서 아무도 안 했다"를 다르게 그리는데, 지워 버리면
     /// 뒤엣것이 앞엣것으로 보인다(`Insight.Step.isMissing`).
     func eventTotals(for project: String?, audience: Audience) -> [String: UsageNameTotal] {
-        let totals = rollups.totals(for: project, excluding: hiddenProjects)
+        let totals = rollups.totals(for: project, excluding: excludedProjects)
         guard let ids = installIDs(for: project, audience: audience) else { return totals }
         return totals.mapValues { total in
             var filtered = total

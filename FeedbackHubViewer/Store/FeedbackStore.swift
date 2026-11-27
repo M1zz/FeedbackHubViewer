@@ -1411,7 +1411,7 @@ final class FeedbackStore: ObservableObject {
 
     /// 스토어 리뷰가 새로 왔을 때(`AppStoreConnectStore.onNewReviews`). 숨긴 앱은 조용히.
     func announceNewReviews(bundleID: String, reviews: [CustomerReview]) {
-        guard notificationsEnabled, alertKinds.contains(.review), !hiddenProjects.contains(bundleID) else { return }
+        guard notificationsEnabled, alertKinds.contains(.review), !isExcluded(bundleID) else { return }
         NotificationService.notifyNewReviews(app: displayName(for: bundleID), reviews: reviews)
     }
 
@@ -1809,6 +1809,47 @@ final class FeedbackStore: ObservableObject {
     private nonisolated static let hiddenProjectsKey = "hiddenProjects"
 
     func isHidden(_ project: String) -> Bool { hiddenProjects.contains(project) }
+
+    // MARK: - 추적하지 않는 앱 (App Store 에 없음)
+
+    /// App Store 에 나가 있지 않은 앱 → 까닭(`StoreTracking`). 숨긴 앱처럼 목록 · 홈 · 뱃지에서 빠진다.
+    @Published private(set) var untracked: [String: String] = [:] { didSet { invalidateDerived() } }
+    /// 스토어에 없어도 추적하라고 한 앱 — 기기 사이에 맞춘다.
+    @Published private(set) var trackedAnyway: Set<String> =
+        Set(UserDefaults.standard.stringArray(forKey: FeedbackStore.trackedAnywayKey) ?? [])
+    nonisolated static let trackedAnywayKey = "tracked-anyway"
+    private var lastTrackingInputs: (absent: Set<String>, versions: [String: AppVersionStatus])?
+
+    /// 숨긴 앱 + 추적하지 않는 앱. 목록에서 빼는 곳은 모두 이것을 본다.
+    var excludedProjects: Set<String> { untracked.isEmpty ? hiddenProjects : hiddenProjects.union(untracked.keys) }
+    func isExcluded(_ project: String) -> Bool { hiddenProjects.contains(project) || untracked[project] != nil }
+
+    /// 스토어 조회 · App Store Connect 상태가 바뀔 때마다.
+    func updateStoreTracking(absent: Set<String>, versions: [String: AppVersionStatus]) {
+        lastTrackingInputs = (absent, versions)
+        let next = StoreTracking.untracked(absent: absent, versions: versions, forced: trackedAnyway)
+        guard next != untracked else { return }
+        untracked = next
+        if let selectedProject, next[selectedProject] != nil {
+            self.selectedProject = nil
+            path = NavigationPath()
+            phonePaths = [:]
+        }
+        refreshBadge()
+    }
+
+    /// 스토어에 없어도 계속 추적한다.
+    func trackAnyway(_ project: String) {
+        trackedAnyway.insert(project)
+        SyncedDefaults.set(Array(trackedAnyway).sorted(), forKey: Self.trackedAnywayKey)
+        if let inputs = lastTrackingInputs { updateStoreTracking(absent: inputs.absent, versions: inputs.versions) }
+    }
+
+    /// "추적 안 함" 목록 — 이름 · 까닭.
+    var untrackedEntries: [(key: String, displayName: String, reason: String)] {
+        untracked.map { (key: $0.key, displayName: displayName(for: $0.key), reason: $0.value) }
+            .sorted { $0.displayName.localizedStandardCompare($1.displayName) == .orderedAscending }
+    }
 
     /// Hide one project's feedback, usage, events and diagnostics at once.
     func hideProject(_ project: String) {

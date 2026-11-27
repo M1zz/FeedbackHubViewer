@@ -187,9 +187,8 @@ extension FeedbackStore {
     }
 
     private func visible<Record: HubRecord>(_ records: [Record]) -> [Record] {
-        hiddenProjects.isEmpty
-            ? records
-            : records.filter { !hiddenProjects.contains($0.projectKey) }
+        let excluded = excludedProjects
+        return excluded.isEmpty ? records : records.filter { !excluded.contains($0.projectKey) }
     }
 
     // MARK: - Grouped by project
