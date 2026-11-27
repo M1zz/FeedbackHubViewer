@@ -1,0 +1,20 @@
+{
+  "$comment": [
+    "FeedbackHubViewer 가 이 앱의 통계를 읽는 스펙. 원본은 이 파일이고, 허브는 scripts/sync-stats-specs.sh 로 복사해 간다.",
+    "release.coreAction 은 품질 탭의 '핵심 기능' 칸과 릴리즈 건강 카드가 읽는다. 이벤트 이름을 바꾸면 여기도 같이 바꿀 것."
+  ],
+  "specVersion": 1,
+  "appId": "com.Ysoup.restaurantmap",
+  "appName": "인생맛집",
+  "eventLabels": {
+    "visit_saved": "방문 남기기",
+    "onboarding_completed": "온보딩 마침"
+  },
+  "release": {
+    "coreAction": {
+      "label": "가게에 다녀온 날을 남긴 사람",
+      "events": ["visit_saved"],
+      "note": "다녀온 날을 세어 단골과 인생 맛집을 가리는 앱이라, 방문을 남기는 순간이 가치 순간이다."
+    }
+  }
+}

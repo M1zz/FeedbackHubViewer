@@ -45,9 +45,36 @@ final class KeywordStore: ObservableObject {
     /// 추천 검색어, 프로젝트마다 마지막으로 돌린 것. 돌리는 데 몇 분 걸려서
     /// 다음 실행까지 디스크에 남긴다(`recommend(for:country:)`).
     @Published private(set) var recommendations: [String: KeywordRecommendation.Report] = [:]
+    /// 검색어(`TrackedKeyword.id`)마다 마지막으로 잰 검색 인기. 순위 줄에 경쟁과 나란히 붙는다.
+    /// 기기마다 따로 잰다 — 자동완성은 언제 재도 다시 잴 수 있는 값이라 동기화할 까닭이 없다.
+    @Published private(set) var popularity: [String: PopularityReading] = [:]
+
+    struct PopularityReading: Codable, Equatable {
+        let score: Int
+        let measuredAt: Date
+    }
+    /// 인기는 순위보다 느리게 변한다. 이보다 오래된 것만 순위 확인 때 다시 잰다.
+    private static let popularityMaxAge: TimeInterval = 7 * 86_400
+    /// 인기를 아직 안 잰 검색어를 재는 중이면 몇 개 중 몇 개째인가.
+    @Published private(set) var popularityProgress: (done: Int, total: Int)?
+    private var popularityTask: Task<Void, Never>?
+    private static let popularityFile = "keyword-popularity"
     /// 스토어 키워드 칸의 기록 — `KeywordField.key(project:locale:)` → 본 값들, 오래된 것부터.
     /// `syncStoreFields` 만 쓴다(`KeywordStore+StoreField.swift`).
     @Published var fieldLog: [String: [KeywordFieldSnapshot]] = [:]
+    /// 앱 레포 `APPSTORE.md` 의 키워드 줄 — `RepoKeywords.key(project:locale:)` → 말들.
+    /// 스토어 칸과 다르면 새 키워드가 출시를 기다리는 중이다(`KeywordStore+Repo.swift`).
+    @Published var repoKeywords: [String: [String]] = [:]
+    /// 같은 폴더의 `docs/quality-tests.json` — 번들 id(소문자) → 아이폰에서 돌린 테스트 결과(`DeviceTests.swift`).
+    @Published var deviceTests: [String: DeviceTestResult] = [:]
+    /// 같은 폴더의 `docs/test-coverage.json` — 번들 id(소문자) → 테스트 커버리지(`TestCoverage.swift`).
+    @Published var testCoverage: [String: TestCoverage] = [:]
+    /// 나라 가게마다 받은 별점 — 품질 탭의 만족도(`KeywordStore+Quality.swift`).
+    @Published var storeRatings: StoreRatings?
+    var qualityCacheObserver: NSObjectProtocol?
+    /// 레포들이 든 폴더(`workspace/Auto`). 샌드박스라 한 번 골라 받은 허락으로 읽는다. nil 이면 아직 안 골랐다.
+    @Published var repoFolder: URL?
+    var repoActiveObserver: NSObjectProtocol?
 
     /// Storefronts offered when adding a term. Seeded from what is already
     /// tracked so the picker matches the data, and persisted as a plain
@@ -59,13 +86,15 @@ final class KeywordStore: ObservableObject {
         }
     }
 
-    private static let countriesKey = "keywordCountries"
+    private nonisolated static let countriesKey = "keywordCountries"
     private static let lastCheckDayKey = "keywordLastCheckDay"
-    private static let lastListingRefreshDayKey = "keywordLastListingRefreshDay"
+    /// 스토어 이름 · 아이콘을 마지막으로 다시 읽은 때(초).
+    private static let lastListingRefreshKey = "keywordLastListingRefreshAt"
+    private static let namesLocalizedKey = "keywordNamesLocalized.v1"
     private static let recommendationsFile = "keyword-recommendations"
     static let fieldLogFile = "keyword-fields"
 
-    private let directory = AppStoreDirectory.shared
+    let directory = AppStoreDirectory.shared
     private var checkTask: Task<Void, Never>?
     private var restoreTask: Task<Void, Never>?
     private var linkTask: Task<Void, Never>?
@@ -99,6 +128,17 @@ final class KeywordStore: ObservableObject {
     init() {
         let saved = UserDefaults.standard.stringArray(forKey: Self.countriesKey)
         countries = saved?.isEmpty == false ? saved! : ["kr"]
+        // 한 번만: en · ja · zh-Hans 키워드도 처방했으니(2026-11-20) 미국 · 일본 · 중국도 매일 잰다.
+        // init 에서는 didSet 이 돌지 않아 저장도 직접 한다(iCloud 로 다른 기기까지).
+        let addedKey = "keywordCountries.added-us-jp-cn"
+        if !UserDefaults.standard.bool(forKey: addedKey) {
+            UserDefaults.standard.set(true, forKey: addedKey)
+            let missing = ["us", "jp", "cn"].filter { !countries.contains($0) }
+            if !missing.isEmpty {
+                countries += missing
+                SyncedDefaults.set(countries, forKey: Self.countriesKey)
+            }
+        }
         // 다른 기기에서 고른 나라(`SyncedDefaults`).
         countriesObserver = NotificationCenter.default.addObserver(forName: SyncedDefaults.changed, object: nil,
                                                                    queue: .main) { [weak self] note in
@@ -109,6 +149,7 @@ final class KeywordStore: ObservableObject {
                 self.countries = saved
             }
         }
+        startRepoKeywords()
     }
 
     private var countriesObserver: NSObjectProtocol?
@@ -132,6 +173,18 @@ final class KeywordStore: ObservableObject {
                                           at: CacheFile.url(Self.recommendationsFile)) {
                 self.recommendations = saved
             }
+            var readings = CacheFile.read([String: PopularityReading].self,
+                                          at: CacheFile.url(Self.popularityFile)) ?? [:]
+            // 추천을 만들 때 이미 잰 말은 다시 묻지 않고 그 값으로 시작한다.
+            for report in self.recommendations.values {
+                for item in report.items {
+                    let id = TrackedKeyword(term: item.term, country: report.country).id
+                    if (readings[id]?.measuredAt ?? .distantPast) < report.measuredAt {
+                        readings[id] = PopularityReading(score: item.popularity, measuredAt: report.measuredAt)
+                    }
+                }
+            }
+            self.popularity = readings
             if let saved = CacheFile.read([String: [KeywordFieldSnapshot]].self,
                                           at: CacheFile.url(Self.fieldLogFile)) {
                 self.fieldLog = saved
@@ -180,20 +233,34 @@ final class KeywordStore: ObservableObject {
             // 다시 묻지 않아서, 스토어에서 이름을 바꾼 앱이 옛 이름으로 영영 남았다
             // ("벅터벅터" → "벅뚜벅뚜"). 이름은 허브 전체의 앱 이름이 되므로 낡으면 안 된다.
             // 키워드가 없어도 돈다 - 요청은 앱 20개당 하나다.
-            if self.needsListingRefresh {
-                UserDefaults.standard.set(UsageRollups.dayKey(Date()), forKey: Self.lastListingRefreshDayKey)
+            // 가게 표시가 생기기 전 기록에는 다른 나라 가게 이름이 섞여 있다 — 한 번은 꼭 다시 읽는다.
+            let namesFixed = UserDefaults.standard.bool(forKey: Self.namesLocalizedKey)
+            if self.needsListingRefresh || !namesFixed {
+                UserDefaults.standard.set(true, forKey: Self.namesLocalizedKey)
+                UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: Self.lastListingRefreshKey)
                 await self.linkTask?.value
                 self.refreshLinks(bundleIds: Array(Set(bundleIds).union(self.history.links.keys))
                     .filter { $0 != Feedback.unclassifiedProject })
             }
-            guard self.needsDailyCheck else { return }
+            // 품질 탭의 별점 — 나라마다 물어 하루 한 번. 키워드 확인과 같은 줄(`ITunesGate`)에 서서 따로 돈다.
+            Task { [weak self] in
+                await self?.linkTask?.value
+                await self?.refreshStoreRatings()
+            }
+            // 확인이 돌면 그 끝에 이름을 맞춘다(`runCheck`). 안 도는 날은 여기서.
+            guard self.needsDailyCheck else {
+                await self.localizeNames()
+                return
+            }
             self.check(bundleIds: bundleIds)
         }
     }
 
-    /// Whether the store listings (names, icons) have been re-read today.
+    /// Whether the store listings (names, icons) are older than six hours.
     private var needsListingRefresh: Bool {
-        UserDefaults.standard.string(forKey: Self.lastListingRefreshDayKey) != UsageRollups.dayKey(Date())
+        // 하루 한 번이면 새벽에 읽은 뒤 아침에 바뀐 이름이 하루 내내 옛것으로 남았다("징검돌" → "모찌모").
+        // 6시간마다 — 요청은 앱 20개당 하나라 가볍다.
+        Date().timeIntervalSince1970 - UserDefaults.standard.double(forKey: Self.lastListingRefreshKey) > 6 * 3600
     }
 
     /// Whether today's check has run. Stored as a day key rather than a date so
@@ -268,6 +335,9 @@ final class KeywordStore: ObservableObject {
             do {
                 let results = try await directory.search(term: keyword.term, country: keyword.country)
                 history.record(keyword, results: results, mine: mine)
+                if isStale(popularity[keyword.id]) {
+                    await measurePopularity(of: keyword.term, country: keyword.country)
+                }
             } catch is CancellationError {
                 return
             } catch {
@@ -281,8 +351,11 @@ final class KeywordStore: ObservableObject {
             done += 1
             // Written as it goes: a check is minutes long at three seconds a
             // term, and quitting halfway should keep what it already learned.
-            if done % 10 == 0 { persist() }
+            if done % 10 == 0 { persist(); savePopularity() }
         }
+        savePopularity()
+        // 다른 나라 가게에서 처음 본 경쟁 앱은 그 나라 말 이름으로 적힌다 — 한국어, 없으면 영어로.
+        await localizeNames()
         guard done > 0 else { return }
 
         history.lastCheckedAt = Date()
@@ -382,9 +455,8 @@ final class KeywordStore: ObservableObject {
         if retryUnanswered { askedLinks.removeAll() }
         let unlinked = bundleIds.filter(needsLink)
         guard !unlinked.isEmpty else { return }
-        let country = countries.first ?? "kr"
         do {
-            let apps = try await directory.lookup(bundleIds: unlinked, country: country)
+            let apps = try await listings(bundleIds: unlinked)
             // Asked *and answered* — the ids the store said nothing about are
             // in here too, and that silence is the answer. Only recorded when
             // the request itself came back: a throttled one is not an answer
@@ -393,26 +465,80 @@ final class KeywordStore: ObservableObject {
             for app in apps {
                 guard let bundleId = app.bundleId else { continue }
                 history.links[Self.hubKey(for: bundleId, among: unlinked)] = app.id
-                history.apps[String(app.id)] = app
+                history.remember(app)
             }
         } catch {
             errorMessage = error.localizedDescription
         }
     }
 
+    /// 번들 ID 들의 스토어 정보 — 한국 가게에서 먼저, 거기 없는 앱만 미국 가게에서
+    /// (`StoreApp.nameStorefronts`). 허브의 앱 이름이 여기서 나오므로 한국어 이름이 먼저고
+    /// 없으면 영어다. 첫 가게가 답하지 않으면 던진다 — 그 뒤 가게의 실패는 "없음" 으로 둔다.
+    private func listings(bundleIds: [String]) async throws -> [StoreApp] {
+        var found: [StoreApp] = []
+        for (index, country) in StoreApp.nameStorefronts.enumerated() {
+            let have = Set(found.compactMap { $0.bundleId?.lowercased() })
+            let left = bundleIds.filter { !have.contains($0.lowercased()) }
+            guard !left.isEmpty else { break }
+            if index == 0 {
+                found += try await directory.lookup(bundleIds: left, country: country)
+            } else if let more = try? await directory.lookup(bundleIds: left, country: country) {
+                found += more
+            }
+        }
+        return found
+    }
+
+    /// App Store id 들의 스토어 정보 — 같은 차례로.
+    private func listings(ids: [Int]) async throws -> [StoreApp] {
+        var found: [StoreApp] = []
+        for (index, country) in StoreApp.nameStorefronts.enumerated() {
+            let have = Set(found.map(\.id))
+            let left = ids.filter { !have.contains($0) }
+            guard !left.isEmpty else { break }
+            if index == 0 {
+                found += try await directory.lookup(ids: left, country: country)
+            } else if let more = try? await directory.lookup(ids: left, country: country) {
+                found += more
+            }
+        }
+        return found
+    }
+
+    /// 한국 · 미국 가게 이름이 아닌 앱(다른 나라 검색 결과에서 처음 본 경쟁 앱, 가게 표시가
+    /// 생기기 전에 적힌 앱)의 이름을 한국 가게, 없으면 미국 가게에서 다시 읽는다. 두 가게에
+    /// 다 없는 앱만 본 가게의 이름으로 남는다. 한 번 물은 앱은 이번 실행에서 다시 묻지 않는다.
+    private func localizeNames() async {
+        let ids = history.foreignNamed.filter { !askedNames.contains($0) }
+        guard !ids.isEmpty else { return }
+        guard let apps = try? await listings(ids: ids) else { return }
+        askedNames.formUnion(ids)
+        guard !apps.isEmpty else { return }
+        for app in apps { history.remember(app) }
+        persist()
+    }
+
+    private var askedNames: Set<Int> = []
+
     /// Re-read every app's store listing, whether or not it is already linked —
     /// what the 새로고침 button does when a name or rating has moved.
     func refreshLinks(bundleIds: [String]) {
         Task { [weak self] in
             guard let self else { return }
-            let country = self.countries.first ?? "kr"
             do {
-                let apps = try await self.directory.lookup(bundleIds: bundleIds, country: country)
+                let apps = try await self.listings(bundleIds: bundleIds)
                 self.askedLinks.formUnion(bundleIds)
                 for app in apps {
                     guard let bundleId = app.bundleId else { continue }
                     self.history.links[Self.hubKey(for: bundleId, among: bundleIds)] = app.id
-                    self.history.apps[String(app.id)] = app
+                    self.history.remember(app)
+                }
+                // 손으로 이은 앱은 번들 ID 가 스토어와 달라 위에서 안 잡힌다 — id 로 다시 읽는다.
+                let seen = Set(apps.map(\.id))
+                let byHand = Set(self.history.links.values).subtracting(seen).sorted()
+                if let more = try? await self.listings(ids: byHand) {
+                    for app in more { self.history.remember(app) }
                 }
                 self.persist()
             } catch {
@@ -437,12 +563,12 @@ final class KeywordStore: ObservableObject {
             .map { String(storeLink[$0].dropFirst(2)) } ?? storeLink.trimmingCharacters(in: .whitespacesAndNewlines)
         guard let id = Int(digits) else { return "링크에서 App Store id(id 뒤의 숫자)를 찾지 못했습니다." }
         do {
-            let apps = try await directory.lookup(ids: [id], country: countries.first ?? "kr")
+            let apps = try await listings(ids: [id])
             guard let app = apps.first(where: { $0.id == id }) ?? apps.first else {
                 return "App Store 가 이 id 의 앱을 모른다고 합니다."
             }
             history.links[project] = app.id
-            history.apps[String(app.id)] = app
+            history.remember(app)
             persist()
             return nil
         } catch {
@@ -473,6 +599,11 @@ final class KeywordStore: ObservableObject {
                                                               country: keyword.country)
                 self.history.record(keyword, results: results, mine: mine)
                 self.persist()
+                // 지금 확인은 그 말의 숫자를 다 채운다 — 방금 더한 말도 인기가 바로 붙게.
+                if self.isStale(self.popularity[keyword.id]) {
+                    await self.measurePopularity(of: keyword.term, country: keyword.country)
+                    self.savePopularity()
+                }
             } catch {
                 self.errorMessage = error.localizedDescription
             }
@@ -687,14 +818,7 @@ final class KeywordStore: ObservableObject {
             guard !Task.isCancelled else { return }
             progress = CheckProgress(done: index + 1, total: candidates.count, term: term)
 
-            var hintsByPrefix: [[String]] = []
-            let target = KeywordRecommendation.compact(term)
-            for prefix in KeywordRecommendation.prefixes(of: term) {
-                guard let list = try? await hints.hints(for: prefix, country: country) else { break }
-                hintsByPrefix.append(list)
-                if list.contains(where: { KeywordRecommendation.compact($0) == target }) { break }
-            }
-            let popularity = KeywordRecommendation.popularity(of: term, hintsByPrefix: hintsByPrefix)
+            guard let popularity = await measurePopularity(of: term, country: country) else { continue }
             // 문턱 아래는 검색하지 않는다. 검색 한 번이 3초라, 아무도 안 치는 말에 쓰기 아깝다.
             guard popularity.score >= KeywordRecommendation.minimumPopularity else { continue }
 
@@ -720,13 +844,75 @@ final class KeywordStore: ObservableObject {
             }
         }
 
+        // 같은 가게의 지난 결과와 견줄 수 있게 남긴다 — 점령도가 올랐나, 새로 뜬 말이 있나.
+        let last = recommendations[project].flatMap { $0.country == country ? $0 : nil }
         recommendations[project] = KeywordRecommendation.Report(
             country: country, measuredAt: Date(),
-            items: KeywordRecommendation.ranked(items), dropped: dropped)
+            items: KeywordRecommendation.ranked(items), dropped: dropped,
+            previousPopularity: last.map { Dictionary($0.items.map { ($0.term, $0.popularity) },
+                                                      uniquingKeysWith: { first, _ in first }) },
+            previousShare: last?.share)
         CacheFile.write(recommendations, to: CacheFile.url(Self.recommendationsFile))
+        savePopularity()
         if failures > 0 {
             errorMessage = "후보 \(failures)개는 검색하지 못했습니다. " + (errorMessage ?? "")
         }
+    }
+
+    // MARK: - 검색 인기
+
+    /// 이 검색어의 검색 인기 0~100. 아직 안 쟀으면 nil.
+    func popularity(of keyword: TrackedKeyword) -> Int? { popularity[keyword.id]?.score }
+
+    /// 이 앱의 검색어 중 인기가 없거나 오래된 것을 지금 잰다. 순위 확인을 기다리지 않는다 —
+    /// 인기가 비어 있으면 그 순위가 값진지 알 수 없어서다. 자동완성은 1초 간격이라 열 개면 수십 초.
+    func fillPopularity(for project: String?) {
+        guard popularityTask == nil else { return }
+        let missing = history.keywords(for: project)
+            .filter { isStale(popularity[$0.id]) && AppStoreHints.supports($0.country) }
+        guard !missing.isEmpty else { return }
+        popularityTask = Task { [weak self] in
+            guard let self else { return }
+            self.popularityProgress = (0, missing.count)
+            for (index, keyword) in missing.enumerated() {
+                if Task.isCancelled { break }
+                await self.measurePopularity(of: keyword.term, country: keyword.country)
+                self.popularityProgress = (index + 1, missing.count)
+                if (index + 1) % 5 == 0 { self.savePopularity() }
+            }
+            self.savePopularity()
+            self.popularityProgress = nil
+            self.popularityTask = nil
+        }
+    }
+
+    private func isStale(_ reading: PopularityReading?) -> Bool {
+        guard let reading else { return true }
+        return Date().timeIntervalSince(reading.measuredAt) > Self.popularityMaxAge
+    }
+
+    /// `term` 을 한 글자씩 쳐 가며 자동완성에 언제 뜨는지 재고 남긴다.
+    /// 자동완성을 못 읽는 가게이거나 중간에 요청이 실패해 못 쟀으면 nil — 0(아무도 안 침)과 다르다.
+    @discardableResult
+    private func measurePopularity(of term: String, country: String) async -> (score: Int, typed: Int?)? {
+        guard AppStoreHints.supports(country) else { return nil }
+        let target = KeywordRecommendation.compact(term)
+        var hintsByPrefix: [[String]] = []
+        var found = false
+        for prefix in KeywordRecommendation.prefixes(of: term) {
+            guard let list = try? await AppStoreHints.shared.hints(for: prefix, country: country) else { break }
+            hintsByPrefix.append(list)
+            if list.contains(where: { KeywordRecommendation.compact($0) == target }) { found = true; break }
+        }
+        // 끝까지 다 쳐 봤거나 찾았을 때만 믿는다. 도중에 끊기면 "안 뜸"인지 모른다.
+        guard found || hintsByPrefix.count == KeywordRecommendation.prefixes(of: term).count else { return nil }
+        let result = KeywordRecommendation.popularity(of: term, hintsByPrefix: hintsByPrefix)
+        popularity[TrackedKeyword(term: term, country: country).id] = PopularityReading(score: result.score, measuredAt: Date())
+        return result
+    }
+
+    private func savePopularity() {
+        CacheFile.write(popularity, to: CacheFile.url(Self.popularityFile))
     }
 
     /// 이 앱이 이미 이 가게에서 추적 중인 검색어인가.

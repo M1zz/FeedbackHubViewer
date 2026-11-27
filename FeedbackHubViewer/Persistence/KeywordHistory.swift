@@ -93,6 +93,9 @@ struct KeywordStanding {
     /// to the raw rank — which is the right answer for it: go where you already
     /// place best, because nothing up there is smaller than you.
     let weakerAbove: Int?
+    /// 0~100. 마지막 검색 상위 5개 앱의 평점 수 중앙값으로 잰 뚫기 어려움
+    /// (`KeywordRecommendation.competition`). 검색 결과를 아직 못 받았으면 nil.
+    var competition: Int? = nil
 
     var isRanked: Bool { rank != nil }
 
@@ -201,10 +204,23 @@ struct KeywordHistory: Codable, Equatable {
             }
             if position <= Self.competitorDepth {
                 check.top.append(app.id)
-                apps[String(app.id)] = app
+                remember(app)
             }
         }
         checks[keyword.id, default: [:]][UsageRollups.dayKey(now, calendar: calendar)] = check
+    }
+
+    /// 앱을 본 대로 적는다. 이름만은 한국 가게 것이 먼저, 없으면 미국 가게 것
+    /// (`StoreApp.keepingBetterName`) — 나라마다 순위를 재면서 마지막에 검색한 가게의
+    /// 이름(중국어 · 일본어)이 허브 전체의 앱 이름이 되던 것을 막는다.
+    mutating func remember(_ app: StoreApp) {
+        let key = String(app.id)
+        apps[key] = app.keepingBetterName(of: apps[key])
+    }
+
+    /// 한국 · 미국 가게 이름이 아닌 앱들 — 그 가게에서 이름을 다시 물어볼 것.
+    var foreignNamed: [Int] {
+        apps.values.filter { StoreApp.nameRank($0.country) >= StoreApp.nameStorefronts.count }.map(\.id).sorted()
     }
 
     // MARK: - Pruning
@@ -310,7 +326,15 @@ struct KeywordHistory: Codable, Equatable {
                                best: ranked.map(\.rank).min(),
                                recent: recent,
                                resultCount: latest?.value.resultCount ?? 0,
-                               weakerAbove: current.flatMap { history[$0.day]?.weakerAbove(trackId) })
+                               weakerAbove: current.flatMap { history[$0.day]?.weakerAbove(trackId) },
+                               competition: latest.flatMap { competition(top: $0.value.top) })
+    }
+
+    /// 상위 5개 앱의 평점 수 중앙값을 경쟁 점수로. 앱 정보가 하나도 없으면 nil.
+    func competition(top: [Int]) -> Int? {
+        let ratings = top.prefix(5).compactMap { apps[String($0)]?.ratingCount }.sorted()
+        guard !ratings.isEmpty else { return nil }
+        return KeywordRecommendation.competition(topRatings: ratings[ratings.count / 2])
     }
 
     /// The latest check for a keyword, whichever day it landed on.
@@ -497,7 +521,14 @@ extension KeywordHistory {
         }
         result.checks = result.checks.filter { result.keywords[$0.key] != nil }
 
-        for (id, app) in other.apps where result.apps[id] == nil { result.apps[id] = app }
+        // 빈 칸을 채우되, 저쪽 이름이 더 앞선 가게 것이면 그 이름으로(한국 > 미국 > 그 밖).
+        for (id, app) in other.apps {
+            if let mine = result.apps[id] {
+                result.apps[id] = mine.keepingBetterName(of: app)
+            } else {
+                result.apps[id] = app
+            }
+        }
         for (project, trackId) in other.links where result.links[project] == nil { result.links[project] = trackId }
         if let theirs = other.lastCheckedAt, (result.lastCheckedAt ?? .distantPast) < theirs {
             result.lastCheckedAt = theirs

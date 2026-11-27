@@ -29,7 +29,6 @@ struct PhoneOverviewView: View {
     @EnvironmentObject private var news: NewsStore
     @ObservedObject private var changes = SectionChanges.shared
     @ObservedObject private var marketing = MarketingStore.shared
-    @ObservedObject private var leadStore = LeadStore.shared
     @ObservedObject private var icons = StoreIcons.shared
 
     /// 앱 카드를 처음엔 이만큼만 — 나머지는 "모두 보기".
@@ -125,17 +124,12 @@ struct PhoneOverviewView: View {
         var result: [Finding] = []
         let name = store.displayName(for:)
 
-        // 릴리즈 — 바뀌었거나 아직 안 본 빨강인 앱의 판정 까닭.
+        // 릴리즈 — 아직 안 본 빨강인 앱의 판정 까닭.
         if let badge = metrics.badge(.release, project: nil) {
-            let alerts = SectionChanges.shared.releaseAlerts(metrics: metrics)
-            let changed = Dictionary(SectionChanges.shared.pendingLines(.release, metrics: metrics)
-                .map { ($0.project, $0.lines) }, uniquingKeysWith: { a, _ in a })
-            let apps = alerts.filter { $0.value > 0 }.map(\.key)
-                .sorted { (store.releaseLevel(for: $0)?.rawValue ?? -1) > (store.releaseLevel(for: $1)?.rawValue ?? -1) }
+            let apps = SectionChanges.shared.releaseAlerts(metrics: metrics).keys.sorted()
             let items = apps.map { project -> Finding.Item in
                 let report = store.releaseHealth(for: project)
-                var lines = changed[project] ?? []
-                lines += report?.verdict.reasons.prefix(3) ?? []
+                let lines = Array(report?.verdict.reasons.prefix(3) ?? [])
                 var meta = [String]()
                 if let level = store.releaseLevel(for: project) { meta.append(level.label) }
                 if let version = report?.latest.version { meta.append(version) }
@@ -152,7 +146,7 @@ struct PhoneOverviewView: View {
             let reports = store.crashes(for: nil).filter { fresh.contains($0.id) }
                 .sorted { ($0.occurredAt ?? $0.receivedAt ?? .distantPast) > ($1.occurredAt ?? $1.receivedAt ?? .distantPast) }
             let items = reports.map { report -> Finding.Item in
-                var meta = [report.kindLabel, report.appVersion]
+                var meta = [report.kindLabel, report.versionLabel]
                 if let date = report.occurredAt ?? report.receivedAt { meta.append(AppFormat.relative(date)) }
                 return Finding.Item(id: "crash|\(report.id)", title: name(report.projectKey),
                                     meta: meta.filter { !$0.isEmpty }.joined(separator: " · "),
@@ -181,6 +175,7 @@ struct PhoneOverviewView: View {
                 return Finding.Item(id: "review|\(review.id)", title: name(entry.project),
                                     meta: "\(stars) · \(review.territoryName) · \(AppFormat.relative(review.createdDate))",
                                     lines: text, emphasizesFirstLine: review.title?.isEmpty == false,
+                                    translatesLines: true,
                                     route: .project(entry.project, .reviews))
             }
             result.append(Finding(section: .reviews, badge: badge, items: items))
@@ -192,32 +187,20 @@ struct PhoneOverviewView: View {
                 .sorted { ($0.createdAt ?? .distantPast) > ($1.createdAt ?? .distantPast) }
             let items = unread.map { feedback -> Finding.Item in
                 var meta: [String] = []
-                if let type = feedback.feedbackType?.trimmed, !type.isEmpty { meta.append(type) }
+                if let type = feedback.typeLabel { meta.append(type) }
+                if let usefulness = feedback.usefulnessLabel { meta.append(usefulness) }
                 if let rating = feedback.rating { meta.append("별 \(rating)") }
                 if let version = feedback.appVersion, !version.isEmpty { meta.append(version) }
                 if feedback.createdAt != nil { meta.append(feedback.createdAtRelative) }
                 return Finding.Item(id: "feedback|\(feedback.id)", title: name(feedback.projectKey),
-                                    meta: meta.joined(separator: " · "), lines: [feedback.text.trimmed],
+                                    meta: meta.joined(separator: " · "),
+                                    lines: feedback.voiceQuestion.map { ["물음  \($0)", feedback.snippet] } ?? [feedback.snippet],
+                                    translatesLines: true,
                                     route: .feedback(feedback))
             }
             result.append(Finding(section: .feedback, badge: badge, items: items))
         }
 
-        // 레딧 질문 — 아직 안 본 새 질문.
-        if let badge = metrics.badge(.leads, project: nil) {
-            let ids = leadStore.unseenIDs(for: nil)
-            let leads = leadStore.open(for: nil).filter { ids.contains($0.id) }
-            let items = leads.map { lead -> Finding.Item in
-                var meta = ["r/\(lead.subreddit)"]
-                if let date = lead.date { meta.append(AppFormat.relative(date)) }
-                return Finding.Item(id: "lead|\(lead.id)", title: name(lead.project),
-                                    meta: meta.joined(separator: " · "),
-                                    lines: [lead.title, lead.snippet].map(\.trimmed).filter { !$0.isEmpty },
-                                    emphasizesFirstLine: true,
-                                    route: .project(lead.project, .leads))
-            }
-            result.append(Finding(section: .leads, badge: badge, items: items))
-        }
 
         // 소식 — 안 읽은 것.
         if let badge = metrics.badge(.news, project: nil) {
@@ -295,10 +278,12 @@ struct PhoneOverviewView: View {
             let red = levels.filter { $0 == .red }.count
             let yellow = levels.filter { $0 == .yellow }.count
             let green = levels.filter { $0 == .green }.count
+            let unknown = levels.filter { $0 == .unknown }.count
             return Tile(section: section,
                         value: levels.isEmpty ? "–" : (red > 0 ? "빨강 \(red)" : "빨강 없음"),
-                        caption: levels.isEmpty ? "판정 없음" : "노랑 \(yellow) · 초록 \(green)",
-                        tint: red > 0 ? .red : (yellow > 0 ? .orange : .green), badge: badge)
+                        caption: levels.isEmpty ? "판정 없음"
+                            : "노랑 \(yellow) · 초록 \(green)" + (unknown > 0 ? " · 판단할 수 없음 \(unknown)" : ""),
+                        tint: red > 0 ? .red : (yellow > 0 ? .orange : (green > 0 ? .green : .secondary)), badge: badge)
         case .crashes:
             let summary = store.crashSummary(for: nil)
             return Tile(section: section, value: "7일 \(AppFormat.count(summary.last7Days))건",
@@ -344,14 +329,18 @@ struct PhoneOverviewView: View {
         return VStack(alignment: .leading, spacing: 10) {
             sectionTitle("앱별 · \(apps.count)개")
             ForEach(shown, id: \.key) { entry in
-                let section = AppCard.watched.first { metrics.badge($0, project: entry.key) != nil } ?? .stats
-                NavigationLink(value: FeedbackStore.ProjectRoute(project: entry.key, section: section)) {
+                // 누르면 그 앱의 기능 목록 — 한 앱을 리뷰 · 통계 · 진단으로 넘겨 본다.
+                NavigationLink(value: FeedbackStore.AppRoute(project: entry.key)) {
                     AppCard(project: entry.key,
                             name: store.displayName(for: entry.key),
                             iconURL: icons.url(for: entry.key, keywords: keywords),
                             traffic: store.trafficByProject[entry.key],
                             release: store.releaseLevel(for: entry.key),
-                            metrics: metrics)
+                            metrics: metrics,
+                            cadence: keywords.storeApp(for: entry.key).map { app in
+                                ReleaseCadence(releasedAt: app.releasedAt, liveVersion: app.version,
+                                               latest: purchases.versions[entry.key])
+                            })
                 }
                 .buttonStyle(.plain)
             }
@@ -443,6 +432,8 @@ private struct AppCard: View {
     let traffic: FeedbackStore.Traffic?
     let release: ReleaseHealth.Level?
     let metrics: SectionMetrics
+    /// 마지막 배포 뒤 며칠 — 2주에 한 번 목표(`ReleaseCadence`).
+    var cadence: ReleaseCadence?
 
     /// 앱 카드가 뱃지를 보는 칸 — 카드를 누르면 뱃지가 선 첫 칸으로 연다.
     static let watched: [FeedbackStore.ProjectSection] = [
@@ -490,6 +481,13 @@ private struct AppCard: View {
                         .font(.body.monospacedDigit())
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
+                    if let cadence {
+                        Label(cadence.line, systemImage: cadence.systemImage)
+                            .font(.body)
+                            .foregroundStyle(cadence.status == .fresh || cadence.status == .unknown
+                                             ? AnyShapeStyle(.secondary) : AnyShapeStyle(cadence.tint))
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 if let release {
@@ -561,6 +559,8 @@ fileprivate struct Finding: Identifiable {
         /// 그 일의 본문 — 피드백 글, 리뷰 제목과 본문, 판정 까닭, 바뀐 숫자.
         let lines: [String]
         var emphasizesFirstLine = false
+        /// 남이 쓴 글(리뷰 · 피드백)이라 한국어로 옮겨 보여 줄 것.
+        var translatesLines = false
         let route: Route
     }
 
@@ -634,6 +634,15 @@ private struct FindingCard: View {
 private struct ItemRow: View {
     let item: Finding.Item
 
+    @ViewBuilder
+    private func lineText(_ line: String) -> some View {
+        if item.translatesLines {
+            KoreanText(line)
+        } else {
+            Text(line)
+        }
+    }
+
     var body: some View {
         HStack(alignment: .top, spacing: 8) {
             VStack(alignment: .leading, spacing: 4) {
@@ -648,7 +657,7 @@ private struct ItemRow: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 ForEach(Array(item.lines.enumerated()), id: \.offset) { index, line in
-                    Text(line)
+                    lineText(line)
                         .font(index == 0 && item.emphasizesFirstLine ? .body.weight(.semibold) : .body)
                         .foregroundStyle(.primary)
                         .fixedSize(horizontal: false, vertical: true)

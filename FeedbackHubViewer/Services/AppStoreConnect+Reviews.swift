@@ -78,6 +78,7 @@ struct AppVersionStatus: Hashable, Codable {
         case "READY_FOR_SALE", "READY_FOR_DISTRIBUTION": return "판매 중"
         case "PREPARE_FOR_SUBMISSION": return "제출 준비 중"
         case "WAITING_FOR_REVIEW": return "심사 대기"
+        case "READY_FOR_REVIEW": return "심사 제출됨"
         case "IN_REVIEW": return "심사 중"
         case "PENDING_DEVELOPER_RELEASE": return "출시 대기 (직접 출시)"
         case "PENDING_APPLE_RELEASE": return "출시 대기"

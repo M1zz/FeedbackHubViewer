@@ -92,6 +92,17 @@ enum NotificationService {
         }
     }
 
+    /// 새 유입처 — 행사 뒤 어디로 퍼졌는지 바로. 한 앱에 한 번, 여러 곳이면 묶어서.
+    static func notifyReferrals(app: String, items: [(name: String, isNew: Bool, recent: Int)]) {
+        guard let first = items.first else { return }
+        let title = items.count == 1
+            ? "\(app) — \(first.name)\(first.isNew ? "에서 처음 링크" : "에서 급증")"
+            : "\(app) — 새 유입처 \(items.count)곳"
+        let body = items.prefix(4).map { "\($0.name) \($0.recent)명" }.joined(separator: " · ")
+            + " — 최근 \(ReferralDetection.recentDays)일 받은 사람"
+        post(id: "new-referral", title: title, body: body)
+    }
+
     // MARK: - 앱 소식
 
     /// 아침 브리핑 — 볼 만한 것만 골라 번호를 붙인다. 미리 예약해 두어 앱이 꺼져 있어도

@@ -16,6 +16,8 @@
 
 import Foundation
 import SwiftUI
+import UserNotifications
+import CloudKit
 #if os(iOS)
 import BackgroundTasks
 import UIKit
@@ -100,6 +102,7 @@ final class HubAppDelegate: NSObject, UIApplicationDelegate {
     func application(_ application: UIApplication,
                      didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
         application.registerForRemoteNotifications()
+        UNUserNotificationCenter.current().delegate = ForegroundPurchaseAlerts.shared
         return true
     }
 
@@ -121,6 +124,7 @@ final class HubAppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApplication.shared.registerForRemoteNotifications()
+        UNUserNotificationCenter.current().delegate = ForegroundPurchaseAlerts.shared
     }
 
     func application(_ application: NSApplication,
@@ -133,3 +137,17 @@ final class HubAppDelegate: NSObject, NSApplicationDelegate {
     }
 }
 #endif
+
+/// 앱이 떠 있을 때 온 알림은 시스템이 숨긴다. 결제 알림만은 떠 있어도 배너로 보인다 —
+/// 허브를 보던 중이라도 결제는 바로 알아야 하고, 설정의 "시험 결제 알림 보내기" 도 앱 안에서 누른다.
+/// 피드백 · 진단 푸시는 그대로 숨긴다(앱이 떠 있으면 목록이 새로 읽혀 거기 보인다).
+final class ForegroundPurchaseAlerts: NSObject, UNUserNotificationCenterDelegate {
+    static let shared = ForegroundPurchaseAlerts()
+
+    func userNotificationCenter(_ center: UNUserNotificationCenter,
+                                willPresent notification: UNNotification) async -> UNNotificationPresentationOptions {
+        let info = notification.request.content.userInfo
+        let push = CKNotification(fromRemoteNotificationDictionary: info)
+        return push?.subscriptionID == PushSubscriptions.purchaseSubscriptionID ? [.banner, .sound, .list] : []
+    }
+}

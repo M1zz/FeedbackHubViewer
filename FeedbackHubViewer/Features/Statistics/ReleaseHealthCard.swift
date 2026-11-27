@@ -7,7 +7,8 @@
 //  제 탭을 갖는다.
 //
 //  읽는 차례대로 놓는다.
-//   1. 판정(초록 · 노랑 · 빨강)과 그 이유 한 줄, 초록이 아니면 초록까지 할 일(고칠 것 · 기다릴 것)
+//   1. 판정(초록 · 노랑 · 빨강 · 판단할 수 없음)과 그 이유 한 줄, 최근 버전마다 곤란을 겪는 사용자가 몇인지 파이,
+//      초록이 아니면 초록까지 할 일(고칠 것 · 기다릴 것)
 //   2. 최신 버전과 앞 버전을 나란히 (활성 설치 · 핵심 행동률 · 크래시 없는 설치 · 크래시 · 피드백)
 //   3. 채택: 지금 쓰는 사람 중 몇이 새 버전인가
 //   4. 처음 본 크래시, 이 앱이 지키기로 한 약속
@@ -18,6 +19,7 @@
 //
 
 import SwiftUI
+import Charts
 
 struct ReleaseHealthCard: View {
     @EnvironmentObject private var store: FeedbackStore
@@ -27,6 +29,8 @@ struct ReleaseHealthCard: View {
         VStack(alignment: .leading, spacing: 12) {
             if let report = store.releaseHealth(for: project) {
                 header(report.verdict)
+                PeopleByVersion(versions: report.recent.isEmpty ? [report.latest] : report.recent,
+                                enough: report.spec.thresholds.minInstallsForVerdict)
                 if !report.verdict.steps.isEmpty { toGreen(report.verdict.steps) }
                 copyForClaude(report)
                 comparison(report)
@@ -123,6 +127,10 @@ struct ReleaseHealthCard: View {
             row("불안정 갈래별 설치") { sliceText($0) }
         }
         row("크래시 보고") { "\($0.crashReports)건" }
+        if latest.performance != nil || previous?.performance != nil {
+            row("첫 화면까지") { ReleaseHealthCard.launchText($0) }
+            row("멈춤 (한 시간에)") { ReleaseHealthCard.hangText($0) }
+        }
         row("피드백") { metrics in
             metrics.bugFeedback.map { "\(metrics.feedback)건 (버그 \($0))" } ?? "\(metrics.feedback)건"
         }
@@ -254,7 +262,21 @@ struct ReleaseHealthCard: View {
             row("크래시 보고", "\(latest.crashReports)건", previous.map { "\($0.crashReports)건" })
             row("새 크래시 지문", "\(latest.newSignatures.count)종", previous.map { _ in "" })
             row("피드백", feedbackText(latest), previous.map(feedbackText))
+            if latest.performance != nil || previous?.performance != nil {
+                row("첫 화면까지", Self.launchText(latest), previous.map(Self.launchText))
+                row("멈춤 (한 시간에)", Self.hangText(latest), previous.map(Self.hangText))
+            }
         }
+    }
+
+    static func launchText(_ metrics: ReleaseHealth.VersionMetrics) -> String {
+        guard let perf = metrics.performance, let ms = perf.launchMs else { return "모름" }
+        return "\(Int(ms))ms (\(perf.samples)대)"
+    }
+
+    static func hangText(_ metrics: ReleaseHealth.VersionMetrics) -> String {
+        guard let perf = metrics.performance, let hang = perf.hangPerHour else { return "모름" }
+        return String(format: "%.1f초", hang) + " (\(perf.samples)대)"
     }
 
     private func columnTitle(_ title: String, _ version: String) -> some View {
@@ -399,7 +421,7 @@ struct ReleaseHealthCard: View {
             note("크래시 보고는 MetricKit이 하루쯤 늦게, 일부만 보냅니다. 오늘 낸 버전의 크래시는 내일에야 보입니다. 설치 ID가 없어 크래시 없는 설치 비율에는 안 들어가고, 그 비율은 불안정 이벤트(\(report.spec.stabilityEvents.joined(separator: ", ")))를 보낸 설치로만 셉니다.")
             note("통계 고르개(전체 · 유료 · 무료)와 무관하게 언제나 전체 기준입니다.")
             if let start = report.coverageStart {
-                note("이 기기에는 원본 이벤트가 \(AppFormat.dateTime(start))부터만 남아 있습니다(보관 상한 \(AppFormat.count(FeedbackStore.eventLimit))건). 그 앞의 활동은 빠진 채로 셌습니다.")
+                note("이 기기에는 원본 이벤트가 \(AppFormat.dateTime(start))부터만 있어, 그 앞의 활동은 빠진 채로 셌습니다. 숫자를 새로고침하면 창 시작까지 다시 받습니다.")
             }
             if report.eventsWithoutInstall > 0 {
                 note("설치 ID가 없는 이벤트 \(AppFormat.count(report.eventsWithoutInstall))건은 설치로 셀 수 없어 뺐습니다.")
@@ -419,6 +441,7 @@ struct ReleaseHealthCard: View {
     static func tint(_ level: ReleaseHealth.Level) -> Color {
         switch level {
         case .green: return .green
+        case .unknown: return .secondary
         case .yellow: return .orange
         case .red: return .red
         }
@@ -427,6 +450,7 @@ struct ReleaseHealthCard: View {
     static func symbol(_ level: ReleaseHealth.Level) -> String {
         switch level {
         case .green: return "checkmark.circle.fill"
+        case .unknown: return "questionmark.circle.fill"
         case .yellow: return "exclamationmark.circle.fill"
         case .red: return "xmark.octagon.fill"
         }
@@ -463,5 +487,167 @@ struct RedFirstToggle: View {
         .buttonStyle(.borderless)
         .help("릴리즈 건강이 빨강인 앱을 위로 올립니다. 같은 색 안에서는 어제 DAU 순입니다.")
         .accessibilityValue(isOn ? "켜짐" : "꺼짐")
+    }
+}
+
+// MARK: - 곤란을 겪는 사용자
+
+/// 최근 버전을 나란히 놓고 고른 버전의 파이를 보인다. 최신 버전 설치가 적으면
+/// 판정할 만큼 쓴 가장 새 버전부터 연다 — "모자라다" 한마디로 끝내지 않으려고.
+private struct PeopleByVersion: View {
+    let versions: [ReleaseHealth.VersionMetrics]
+    /// 판정에 필요한 활성 설치 수. 이보다 적은 버전은 "표본 적음"을 붙인다.
+    let enough: Int
+    @State private var chosen: String?
+
+    private var shown: [ReleaseHealth.VersionMetrics] { versions.filter { $0.people != nil } }
+
+    private var current: ReleaseHealth.VersionMetrics? {
+        let shown = shown
+        if let chosen, let match = shown.first(where: { $0.version == chosen }) { return match }
+        return shown.first { $0.activeInstalls >= enough } ?? shown.first
+    }
+
+    var body: some View {
+        if let current, let people = current.people {
+            VStack(alignment: .leading, spacing: 10) {
+                if shown.count > 1 {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 8) {
+                            ForEach(shown, id: \.version) { metrics in chip(metrics, isOn: metrics.version == current.version) }
+                        }
+                    }
+                }
+                PeoplePie(version: current.version, people: people)
+                if current.activeInstalls < enough {
+                    Text("\(current.version)은 아직 \(current.activeInstalls)대만 써서 비율이 크게 흔들립니다. 판정에는 \(enough)대가 필요해요.")
+                        .font(.hubCaption)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+        }
+    }
+
+    /// 버전 하나. 곤란 비율을 함께 적어 누르기 전에도 버전끼리 견줄 수 있게 한다.
+    private func chip(_ metrics: ReleaseHealth.VersionMetrics, isOn: Bool) -> some View {
+        let people = metrics.people!
+        let troubled = (people.troubled ?? 0) + (people.stuck ?? 0)
+        let rate = people.total > 0 ? "\(Int((100 * Double(troubled) / Double(people.total)).rounded()))%" : "—"
+        let isFirst = metrics.version == versions.first?.version
+        return Button {
+            chosen = metrics.version
+        } label: {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(metrics.version + (isFirst ? " · 최신" : ""))
+                    .font(.body.weight(.semibold))
+                Text(metrics.activeInstalls < enough ? "\(people.total)명 · 표본 적음" : "\(people.total)명 · 곤란 \(rate)")
+                    .font(.hubCaption.monospacedDigit())
+                    .foregroundStyle(.secondary)
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(RoundedRectangle(cornerRadius: 8).fill(isOn ? Color.accentColor.opacity(0.15) : Color.secondary.opacity(0.08)))
+            .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(isOn ? Color.accentColor : .clear, lineWidth: 1.5))
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(isOn ? .isSelected : [])
+    }
+}
+
+/// 최신 버전 사용자를 곤란 · 막힘 · 괜찮음으로 가른 도넛. 판정 글보다 먼저 "몇 명이 힘든가"를
+/// 한눈에 보이려고 둔다. 조각마다 아이콘 · 이름 · 수를 범례에 적어 색만으로 읽지 않게 한다.
+private struct PeoplePie: View {
+    let version: String
+    let people: ReleaseHealth.People
+    @State private var selectedAngle: Int?
+
+    private struct Slice: Identifiable {
+        let id: String
+        let label: String
+        let symbol: String
+        let tint: Color
+        let count: Int
+    }
+
+    private var slices: [Slice] {
+        var all: [Slice] = []
+        if let troubled = people.troubled {
+            all.append(Slice(id: "troubled", label: "크래시 · 실행 실패를 겪음", symbol: "xmark.octagon.fill",
+                             tint: .red, count: troubled))
+        }
+        if let stuck = people.stuck {
+            all.append(Slice(id: "stuck", label: "핵심 기능까지 못 감", symbol: "exclamationmark.triangle.fill",
+                             tint: .orange, count: stuck))
+        }
+        all.append(Slice(id: "fine", label: "문제없이 씀", symbol: "checkmark.circle.fill", tint: .green, count: people.fine))
+        return all
+    }
+
+    private var troubledTotal: Int { (people.troubled ?? 0) + (people.stuck ?? 0) }
+
+    private func percent(_ count: Int) -> String {
+        people.total > 0 ? "\(Int((100 * Double(count) / Double(people.total)).rounded()))%" : "—"
+    }
+
+    /// 마우스를 올린 조각. 각도 값은 조각 수를 앞에서부터 쌓은 자리다.
+    private var selected: Slice? {
+        guard let selectedAngle else { return nil }
+        var running = 0
+        for slice in slices {
+            running += slice.count
+            if selectedAngle < running { return slice }
+        }
+        return nil
+    }
+
+    var body: some View {
+        let slices = slices
+        HStack(alignment: .center, spacing: 20) {
+            Chart(slices) { slice in
+                SectorMark(angle: .value("사용자", slice.count), innerRadius: .ratio(0.62), angularInset: 1.5)
+                    .cornerRadius(3)
+                    .foregroundStyle(slice.tint)
+                    .opacity(selected == nil || selected?.id == slice.id ? 1 : 0.35)
+            }
+            .chartLegend(.hidden)
+            .chartAngleSelection(value: $selectedAngle)
+            .chartBackground { _ in
+                VStack(spacing: 2) {
+                    if let selected {
+                        Text(percent(selected.count)).font(.title2.monospacedDigit().weight(.bold))
+                        Text("\(selected.count)명").font(.hubCaption).foregroundStyle(.secondary)
+                    } else {
+                        Text(percent(troubledTotal)).font(.title2.monospacedDigit().weight(.bold))
+                        Text("곤란을 겪음").font(.hubCaption).foregroundStyle(.secondary)
+                    }
+                }
+            }
+            .frame(width: 150, height: 150)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("\(version) 사용자 \(people.total)명 중 곤란을 겪는 사람 \(troubledTotal)명, \(percent(troubledTotal))")
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text("\(version) 사용자 \(people.total)명 중 \(troubledTotal)명이 곤란을 겪고 있어요")
+                    .font(.headline)
+                    .fixedSize(horizontal: false, vertical: true)
+                ForEach(slices) { slice in
+                    HStack(spacing: 8) {
+                        Image(systemName: slice.symbol).foregroundStyle(slice.tint)
+                        Text(slice.label)
+                        Spacer(minLength: 8)
+                        Text("\(slice.count)명 · \(percent(slice.count))")
+                            .monospacedDigit()
+                            .foregroundStyle(.secondary)
+                    }
+                    .font(.body)
+                }
+                Text("최근 \(ReleaseHealth.windowDays)일 동안 이 버전을 쓴 설치 하나를 한 사람으로 셉니다. 한 사람은 한 칸에만 들어갑니다.")
+                    .font(.hubCaption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding(.vertical, 4)
     }
 }

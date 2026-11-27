@@ -36,6 +36,9 @@ struct InboxView: View {
     @State private var expanded: Set<String> = []
     /// 방금 완료로 옮긴 리뷰. 잘못 눌렀을 때 되돌릴 수 있게 잠깐 아래에 띄운다.
     @State private var justCompleted: String?
+    /// 결제를 언제까지 봤는지 — 종의 수가 이것을 기준으로 센다.
+    static let purchasesSeenKey = "inboxPurchasesSeenAt"
+    @AppStorage(InboxView.purchasesSeenKey) private var purchasesSeenAt: Double = 0
 
     struct ReviewItem: Identifiable {
         let project: String
@@ -74,6 +77,10 @@ struct InboxView: View {
             }
             .safeAreaInset(edge: .bottom, spacing: 0) { undoBar }
             .task(id: store.projectCounts.count) { await loadReviews() }
+            .task {
+                await purchases.loadReceipts()
+                purchasesSeenAt = Date().timeIntervalSince1970
+            }
             .sheet(item: $replying) { item in
                 ReviewResponseSheet(review: item.review, project: item.project)
                     .environmentObject(purchases)
@@ -118,6 +125,14 @@ struct InboxView: View {
 
         #if os(macOS)
         List(selection: $selection) {
+            Section {
+                TodayDigest()
+                    .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))
+                    .listRowBackground(Color.clear)
+            } header: {
+                Text("알아 둘 것")
+            }
+            purchaseSection
             sections(reviews: showsReviews ? reviews : nil,
                      bugs: showsBugs ? bugs : nil,
                      others: showsOthers ? others : nil,
@@ -127,6 +142,14 @@ struct InboxView: View {
         .id(rowsKey)
         #else
         List {
+            Section {
+                TodayDigest()
+                    .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))
+                    .listRowBackground(Color.clear)
+            } header: {
+                Text("알아 둘 것")
+            }
+            purchaseSection
             sections(reviews: showsReviews ? reviews : nil,
                      bugs: showsBugs ? bugs : nil,
                      others: showsOthers ? others : nil,
@@ -135,6 +158,37 @@ struct InboxView: View {
         .hubListStyle()
         .id(rowsKey)
         #endif
+    }
+
+    /// 최근 7일 결제 · 환불(모든 앱). 결제 알림을 놓쳐도 종을 누르면 여기서 본다.
+    @ViewBuilder
+    private var purchaseSection: some View {
+        let receipts = purchases.recentReceipts.filter { !store.hiddenProjects.contains($0.bundleID) }
+        if !receipts.isEmpty {
+            Section {
+                ForEach(receipts.prefix(10)) { receipt in
+                    Button {
+                        store.open(project: receipt.bundleID, section: .purchases)
+                    } label: {
+                        HStack(alignment: .firstTextBaseline, spacing: 8) {
+                            Text(receipt.isRefund ? "↩️" : "💰")
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(store.displayName(for: receipt.bundleID)).font(.headline)
+                                Text(receipt.message).font(.body)
+                            }
+                            Spacer(minLength: 8)
+                            Text(AppFormat.dateTime(receipt.occurredAt))
+                                .font(.hubCaption.monospacedDigit())
+                                .foregroundStyle(.secondary)
+                        }
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                }
+            } header: {
+                Text("결제 · 최근 7일")
+            }
+        }
     }
 
     private func rowsKey(reviews: [ReviewItem], feedback: [Feedback]) -> Int {
@@ -275,19 +329,27 @@ struct InboxView: View {
                     .lineLimit(1)
             }
             if let title = review.title, !title.isEmpty {
-                Text(title)
+                KoreanText(title)
                     .font(.headline)
             }
             if let body = review.body, !body.isEmpty {
-                Text(body)
+                KoreanText(body)
                     .font(.body)
                     .lineLimit(3)
             }
+            TranslationFooter([review.title, review.body])
             HStack {
                 Text(review.territoryName)
                     .font(.body)
                     .foregroundStyle(.secondary)
                 Spacer()
+                // 리뷰 칸과 같은 "리뷰 복사". 아이폰은 줄이 좁아 아이콘만.
+                #if os(iOS)
+                CopyButton(text: review.fullText, title: "리뷰 복사", isCompact: true)
+                #else
+                CopyButton(text: review.fullText, title: "리뷰 복사")
+                    .font(.body)
+                #endif
                 // 답할 필요가 없는 리뷰를 치우는 자리. 다른 기기에서도 빠진다.
                 Button {
                     complete(review.id)
@@ -307,6 +369,13 @@ struct InboxView: View {
             }
         }
         .padding(.vertical, 6)
+        .contextMenu {
+            Button {
+                Platform.copyToPasteboard(review.fullText)
+            } label: {
+                Label("리뷰 복사", systemImage: "doc.on.doc")
+            }
+        }
         #if os(iOS)
         .swipeActions(edge: .trailing) {
             Button {

@@ -1,0 +1,77 @@
+{
+ "name": "Rereminder",
+ "icon": "/Users/hyunholee/Documents/workspace/개발중/FeedbackHubViewer/scripts/cardnews/decks/icons/두번알림-1024.png",
+ "accent": "1E90FF",
+ "accent2": "FF9F0A",
+ "kicker": "Did you know? · Rereminder",
+ "cover": "Does your timer\nring when it's\nalready too late?",
+ "coverScreen": "/Users/hyunholee/Documents/workspace/Auto/두번알림/docs/screenshots/raw/en/01-dial.png",
+ "coverTop": 0.12,
+ "coverCallout": {
+  "symbol": "bell.fill",
+  "text": "5 min left",
+  "x": 0.62,
+  "y": 0.18
+ },
+ "features": [
+  {
+   "label": "The usual way",
+   "headline": "Ding.\nToo late.",
+   "text": "The timer goes off mid-talk\nand you haven't even started wrapping up.",
+   "screen": "/Users/hyunholee/Documents/workspace/Auto/두번알림/docs/screenshots/raw/en/02-running.png",
+   "top": 0.12,
+   "callout": {
+    "symbol": "exclamationmark.triangle.fill",
+    "text": "Time's up",
+    "x": 0.64,
+    "y": 0.2
+   }
+  },
+  {
+   "label": "Heads-up alerts",
+   "headline": "Hear it before\nthe end",
+   "text": "Get alerts 1, 3, 5, 10, 15 or 30 minutes\nbefore the end. Pick the ones you want.",
+   "screen": "/Users/hyunholee/Documents/workspace/Auto/두번알림/docs/screenshots/raw/en/01-dial.png",
+   "top": 0.12,
+   "callout": {
+    "symbol": "bell.badge.fill",
+    "text": "3 min left",
+    "x": 0.66,
+    "y": 0.3
+   }
+  },
+  {
+   "label": "A note on each",
+   "headline": "Every alert\nsays what to do",
+   "text": "\"Wrap up the slides.\" \"Take questions.\"\nAdd a message to each one.",
+   "screen": "/Users/hyunholee/Documents/workspace/Auto/두번알림/docs/screenshots/raw/en/03-session.png",
+   "top": 0.45,
+   "callout": {
+    "symbol": "text.bubble.fill",
+    "text": "Take questions",
+    "x": 0.62,
+    "y": 0.62
+   }
+  },
+  {
+   "label": "Bonus",
+   "headline": "See what's next\nat a glance",
+   "text": "Split a talk into parts and see\nthe current note while the timer runs.",
+   "screen": "/Users/hyunholee/Documents/workspace/Auto/두번알림/docs/screenshots/raw/en/04-sessionRunning.png",
+   "top": 0.2,
+   "callout": {
+    "symbol": "list.bullet",
+    "text": "Next: Main talk",
+    "x": 0.64,
+    "y": 0.6
+   }
+  }
+ ],
+ "outro": "Finish on time,\nnot after the ding",
+ "points": [
+  "No ads",
+  "Works offline",
+  "Dynamic Island and Apple Watch"
+ ],
+ "search": "Search “Rereminder” on the App Store"
+}

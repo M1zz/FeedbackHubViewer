@@ -168,10 +168,10 @@ final class MarketingStore: ObservableObject {
 
     /// 예전 판이 걸어 둔 "올렸나요?" 알림을 걷는다.
     private func clearReminders() {
-        let center = UNUserNotificationCenter.current()
-        center.getPendingNotificationRequests { requests in
-            center.removePendingNotificationRequests(
-                withIdentifiers: requests.map(\.identifier).filter { $0.hasPrefix("marketing-") })
+        Task {
+            let center = UNUserNotificationCenter.current()
+            let ids = await center.pendingNotificationRequests().map(\.identifier)
+            center.removePendingNotificationRequests(withIdentifiers: ids.filter { $0.hasPrefix("marketing-") })
         }
     }
 }

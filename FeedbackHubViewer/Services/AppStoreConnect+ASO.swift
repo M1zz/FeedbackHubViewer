@@ -18,13 +18,13 @@ import Foundation
 // MARK: - 메타데이터 모델
 
 /// 한 앱의 스토어 메타데이터 — 나가 있는 것과, 고칠 수 있는 것.
-struct StoreMetadata {
+struct StoreMetadata: Codable {
     /// 지금 스토어에 나가 있는 버전과 앱 정보.
     let live: Edition
     /// 고칠 수 있는 버전 · 앱 정보. 없으면 새 버전을 만들어야 키워드 · 이름 · 부제를 고친다.
     let draft: Edition?
 
-    struct Edition {
+    struct Edition: Codable {
         let versionID: String?
         let versionString: String?
         let versionState: String?
@@ -40,7 +40,7 @@ struct StoreMetadata {
     }
 
     /// 한 로케일의 글. 필드마다 그 필드가 사는 리소스의 id를 같이 든다 — 고칠 때 쓴다.
-    struct LocaleText: Hashable {
+    struct LocaleText: Hashable, Codable {
         let locale: String
         var appInfoLocalizationID: String?
         var versionLocalizationID: String?
@@ -80,7 +80,7 @@ struct MetadataEdit {
 // MARK: - 노출 · 전환 모델
 
 /// 최근 N일의 App Store 퍼널 — 경로별 노출 → 페이지 조회 → 첫 다운로드.
-struct StoreFunnel {
+struct StoreFunnel: Codable {
     let days: Int
     /// 경로 이름(리포트 원문) → 수.
     let sources: [String: Counts]
@@ -91,10 +91,18 @@ struct StoreFunnel {
     /// 날짜 → 나라 → 둘러보기 노출. 어디에 걸렸는지 짐작하는 데 쓴다(`StoreExposure`).
     var browse: [String: [String: Int]] = [:]
 
-    struct Counts {
+    struct Counts: Codable {
         var impressions = 0
         var pageViews = 0
         var firstDownloads = 0
+        /// 제품 페이지에서 받은 첫 다운로드(Page Type "Product page"). 페이지 조회와 견줄 수는 이것뿐이다 —
+        /// 둘러보기 · 검색 목록에서 페이지를 안 열고 바로 받은 것까지 나누면 100% 를 넘는다.
+        var pageDownloads = 0
+
+        /// 제품 페이지를 본 사람 중 거기서 받은 몫.
+        var pageConversion: Double? {
+            pageViews > 0 ? Double(pageDownloads) / Double(pageViews) : nil
+        }
 
         /// 노출 대비 첫 다운로드.
         var conversion: Double? {
@@ -105,6 +113,7 @@ struct StoreFunnel {
             impressions += other.impressions
             pageViews += other.pageViews
             firstDownloads += other.firstDownloads
+            pageDownloads += other.pageDownloads
         }
     }
 
@@ -133,14 +142,17 @@ extension AppStoreConnect {
 
     func metadata(appID: String) async throws -> StoreMetadata {
         let infos = try await list("v1/apps/\(appID)/appInfos", ["fields[appInfos]": "state"])
+        // 플랫폼을 거르지 않는다 — iOS 만 읽던 때는 맥 전용 앱(무지개 공방 · TetraTint · 탭클립키보드)의
+        // 키워드 · 프로모션 텍스트가 모든 언어에서 비어 보였다. iOS 판이 있으면 그것을, 없으면 있는 판을 본다.
         let versions = try await list("v1/apps/\(appID)/appStoreVersions", [
-            "filter[platform]": "IOS",
-            "fields[appStoreVersions]": "versionString,appVersionState,createdDate",
-            "limit": "10"
+            "fields[appStoreVersions]": "versionString,appVersionState,createdDate,platform",
+            "limit": "20"
         ])
+        let iOSVersions = versions.data.filter { $0.string("platform") == "IOS" }
+        let platformVersions = iOSVersions.isEmpty ? versions.data : iOSVersions
 
         let liveStates: Set<String> = ["READY_FOR_DISTRIBUTION", "READY_FOR_SALE"]
-        let sortedVersions = versions.data.sorted { ($0.string("createdDate") ?? "") > ($1.string("createdDate") ?? "") }
+        let sortedVersions = platformVersions.sorted { ($0.string("createdDate") ?? "") > ($1.string("createdDate") ?? "") }
         let liveVersion = sortedVersions.first { liveStates.contains($0.string("appVersionState") ?? "") } ?? sortedVersions.first
         let draftVersion = sortedVersions.first { StoreMetadata.editableStates.contains($0.string("appVersionState") ?? "") }
 
@@ -259,6 +271,7 @@ extension AppStoreConnect {
             for row in rows where row["Download Type"] == "First-time download" {
                 var counts = StoreFunnel.Counts()
                 counts.firstDownloads = Int(row["Counts"] ?? "") ?? 0
+                if row["Page Type"] == "Product page" { counts.pageDownloads = counts.firstDownloads }
                 add(counts, source: row["Source Type"] ?? "Unavailable", date: date)
             }
         }

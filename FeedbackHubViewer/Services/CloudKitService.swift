@@ -59,6 +59,9 @@ final class CloudKitService {
 
     /// The CloudKit container that backs the feedback data.
     nonisolated static let containerIdentifier = "iCloud.com.Ysoup.FeedbackHub"
+    /// 결제 알림만 사는 컨테이너. 허브만 쓴다 — FeedbackHub 컨테이너는 LeeoKit 앱들도 써서,
+    /// 거기 걸린 푸시는 그 앱들에도 떴다(결제 한 건이 여섯 앱 알림으로, 2026-11-26).
+    nonisolated static let purchasesContainerIdentifier = "iCloud.com.Ysoup.HubPurchases"
 
     /// The environment this build reads. See `CloudKitEnvironment`.
     static var environment: CloudKitEnvironment { .current }
@@ -99,20 +102,62 @@ final class CloudKitService {
         CKRecord.ID(recordName: "reply-\(id)")
     }
 
-    /// The reply already written for this feedback, if any.
-    func fetchReply(forFeedback id: String) async -> String? {
-        (try? await database.record(for: Self.replyRecordID(forFeedback: id)))?["message"] as? String
+    /// 답장 한 건의 상태 — 글과, 사용자가 그 글을 읽은 시각.
+    struct ReplyStatus: Equatable {
+        let message: String
+        var readAt: Date?
+        /// 채택하고 보낸 선물의 등급("Plus" · "Pro"). 선물이 없으면 nil.
+        var gift: String?
     }
 
-    /// Which of these feedback already have a reply. Fetched by record name in
-    /// batches with no fields — a missing reply is just a per-record error.
-    func repliedFeedbackIDs(among ids: [String]) async -> Set<String> {
-        var found: Set<String> = []
+    /// 채택 선물 — 답장에 **표시만** 싣는다. 앱(LeeoKit `LeeoFeedbackGift`)이 `pool` 묶음에서 코드를 꺼낸다.
+    struct ReplyGift {
+        let tier: String
+        let pool: String
+        let appStoreID: String?
+    }
+
+    /// 읽음 확인. 사용자 앱(LeeoKit)이 답장을 열어 보면 같은 타입으로 `read-<feedback recordName>`
+    /// 을 만들고 `message` 에 읽은 답장 글을 적는다 — 개발자가 만든 답장 레코드에는 남이 쓸 수 없어
+    /// 자기 레코드를 하나 둔다. 글이 지금 답장과 같을 때만 읽은 것이다. 고친 답장은 다시 안 읽음.
+    nonisolated static func receiptRecordID(forFeedback id: String) -> CKRecord.ID {
+        CKRecord.ID(recordName: "read-\(id)")
+    }
+
+    /// The reply already written for this feedback, if any.
+    func fetchReply(forFeedback id: String) async -> ReplyStatus? {
+        await replyStatuses(among: [id])[id]
+    }
+
+    /// 피드백에 붙은 사진을 다시 받아 캐시에 옮긴다. 목록을 읽을 때 이미 옮겼으면
+    /// 부르지 않는다 — 다른 기기에서 처음 열었거나 캐시가 비었을 때만.
+    func fetchScreenshots(forFeedback id: String, keys: [String]) async -> [URL] {
+        let recordID = CKRecord.ID(recordName: id)
+        if let results = try? await database.records(for: [recordID], desiredKeys: keys),
+           case .success(let record)? = results[recordID] {
+            FeedbackScreenshots.keep(record)
+        }
+        return FeedbackScreenshots.cached(forFeedback: id, keys: keys)
+    }
+
+    /// Which of these feedback have a reply, and whether it was read. Reply and
+    /// receipt are fetched by record name in batches, `message` only — a
+    /// missing record is just a per-record error.
+    func replyStatuses(among ids: [String]) async -> [String: ReplyStatus] {
+        var found: [String: ReplyStatus] = [:]
         for start in stride(from: 0, to: ids.count, by: 200) {
-            let batch = ids[start..<min(start + 200, ids.count)].map(Self.replyRecordID(forFeedback:))
-            guard let results = try? await database.records(for: batch, desiredKeys: []) else { continue }
-            for (recordID, result) in results {
-                if case .success = result { found.insert(String(recordID.recordName.dropFirst("reply-".count))) }
+            let batch = ids[start..<min(start + 200, ids.count)]
+            let recordIDs = batch.map(Self.replyRecordID(forFeedback:)) + batch.map(Self.receiptRecordID(forFeedback:))
+            guard let results = try? await database.records(for: recordIDs, desiredKeys: ["message", "gift"]) else { continue }
+            for id in batch {
+                guard case .success(let reply)? = results[Self.replyRecordID(forFeedback: id)],
+                      let message = reply["message"] as? String else { continue }
+                var status = ReplyStatus(message: message, gift: reply["gift"] as? String)
+                if case .success(let receipt)? = results[Self.receiptRecordID(forFeedback: id)],
+                   receipt["message"] as? String == message {
+                    status.readAt = receipt.modificationDate
+                }
+                found[id] = status
             }
         }
         return found
@@ -120,13 +165,18 @@ final class CloudKitService {
 
     /// Writes (or rewrites) the reply. The sender sees it in their app under
     /// Settings > 보낸 의견, whether or not they left an email.
-    func saveReply(_ message: String, forFeedback id: String, appId: String?) async throws {
+    func saveReply(_ message: String, forFeedback id: String, appId: String?, gift: ReplyGift? = nil) async throws {
         let recordID = Self.replyRecordID(forFeedback: id)
         let record = (try? await database.record(for: recordID))
             ?? CKRecord(recordType: Self.replyRecordType, recordID: recordID)
         record["feedbackID"] = id
         record["message"] = message
         if let appId { record["appId"] = appId }
+        if let gift {
+            record["gift"] = gift.tier
+            record["giftPool"] = gift.pool
+            record["appStoreID"] = gift.appStoreID
+        }
         _ = try await database.save(record)
     }
 
@@ -136,7 +186,7 @@ final class CloudKitService {
     static let snapshotRecordType = "UsageSnapshot"
     static let eventRecordType = "UsageEvent"
     /// MetricKit diagnostics, uploaded by the apps' `DiagnosticsService`.
-    static let crashRecordType = "CrashReport"
+    nonisolated static let crashRecordType = "CrashReport"
 
     struct FetchOutcome {
         var feedback: [Feedback]

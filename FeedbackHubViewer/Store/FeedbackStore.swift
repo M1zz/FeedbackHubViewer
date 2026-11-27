@@ -78,12 +78,38 @@ final class FeedbackStore: ObservableObject {
         /// 내가 할 마케팅 — 기획 · 자료(카드뉴스 · 영상 · 글) · 올렸는지 확인(`MarketingStore`).
         /// 다른 칸은 일어난 일을 읽지만 이 칸은 내가 쓴다.
         case marketing = "마케팅"
-        /// 레딧에서 "이런 앱 없나요?" 를 묻는 질문(`LeadsView`, `RedditLead`). 답은 사람이 직접.
-        case leads = "질문 찾기"
         /// 앱이 사용자에게 줘야 하는 경험과 사용자가 꿈꿀 수 있는 모습(`ExperienceView`).
         /// 숫자를 보다가 이 앱이 원래 무엇을 하려던 것인지 다시 붙잡는 자리.
         case experience = "경험"
+        /// 이 앱이 여기까지 오게 해 준 분들 — 내가 고른 분과 후원해 준 분(`SupportersStore`).
+        /// 지금은 허브에서만 보고, 모아 두었다가 앱 · 웹에 내보낸다.
+        case supporters = "고마운 분들"
         var id: String { rawValue }
+
+        /// 이 칸이 들어가 사는 칸. 같은 물음에 답하는 칸끼리 묶어 목록에는 하나만 세우고, 나머지는
+        /// 그 화면 위의 탭으로 넘긴다 — 칸 16개를 오가며 숫자 하나를 찾지 않게.
+        ///  - 통계 ← 스토어 분석: 설치 · 사용과 스토어 쪽 숫자.
+        ///  - 유입 ← 키워드 · 차트: 사람들이 어떻게 앱을 찾아오나.
+        ///  - 앱 내 구입 ← 선물 코드, 설계 ← 경험.
+        /// 릴리즈와 진단은 따로 선다 — 하나는 버전의 판정, 하나는 크래시 자체라 오가며 보는 일이 잦다.
+        var host: ProjectSection {
+            switch self {
+            case .storeAnalytics: .stats
+            case .keywords, .charts: .acquisition
+            case .giftCodes: .purchases
+            case .experience: .design
+            default: self
+            }
+        }
+        var isHost: Bool { host == self }
+        /// 한 칸에 사는 탭들 — 집 칸이 먼저.
+        var members: [ProjectSection] {
+            let host = host
+            return [host] + ProjectSection.allCases.filter { $0 != host && $0.host == host }
+                #if os(iOS)
+                .filter { $0 != .design }
+                #endif
+        }
         /// 할 일은 처음부터 모든 앱을 앱별로 묶어 보여 주는 칸이라 앱 목록을 거치지 않는다.
         var usesAppList: Bool { self != .inbox && self != .news }
         /// 기능 목록에서 이 칸이 놓이는 무리.
@@ -94,8 +120,8 @@ final class FeedbackStore: ObservableObject {
             case .crashes, .release: .quality
             case .stats, .acquisition, .keywords, .charts, .storeAnalytics: .growth
             case .purchases, .giftCodes: .revenue
-            case .marketing, .leads: .marketing
-            case .design, .experience: .build
+            case .marketing: .marketing
+            case .design, .experience, .supporters: .build
             }
         }
         /// 기능 목록의 무리. 열한 칸을 한 줄로 늘어놓으면 무엇이 어디 있는지 읽히지 않는다 —
@@ -110,6 +136,8 @@ final class FeedbackStore: ObservableObject {
             case build = "만들기"
             var id: String { rawValue }
             var sections: [ProjectSection] { ProjectSection.allCases.filter { $0.group == self } }
+            /// 목록에 서는 칸 — 딸린 칸(`ProjectSection.host`)은 그 칸 안의 탭으로 들어간다.
+            var hosts: [ProjectSection] { phoneSections.filter(\.isHost) }
             /// 아이폰에서 여는 기능. 설계는 맥의 디스크를 읽는 칸이라(`DesignDocsStore.isSupported`)
             /// 아이폰에는 없다.
             var phoneSections: [ProjectSection] {
@@ -150,8 +178,8 @@ final class FeedbackStore: ObservableObject {
             case .reviews: return "star.bubble"
             case .design: return "pencil.and.ruler"
             case .marketing: return "megaphone"
-            case .leads: return "questionmark.bubble"
             case .experience: return "sparkles"
+            case .supporters: return "heart.text.square"
             }
         }
     }
@@ -338,6 +366,23 @@ final class FeedbackStore: ObservableObject {
         let section: ProjectSection
     }
 
+    /// 한 앱의 기능 목록(`AppHomeView`) — 아이폰에서 앱부터 고를 때.
+    struct AppRoute: Hashable {
+        let project: String
+    }
+
+    /// 맥 · 아이패드의 "앱 하나로 보기". 고르면 앱 목록 칸을 걷고, 기능 목록이 이 앱의
+    /// 숫자로 바뀐다 — 기능을 넘겨도 앱이 그대로라 한 앱을 리뷰 · 통계 · 진단으로 넘겨 본다.
+    @Published var focusedApp: String? = UserDefaults.standard.string(forKey: "focused-app") {
+        didSet {
+            UserDefaults.standard.set(focusedApp, forKey: "focused-app")
+            if let focusedApp {
+                selectedProject = focusedApp
+                if !projectSection.usesAppList { projectSection = .feedback }
+            }
+        }
+    }
+
     // Navigation
 
     /// 지금 고른 기능. 화면의 첫 단계다 — 앱은 그 안에서 고른다.
@@ -367,21 +412,24 @@ final class FeedbackStore: ObservableObject {
     /// moves, so pushing (iPhone) and re-scoping the column (Mac/iPad) don't
     /// have to be spelled out at each call site.
     func open(project: String?, section: ProjectSection? = nil) {
+        showsHome = false
+        // 맥 · 아이패드: 앱이 걸린 링크는 늘 그 앱 하나로 보는 상태로 연다 — 어느 모드로 갈지
+        // 헤아리지 않아도 되게. 전체(nil)로 가는 링크면 앱 하나로 보기를 푼다.
+        if !usesStackNavigation, focusedApp != project {
+            focusedApp = project == Feedback.unclassifiedProject ? nil : project
+        }
         selectedProject = project
         if let section {
             projectSection = section
+            if project == nil { showsAllAppsDashboard = false }
         } else if projectSection == .inbox {
             projectSection = .feedback
         }
         if usesStackNavigation {
-            // 그 기능이 사는 탭으로 옮겨 가서 민다. 뒤로 가면 그 탭의 앱 목록이 나온다.
-            let tab = PhoneTab.containing(projectSection)
-            phoneTab = tab
-            // 기능 목록 → 앱 목록 → 앱 차례라, 뒤로 가면 그 기능의 앱 목록이 나오게.
-            var path = NavigationPath()
-            if projectSection.usesAppList { path.append(SectionRoute(section: projectSection)) }
-            path.append(ProjectRoute(project: project, section: projectSection))
-            phonePaths[tab] = path
+            // 지금 탭 안에서 민다. 예전에는 그 기능이 사는 탭으로 건너가 밀어서, 뒤로 가도
+            // 누른 곳(현황 · 오늘)으로 돌아오지 않았다.
+            phonePaths[phoneTab, default: NavigationPath()]
+                .append(ProjectRoute(project: project, section: projectSection))
         }
     }
 
@@ -391,7 +439,19 @@ final class FeedbackStore: ObservableObject {
     /// 기능 안에서 고른 앱. 기능을 바꿔도 그대로 남아, 한 앱을 여러 기능으로 넘겨 볼 수 있다.
     /// 할 일은 앱을 가리지 않으므로 할 일에서 앱 링크를 누르면 그 앱의 피드백으로 간다
     /// (`open(project:section:)`).
-    @Published var selectedProject: String? = nil     // nil == all projects
+    @Published var selectedProject: String? = nil   // nil == all projects
+    /// 맥 · 아이패드에서 "전체 앱"을 고르면 가운데가 모든 앱 대시보드다(`AppDashboardPanel`).
+    /// 칸을 고르면(사이드바 · 카드) 그 칸의 전체 모아보기로 넘어간다 — 맨 위 전환으로 오간다.
+    @Published var showsAllAppsDashboard = true
+    /// 맥 · 아이패드의 첫 화면 — 사이드바를 걷고 모든 앱을 카드로 편 홈(`AppGridHome`).
+    /// 카드 · 링크 · 사이드바 어느 것으로든 어딘가로 들어가면 꺼진다.
+    @Published var showsHome = true
+
+    /// 홈으로. 앱 하나로 보던 중이면 그 고름도 푼다 — 모든 앱을 펴 놓고 한 앱이 골라진 채 남지 않게.
+    func goHome() {
+        focusedApp = nil
+        showsHome = true
+    }
     @Published var selectedVersion: String? = nil     // nil == all versions
     @Published var minimumRating: Int = 0             // 0 == any rating
     /// Which triage decisions the list shows (see `FeedbackTriage.swift`).
@@ -440,6 +500,7 @@ final class FeedbackStore: ObservableObject {
                 SyncedDefaults.set(data, forKey: Self.activityOverridesKey)
             }
             derived.habit = [:]
+            derived.releaseHealth = [:]
         }
     }
     /// 새로고침이 새것을 찾았을 때 시스템 알림을 띄울 것(`notificationsEnabled` 가 켜져 있을 때).
@@ -453,6 +514,8 @@ final class FeedbackStore: ObservableObject {
     /// CloudKit 푸시가 실제로 걸린 종류(`PushSubscriptions`). 이것들은 앱이 꺼져 있어도 Apple 이
     /// 알려 주므로, 새로고침에서 찾았을 때 로컬 알림을 또 띄우지 않는다.
     @Published private(set) var pushKinds: Set<AttentionKind> = []
+    /// 결제 푸시 구독을 못 걸었을 때의 까닭. nil 이면 걸렸다(또는 알림이 꺼져 있다).
+    @Published private(set) var purchasePushProblem: String?
     private var pushSyncTask: Task<Void, Never>?
     /// False when the system denied notifications — the toggle stays on but the
     /// UI can explain why nothing shows up.
@@ -481,6 +544,9 @@ final class FeedbackStore: ObservableObject {
         readIDs = Set(defaults.stringArray(forKey: Self.readIDsKey) ?? [])
         triage = Self.decodeTriage(defaults.data(forKey: Self.triageKey))
         repliedIDs = Set(defaults.stringArray(forKey: Self.repliedIDsKey) ?? [])
+        gifted = defaults.dictionary(forKey: Self.giftedKey) as? [String: String] ?? [:]
+        replyReadAt = defaults.data(forKey: Self.replyReadAtKey)
+            .flatMap { try? JSONDecoder().decode([String: Date].self, from: $0) } ?? [:]
         reviewsDone = defaults.data(forKey: Self.reviewsDoneKey)
             .flatMap { try? JSONDecoder().decode([String: ReviewDoneEntry].self, from: $0) } ?? [:]
         releaseHypotheses = defaults.data(forKey: Self.releaseHypothesesKey)
@@ -638,11 +704,26 @@ final class FeedbackStore: ObservableObject {
     /// end — so an unordered read handed back an arbitrary slice of the stream
     /// and the rest was never asked for again. Reads are uncapped now; what is
     /// bounded is what this device *keeps*.
-    /// 릴리즈 건강 카드가 "원본이 창 끝까지 남아 있나"를 따지려고 읽는다.
+    ///
+    /// 릴리즈 판정 창(`ReleaseHealth.windowDays`) 안의 원본에는 걸지 않는다. 예전에는 허브 전체에
+    /// 걸려서, 하루 수백 건을 보내는 앱 둘이 5,000건을 7일 만에 채우고 다른 앱의 앞 7일까지 밀어냈다.
+    /// 그러면 릴리즈 판정이 14일이 아니라 7일로 설치를 세어 "판단할 수 없음"이 늘었다.
     nonisolated static let eventLimit = 5000
     /// Diagnostics are read whole and are small; this is the only cap they get
     /// — again on what is kept, applied after the merge.
     private static let crashLimit = 1000
+    /// 같은 레코드 타입에 실려 오는 성능 한 줄(kind "metrics")의 몫. 진단 몫을 밀어내지 않게 따로 센다.
+    private static let metricsLimit = 5000
+
+    /// 진단과 성능 한 줄을 각자의 몫까지, 차례는 그대로.
+    private static func capped(_ records: [CrashReport]) -> [CrashReport] {
+        var diagnostics = 0, metrics = 0
+        return records.filter { record in
+            if record.isMetrics { metrics += 1; return metrics <= metricsLimit }
+            diagnostics += 1
+            return diagnostics <= crashLimit
+        }
+    }
 
     /// When each record type was last read successfully. Persisted with the
     /// cache; drives the incremental queries.
@@ -667,6 +748,7 @@ final class FeedbackStore: ObservableObject {
             let restored = await restore.value
             // 피드백 레코드 타입은 캐시에서 알게 된다 - 그다음에 푸시 구독을 맞춘다.
             if self.notificationsEnabled { self.syncPushSubscriptions() }
+            self.syncPurchasePush()
             // 그 다음이 iCloud의 마지막 요약본이다. 이 기기의 캐시가 먼저
             // 그려지고 나서 오는 것이라 첫 프레임을 붙잡지 않고, 다른 기기가
             // 방금 새로고침해 뒀다면 이 기기는 읽을 것이 없다 — 아이폰이
@@ -823,6 +905,13 @@ final class FeedbackStore: ObservableObject {
         if watermarks[CloudKitService.eventRecordType] != nil {
             usageKnown[CloudKitService.eventRecordType] = rollups.knownEventIDs()
         }
+        // 원본이 릴리즈 창 시작까지 닿지 않으면(예전 상한에 잘려 나간 날들) 이벤트는 창 시작부터,
+        // 아는 기록에서 멈추지 않고 다시 읽는다. 아는 기록에서 멈추는 읽기로는 잘린 앞쪽이 영영
+        // 돌아오지 않는다. 겹치는 기록은 ID 로 합쳐지고, 접기도 같은 ID 를 두 번 세지 않는다.
+        if readsNumbers, let start = rawEventCoverageStart, start > Self.releaseWindowStart() {
+            usageKnown[CloudKitService.eventRecordType] = nil
+            usageSince[CloudKitService.eventRecordType] = Self.releaseWindowStart()
+        }
         if isIncremental, watermarks[CloudKitService.crashRecordType] != nil {
             usageKnown[CloudKitService.crashRecordType] = Set(fetchedCrashes.map(\.id))
         }
@@ -929,7 +1018,7 @@ final class FeedbackStore: ObservableObject {
             // non-empty incremental result is genuinely new. Comparing counts
             // would miss one once the cap is reached and the count stops moving.
             if !crashes.isEmpty || !incremental {
-                fetchedCrashes = Array(all.prefix(Self.crashLimit))
+                fetchedCrashes = Self.capped(all)
             }
         }
         watermarks.merge(usage.syncedTypes) { _, new in new }
@@ -942,14 +1031,21 @@ final class FeedbackStore: ObservableObject {
     }
 
     /// The slice of the event stream kept as individual records, newest first.
+    /// 릴리즈 판정 창 안은 통째로, 그보다 오래된 쪽만 `eventLimit` 까지.
     private nonisolated static func withinRetention(_ events: [UsageEvent],
                                         calendar: Calendar = .current,
                                         now: Date = Date()) -> [UsageEvent] {
-        guard let cutoff = calendar.date(byAdding: .day, value: -rawEventRetentionDays,
-                                         to: calendar.startOfDay(for: now)) else {
-            return Array(events.prefix(eventLimit))
-        }
-        return Array(events.filter { $0.occurredAt >= cutoff }.prefix(eventLimit))
+        let windowStart = releaseWindowStart(now: now)
+        let cutoff = calendar.date(byAdding: .day, value: -rawEventRetentionDays,
+                                   to: calendar.startOfDay(for: now)) ?? windowStart
+        let recent = events.filter { $0.occurredAt >= windowStart }
+        let older = events.filter { $0.occurredAt < windowStart && $0.occurredAt >= cutoff }
+        return recent + older.prefix(eventLimit)
+    }
+
+    /// 릴리즈 판정 창의 시작. 이 뒤의 원본은 이 기기가 빠짐없이 들고 있어야 한다.
+    nonisolated static func releaseWindowStart(now: Date = Date()) -> Date {
+        now.addingTimeInterval(-Double(ReleaseHealth.windowDays) * 86_400)
     }
 
     /// A cheap stand-in for "did any install's numbers move". Coarse on
@@ -1055,7 +1151,7 @@ final class FeedbackStore: ObservableObject {
         // 값이어야 하기 때문이다 — 자르기 전의 수로 "내가 더 갖고 있다"를
         // 판단하면, 잘려 나갈 몫 때문에 실행할 때마다 헛되이 올리게 된다.
         hub.events = Self.withinRetention(hub.events)
-        hub.crashes = Array(hub.crashes.prefix(Self.crashLimit))
+        hub.crashes = Self.capped(hub.crashes)
         let recordsChanged = hub.feedback.count != fetchedFeedback.count
             || Self.fingerprint(hub.snapshots) != Self.fingerprint(fetchedSnapshots)
             || hub.events.count != fetchedEvents.count
@@ -1254,10 +1350,10 @@ final class FeedbackStore: ObservableObject {
     // MARK: - Notifications
 
     private static let notificationsEnabledKey = "notificationsEnabled"
-    private static let badgeKindsKey = "badgeKinds"
-    private static let alertKindsKey = "alertKinds"
+    private nonisolated static let badgeKindsKey = "badgeKinds"
+    private nonisolated static let alertKindsKey = "alertKinds"
     private static let reviewAlertMigratedKey = "alertKinds.reviewAdded"
-    private static let activityOverridesKey = "activityDefinitions"
+    private nonisolated static let activityOverridesKey = "activityDefinitions"
     private static let seenFeedbackIDsKey = "seenFeedbackIDs"
     private static let seenCrashIDsKey = "seenCrashIDs"
 
@@ -1331,6 +1427,20 @@ final class FeedbackStore: ObservableObject {
         }
     }
 
+    /// 결제 알림은 알림 스위치와 따로 늘 건다 — 결제는 놓치고 싶은 사람이 없고, 스위치가 처음에
+    /// 꺼져 있어서 결제 알림도 함께 꺼져 있던 것을 아무도 몰랐다. 허락을 아직 안 물었으면 여기서 묻는다.
+    func syncPurchasePush() {
+        Task { [weak self] in
+            // 구독부터 — 허락 창은 사람이 답할 때까지 기다리므로 그 뒤에 묻는다.
+            let problem = await PushSubscriptions.syncPurchases(true)
+            let authorized = await NotificationService.requestAuthorization()
+            let shown = problem ?? (authorized ? nil : "이 기기에서 알림이 허용되지 않았습니다(시스템 설정 ▸ 알림)")
+            self?.purchasePushProblem = shown
+            // 화면을 못 볼 때 상태를 꺼내 볼 수 있게(`defaults read … purchase-push-status`).
+            self?.defaults.set(shown ?? "ok", forKey: "purchase-push-status")
+        }
+    }
+
     /// 앱 아이콘 뱃지 — 설정에서 켠 것(기본: 새 스토어 리뷰 + 안 읽은 피드백). 알림 토글과 따로
     /// 늘 붙인다(맥 Dock 은 허락이 필요 없고, 아이폰은 알림을 허락했을 때만 보인다).
     func refreshBadge() {
@@ -1348,7 +1458,11 @@ final class FeedbackStore: ObservableObject {
     @Published private(set) var readIDs: Set<String> = [] { didSet { invalidateReadState() } }
     private static let readIDsKey = "readFeedbackIDs"
 
-    func isUnread(_ feedback: Feedback) -> Bool { !readIDs.contains(feedback.id) }
+    /// 답장을 보낸 것은 읽은 것이다 — 다른 기기에서 답장해 이 기기에선 연 적이 없어도.
+    /// 그게 빠져 "피드백 9" 와 "할 일 5" 가 어긋났다(답장만 하고 안 연 4건).
+    func isUnread(_ feedback: Feedback) -> Bool {
+        !readIDs.contains(feedback.id) && !repliedIDs.contains(feedback.id)
+    }
 
     /// Unread across every project — the number the tab badge shows.
     var unreadCount: Int { countUnread(in: allFeedback) }
@@ -1364,7 +1478,7 @@ final class FeedbackStore: ObservableObject {
     /// Not `private`: the project summaries in `FeedbackStore+Projects.swift`
     /// count unread per project as they build each card.
     func countUnread(in items: [Feedback]) -> Int {
-        items.reduce(0) { $0 + (readIDs.contains($1.id) ? 0 : 1) }
+        items.reduce(0) { $0 + (isUnread($1) ? 1 : 0) }
     }
 
     /// Called when a feedback's detail is shown.
@@ -1415,36 +1529,92 @@ final class FeedbackStore: ObservableObject {
     /// 답장은 허브에 남으니(`FeedbackReply`) 다른 기기에서 보낸 것도 `checkReplies` 가 찾아온다.
     @Published private(set) var repliedIDs: Set<String> = [] { didSet { invalidateReadState() } }
     private static let repliedIDsKey = "repliedFeedbackIDs"
+    /// 사용자가 답장을 읽은 시각(허브의 읽음 확인). 답장을 고치면 지워진다 — 고친 글은 아직 안 읽은 것이다.
+    @Published private(set) var replyReadAt: [String: Date] = [:]
+    private static let replyReadAtKey = "feedbackReplyReadAt"
+    /// 채택하고 선물을 보낸 피드백 → 등급. 같은 사람의 다음 채택이 Pro 가 되는지 가른다.
+    @Published private(set) var gifted: [String: String] = [:]
+    private static let giftedKey = "feedbackGifted"
     private var lastReplyCheck: Date?
 
     func isReplied(_ feedback: Feedback) -> Bool { repliedIDs.contains(feedback.id) }
+    func replyReadAt(_ feedback: Feedback) -> Date? { replyReadAt[feedback.id] }
 
-    func reply(for feedback: Feedback) async -> String? {
-        let message = await service.fetchReply(forFeedback: feedback.id)
-        if message != nil { markReplied([feedback.id]) }
-        return message
+    func reply(for feedback: Feedback) async -> CloudKitService.ReplyStatus? {
+        let status = await service.fetchReply(forFeedback: feedback.id)
+        if let status { apply(replies: [feedback.id: status]) }
+        return status
     }
 
-    func sendReply(_ message: String, for feedback: Feedback) async throws {
-        try await service.saveReply(message, forFeedback: feedback.id, appId: feedback.appId)
-        markReplied([feedback.id])
+    /// 사용자가 붙인 사진 파일. 캐시에 다 있으면 그것을, 모자라면 허브에서 다시 받는다.
+    func screenshots(for feedback: Feedback) async -> [URL] {
+        let keys = feedback.screenshotKeys
+        guard !keys.isEmpty else { return [] }
+        let cached = FeedbackScreenshots.cached(forFeedback: feedback.id, keys: keys)
+        if cached.count == keys.count { return cached }
+        return await service.fetchScreenshots(forFeedback: feedback.id, keys: keys)
+    }
+
+    func sendReply(_ message: String, for feedback: Feedback, gift: CloudKitService.ReplyGift? = nil) async throws {
+        try await service.saveReply(message, forFeedback: feedback.id, appId: feedback.appId, gift: gift)
+        apply(replies: [feedback.id: .init(message: message, gift: gift?.tier ?? gifted[feedback.id])])
         markRead(feedback)
     }
 
-    /// 아직 답장을 모르는 피드백에 답장이 달렸는지 허브에서 확인한다. 답장은 이 앱에서만
-    /// 쓰므로 자주 볼 까닭이 없다 — 새로고침이 잦아도 10분에 한 번.
+    // MARK: - 채택 선물
+
+    /// 이 사람에게 채택 선물을 준 적이 있는가 — 첫 채택은 Plus, 그다음부터 Pro.
+    func hasBeenGifted(_ feedback: Feedback) -> Bool {
+        guard let creator = feedback.creatorID else { return false }
+        return allFeedback.contains { $0.id != feedback.id && $0.creatorID == creator && gifted[$0.id] != nil }
+    }
+
+    /// 이 피드백에 보낼 선물. 첫 채택이고 Plus 묶음에 남은 장이 있으면 Plus, 아니면 Pro 묶음.
+    /// 묶음이 비었으면 nil — 허브의 선물 묶음 화면에서 채운 뒤에 보낸다.
+    func giftOffer(for feedback: Feedback, connect: AppStoreConnectStore) -> CloudKitService.ReplyGift? {
+        guard let bundle = feedback.appId, !bundle.isEmpty else { return nil }
+        let pools = GiftCodePool.shared
+        let keys = GiftCodePool.poolKeys(for: bundle).filter { (pools.statuses[$0]?.left ?? 0) > 0 }
+        let plus = keys.first { GiftCodePool.tierLabel($0) == "Plus" }
+        let pro = keys.first { GiftCodePool.tierLabel($0) == "Pro" }
+        guard let key = hasBeenGifted(feedback) ? (pro ?? plus) : (plus ?? pro) else { return nil }
+        return .init(tier: GiftCodePool.tierLabel(key), pool: key, appStoreID: connect.connectApp(for: bundle)?.id)
+    }
+
+    /// 아직 답장을 모르는 피드백에 답장이 달렸는지, 답장을 아직 안 읽은 피드백은 읽었는지 허브에서
+    /// 확인한다. 답장은 이 앱에서만 쓰므로 자주 볼 까닭이 없다 — 새로고침이 잦아도 10분에 한 번.
+    /// 사용자 앱은 보낸 지 180일까지만 답장을 찾으니, 읽음 확인도 그 안의 것만 기다린다.
     private func checkReplies() async {
         if let last = lastReplyCheck, Date().timeIntervalSince(last) < 600 { return }
         lastReplyCheck = Date()
-        let unknown = allFeedback.map(\.id).filter { !repliedIDs.contains($0) }
-        guard !unknown.isEmpty else { return }
-        markReplied(await service.repliedFeedbackIDs(among: unknown))
+        let lookback = Date().addingTimeInterval(-180 * 86_400)
+        let wanted = allFeedback.filter { item in
+            !repliedIDs.contains(item.id)
+                || (replyReadAt[item.id] == nil && (item.createdAt ?? .distantPast) > lookback)
+        }.map(\.id)
+        guard !wanted.isEmpty else { return }
+        apply(replies: await service.replyStatuses(among: wanted))
     }
 
-    private func markReplied(_ ids: Set<String>) {
-        guard !ids.isSubset(of: repliedIDs) else { return }
-        repliedIDs.formUnion(ids)
-        defaults.set(Array(repliedIDs), forKey: Self.repliedIDsKey)
+    /// 허브가 말한 답장 상태를 적는다. 답장이 있으면 답장함, 읽은 시각은 그대로(없으면 지움).
+    private func apply(replies: [String: CloudKitService.ReplyStatus]) {
+        guard !replies.isEmpty else { return }
+        let ids = Set(replies.keys)
+        if !ids.isSubset(of: repliedIDs) {
+            repliedIDs.formUnion(ids)
+            defaults.set(Array(repliedIDs), forKey: Self.repliedIDsKey)
+        }
+        var gifts = gifted
+        for (id, status) in replies { if let tier = status.gift { gifts[id] = tier } }
+        if gifts != gifted {
+            gifted = gifts
+            defaults.set(gifts, forKey: Self.giftedKey)
+        }
+        var read = replyReadAt
+        for (id, status) in replies { read[id] = status.readAt }
+        guard read != replyReadAt else { return }
+        replyReadAt = read
+        if let data = try? JSONEncoder().encode(read) { defaults.set(data, forKey: Self.replyReadAtKey) }
     }
 
     func note(for feedback: Feedback) -> String {
@@ -1494,6 +1664,10 @@ final class FeedbackStore: ObservableObject {
 
     private func apply(status: FeedbackStatus, note: String?, to id: String) {
         let existing = triage[id]
+        // 같은 판단을 다시 쓰지 않는다. 맥의 세그먼트 Picker 는 화면을 다시 그리는 중에 같은 값을
+        // 바인딩에 한 번 더 넘기는데, 그때마다 시각을 새로 찍어 `triage` 를 바꾸면 "view update 중
+        // publish" 경고가 나고 iCloud 로 괜히 올라간다.
+        if let existing, existing.status == status, note == nil || note == existing.note { return }
         let entry = FeedbackTriageEntry(status: status,
                                         note: note ?? existing?.note ?? "",
                                         decidedAt: Date())
@@ -1632,7 +1806,7 @@ final class FeedbackStore: ObservableObject {
     /// the records stay in the hub and come back the moment the project is
     /// shown again. Persisted per device.
     @Published private(set) var hiddenProjects: Set<String> = [] { didSet { invalidateDerived() } }
-    private static let hiddenProjectsKey = "hiddenProjects"
+    private nonisolated static let hiddenProjectsKey = "hiddenProjects"
 
     func isHidden(_ project: String) -> Bool { hiddenProjects.contains(project) }
 
@@ -1743,7 +1917,47 @@ final class FeedbackStore: ObservableObject {
     /// 앱이 보낸 이름보다 앞선다. 스토어에 없는 앱(개발 빌드·심사 중)은 여기
     /// 없어서 앱이 보낸 이름으로 남는다.
     var storeAppNames: [String: String] = [:] {
-        didSet { if storeAppNames != oldValue { invalidateLabels() } }
+        // 이름만 바뀌면 화면이 다시 그려지지 않아 옛 이름이 다른 일로 다시 그릴 때까지 남았다.
+        willSet { if newValue != storeAppNames { objectWillChange.send() } }
+        didSet {
+            guard storeAppNames != oldValue else { return }
+            // 스토어에서 이름을 바꾸면 옛 이름을 적어 둔다 — 그 이름으로 저장된 글(소식 제목 등)을
+            // 지금 이름으로 바꿔 보여 주려고(`currentWording`).
+            var former = formerStoreNames
+            for (key, old) in oldValue where !old.isEmpty && storeAppNames[key].map({ $0 != old }) == true {
+                former[key, default: []].insert(old)
+            }
+            if former != formerStoreNames {
+                formerStoreNames = former
+                defaults.set(former.mapValues { Array($0) }, forKey: Self.formerStoreNamesKey)
+            }
+            invalidateLabels()
+        }
+    }
+
+    /// 스토어에 걸렸던 옛 이름들.
+    private lazy var formerStoreNames: [String: Set<String>] =
+        ((defaults.dictionary(forKey: Self.formerStoreNamesKey) as? [String: [String]]) ?? [:]).mapValues(Set.init)
+    private static let formerStoreNamesKey = "formerStoreAppNames"
+    /// 앱이 스스로 보낸 이름들(피드백 · 사용 기록). 옛 이름일 수 있다.
+    private var reportedAppNames: [String: Set<String>] = [:]
+
+    /// 저장해 둔 글 속 옛 앱 이름을 지금 이름으로. 소식처럼 만들 때 이름을 박아 둔 글은 앱이
+    /// 이름을 바꾸면 옛 이름으로 남아 화면에 두 이름이 섞였다("징검돌" · "모찌모").
+    /// 조사(이/가, 으로/로)도 새 이름에 맞춘다.
+    func currentWording(_ text: String, project: String) -> String {
+        let current = displayName(for: project)
+        let names = (formerStoreNames[project] ?? []).union(reportedAppNames[project] ?? [])
+            .map(Self.shortName)
+            .filter { $0 != current && $0.count >= 2 }
+            .sorted { $0.count > $1.count }
+        var result = text
+        for old in names where result.contains(old) {
+            result = result.replacingOccurrences(of: old.이가, with: current.이가)
+                .replacingOccurrences(of: old.으로, with: current.으로)
+                .replacingOccurrences(of: old, with: current)
+        }
+        return result
     }
 
     /// Manual `appId → 앱 이름` overrides for apps whose records never include an
@@ -1753,6 +1967,16 @@ final class FeedbackStore: ObservableObject {
 
     private func learnAppNames(from feedback: [Feedback]) {
         var map: [String: String] = [:]
+        var reported: [String: Set<String>] = [:]
+        func note(_ id: String?, _ name: String?) {
+            guard let id = id?.trimmingCharacters(in: .whitespaces), !id.isEmpty,
+                  let name = name?.trimmingCharacters(in: .whitespaces), !name.isEmpty else { return }
+            reported[id, default: []].insert(name)
+        }
+        for fb in feedback { note(fb.appId, fb.recordAppName) }
+        for snapshot in fetchedSnapshots { note(snapshot.appId, snapshot.appName) }
+        for event in fetchedEvents { note(event.appId, event.appName) }
+        reportedAppNames = reported
         for fb in feedback {
             guard let id = fb.appId?.trimmingCharacters(in: .whitespaces), !id.isEmpty,
                   let name = fb.recordAppName else { continue }

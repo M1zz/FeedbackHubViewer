@@ -1,0 +1,50 @@
+{
+ "name": "Goldweek",
+ "icon": "/Users/hyunholee/Documents/workspace/개발중/FeedbackHubViewer/scripts/cardnews/decks/icons/골드위크-1024.png",
+ "accent": "F2A516",
+ "accent2": "2BB673",
+ "kicker": "Did you know? · Goldweek's recommended schedule",
+ "cover": "Which days off\nmake the\nlongest break?",
+ "features": [
+  {
+   "label": "The usual guess",
+   "headline": "A holiday is coming.\nWhich days do you take?",
+   "text": "Most of us count weekends on a calendar\nand hope we picked right.",
+   "screen": "/Users/hyunholee/Documents/workspace/Auto/골드위크/docs/screenshots/raw/en/03-calendar.png",
+   "top": 0.05
+  },
+  {
+   "label": "Holidays + weekends",
+   "headline": "Goldweek pairs them\nfor you",
+   "text": "For every upcoming holiday it shows\nwhich days to take off.",
+   "screen": "/Users/hyunholee/Documents/workspace/Auto/골드위크/docs/screenshots/raw/en/02-recommend.png",
+   "top": 0.05
+  },
+  {
+   "label": "The answer",
+   "headline": "2 days of leave,\n5 days off",
+   "text": "Martin Luther King Jr. Day: take Tue and Wed,\nget Sat to Wed in a row.",
+   "screen": "/Users/hyunholee/Documents/workspace/Auto/골드위크/docs/screenshots/raw/en/02-recommend.png",
+   "top": 0.25
+  },
+  {
+   "label": "Keep count",
+   "headline": "See what\nyou have left",
+   "text": "Used, planned and left on one screen,\nand on a Home Screen widget.",
+   "screen": "/Users/hyunholee/Documents/workspace/Auto/골드위크/docs/screenshots/raw/en/01-home.png",
+   "top": 0.0
+  }
+ ],
+ "outro": "Fewer days of leave,\nlonger breaks",
+ "points": [
+  "Public holidays for 42 countries",
+  "Pick your state or region",
+  "Add your own holidays if yours is missing"
+ ],
+ "search": "Search “Goldweek” on the App Store",
+ "coverScreens": [
+  "/Users/hyunholee/Documents/workspace/Auto/골드위크/docs/screenshots/raw/en/01-home.png",
+  "/Users/hyunholee/Documents/workspace/Auto/골드위크/docs/screenshots/raw/en/02-recommend.png",
+  "/Users/hyunholee/Documents/workspace/Auto/골드위크/docs/screenshots/raw/en/03-calendar.png"
+ ]
+}

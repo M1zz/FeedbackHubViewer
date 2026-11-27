@@ -142,7 +142,7 @@ final class ReviewStateSync {
             forName: NSUbiquitousKeyValueStore.didChangeExternallyNotification,
             object: store,
             queue: .main
-        ) { note in
+        ) { [weak self] note in
             // 이 키가 안 바뀐 알림도 온다(다른 키, 또는 계정 전환). 우리 키가
             // 목록에 없으면 할 일이 없다 — 계정이 바뀐 경우만 예외로, 그때는
             // 저장소 전체가 갈아끼워지므로 무조건 다시 읽는다.
@@ -150,7 +150,7 @@ final class ReviewStateSync {
             let reason = note.userInfo?[NSUbiquitousKeyValueStoreChangeReasonKey] as? Int
             let accountChanged = reason == NSUbiquitousKeyValueStoreAccountChange
             guard accountChanged || changedKeys?.contains(watchedKey) == true else { return }
-            Task { @MainActor [weak self] in
+            Task { @MainActor in
                 guard let state = self?.load() else { return }
                 onRemoteChange(state)
             }

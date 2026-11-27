@@ -180,6 +180,9 @@ struct FeedbackListView: View {
                         Label(option.label, systemImage: option.systemImage).tag(option)
                     }
                 }
+                // 하위 메뉴로 두면 "처리 완료" 로 비스듬히 옮겨 가는 사이 아래 일괄 처리 줄을 스쳐
+                // 하위 메뉴가 닫혔다. 이 칸 안에 바로 펼친다.
+                .pickerStyle(.inline)
                 if !store.filteredFeedback.isEmpty {
                     Button {
                         bulkStatus = .applied
@@ -379,6 +382,7 @@ struct FeedbackListView: View {
                         isUnread: store.isUnread(feedback),
                         status: status,
                         isReplied: store.isReplied(feedback),
+                        isReplyRead: store.replyReadAt(feedback) != nil,
                         note: store.note(for: feedback))
                 #if os(iOS)
                 // A plain tap target rather than a `NavigationLink`: a link
@@ -450,6 +454,8 @@ struct FeedbackRow: View {
     let status: FeedbackStatus
     /// 답장을 보냈다 — 반영 여부와 따로 보인다.
     var isReplied = false
+    /// 사용자가 그 답장을 읽었다(허브의 읽음 확인).
+    var isReplyRead = false
     let note: String
     /// 앱별로 묶인 목록(할 일)에서는 머리글이 이미 앱 이름을 말한다.
     var showsProject = true
@@ -483,8 +489,16 @@ struct FeedbackRow: View {
                     StarRatingView(rating: rating)
                 }
                 StatusChip(status: status)
+                if feedback.isVoice {
+                    VoiceTags(feedback: feedback)
+                }
                 if isReplied {
-                    Tag(text: "답변함", systemImage: "arrowshape.turn.up.left.fill", tint: .blue,
+                    Tag(text: isReplyRead ? "답변 읽음" : "답변함",
+                        systemImage: isReplyRead ? "checkmark.bubble.fill" : "arrowshape.turn.up.left.fill",
+                        tint: .blue, font: .hubCaption2.weight(.medium))
+                }
+                if !feedback.screenshotKeys.isEmpty {
+                    Tag(text: "사진 \(feedback.screenshotKeys.count)", systemImage: "photo", tint: .purple,
                         font: .hubCaption2.weight(.medium))
                 }
                 Spacer(minLength: 4)
@@ -494,13 +508,22 @@ struct FeedbackRow: View {
                     .lineLimit(1)
             }
 
-            Text(feedback.snippet)
+            if let question = feedback.voiceQuestion {
+                VoiceQuestionLine(question: question)
+            }
+
+            KoreanText(feedback.snippet)
                 .font(.body)
                 .fontWeight(isUnread ? .semibold : .regular)
                 .lineLimit(snippetLineLimit)
                 // Decided feedback steps back visually so what is left to do
                 // stands out in a long list.
                 .foregroundStyle(status.isHandled || isReplied ? .secondary : .primary)
+
+            // 붙인 사진을 상세를 열지 않고 바로 본다. 누르면 크게.
+            if !feedback.screenshotKeys.isEmpty {
+                FeedbackScreenshotStrip(feedback: feedback, height: 72)
+            }
 
             if !note.isEmpty {
                 Label(note, systemImage: "text.bubble")
@@ -519,7 +542,7 @@ struct FeedbackRow: View {
     @ViewBuilder
     private var metadata: some View {
         #if os(iOS)
-        let parts = [feedback.feedbackType, feedback.appVersion.map { "v\($0)" },
+        let parts = [feedback.isVoice ? nil : feedback.typeLabel, feedback.appVersion.map { "v\($0)" },
                      feedback.deviceModel, feedback.contactEmail]
             .compactMap { $0 }
             .filter { !$0.isEmpty && $0 != "v" }
@@ -531,7 +554,7 @@ struct FeedbackRow: View {
         }
         #else
         FlowLayout(spacing: 6, lineSpacing: 4) {
-            if let type = feedback.feedbackType, !type.isEmpty {
+            if !feedback.isVoice, let type = feedback.typeLabel {
                 Tag(text: type, systemImage: "tag")
             }
             if let version = feedback.appVersion, !version.isEmpty {

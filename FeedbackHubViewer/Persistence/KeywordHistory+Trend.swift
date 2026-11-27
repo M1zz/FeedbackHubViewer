@@ -6,9 +6,8 @@
 //
 //  줄마다 붙은 30일 스파크라인은 "오르는 중인가"에는 답하지만 "무슨 일이 있었나"에는
 //  답하지 않는다. 여기서는 일주일 전의 확인과 지금의 확인을 나란히 놓고 달라진 것을
-//  말로 뽑는다 — 크게 떨어짐 · 크게 오름 · 순위에서 빠짐 · 새로 잡힘, 그리고 **누가 나를
-//  앞질렀나**. 마지막 것은 순위만 봐서는 안 보인다: 3위에서 5위로 간 것이 내가 밀린
-//  것인지 두 앱이 올라온 것인지는 결과 목록을 봐야 안다.
+//  말로 뽑는다 — 크게 오름 · 새로 잡힘. 떨어진 것은 알리지 않는다: 할 일은 오르는 말을
+//  더 밀어 올리는 것이다.
 //
 
 import Foundation
@@ -23,29 +22,15 @@ struct RankAlert: Identifiable {
 
     var id: String { keyword.id + kind.tag }
 
+    /// 오른 것만 — 떨어진 것은 알리지 않는다.
     enum Kind {
-        case dropped(from: Int, to: Int)
         case climbed(from: Int, to: Int)
-        case lost(from: Int)
         case entered(to: Int)
-        /// 나를 새로 앞지른 앱들의 이름.
-        case overtaken(by: [String], myRank: Int)
 
         var tag: String {
             switch self {
-            case .dropped: return "dropped"
             case .climbed: return "climbed"
-            case .lost: return "lost"
             case .entered: return "entered"
-            case .overtaken: return "overtaken"
-            }
-        }
-
-        /// 나쁜 소식인가 — 색을 고를 때만 쓴다.
-        var isBad: Bool {
-            switch self {
-            case .dropped, .lost, .overtaken: return true
-            case .climbed, .entered: return false
             }
         }
     }
@@ -93,29 +78,19 @@ extension KeywordHistory {
             }
 
             switch (then, now) {
-            case let (then?, now?) where now - then >= Self.bigMove: add(.dropped(from: then, to: now))
             case let (then?, now?) where then - now >= Self.bigMove: add(.climbed(from: then, to: now))
-            case let (then?, nil): add(.lost(from: then))
             case let (nil, now?): add(.entered(to: now))
             default: break
             }
-
-            // 누가 나를 앞질렀나: 지금 내 위에 있는 앱 중, 그때는 내 아래(또는 목록 밖)였던 것.
-            if let now, let then {
-                let aboveNow = latest.top.prefix(max(0, now - 1))
-                let passed = aboveNow.filter { id in
-                    guard id != trackId else { return false }
-                    if let index = base.top.firstIndex(of: id) { return index + 1 > then }
-                    // 그때 목록(30위) 밖이었다면, 내가 목록 안에 있었을 때만 "아래"라고 안다.
-                    return then <= base.top.count
-                }
-                if !passed.isEmpty {
-                    add(.overtaken(by: passed.map { apps[String($0)]?.name ?? "앱 \($0)" }, myRank: now))
-                }
-            }
         }
-        // 나쁜 소식이 먼저.
-        return alerts.sorted { ($0.kind.isBad ? 0 : 1, $0.keyword.term) < ($1.kind.isBad ? 0 : 1, $1.keyword.term) }
+        // 더 높이 올라선 것이 먼저.
+        return alerts.sorted { rank($0.kind) == rank($1.kind) ? $0.keyword.term < $1.keyword.term : rank($0.kind) < rank($1.kind) }
+    }
+
+    private func rank(_ kind: RankAlert.Kind) -> Int {
+        switch kind {
+        case .climbed(_, let to), .entered(let to): return to
+        }
     }
 
     static func date(fromDayKey key: String, calendar: Calendar = .current) -> Date? {

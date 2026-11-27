@@ -499,12 +499,12 @@ struct ReviewCard: View {
             header
 
             if let title = review.title, !title.isEmpty {
-                Text(title)
+                KoreanText(title)
                     .font(.headline)
                     .textSelection(.enabled)
             }
             if let body = review.body, !body.isEmpty {
-                Text(body)
+                KoreanText(body)
                     .font(.body)
                     .lineLimit(isExpanded ? nil : 4)
                     .textSelection(.enabled)
@@ -518,8 +518,7 @@ struct ReviewCard: View {
                 }
             }
 
-            TranslateToKoreanView(text: review.fullText)
-                .font(.hubCallout)
+            TranslationFooter([review.title, review.body])
 
             if let nickname = review.reviewerNickname, !nickname.isEmpty {
                 Text("— \(nickname)")

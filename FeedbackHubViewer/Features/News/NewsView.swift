@@ -15,12 +15,18 @@ import SwiftUI
 struct NewsView: View {
     @EnvironmentObject private var store: FeedbackStore
     @EnvironmentObject private var news: NewsStore
+    @EnvironmentObject private var keywords: KeywordStore
+    @ObservedObject private var icons = StoreIcons.shared
     @Environment(\.openURL) private var openURL
 
     @State private var category: NewsCategory?
     @State private var project: String?
     /// 화면을 열었을 때의 읽음 시각. 이보다 뒤에 찾은 것에 점을 찍는다.
     @State private var readMark: Date?
+    /// 최근 `NewsStore.recentDays` 일보다 오래된 기록까지 펼쳤나.
+    @State private var showsOlder = false
+    /// 펼친 하루의 "그 밖에".
+    @State private var expanded: Set<String> = []
 
     var body: some View {
         let shown = news.items.filter {
@@ -29,7 +35,7 @@ struct NewsView: View {
         Group {
             if news.items.isEmpty {
                 VStack(spacing: 0) {
-                    briefingCard(news.briefing())
+                    BriefingCard(briefing: news.briefing())
                         .padding(16)
                     emptyState
                 }
@@ -56,63 +62,6 @@ struct NewsView: View {
     }
 
     // MARK: 브리핑
-
-    /// 오늘의 브리핑. 거르기와 상관없이 늘 같은 것 — 무엇을 고르든 "오늘 볼 것" 은 하나다.
-    private func briefingCard(_ briefing: Briefing) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Label(briefing.isEmpty ? "오늘은 볼 만한 게 없어요"
-                                   : "오늘 볼 만한 것 \(briefing.lines.count + briefing.more)개",
-                  systemImage: "newspaper")
-                .font(.title3.weight(.semibold))
-            if briefing.isEmpty {
-                Text("지난 하루 동안 차트 · 링크 · 출시 · 기록 가운데 일부러 볼 만한 일은 없었어요. 일어난 일은 아래 기록에 그대로 쌓입니다.")
-                    .font(.body)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            ForEach(Array(briefing.lines.enumerated()), id: \.element.id) { index, line in
-                Button { open(line) } label: {
-                    HStack(alignment: .firstTextBaseline, spacing: 10) {
-                        Text("\(index + 1)")
-                            .font(.headline.monospacedDigit())
-                            .foregroundStyle(line.kind.category.tint)
-                        VStack(alignment: .leading, spacing: 3) {
-                            Text(line.title)
-                                .font(.headline)
-                                .fixedSize(horizontal: false, vertical: true)
-                            Text("→ \(line.action)")
-                                .font(.body)
-                                .foregroundStyle(Color.accentColor)
-                                .fixedSize(horizontal: false, vertical: true)
-                        }
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-            }
-            if briefing.more > 0 {
-                Text("외 \(briefing.more)개는 아래 기록에 있어요.")
-                    .font(.hubCallout)
-                    .foregroundStyle(.secondary)
-            } else if !briefing.isEmpty {
-                Text("그 밖에는 조용했어요.")
-                    .font(.hubCallout)
-                    .foregroundStyle(.secondary)
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(Platform.cardPadding)
-        .cardSurface()
-    }
-
-    private func open(_ line: Briefing.Line) {
-        if let url = line.url {
-            openURL(url)
-        } else {
-            store.open(project: line.project, section: line.kind.section)
-        }
-    }
 
     // MARK: 거르기
 
@@ -147,69 +96,177 @@ struct NewsView: View {
 
     // MARK: 목록
 
+    /// 하루 안에서 같은 앱 · 같은 종류를 한 줄로 합친 것.
+    private struct NewsGroup: Identifiable {
+        let id: String
+        let items: [NewsItem]
+        var first: NewsItem { items[0] }
+        var count: Int { items.count }
+    }
+
+    /// 하루의 기록을 볼 만한 줄과 조용한 줄(브리핑에 오르지 않는 종류)로 나눈다.
+    private func groups(_ items: [NewsItem]) -> (main: [NewsGroup], quiet: [NewsGroup]) {
+        let grouped = Dictionary(grouping: items) { "\($0.project)|\($0.kind.rawValue)" }
+        let all = grouped.map { key, value in
+            NewsGroup(id: key + "|" + (value.first.map { NewsDetector.day($0.foundAt) } ?? ""),
+                  items: value.sorted { $0.date > $1.date })
+        }
+        // 하루 안에서는 최근 일이 위. 종류 차례로 세우면 아침에 난 경고가 방금 일 위에 눌러앉는다 —
+        // 급한 것은 맨 위 브리핑과 빨간 글씨가 이미 말한다.
+        .sorted { $0.first.date > $1.first.date }
+        return (all.filter { $0.first.kind.briefingRank != nil }, all.filter { $0.first.kind.briefingRank == nil })
+    }
+
     private func list(_ items: [NewsItem]) -> some View {
-        let days = Dictionary(grouping: items) { Calendar.current.startOfDay(for: $0.foundAt) }
+        let cutoff = news.recentCutoff
+        let olderCount = items.filter { $0.foundAt <= cutoff }.count
+        let visible = showsOlder ? items : items.filter { $0.foundAt > cutoff }
+        let days = Dictionary(grouping: visible) { Calendar.current.startOfDay(for: $0.foundAt) }
+        // 화면을 열 때 새로 와 있던 것 — 뱃지가 센 그것들. 날짜 기록 속에 점 하나로 묻히거나
+        // "그 밖에" 로 접히면 뱃지 수만 보이고 어느 것인지 찾을 수 없었다. 맨 위에 따로 모은다.
+        let fresh = readMark.map { mark in items.filter { $0.foundAt > mark } } ?? []
+        let freshGroups = { () -> [NewsGroup] in
+            let split = groups(fresh)
+            return (split.main + split.quiet)
+                .sorted { $0.first.date > $1.first.date }
+                .map { NewsGroup(id: "new|" + $0.id, items: $0.items) }
+        }()
         return List {
+            if !freshGroups.isEmpty {
+                Section {
+                    ForEach(freshGroups) { group in
+                        groupRow(group)
+                    }
+                } header: {
+                    Label("새로 온 소식 \(AppFormat.count(fresh.count))", systemImage: "sparkle")
+                        .font(.body.weight(.semibold))
+                        .foregroundStyle(.purple)
+                }
+            }
             Section {
-                briefingCard(news.briefing())
+                BriefingCard(briefing: news.briefing())
                     .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))
                     .listRowBackground(Color.clear)
             }
             ForEach(days.keys.sorted(by: >), id: \.self) { day in
-                Section("기록 · " + Self.dayTitle(day)) {
-                    ForEach(days[day] ?? []) { item in
-                        Button { open(item) } label: { row(item) }
-                            .buttonStyle(.plain)
+                let split = groups(days[day] ?? [])
+                Section(Self.dayTitle(day)) {
+                    ForEach(split.main) { group in
+                        groupRow(group)
                     }
+                    if !split.quiet.isEmpty {
+                        quietRow(split.quiet, day: day)
+                    }
+                }
+            }
+            if olderCount > 0 {
+                Section {
+                    Button(showsOlder ? "지난 소식 접기"
+                                      : "\(NewsStore.recentDays)일 전 소식 \(AppFormat.count(olderCount))개 보기") {
+                        showsOlder.toggle()
+                    }
+                    .buttonStyle(.borderless)
                 }
             }
         }
     }
 
-    private func row(_ item: NewsItem) -> some View {
-        let tint = item.kind.category.tint
-        let isNew = readMark.map { item.foundAt > $0 } ?? false
-        return HStack(alignment: .top, spacing: 12) {
-            Image(systemName: item.kind.systemImage)
-                .font(.body.weight(.semibold))
-                .foregroundStyle(tint)
-                .frame(width: 32, height: 32)
-                .background(tint.opacity(0.14), in: RoundedRectangle(cornerRadius: 8))
-            VStack(alignment: .leading, spacing: 3) {
-                HStack(spacing: 6) {
-                    Text(store.displayName(for: item.project))
-                    Text("·")
-                    Text(item.kind.category.rawValue)
-                    Spacer(minLength: 4)
-                    Text(item.date, format: .relative(presentation: .named))
-                }
-                .font(.hubCaption)
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
-                Text(item.title)
-                    .font(.headline)
-                    .fixedSize(horizontal: false, vertical: true)
-                if !item.body.isEmpty {
-                    Text(item.body)
-                        .font(.body)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(4)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                if let url = item.url {
-                    Label(url.host() ?? url.absoluteString, systemImage: "arrow.up.right.square")
-                        .font(.hubCaption)
-                        .foregroundStyle(Color.accentColor)
-                        .lineLimit(1)
+    /// 한 줄 — 위는 무슨 일인지(굵게)와 언제인지, 아래는 그 안의 것들(여러 건이면 무엇무엇인지,
+    /// 경고면 할 일). 제목에 앱 이름이 들어 있어 따로 적지 않는다.
+    private func groupRow(_ group: NewsGroup) -> some View {
+        Button { open(group.first) } label: {
+            HStack(alignment: .top, spacing: 10) {
+                newsIcon(project: group.first.project, kind: group.first.kind, size: 32)
+                VStack(alignment: .leading, spacing: 3) {
+                    HStack(alignment: .firstTextBaseline, spacing: 8) {
+                        Text(title(group))
+                            .font(.body.weight(.semibold))
+                            .foregroundStyle(group.first.kind.tone == .bad ? Color.red : Color.primary)
+                            .lineLimit(2)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                        if isNew(group) {
+                            Circle().fill(Color.accentColor).frame(width: 8, height: 8)
+                                .accessibilityLabel("새 소식")
+                        }
+                        Text(AppFormat.relative(group.first.date))
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                            .monospacedDigit()
+                            .fixedSize()
+                    }
+                    if let detail = detail(group) {
+                        Text(detail)
+                            .font(.callout)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(2)
+                    }
                 }
             }
-            if isNew {
-                Circle().fill(Color.accentColor).frame(width: 8, height: 8).padding(.top, 6)
-                    .accessibilityLabel("새 소식")
+            .padding(.vertical, 4)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    /// 둘째 줄. 묶인 줄은 낱낱의 요지("'UI패턴' 검색 1위 · '내비게이션바' 검색 3위"),
+    /// 한 건이면 경고일 때만 할 일. 나머지 한 건짜리 설명은 제목을 되풀이할 뿐이라 싣지 않는다.
+    private func detail(_ group: NewsGroup) -> String? {
+        if group.count > 1 {
+            return group.items.map { item in
+                let title = store.currentWording(item.title, project: item.project)
+                guard let range = title.range(of: " · ") else { return title }
+                return String(title[range.upperBound...])
+            }
+            .joined(separator: " · ")
+        }
+        guard group.first.kind.tone == .bad, !group.first.body.isEmpty else { return nil }
+        return group.first.body
+    }
+
+    /// 브리핑에 오르지 않는 일(심사 시작 · 차트에서 빠짐 · 새 나라 설치)은 하루에 한 줄로 접는다.
+    @ViewBuilder
+    private func quietRow(_ quiet: [NewsGroup], day: Date) -> some View {
+        let id = "quiet|" + NewsDetector.day(day)
+        let isOpen = expanded.contains(id)
+        let total = quiet.reduce(0) { $0 + $1.count }
+        Button {
+            if isOpen { expanded.remove(id) } else { expanded.insert(id) }
+        } label: {
+            HStack(spacing: 10) {
+                Image(systemName: "ellipsis.circle")
+                    .font(.title3)
+                    .foregroundStyle(.secondary)
+                    .frame(width: 32)
+                Text("그 밖에 \(AppFormat.count(total))건")
+                    .font(.body)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                Image(systemName: isOpen ? "chevron.up" : "chevron.down")
+                    .foregroundStyle(.secondary)
+                    .frame(width: 28)
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        if isOpen {
+            ForEach(quiet) { group in
+                groupRow(group)
             }
         }
-        .padding(.vertical, 4)
-        .contentShape(Rectangle())
+    }
+
+    private func newsIcon(project: String, kind: NewsKind, size: CGFloat) -> some View {
+        NewsIcon(project: project, kind: kind, size: size)
+    }
+
+    private func title(_ group: NewsGroup) -> String {
+        guard group.count > 1 else { return store.currentWording(group.first.title, project: group.first.project) }
+        return Briefing.mergedTitle(group.first.kind, app: store.displayName(for: group.first.project), count: group.count)
+    }
+
+    private func isNew(_ group: NewsGroup) -> Bool {
+        guard let readMark else { return false }
+        return group.items.contains { $0.foundAt > readMark }
     }
 
     private func open(_ item: NewsItem) {

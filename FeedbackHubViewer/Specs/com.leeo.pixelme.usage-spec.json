@@ -1,0 +1,23 @@
+{
+  "$comment": [
+    "FeedbackHubViewer 가 이 앱의 통계를 읽는 스펙. 원본은 이 파일이고, 허브는 scripts/sync-stats-specs.sh 로 복사해 간다.",
+    "release.coreAction 은 품질 탭의 '핵심 기능' 칸과 릴리즈 건강 카드가 읽는다. 이벤트 이름을 바꾸면 여기도 같이 바꿀 것."
+  ],
+  "specVersion": 1,
+  "appId": "com.leeo.PixelMe",
+  "appName": "한땀",
+  "eventLabels": {
+    "pattern_photo_picked": "도안 사진을 고름",
+    "onboarding_done": "온보딩 마침",
+    "onboarding_skipped": "온보딩 건너뜀"
+  },
+  "release": {
+    "coreAction": {
+      "label": "사진으로 도안을 만든 사람",
+      "events": [
+        "pattern_photo_picked"
+      ],
+      "note": "사진을 골라야 자기만의 십자수 도안이 생긴다."
+    }
+  }
+}

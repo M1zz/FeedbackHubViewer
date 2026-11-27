@@ -25,8 +25,6 @@ struct AppListView: View {
     @ObservedObject private var changes = SectionChanges.shared
     /// 마케팅 칸의 "올렸나요?" 뱃지.
     @ObservedObject private var marketing = MarketingStore.shared
-    /// 질문 찾기 칸의 새 질문 뱃지.
-    @ObservedObject private var leadStore = LeadStore.shared
     /// 맥 전용 앱처럼 키워드 칸이 못 찾은 앱의 아이콘.
     @ObservedObject private var icons = StoreIcons.shared
     /// App Store 와 손수 이을 앱(오른쪽 클릭 메뉴).
@@ -40,11 +38,14 @@ struct AppListView: View {
     var body: some View {
         let metrics = SectionMetrics(store: store, keywords: keywords, purchases: purchases, design: design, charts: charts, news: news)
         let traffic = section == .stats ? store.trafficByProject : [:]
-        // 뱃지가 선 앱이 언제나 맨 위 — 볼 것을 찾아다니지 않게. 그 안과 나머지는 MAU 순
-        // 그대로(릴리즈는 빨강 먼저). 눌러 고른 앱은 뱃지가 사라져도 떠날 때까지 자리를 지킨다.
-        let base = section == .release
-            ? store.redFirst(store.projectCounts, key: { $0.key })
-            : store.projectCounts
+        // 뱃지가 선 앱이 언제나 맨 위 — 볼 것을 찾아다니지 않게. 그 안과 나머지는 칸마다 손댈 것이
+        // 많은 앱부터(`SectionMetrics.sortKey`), 같으면 MAU 순. 눌러 고른 앱은 뱃지가 사라져도
+        // 떠날 때까지 자리를 지킨다.
+        let keys = Dictionary(uniqueKeysWithValues: store.projectCounts.map { ($0.key, metrics.sortKey(section, project: $0.key)) })
+        let base = store.projectCounts.enumerated().sorted {
+            let (a, b) = (keys[$0.element.key] ?? nil, keys[$1.element.key] ?? nil)
+            return a == b ? $0.offset < $1.offset : (a ?? 0) > (b ?? 0)
+        }.map(\.element)
         let flagged = Set(base.map(\.key).filter {
             (metrics.badge(section, project: $0) ?? visitBadge($0)) != nil || ($0 == held && $0 == store.selectedProject)
         })
@@ -77,6 +78,9 @@ struct AppListView: View {
             }
         }
         .animation(.default, value: entries.map(\.key))
+        // 칸을 바꾸면 목록을 새로 — 같은 목록이 새 칸의 차례로 줄을 섞으며 날아다니지 않게.
+        // 줄이 움직이는 애니메이션은 한 칸 안에서 차례가 바뀔 때만(뱃지가 서거나 질 때).
+        .id(section)
         .onChange(of: section) { held = nil }
         .hubSidebarListStyle()
         .modifier(PushedTitle(title: section.rawValue, isPushed: pushes))
@@ -95,6 +99,7 @@ struct AppListView: View {
         let isSelected = !pushes && store.selectedProject == project
         let content = AppRow(
             name: project.map(store.displayName(for:)) ?? "전체 앱",
+            platform: project.flatMap(store.platformTag(for:)),
             iconURL: project.flatMap { icons.url(for: $0, keywords: keywords) },
             systemImage: project == nil ? "square.grid.2x2"
                 : project == Feedback.unclassifiedProject ? "questionmark.folder" : "app.dashed",
@@ -102,7 +107,11 @@ struct AppListView: View {
                 : project == Feedback.unclassifiedProject ? .secondary : .accentColor,
             detail: metrics.label(section, project: project),
             isAlarming: metrics.isAlarming(section, project: project),
-            badge: metrics.badge(section, project: project) ?? visitBadge(project),
+            // 줄의 빨간 숫자는 사이드바 · 탭 뱃지가 세는 것만 — 이미 본 바뀜(`visitBadge`)과 옆 탭의
+            // 뱃지("차트 1")까지 달면 같은 일이 세 자리에 다른 수로 서서 무엇을 세는지 알 수 없었다.
+            // 본 바뀜은 화면 맨 위 "지난번 본 뒤 바뀐 것" 이, 옆 탭은 탭 이름 옆 뱃지가 말한다.
+            // (본 바뀜이 있는 앱은 목록 위쪽에 남는다 — 차례는 그대로.)
+            badge: metrics.badge(section, project: project),
             release: section == .release ? project.flatMap(store.releaseLevel(for:)) : nil,
             stats: section == .stats ? StatsGlance(traffic: traffic, cycle: project.flatMap(store.usageCycle(for:))) : nil,
             isSelected: isSelected)
@@ -113,6 +122,7 @@ struct AppListView: View {
             Button {
                 let hasBadge = project.flatMap { metrics.badge(section, project: $0) ?? visitBadge($0) } != nil
                 held = hasBadge ? project : nil
+                // 전체 앱을 골라도 보던 칸(앱 내 구입 등)을 모든 앱으로 넓혀 본다 — 대시보드는 맨 위 전환으로.
                 store.selectedProject = project
             } label: { content }
                 .buttonStyle(.plain)
@@ -220,12 +230,16 @@ struct StatsGlance {
 /// 앱 한 줄. 두 줄이고 말은 평범하게 — 이름, 그리고 이 기능이 이 앱에 대해 하는 한마디.
 private struct AppRow: View {
     let name: String
+    /// iOS 가 아니면 그 OS("macOS"). 이름 옆에 회색으로.
+    var platform: String?
     var iconURL: URL?
     let systemImage: String
     let tint: Color
     let detail: String
     let isAlarming: Bool
     let badge: SectionMetrics.Badge?
+    /// 옆 탭에 선 뱃지 — "키워드 1".
+    var elsewhere: String? = nil
     let release: ReleaseHealth.Level?
     let stats: StatsGlance?
     let isSelected: Bool
@@ -236,10 +250,21 @@ private struct AppRow: View {
 
             // 자르지 않는다 — 길면 줄을 넘긴다.
             VStack(alignment: .leading, spacing: 3) {
-                Text(name)
-                    .font(.body.weight(isSelected ? .semibold : .medium))
-                    .lineLimit(2)
-                    .fixedSize(horizontal: false, vertical: true)
+                HStack(alignment: .firstTextBaseline, spacing: 6) {
+                    Text(name)
+                        .font(.body.weight(isSelected ? .semibold : .medium))
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
+                    if let platform {
+                        Tag(text: platform, isCompact: true)
+                    }
+                    if let action = badge?.action {
+                        Tag(text: action, tint: badge?.tint, isCompact: true)
+                    }
+                    if let elsewhere {
+                        Tag(text: elsewhere, tint: .red, isCompact: true)
+                    }
+                }
                 HStack(spacing: 5) {
                     ReleaseDot(level: release)
                     Text(detail)
@@ -253,7 +278,7 @@ private struct AppRow: View {
 
             Spacer(minLength: 8)
 
-            if let badge {
+            if let badge, badge.action == nil {
                 CountBadge(count: badge.count, systemImage: badge.systemImage,
                            tint: badge.tint, name: badge.name)
             }

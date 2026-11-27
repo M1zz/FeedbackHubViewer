@@ -14,8 +14,16 @@ struct ReleaseHealthView: View {
     @EnvironmentObject private var store: FeedbackStore
     @EnvironmentObject private var keywords: KeywordStore
     @EnvironmentObject private var connect: AppStoreConnectStore
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// nil == 전체 프로젝트.
     let project: String?
+
+    /// 카드가 위에서부터 차례로 떠오르고, 판정 순서 · 스토어 상태가 바뀌면 줄이 미끄러져 자리를 바꾼다.
+    private var motion: Animation? { reduceMotion ? nil : .snappy(duration: 0.35) }
+
+    private func appear(_ index: Int) -> FadeIn<String> {
+        FadeIn(enabled: !reduceMotion, key: project ?? "", delay: Double(index) * 0.06)
+    }
 
     #if os(macOS)
     private let contentPadding: CGFloat = 16
@@ -27,12 +35,12 @@ struct ReleaseHealthView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 12) {
                 if let project {
-                    StoreVersionCard(project: project)
-                    ReleaseHealthCard(project: project)
-                    StabilizationCard(project: project)
+                    StoreVersionCard(project: project).modifier(appear(0))
+                    ReleaseHealthCard(project: project).modifier(appear(1))
+                    StabilizationCard(project: project).modifier(appear(2))
                 } else {
                     overview
-                    StabilizationOverview()
+                    StabilizationOverview().modifier(appear(2))
                 }
             }
             .padding(contentPadding)
@@ -90,6 +98,7 @@ struct ReleaseHealthView: View {
                 }
                 .padding(Platform.cardPadding)
                 .cardSurface()
+                .modifier(appear(0))
             }
 
             if !rows.unjudged.isEmpty {
@@ -104,8 +113,12 @@ struct ReleaseHealthView: View {
                 }
                 .padding(Platform.cardPadding)
                 .cardSurface()
+                .modifier(appear(1))
             }
         }
+        // 판정이 무거운 순서 · 스토어 상태가 바뀌면(차례로 묻는 중에도) 줄이 제자리로 미끄러진다.
+        .animation(motion, value: rows.judged.map { "\($0.key)|\($0.report!.verdict.level)" })
+        .animation(motion, value: connect.versions.mapValues(\.stateLabel))
     }
 
     private func appRow(_ row: Row) -> some View {
@@ -215,6 +228,7 @@ struct StoreVersionTag: View {
 /// 한 앱의 릴리즈 탭 맨 위. 건강 판정은 사용 이벤트에서, 이것은 App Store Connect 에서 온다.
 private struct StoreVersionCard: View {
     @EnvironmentObject private var connect: AppStoreConnectStore
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let project: String
     /// 물어본 앱. 답을 못 받은 것과 아직 묻는 중인 것을 가른다.
     @State private var askedProject: String?
@@ -225,6 +239,7 @@ private struct StoreVersionCard: View {
                 .font(.headline)
             if let status = connect.versions[project] {
                 StoreVersionTag(status: status, font: .body.weight(.semibold))
+                    .transition(.opacity.combined(with: .scale(scale: 0.9)))
             } else {
                 Text(emptyMessage)
                     .font(.body)
@@ -234,6 +249,7 @@ private struct StoreVersionCard: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(Platform.cardPadding)
         .cardSurface()
+        .animation(reduceMotion ? nil : .snappy(duration: 0.3), value: connect.versions[project]?.stateLabel)
         .task(id: project) {
             await connect.loadVersion(bundleID: project)
             askedProject = project

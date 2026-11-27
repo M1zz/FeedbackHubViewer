@@ -81,11 +81,23 @@ enum CacheFile {
         return directory.appendingPathComponent("\(name)\(suffix).json")
     }
 
+    /// 열쇠 차례를 고정한다 — 같은 값이면 같은 바이트라, 기기 사이에서 견줄 때
+    /// (`CacheFileBundle`) 내용이 같은 파일을 다르다고 보지 않는다.
+    static var encoder: JSONEncoder {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = .sortedKeys
+        return encoder
+    }
+
+    /// 파일을 썼다 — `object` 는 파일 이름(확장자 없이). 기기 사이에 나누는 캐시가 듣는다.
+    static let didWrite = Notification.Name("CacheFile.didWrite")
+
     /// Encode and write where the caller stands. Atomic, so a write cut short
     /// leaves the previous file rather than half of a new one.
     static func write<Value: Encodable>(_ value: Value, to url: URL?) {
-        guard let url, let data = try? JSONEncoder().encode(value) else { return }
-        try? data.write(to: url, options: .atomic)
+        guard let url, let data = try? encoder.encode(value) else { return }
+        guard (try? data.write(to: url, options: .atomic)) != nil else { return }
+        NotificationCenter.default.post(name: didWrite, object: url.deletingPathExtension().lastPathComponent)
     }
 
     /// Decode what is there, or nil when the file is absent, unreadable, or

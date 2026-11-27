@@ -25,8 +25,6 @@ struct PhoneRootView: View {
     @ObservedObject private var changes = SectionChanges.shared
     /// 마케팅 칸의 "올렸나요?" 뱃지.
     @ObservedObject private var marketing = MarketingStore.shared
-    /// 질문 찾기 칸의 새 질문 뱃지.
-    @ObservedObject private var leadStore = LeadStore.shared
 
     var body: some View {
         let metrics = SectionMetrics(store: store, keywords: keywords, purchases: purchases, design: design, charts: charts, news: news)
@@ -69,7 +67,6 @@ private struct PhoneTab: View {
     @EnvironmentObject private var news: NewsStore
     @ObservedObject private var changes = SectionChanges.shared
     @ObservedObject private var marketing = MarketingStore.shared
-    @ObservedObject private var leadStore = LeadStore.shared
     let tab: FeedbackStore.PhoneTab
 
     var body: some View {
@@ -88,6 +85,10 @@ private struct PhoneTab: View {
                 .navigationDestination(for: FeedbackStore.ProjectRoute.self) { route in
                     ProjectSectionView(project: route.project,
                                        section: route.section ?? tab.sections.first ?? .inbox)
+                        .hubToolbar()
+                }
+                .navigationDestination(for: FeedbackStore.AppRoute.self) { route in
+                    AppHomeView(project: route.project)
                         .hubToolbar()
                 }
                 .navigationDestination(for: Feedback.self) { feedback in
@@ -111,6 +112,16 @@ private struct PhoneTab: View {
     private var root: some View {
         if tab == .overview {
             PhoneOverviewView()
+        } else if tab == .today {
+            // 할 일 탭은 곧바로 할 일(손볼 것 + 알아 둘 것). 소식은 오른쪽 위에서.
+            ProjectSectionView(project: nil, section: .inbox)
+                .toolbar {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        NavigationLink(value: FeedbackStore.ProjectRoute(project: nil, section: .news)) {
+                            Label("소식", systemImage: "newspaper")
+                        }
+                    }
+                }
         } else {
             sectionList
         }
@@ -131,11 +142,11 @@ private struct PhoneTab: View {
         return List {
             ForEach(tab.groups) { group in
                 Section {
-                    ForEach(group.phoneSections) { section in
+                    ForEach(group.hosts) { section in
                         link(section) {
                             FeatureRow(section: section,
                                        detail: metrics.label(section, project: nil),
-                                       badge: metrics.badge(section, project: nil),
+                                       badge: metrics.hostBadge(section, project: nil),
                                        isSelected: false)
                         }
                     }

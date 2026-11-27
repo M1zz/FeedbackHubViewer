@@ -288,24 +288,73 @@ actor AppStoreConnect {
     /// 20분이 한도라 15분짜리를 만들어 두고 돌려 쓴다.
     func bearer() throws -> String {
         if let token, token.expires > Date().addingTimeInterval(60) { return token.value }
+        let made = try makeToken()
+        token = made
+        return made.value
+    }
+
+    /// 팀 키로 서명한 JWT. App Store Server API(`requestTestNotification`)는 같은 키에
+    /// 번들 ID(`bid`)를 하나 더 붙여야 받는다.
+    private func makeToken(bundleID: String? = nil) throws -> (value: String, expires: Date) {
         let key = try P256.Signing.PrivateKey(
             pemRepresentation: credentials.privateKey.trimmingCharacters(in: .whitespacesAndNewlines))
         let now = Date()
         let expires = now.addingTimeInterval(15 * 60)
         let header = ["alg": "ES256", "kid": credentials.keyID.trimmingCharacters(in: .whitespaces), "typ": "JWT"]
-        let payload: [String: Any] = [
+        var payload: [String: Any] = [
             "iss": credentials.issuerID.trimmingCharacters(in: .whitespaces),
             "iat": Int(now.timeIntervalSince1970),
             "exp": Int(expires.timeIntervalSince1970),
             "aud": "appstoreconnect-v1"
         ]
+        if let bundleID { payload["bid"] = bundleID }
         let head = try Self.base64URL(JSONSerialization.data(withJSONObject: header))
         let body = try Self.base64URL(JSONSerialization.data(withJSONObject: payload))
         let input = Data("\(head).\(body)".utf8)
         let signature = try key.signature(for: input).rawRepresentation
-        let value = "\(head).\(body).\(Self.base64URL(signature))"
-        token = (value, expires)
-        return value
+        return ("\(head).\(body).\(Self.base64URL(signature))", expires)
+    }
+
+    // MARK: 결제 알림 시험
+
+    /// Apple 에 그 앱의 시험 알림(TEST)을 보내 달라고 한다. Apple 은 앱에 적힌 서버 알림 주소로
+    /// 보내고, 서버(app-portfolio `services/purchase-notify`)가 허브에 Purchase 를 남겨 아이폰 · 맥에
+    /// 푸시가 뜬다 — 실제 결제 없이 결제 알림 길 전체를 한 번에 시험한다.
+    ///
+    /// **운영(Production) 쪽으로 보낸다.** 서버는 샌드박스 소식을 버린다(시험 구독 갱신이 몇 분마다 쏟아져서,
+    /// 2026-11-27). 샌드박스로 시험하면 서버가 받고도 버려서 푸시가 절대 오지 않았다. 운영의 TEST 는 결제가 아니다.
+    /// 돌려주는 값은 Apple 의 시험 토큰 — `testNotificationStatus` 로 서버에 닿았는지 묻는다.
+    @discardableResult
+    func requestTestNotification(bundleID: String) async throws -> String? {
+        var request = URLRequest(url: URL(string: "\(Self.storeKitServer)/inApps/v1/notifications/test")!)
+        request.httpMethod = "POST"
+        request.setValue("Bearer \(try makeToken(bundleID: bundleID).value)", forHTTPHeaderField: "Authorization")
+        let (data, response) = try await URLSession.shared.data(for: request)
+        let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+        if (200..<300).contains(status) {
+            return (try? JSONSerialization.jsonObject(with: data) as? [String: Any])?["testNotificationToken"] as? String
+        }
+        if status == 404 {
+            throw Failure.http(404, "이 앱에는 서버 알림 주소가 없습니다. 막 넣었다면 몇 분 뒤에 다시 해 보세요")
+        }
+        let message = (try? JSONSerialization.jsonObject(with: data) as? [String: Any])?["errorMessage"] as? String
+        if status == 401 { throw Failure.unauthorized }
+        throw Failure.http(status, message)
+    }
+
+    static let storeKitServer = "https://api.storekit.itunes.apple.com"
+
+    /// Apple 이 시험 알림을 서버에 보낸 결과 — "SUCCESS" 면 서버가 2xx 로 받았다.
+    /// 아직 보내기 전이면 nil. 실패는 Apple 의 말 그대로(TIMED_OUT · NO_RESPONSE · UNSUCCESSFUL_HTTP_RESPONSE_CODE …).
+    func testNotificationStatus(token: String, bundleID: String) async throws -> String? {
+        var request = URLRequest(url: URL(string: "\(Self.storeKitServer)/inApps/v1/notifications/test/\(token)")!)
+        request.setValue("Bearer \(try makeToken(bundleID: bundleID).value)", forHTTPHeaderField: "Authorization")
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard (response as? HTTPURLResponse)?.statusCode == 200,
+              let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] else { return nil }
+        let attempts = json["sendAttempts"] as? [[String: Any]] ?? []
+        if let last = attempts.last?["sendAttemptResult"] as? String { return last }
+        return json["firstSendAttemptResult"] as? String
     }
 
     private static func base64URL(_ data: Data) -> String {
@@ -388,7 +437,9 @@ actor AppStoreConnect {
 
     func app(bundleID: String) async throws -> ConnectApp {
         let doc = try await list("v1/apps", ["filter[bundleId]": bundleID, "fields[apps]": "name,bundleId"])
-        guard let app = doc.data.first(where: { $0.string("bundleId") == bundleID }) ?? doc.data.first else {
+        // 꼭 같은 번들 ID 만. 예전에는 없으면 목록의 첫 앱을 썼는데, 그러면 다른 앱의
+        // 상품 · 상태 · 가격이 이 앱 것처럼 보였다.
+        guard let app = doc.data.first(where: { $0.string("bundleId") == bundleID }) else {
             throw Failure.appNotFound(bundleID)
         }
         return ConnectApp(id: app.id, name: app.string("name") ?? bundleID, bundleID: bundleID)
@@ -468,7 +519,8 @@ actor AppStoreConnect {
             return nil
         }
 
-        let schedule = try await single("v2/inAppPurchases/\(product.id)/iapPriceSchedule")
+        let schedule = try await single("v2/inAppPurchases/\(product.id)/iapPriceSchedule",
+                                        ["include": "baseTerritory"])
         let doc = try await list("v1/inAppPurchasePriceSchedules/\(schedule.id)/manualPrices", [
             "include": "inAppPurchasePricePoint,territory",
             "fields[inAppPurchasePricePoints]": "customerPrice",
@@ -491,12 +543,14 @@ actor AppStoreConnect {
            let text = Self.formatPrice(korean, point: "inAppPurchasePricePoint", in: automatic) {
             return text
         }
-        guard let chosen = current.first else { return nil }
+        // 그래도 없으면 기준 국가의 가격 — 아무 나라나 집으면 엉뚱한 통화 · 금액이 나왔다.
+        let base = schedule.relationshipID("baseTerritory")
+        guard let chosen = current.first(where: { $0.relationshipID("territory") == base }) ?? current.first else { return nil }
         return Self.formatPrice(chosen, point: "inAppPurchasePricePoint", in: doc)
     }
 
-    func single(_ path: String) async throws -> ASCResource {
-        let (data, status) = try await send(url(path))
+    func single(_ path: String, _ query: [String: String] = [:]) async throws -> ASCResource {
+        let (data, status) = try await send(url(path, query))
         try check(data, status)
         guard let doc = try? JSONDecoder().decode(ASCSingleDocument.self, from: data) else { throw Failure.decoding }
         return doc.data

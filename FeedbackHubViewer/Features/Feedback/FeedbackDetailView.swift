@@ -9,6 +9,8 @@ import SwiftUI
 
 struct FeedbackDetailView: View {
     @EnvironmentObject private var store: FeedbackStore
+    @EnvironmentObject private var purchases: AppStoreConnectStore
+    @ObservedObject private var giftPools = GiftCodePool.shared
     let feedback: Feedback
     /// Resolved project/app name (appId → appName mapping applied by the store).
     let projectLabel: String
@@ -43,17 +45,24 @@ struct FeedbackDetailView: View {
                 triageSection
 
                 if !feedback.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                    section(title: "내용", accessory: {
+                    section(title: feedback.isVoice ? "답" : "내용", accessory: {
                         CopyButton(text: feedback.text, title: "내용 복사")
                     }) {
-                        Text(feedback.text)
+                        if let question = feedback.voiceQuestion {
+                            VoiceQuestionLine(question: question, font: .body)
+                        }
+                        // Feedback comes in whatever language its writer speaks;
+                        // it is shown in Korean, with the original one tap away.
+                        KoreanText(feedback.text)
                             .font(.title3)
                             .textSelection(.enabled)
                             .frame(maxWidth: .infinity, alignment: .leading)
-                        // Feedback comes in whatever language its writer speaks;
-                        // this puts Korean under it without leaving the app.
-                        TranslateToKoreanView(text: feedback.text)
+                        TranslationFooter([feedback.text])
                     }
+                }
+
+                if !feedback.screenshotKeys.isEmpty {
+                    FeedbackScreenshotsSection(feedback: feedback)
                 }
 
                 metadataGrid
@@ -107,12 +116,18 @@ struct FeedbackDetailView: View {
             store.markRead(feedback)
             noteDraft = store.note(for: feedback)
             replyState = .idle
-            sentReply = await store.reply(for: feedback)
+            sentReply = await store.reply(for: feedback)?.message
             replyDraft = sentReply ?? ""
         }
-        .onChange(of: noteDraft) { _, draft in
-            guard draft != store.note(for: feedback) else { return }
-            store.setNote(draft, for: feedback)
+        // 메모는 치다 멈췄을 때 한 번 저장한다. `onChange` 에서 바로 쓰면 맥의 TextField 가
+        // 화면을 그리는 도중에 글을 넘길 때 스토어가 바뀌어 "view update 중 publish" 경고가 났고,
+        // 글자마다 iCloud 로 올렸다. 값은 시작할 때 잡는다 — 다른 피드백으로 넘어가며 취소된
+        // 작업이 새 피드백의 메모를 옛 피드백에 쓰지 않게. 취소돼도(다음 글자 · 화면 닫힘) 저장한다.
+        .task(id: noteDraft) {
+            let draft = noteDraft, target = feedback
+            try? await Task.sleep(for: .milliseconds(400))
+            guard draft != store.note(for: target) else { return }
+            store.setNote(draft, for: target)
         }
         #if os(iOS)
         // 맥에는 툴바 단추를 두지 않는다. 맥의 상세는 가운데 칸 옆에 나란히 서서
@@ -149,7 +164,7 @@ struct FeedbackDetailView: View {
     private var shareText: String {
         var lines = ["[\(projectLabel)] \(feedback.createdAtDisplay)"]
         if let rating = feedback.rating { lines.append("별점: \(rating)/5") }
-        if let type = feedback.feedbackType, !type.isEmpty { lines.append("유형: \(type)") }
+        if let type = feedback.typeLabel { lines.append("유형: \(type)") }
         lines.append("")
         lines.append(feedback.text)
         let status = store.status(of: feedback)
@@ -218,9 +233,15 @@ struct FeedbackDetailView: View {
     private var statusBinding: Binding<FeedbackStatus> {
         Binding(get: { store.status(of: feedback) },
                 set: { status in
-                    // Animated because the list behind this screen drops the
-                    // row as soon as the decision lands.
-                    withAnimation { store.setStatus(status, note: noteDraft, for: feedback) }
+                    // 맥의 세그먼트 Picker 는 화면을 그리는 도중에도 바인딩을 쓴다 — 바뀐 것만,
+                    // 그리기가 끝난 뒤에 스토어로 넘긴다.
+                    guard status != store.status(of: feedback) else { return }
+                    let note = noteDraft, target = feedback
+                    Task { @MainActor in
+                        // Animated because the list behind this screen drops the
+                        // row as soon as the decision lands.
+                        withAnimation { store.setStatus(status, note: note, for: target) }
+                    }
                 })
     }
 
@@ -229,7 +250,9 @@ struct FeedbackDetailView: View {
             HStack(spacing: 8) {
                 Label(projectLabel, systemImage: "square.grid.2x2")
                     .font(.title3.weight(.semibold))
-                if let type = feedback.feedbackType, !type.isEmpty {
+                if feedback.isVoice {
+                    VoiceTags(feedback: feedback, font: .hubSubheadline)
+                } else if let type = feedback.typeLabel {
                     Tag(text: type, tint: .teal)
                 }
                 StatusChip(status: store.status(of: feedback))
@@ -251,7 +274,7 @@ struct FeedbackDetailView: View {
     /// Reply that lands in the sender's app (Settings > 보낸 의견). Works
     /// without an email address, which most feedback does not carry.
     private var replySection: some View {
-        section(title: sentReply == nil ? "답장" : "답장 (보냄)") {
+        section(title: sentReply == nil ? "답장" : replyReadAt == nil ? "답장 (보냄)" : "답장 (읽음)") {
             VStack(alignment: .leading, spacing: 8) {
                 TextEditor(text: $replyDraft)
                     .font(.body)
@@ -268,15 +291,51 @@ struct FeedbackDetailView: View {
                         .disabled(replyDraft.trimmed.isEmpty || replyState == .sending
                                   || replyDraft.trimmed == sentReply)
                 }
+                giftRow
             }
+        }
+        .task(id: feedback.appId) {
+            guard let bundle = feedback.appId else { return }
+            for key in GiftCodePool.poolKeys(for: bundle) { await giftPools.refresh(key, connect: purchases) }
         }
     }
 
+    /// 쓸모 있는 의견을 채택하고 선물을 보낸다 — 그 사람의 첫 채택은 Plus, 그다음부터 Pro.
+    /// 답장 글과 함께 간다. 코드는 싣지 않고, 앱이 묶음에서 꺼낸다(LeeoKit `LeeoFeedbackGift`).
+    @ViewBuilder
+    private var giftRow: some View {
+        if let tier = store.gifted[feedback.id] {
+            Label("채택하고 \(tier) 선물을 보냈어요 · 사용자 앱의 보낸 의견에서 받아요", systemImage: "gift.fill")
+                .font(.body)
+                .foregroundStyle(.secondary)
+        } else if let offer = store.giftOffer(for: feedback, connect: purchases) {
+            HStack {
+                Text(store.hasBeenGifted(feedback)
+                     ? "이 사람은 전에 채택된 적이 있어 \(offer.tier) 를 보내요"
+                     : "이 사람의 첫 채택이라 \(offer.tier) 를 보내요")
+                    .font(.body)
+                    .foregroundStyle(.secondary)
+                Spacer()
+                Button("채택하고 \(offer.tier) 선물") { sendReply(gift: offer) }
+                    .disabled(replyDraft.trimmed.isEmpty || replyState == .sending)
+            }
+        } else if feedback.appId != nil {
+            Text("선물 코드 묶음이 비어 있어 채택 선물을 보낼 수 없어요 · 앱 내 구입 화면의 선물 묶음을 채우세요")
+                .font(.body)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    /// 사용자가 이 답장을 읽은 시각 — 허브의 읽음 확인. 스토어가 10분마다 새로 보니 여기 상태로 두지 않는다.
+    private var replyReadAt: Date? { store.replyReadAt(feedback) }
+
     private var replyStatusText: String {
         switch replyState {
-        case .idle: return "사용자 앱의 설정 > 보낸 의견에 보여요"
+        case .idle:
+            if let replyReadAt { return "사용자가 읽었어요 · \(AppFormat.dateTime(replyReadAt))" }
+            return sentReply == nil ? "사용자 앱의 설정 > 보낸 의견에 보여요" : "보냈어요 · 아직 안 읽었어요"
         case .sending: return "보내는 중…"
-        case .sent: return "보냈어요"
+        case .sent: return "보냈어요 · 사용자가 열어 보면 읽음이 떠요"
         case .failed(let message): return message
         }
     }
@@ -286,12 +345,12 @@ struct FeedbackDetailView: View {
         return false
     }
 
-    private func sendReply() {
+    private func sendReply(gift: CloudKitService.ReplyGift? = nil) {
         let message = replyDraft.trimmed
         replyState = .sending
         Task {
             do {
-                try await store.sendReply(message, for: feedback)
+                try await store.sendReply(message, for: feedback, gift: gift)
                 sentReply = message
                 replyState = .sent
             } catch {

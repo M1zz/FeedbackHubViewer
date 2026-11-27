@@ -27,10 +27,6 @@ struct FeatureListView: View {
     @ObservedObject private var changes = SectionChanges.shared
     /// 마케팅 칸의 "올렸나요?" 뱃지.
     @ObservedObject private var marketing = MarketingStore.shared
-    /// 질문 찾기 칸의 새 질문 뱃지.
-    @ObservedObject private var leadStore = LeadStore.shared
-    /// "확인할 것" 에서 눌러 고른 칸. 뱃지가 사라져도 떠날 때까지 그 자리에 둔다.
-    @State private var held: FeedbackStore.ProjectSection?
 
     var body: some View {
         let metrics = SectionMetrics(store: store, keywords: keywords, purchases: purchases, design: design, charts: charts, news: news)
@@ -53,6 +49,21 @@ struct FeatureListView: View {
                 }
             }
 
+            // 모든 앱을 카드로 편 첫 화면(`AppGridHome`) — 맨 위, 다른 칸과 같은 줄 모양 · 같은 선택 표시.
+            // 예전에는 앱 고르기 옆의 작은 글자 단추였고, 홈에 있으면 흐리게 꺼져 눌리지 않았다.
+            if !store.usesStackNavigation {
+                Section {
+                    Button {
+                        store.goHome()
+                    } label: {
+                        HomeRow(appCount: store.projectCounts.filter { $0.key != Feedback.unclassifiedProject }.count,
+                                isSelected: store.showsHome)
+                    }
+                    .buttonStyle(.plain)
+                    .listRowBackground(Rectangle().fill(store.showsHome ? AnyShapeStyle(.tint.opacity(0.14)) : AnyShapeStyle(.clear)))
+                }
+            }
+
             // 읽어서 사라지는 뱃지를 한 번에(`BadgeReset`). 할 일 · 올렸나요는 남는다.
             let readable = BadgeReset.readableCount(metrics)
             if readable > 0 {
@@ -68,33 +79,16 @@ struct FeatureListView: View {
                 }
             }
 
-            // 뱃지가 달린 칸은 맨 위 "확인할 것" 으로 올린다. 뱃지가 사라지고 그 칸을 떠나면 제 무리의
-            // 제자리로 — 누르자마자 줄이 도망가면 무엇을 골랐는지 볼 수 없다.
-            // 할 일은 이미 맨 위 한 줄이라 그대로 둔다.
-            let flagged = flagged(metrics)
-            if !flagged.isEmpty {
-                Section("확인할 것") {
-                    ForEach(flagged) { section in
-                        row(section, metrics: metrics)
-                    }
-                }
+            Section {
+                AppFocusPicker()
             }
 
-            ForEach(FeedbackStore.ProjectSection.Group.allCases) { group in
-                let sections = group.sections.filter { !flagged.contains($0) }
-                if !sections.isEmpty {
-                    Section {
-                        ForEach(sections) { section in
-                            row(section, metrics: metrics)
-                        }
-                    } header: {
-                        // 할 일은 맨 위 한 줄이라 무리 이름이 없어도 읽힌다.
-                        if group != .today { Text(group.rawValue) }
-                    }
-                }
+            if let app = store.focusedApp, !store.usesStackNavigation {
+                focusedSections(app, metrics: metrics)
+            } else {
+                allSections(metrics)
             }
         }
-        .animation(.default, value: flagged(metrics))
         .hubSidebarListStyle()
         .modifier(SectionChangesBaseline(metrics: metrics))
         .navigationTitle("FeedbackHub")
@@ -106,23 +100,55 @@ struct FeatureListView: View {
         #endif
     }
 
-    /// 뱃지가 달린 칸 — 무리 차례 그대로.
-    private func flagged(_ metrics: SectionMetrics) -> [FeedbackStore.ProjectSection] {
-        FeedbackStore.ProjectSection.Group.allCases
-            .filter { $0 != .today }
-            .flatMap(\.sections)
-            .filter { metrics.badge($0, project: nil) != nil || ($0 == held && $0 == store.projectSection) }
+    /// 앱 하나로 보는 중 — 그 앱의 기능을 무리별로, 숫자와 뱃지도 그 앱의 것으로.
+    @ViewBuilder
+    private func focusedSections(_ app: String, metrics: SectionMetrics) -> some View {
+        ForEach(AppScopedSections.groups(), id: \.group) { entry in
+            Section(entry.group.rawValue) {
+                ForEach(entry.sections) { section in
+                    let isSelected = !store.showsHome && store.projectSection.host == section
+                    Button {
+                        store.showsHome = false
+                        store.selectedProject = app
+                        store.projectSection = section
+                    } label: {
+                        FeatureRow(section: section,
+                                   detail: metrics.label(section, project: app),
+                                   badge: metrics.hostBadge(section, project: app),
+                                   isSelected: isSelected)
+                    }
+                    .buttonStyle(.plain)
+                    .listRowBackground(Rectangle().fill(isSelected ? AnyShapeStyle(.tint.opacity(0.14)) : AnyShapeStyle(.clear)))
+                }
+            }
+        }
+    }
+
+    /// 무리별로 목록에 선 칸만(`Group.hosts`). 볼 것을 모아 보여 주던 "확인할 것" 은 할 일 맨 위
+    /// "알아 둘 것"(`TodayDigest`)으로 옮겼다 — 뱃지는 줄마다 그대로 선다.
+    @ViewBuilder
+    private func allSections(_ metrics: SectionMetrics) -> some View {
+        ForEach(FeedbackStore.ProjectSection.Group.allCases) { group in
+            Section {
+                ForEach(group.hosts) { section in
+                    row(section, metrics: metrics)
+                }
+            } header: {
+                // 할 일은 맨 위 한 줄이라 무리 이름이 없어도 읽힌다.
+                if group != .today { Text(group.rawValue) }
+            }
+        }
     }
 
     private func row(_ section: FeedbackStore.ProjectSection, metrics: SectionMetrics) -> some View {
-        let isSelected = store.projectSection == section
+        let isSelected = !store.showsHome && store.projectSection.host == section
         return Button {
-            held = metrics.badge(section, project: nil) != nil ? section : nil
+            store.showsHome = false
             store.projectSection = section
         } label: {
             FeatureRow(section: section,
                        detail: metrics.label(section, project: nil),
-                       badge: metrics.badge(section, project: nil),
+                       badge: metrics.hostBadge(section, project: nil),
                        isSelected: isSelected)
         }
         .buttonStyle(.plain)
@@ -139,7 +165,90 @@ struct FeatureListView: View {
     }
 }
 
+/// 사이드바 맨 위 — "모든 앱" 이면 기능 → 앱 차례, 앱을 고르면 그 앱 하나로 기능을 넘겨 본다.
+struct AppFocusPicker: View {
+    @EnvironmentObject private var store: FeedbackStore
+    @EnvironmentObject private var keywords: KeywordStore
+    @ObservedObject private var icons = StoreIcons.shared
+
+    var body: some View {
+        Menu {
+            Button {
+                store.focusedApp = nil
+            } label: {
+                Label("모든 앱 (기능부터 고르기)", systemImage: "square.grid.2x2")
+            }
+            Divider()
+            ForEach(store.projectCounts.map(\.key).filter { $0 != Feedback.unclassifiedProject }, id: \.self) { key in
+                Button(store.displayName(for: key)) { store.focusedApp = key }
+            }
+        } label: {
+            HStack(spacing: 10) {
+                if let app = store.focusedApp {
+                    AppIcon(url: icons.url(for: app, keywords: keywords), size: 28)
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(store.displayName(for: app))
+                            .font(.headline)
+                            .lineLimit(1)
+                        Text("이 앱 하나로 보는 중")
+                            .font(.hubCaption)
+                            .foregroundStyle(.secondary)
+                    }
+                } else {
+                    Image(systemName: "square.grid.2x2")
+                        .font(.title3)
+                        .foregroundStyle(.purple)
+                        .frame(width: 28)
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text("모든 앱")
+                            .font(.headline)
+                        Text("앱 하나로 보려면 고르세요")
+                            .font(.hubCaption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                Spacer(minLength: 4)
+                Image(systemName: "chevron.up.chevron.down")
+                    .foregroundStyle(.secondary)
+            }
+            .contentShape(Rectangle())
+        }
+        .menuStyle(.button)
+        .buttonStyle(.plain)
+        .menuIndicator(.hidden)
+        .accessibilityLabel(store.focusedApp.map { "\(store.displayName(for: $0)) 하나로 보는 중, 앱 바꾸기" } ?? "앱 하나로 보기")
+    }
+}
+
 /// 기능 한 줄: 아이콘 · 이름 · 전체 앱 기준 한마디 · 손볼 것 뱃지.
+/// 사이드바 맨 위 "모든 앱 한눈에" — `FeatureRow` 와 같은 자리 · 같은 크기.
+private struct HomeRow: View {
+    let appCount: Int
+    let isSelected: Bool
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "square.grid.2x2")
+                .font(.body)
+                .foregroundStyle(isSelected ? AnyShapeStyle(.tint) : AnyShapeStyle(.secondary))
+                .frame(width: 22)
+            VStack(alignment: .leading, spacing: 1) {
+                Text("모든 앱 한눈에")
+                    .font(.body)
+                    .fontWeight(isSelected ? .semibold : .regular)
+                Text("앱 \(AppFormat.count(appCount))개")
+                    .font(.hubCaption.monospacedDigit())
+                    .foregroundStyle(.secondary)
+            }
+            Spacer(minLength: 4)
+        }
+        .padding(.vertical, 3)
+        .contentShape(Rectangle())
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(isSelected ? [.isSelected] : [])
+    }
+}
+
 struct FeatureRow: View {
     let section: FeedbackStore.ProjectSection
     let detail: String

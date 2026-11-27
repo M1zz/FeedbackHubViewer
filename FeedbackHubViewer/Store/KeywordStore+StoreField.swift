@@ -79,12 +79,20 @@ extension KeywordStore {
     // MARK: - 읽기
 
     /// 한 앱의 칸들 — 순위를 보는 나라의 것만, 고른 나라 차례로.
-    func refreshStates(for project: String, now: Date = Date()) -> [KeywordRefreshState] {
+    /// `withRanks: false` 면 말마다의 순위를 셈하지 않는다(`terms` 가 빈다). 다시 짤 때인지는
+    /// 바꾼 날짜만으로 가려지는데, 순위까지 셈하면 사이드바를 그릴 때마다 모든 앱 · 나라 · 검색어의
+    /// 이력을 훑어 화면 전환이 1초 가까이 멈췄다.
+    func refreshStates(for project: String, now: Date = Date(), withRanks: Bool = true) -> [KeywordRefreshState] {
         let trackId = trackId(for: project)
         return fieldLog.compactMap { key, log -> KeywordRefreshState? in
             guard key.hasPrefix(project + "|"), let current = log.last else { return nil }
             let locale = String(key.dropFirst(project.count + 1))
             guard let country = KeywordField.storefront(for: locale), countries.contains(country) else { return nil }
+            guard withRanks else {
+                return KeywordRefreshState(project: project, locale: locale, country: country,
+                                           current: current, terms: [], now: now,
+                                           repoTerms: repoTerms(project: project, locale: locale))
+            }
             let changeDay = current.isBaseline ? nil : UsageRollups.dayKey(current.seenAt)
             let terms = current.terms.map { term -> KeywordRefreshState.Term in
                 let keyword = TrackedKeyword(term: term, country: country)
@@ -99,17 +107,28 @@ extension KeywordStore {
                              checkedBefore: before != nil, best: standing.best)
             }
             return KeywordRefreshState(project: project, locale: locale, country: country,
-                                       current: current, terms: terms, now: now)
+                                       current: current, terms: terms, now: now,
+                                       repoTerms: repoTerms(project: project, locale: locale))
         }
         .sorted { (countries.firstIndex(of: $0.country) ?? .max, $0.locale) < (countries.firstIndex(of: $1.country) ?? .max, $1.locale) }
     }
 
     /// 다시 짤 때가 된 앱 — 순위를 보는 칸이 하나라도 두 주를 넘겼다. 오래된 것부터.
-    func refreshDue(projects: [String], now: Date = Date()) -> [(project: String, days: Int)] {
+    /// 레포에 새로 짠 말이 출시를 기다리는 칸은 뺀다(`KeywordRefreshState.isDue`).
+    /// `since` 는 그 칸을 바꾼 때 — 다시 짜기 전까지 변하지 않아 "알아봤다" 를 적는 열쇠가 된다.
+    func refreshDue(projects: [String], now: Date = Date()) -> [(project: String, days: Int, since: Date)] {
         projects.compactMap { project in
-            let settled = refreshStates(for: project, now: now).filter(\.isSettled)
-            return settled.map(\.days).max().map { (project, $0) }
+            let oldest = refreshStates(for: project, now: now, withRanks: false).filter(\.isDue).max { $0.days < $1.days }
+            return oldest.map { (project, $0.days, $0.current.seenAt) }
         }
         .sorted { $0.days > $1.days }
+    }
+
+    /// 새로 짠 키워드가 출시를 기다리는 앱 — 레포 줄이 스토어 칸과 다른 칸이 있고, 다시 짤 때는 아니다.
+    func awaitingRelease(projects: [String], now: Date = Date()) -> [String] {
+        projects.filter { project in
+            let states = refreshStates(for: project, now: now, withRanks: false)
+            return states.contains(where: \.awaitingRelease) && !states.contains(where: \.isDue)
+        }
     }
 }

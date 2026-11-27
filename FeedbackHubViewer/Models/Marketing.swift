@@ -234,7 +234,9 @@ enum MarketingSeed {
     /// 2026-10-28: 오늘 올린 골드위크 인스타 카드뉴스(내년 설, 연차 하루로 닷새) · 스레드 글(마지막으로 쉰 날).
     /// 2026-10-29: 오늘 올린 두번알림 인스타 글(중요한 순간은 끝나기 전에) · 스레드 글(타이머가 땡 울리면 이미 늦다).
     /// 2026-10-30: 두번알림 인스타 글을 안 잘린 4:5 이미지로 다시 올린 대로.
-    static let version = "2026-10-30"
+    /// 2026-11-12: 10-30 뒤로 시드에만 적고 판을 안 올려 앱에 안 들어간 것들 — 한 기능 깊이형 카드뉴스(클립키보드 템플릿 · 쑥쑥용돈 저축 이자) 올림 등.
+    /// 2026-11-13: 첫 영어판 — 클립키보드 Recent 탭(인스타 릴스 · 스레드 카드 6장 · X 영상).
+    static let version = "2026-11-27c"
     static let fileName = "marketing-seed"
     /// 처음 시드를 만든 날. 시드에서 온 활동의 만든 시각 · 고친 시각이 이것이다.
     static let firstStamp = ISO8601DateFormatter().date(from: "2026-10-22T00:00:00Z") ?? .distantPast
@@ -392,34 +394,6 @@ enum MarketingPrompt {
             {"body":"한국어 글","bodyEn":"English post"}
             """
         }
-    }
-
-    /// 레딧 질문에 다는 답글 초안. 도움이 먼저, 앱은 그다음 — 그리고 만든 사람이라고 밝힌다.
-    static func redditReply(_ lead: RedditLead, context: MarketingContext) -> String {
-        """
-        레딧 \(lead.subreddit) 에 올라온 질문에 답글을 달려고 해. 나는 아래 앱을 혼자 만든 개발자야.
-
-        질문 제목: \(lead.title)
-        질문 본문(앞부분): \(lead.snippet.isEmpty ? "(본문 없음)" : lead.snippet)
-        글 주소: \(lead.url.absoluteString)
-
-        \(context.brief)
-
-        답글 규칙:
-        - 질문에 먼저 진짜로 답한다. 내 앱이 맞지 않는 질문이면 "이 질문에는 내 앱이 맞지 않다"고 말해 줘 — 억지로 끼워 넣지 않는다
-        - 내 앱을 말할 때는 반드시 "I made this" 처럼 만든 사람이라고 밝힌다
-        - 광고 말투 · 과장 · 이모지 금지. 레딧 사람이 쓰는 말투로, 120단어 안
-        - 앱이 실제로 하는 일만. 질문한 사람의 상황에 어떻게 맞는지 한두 문장으로
-        - 링크는 맨 끝에 한 번만, 서브레딧이 링크를 싫어할 것 같으면 "App Store에서 앱 이름 검색" 으로
-        - 다른 좋은 방법(내장 기능 · 다른 앱)이 있으면 같이 알려 준다 — 그래야 믿는다
-
-        답은 두 판으로:
-        영어 답글:
-        (그대로 붙여 넣을 영어 답글)
-
-        한국어 뜻:
-        (위 답글을 한국어로)
-        """
     }
 
     static func day(_ date: Date) -> String {

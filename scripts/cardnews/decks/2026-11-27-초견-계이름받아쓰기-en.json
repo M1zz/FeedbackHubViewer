@@ -1,0 +1,77 @@
+{
+ "name": "StaffSinger",
+ "icon": "/Users/hyunholee/Documents/workspace/개발중/FeedbackHubViewer/scripts/cardnews/decks/icons/초견-1024.png",
+ "accent": "3B82F6",
+ "accent2": "F59E0B",
+ "kicker": "Did you know? · StaffSinger",
+ "cover": "You can sing it.\nCan you write\nit down?",
+ "coverScreen": "/Users/hyunholee/Documents/workspace/개발중/FeedbackHubViewer/scripts/cardnews/decks/icons/초견-화면/dict-left.png",
+ "coverTop": 0,
+ "coverCallout": {
+  "symbol": "music.mic",
+  "text": "do re mi fa sol",
+  "x": 0.66,
+  "y": 0.8
+ },
+ "features": [
+  {
+   "label": "The usual way",
+   "headline": "Hunting notes\nkey by key",
+   "text": "The melody is in your head.\nGetting it onto the staff takes forever.",
+   "screen": "/Users/hyunholee/Documents/workspace/개발중/FeedbackHubViewer/scripts/cardnews/decks/icons/초견-화면/piano.png",
+   "top": 0.0,
+   "callout": {
+    "symbol": "questionmark.circle.fill",
+    "text": "Wait, was that an E?",
+    "x": 0.62,
+    "y": 0.12
+   }
+  },
+  {
+   "label": "Just say it",
+   "headline": "Say do re mi,\nget real notes",
+   "text": "After four metronome beats, say the\nnote names. They land on the staff.",
+   "screen": "/Users/hyunholee/Documents/workspace/개발중/FeedbackHubViewer/scripts/cardnews/decks/icons/초견-화면/dict-left.png",
+   "top": 0,
+   "callout": {
+    "symbol": "mic.fill",
+    "text": "Say \"rest\" for a rest",
+    "x": 0.62,
+    "y": 0.85
+   }
+  },
+  {
+   "label": "On the beat",
+   "headline": "Speak in time,\nthe rhythm comes too",
+   "text": "Snap to 1/4, 1/8 or 1/16 notes.\nOr keep it free and fix lengths later.",
+   "screen": "/Users/hyunholee/Documents/workspace/개발중/FeedbackHubViewer/scripts/cardnews/decks/icons/초견-화면/dict-right.png",
+   "top": 0.1,
+   "callout": {
+    "symbol": "metronome.fill",
+    "text": "1/4 · 1/8 · 1/16 · Free",
+    "x": 0.62,
+    "y": 0.1
+   }
+  },
+  {
+   "label": "Bonus",
+   "headline": "Hear it back\nright away",
+   "text": "Press play for a count-in and a click.\nThe note that's sounding lights up.",
+   "screen": "/Users/hyunholee/Documents/workspace/개발중/FeedbackHubViewer/scripts/cardnews/decks/icons/초견-화면/playback.png",
+   "top": 0,
+   "callout": {
+    "symbol": "play.fill",
+    "text": "Check it by ear",
+    "x": 0.62,
+    "y": 0.1
+   }
+  }
+ ],
+ "outro": "Stop hunting keys.\nJust say the notes",
+ "points": [
+  "Speech recognition stays on device",
+  "Chords, voices, treble, alto, bass",
+  "Try dictation free three times"
+ ],
+ "search": "Search “StaffSinger” on the App Store"
+}

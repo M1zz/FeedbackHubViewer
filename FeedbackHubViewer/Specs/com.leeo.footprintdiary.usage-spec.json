@@ -1,0 +1,20 @@
+{
+  "$comment": [
+    "FeedbackHubViewer 가 이 앱의 통계를 읽는 스펙. 원본은 이 파일이고, 허브는 scripts/sync-stats-specs.sh 로 복사해 간다.",
+    "release.coreAction 은 품질 탭의 '핵심 기능' 칸과 릴리즈 건강 카드가 읽는다. 이벤트 이름을 바꾸면 여기도 같이 바꿀 것."
+  ],
+  "specVersion": 1,
+  "appId": "com.leeo.FootprintDiary",
+  "appName": "벅뚜벅뚜",
+  "eventLabels": {
+    "visit_confirmed": "다녀온 곳 확인",
+    "onboarding_completed": "온보딩 마침"
+  },
+  "release": {
+    "coreAction": {
+      "label": "다녀온 자리를 확인한 사람",
+      "events": ["visit_confirmed"],
+      "note": "걸어 다닌 자리를 되짚어 '다녀왔다'고 답하는 순간 지도에 내 발자취가 쌓이고, 그게 이 앱이 주는 가치다."
+    }
+  }
+}

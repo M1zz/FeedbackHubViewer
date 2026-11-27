@@ -46,6 +46,44 @@ enum KeywordField {
             .filter { !$0.isEmpty }
     }
 
+    /// 이 가게(나라)의 칸을 쓰는 로케일들. 로케일 → 가게의 거꾸로.
+    static func locales(for country: String) -> [String] {
+        storefronts.filter { $0.value == country }.map(\.key).sorted()
+    }
+
+    /// 이 검색어가 App Store Connect 메타데이터의 어디에 적혀 있나.
+    ///
+    /// 스토어는 이름 · 부제 · 키워드 칸의 말을 섞어 검색에 쓴다. 그래서 "키워드 칸에 그대로" 가
+    /// 아니어도 말이 칸들에 나뉘어 있으면 적은 셈이다. 어디에도 없는데 순위가 잡히면 스토어가
+    /// 다른 근거(카테고리, 비슷한 말, 다른 사람들이 찾은 흐름)로 붙여 준 것이다.
+    static func source(of term: String, in text: StoreMetadata.LocaleText) -> Source {
+        func compact(_ s: String) -> String {
+            s.lowercased().filter { !$0.isWhitespace && !",，、:：-–—·|!&()".contains($0) }
+        }
+        let normalized = TrackedKeyword.normalize(term)
+        if terms(in: text.keywords).map(TrackedKeyword.normalize).contains(normalized) { return .keywordField }
+        let whole = compact(normalized)
+        let words = normalized.split(whereSeparator: \.isWhitespace).map { compact(String($0)) }.filter { !$0.isEmpty }
+        let nameSubtitle = compact(text.name + " " + text.subtitle)
+        if nameSubtitle.contains(whole) || (!words.isEmpty && words.allSatisfy(nameSubtitle.contains)) { return .nameSubtitle }
+        let everything = nameSubtitle + compact(text.keywords)
+        if everything.contains(whole) || (!words.isEmpty && words.allSatisfy(everything.contains)) { return .combined }
+        return .unwritten
+    }
+
+    enum Source {
+        /// 키워드 칸에 그 말 그대로.
+        case keywordField
+        /// 이름이나 부제 안에.
+        case nameSubtitle
+        /// 말이 이름 · 부제 · 키워드 칸에 나뉘어 있음.
+        case combined
+        /// 어디에도 안 적었음.
+        case unwritten
+
+        var isWritten: Bool { self != .unwritten }
+    }
+
     /// 스토어 로케일 → 순위를 볼 가게. 키워드 칸은 로케일마다, 순위는 나라마다라 잇는다.
     /// 한 나라에 로케일이 여럿이면(캐나다의 영어 · 프랑스어) 그 나라 사람이 주로 보는 쪽 하나만.
     static func storefront(for locale: String) -> String? {
@@ -72,6 +110,8 @@ struct KeywordRefreshState: Identifiable {
     /// 칸에 걸린 말마다 지금 순위와 바꿀 때 순위.
     let terms: [Term]
     let now: Date
+    /// 레포 `APPSTORE.md` 에 적힌 이 칸의 말. 레포를 못 읽었으면 nil.
+    var repoTerms: [String]? = nil
 
     struct Term: Hashable {
         let term: String
@@ -90,6 +130,14 @@ struct KeywordRefreshState: Identifiable {
     var changedAt: Date? { current.isBaseline ? nil : current.seenAt }
     var days: Int { max(0, Calendar.current.dateComponents([.day], from: current.seenAt, to: now).day ?? 0) }
     var isSettled: Bool { days >= KeywordField.settleDays }
+    /// 레포에 새로 짠 말이 있고 아직 스토어에 안 나갔다 — 다음 출시 때 바뀐다.
+    var awaitingRelease: Bool {
+        guard let repoTerms else { return false }
+        func normalized(_ terms: [String]) -> Set<String> { Set(terms.map { $0.lowercased() }) }
+        return normalized(repoTerms) != normalized(current.terms)
+    }
+    /// 다시 짤 때 — 자리 잡을 만큼 지났고, 이미 새로 짠 말이 출시를 기다리는 중도 아니다.
+    var isDue: Bool { isSettled && !awaitingRelease }
 
     var ranked: Int { terms.filter { $0.rank != nil }.count }
     var topTen: Int { terms.filter { ($0.rank ?? .max) <= 10 }.count }

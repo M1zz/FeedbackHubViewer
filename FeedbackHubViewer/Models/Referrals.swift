@@ -119,6 +119,11 @@ struct ReferralProfile {
         "com.tencent.xin": .init(name: "WeChat", category: .messenger),
         "com.tencent.mqq": .init(name: "QQ", category: .messenger),
         "ph.telegra.Telegraph": .init(name: "Telegram", category: .messenger),
+        // 텔레그램 대체 앱 — 할인 채널을 보는 사람들이 많이 쓴다. 행사 뒤 함께 나타난다(2026-11 장표스냅 · 인생 맛집).
+        "ru.keepcoder.Telegram": .init(name: "Telegram (macOS)", category: .messenger),
+        "app.swiftgram.ios": .init(name: "Swiftgram (Telegram)", category: .messenger),
+        "com.seastar.turrit": .init(name: "Turrit (Telegram)", category: .messenger),
+        "xyz.nextalone.nagram": .init(name: "Nagram (Telegram)", category: .messenger),
         "jp.naver.line": .init(name: "LINE", category: .messenger),
         "com.iwilab.KakaoTalk": .init(name: "카카오톡", category: .messenger),
         "net.whatsapp.WhatsApp": .init(name: "WhatsApp", category: .messenger),
@@ -194,7 +199,7 @@ struct ReferralProfile {
 // MARK: - 리포트
 
 /// 한 앱의 최근 `days`일 출처별 셈.
-struct ReferralReport {
+struct ReferralReport: Codable {
     /// 캠페인 이름이 담기는 칸. 리포트 판에 따라 이름이 조금 다를 수 있어 둘 다 본다.
     static let campaignColumns = ["Campaign", "Campaign Name"]
 
@@ -205,7 +210,7 @@ struct ReferralReport {
         return nil
     }
 
-    struct Tally {
+    struct Tally: Codable {
         /// 날짜 → 그날 첫 다운로드.
         var downloadsByDate: [String: Int] = [:]
         /// 제품 페이지 조회(고유). 다운로드로 안 이어진 관심까지 보인다.
@@ -379,6 +384,10 @@ struct ReferralDetection {
 
     /// 알릴 것 — 새로 링크했거나 급증한 곳. 통로는 알리지 않는다.
     var alerts: [Item] { places.filter(\.status.isAlert) }
+
+    /// 퍼지는 곳 — 알릴 것 중 **최근에 실제로 받은 사람이 있는** 곳. 홈의 "새 유입처" 와 알림이 이것을 센다.
+    /// 조회만 있고 받은 사람이 없는 곳은 우연한 링크일 수 있어 뺀다.
+    var spreading: [Item] { alerts.filter { $0.recent > 0 || ($0.status == .new && $0.tally.firstDownloads > 0) } }
 
     /// 한 줄 판정.
     var headline: String {

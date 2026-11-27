@@ -24,6 +24,7 @@ import SwiftUI
 struct CrashListView: View {
     let project: String?
     @AppStorage("crashViewMode") private var mode = Mode.issues.rawValue
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     enum Mode: String, CaseIterable, Identifiable {
         case issues, reports
@@ -39,6 +40,8 @@ struct CrashListView: View {
                 CrashIssueListView(project: project)
             }
         }
+        // 이슈 ↔ 한 건씩을 바꾸면 툭 갈아 끼우지 않고 번져 들어온다.
+        .modifier(FadeIn(enabled: !reduceMotion, key: mode))
         .toolbar {
             ToolbarItem(placement: .automatic) {
                 Picker("보기", selection: $mode) {
@@ -171,7 +174,10 @@ struct CrashReportListView: View {
     /// naturally ("v10" after "v9"), and reports with no version land last.
     private func versionGroups(of reports: [CrashReport]) -> [(version: String, reports: [CrashReport], last7Days: Int)] {
         let weekAgo = Date().addingTimeInterval(-7 * 86_400)
-        return Dictionary(grouping: reports, by: \.appVersion)
+        // 보고를 보낸 버전이 아니라 죽은 빌드의 버전으로 묶는다 — 업데이트 뒤에 배달된 옛 크래시가
+        // 새 버전에 붙어 "새 버전도 계속 죽는다" 처럼 보이지 않게(`ReleaseHealth.versionResolver`).
+        let resolve = ReleaseHealth.versionResolver(for: reports)
+        return Dictionary(grouping: reports, by: resolve)
             .map { version, items in
                 (version: version,
                  reports: items.sorted { ($0.receivedAt ?? .distantPast) > ($1.receivedAt ?? .distantPast) },
@@ -257,7 +263,7 @@ struct CrashRow: View {
                     .font(.hubCallout.weight(.semibold))
                     .foregroundStyle(report.kind == "crash" ? Color.red : Color.orange)
                 if showsVersion {
-                    Text("v\(report.appVersion)")
+                    Text("v\(report.versionLabel)")
                         .font(.hubCaption)
                         .foregroundStyle(.secondary)
                 }

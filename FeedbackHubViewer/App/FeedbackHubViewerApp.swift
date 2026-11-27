@@ -8,6 +8,7 @@
 //
 
 import SwiftUI
+import CloudKit
 
 @main
 struct FeedbackHubViewerApp: App {
@@ -60,6 +61,46 @@ struct FeedbackHubViewerApp: App {
                     // The daily rank check does wait: the apps it looks for in
                     // each result list are the hub's project keys, and before
                     // the restore there are none.
+                    #if DEBUG
+                    // 화면 없이 선물 코드 묶음을 채운다(명령줄에서): -autoFillGiftPool "<열쇠>,<열쇠>"
+                    // 열쇠는 `GiftCodePool.poolKeys(for:)` 의 것. 결과는 표준 출력으로.
+                    if let keys = UserDefaults.standard.string(forKey: "autoFillGiftPool") {
+                        func say(_ line: String) { FileHandle.standardError.write(Data((line + "\n").utf8)) }
+                        for key in keys.split(separator: ",").map(String.init) {
+                            say("🎁 [autoFillGiftPool] \(key) 시작")
+                            await GiftCodePool.shared.fillFromStore(key, connect: purchases)
+                            let status = GiftCodePool.shared.statuses[key]
+                            say("🎁 [autoFillGiftPool] \(key) left=\(status?.left ?? -1) reserve=\(status?.reserve ?? -1) error=\(GiftCodePool.shared.lastError[key] ?? "none")")
+                        }
+                        say("🎁 [autoFillGiftPool] done")
+                    }
+                    // 화면 없이 결제 알림 길을 시험한다: -testPurchasePush "<번들 ID>"
+                    // Apple 에 운영 시험 알림을 부탁 → Apple 이 서버에 보낸 결과 → 서버가 허브 기록에 남겼나.
+                    if let bundleID = UserDefaults.standard.string(forKey: "testPurchasePush"), let client = purchases.client {
+                        func say(_ line: String) { FileHandle.standardError.write(Data((line + "\n").utf8)) }
+                        let started = Date()
+                        do {
+                            let token = try await client.requestTestNotification(bundleID: bundleID)
+                            say("🔔 [testPurchasePush] ① Apple 보냄 token=\(token ?? "-")")
+                            var result: String?
+                            for _ in 0..<10 where result == nil {
+                                try? await Task.sleep(nanoseconds: 3_000_000_000)
+                                if let token { result = try? await client.testNotificationStatus(token: token, bundleID: bundleID) }
+                            }
+                            say("🔔 [testPurchasePush] ② 서버 \(result ?? "결과 없음")")
+                            try? await Task.sleep(nanoseconds: 5_000_000_000)
+                            let found = try await PurchaseFeed.hasTest(bundleID: bundleID, since: started)
+                            say("🔔 [testPurchasePush] ③ 허브 기록 \(found ? "있음" : "없음")")
+                        } catch {
+                            say("🔔 [testPurchasePush] 실패 \(error)")
+                        }
+                        // ④ 이 iCloud 사용자 몫으로 걸린 구독 — 결제 컨테이너에 hub-new-purchase 가 있어야 푸시가 온다.
+                        let subs = try? await CKContainer(identifier: CloudKitService.purchasesContainerIdentifier)
+                            .publicCloudDatabase.allSubscriptions()
+                        say("🔔 [testPurchasePush] ④ 구독 \(subs.map { $0.map(\.subscriptionID).joined(separator: ",") } ?? "읽기 실패")")
+                        say("🔔 [testPurchasePush] done")
+                    }
+                    #endif
                     await store.awaitRestore()
                     keywords.start(bundleIds: store.allProjectKeys)
                     startChartsIfDue()
@@ -93,6 +134,8 @@ struct FeedbackHubViewerApp: App {
                         keywords.pullFromCloud()
                         charts.pullFromCloud()
                         Task { await purchases.viewedReviewsCloud.pull(minimumInterval: 60) }
+                        // 다른 기기가 받아 둔 App Store Connect 것 — 판매 · 상품 · 리뷰 · 분석 결과.
+                        purchases.pullCachesFromCloud()
                         news.collect()
                         syncKeywordFieldsIfDue()
                     }

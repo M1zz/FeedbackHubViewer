@@ -76,7 +76,8 @@
     "pro_nudge_shown": "Pro 권유를 봄",
     "pro_nudge_tapped": "Pro 권유를 누름",
     "time_saved_milestone": "아낀 시간 이정표에 닿음",
-    "launch_incomplete": "직전 실행이 끝까지 못 감"
+    "launch_incomplete": "직전 실행이 끝까지 못 감",
+    "keyboard_idle_exit": "키보드가 보이지 않은 채 정리됨(죽은 것 아님)"
   },
 
   "tileGroups": [
@@ -230,6 +231,9 @@
     "moments": [
       { "label": "열 번째 칸에서 막힘", "event": "paywall_view:memo", "note": "하려던 일이 막힌 자리" },
       { "label": "9칸에서 일주일 (반값)", "event": "paywall_view:discount_offer_limitEdge", "note": "벽에 닿기 전이라 강요가 아니다" },
+      { "label": "무료 문턱 영수증", "event": "paywall_view:free_use_threshold", "note": "문턱에 닿아 저절로 뜬 결제 화면. 2026-11-25 고치기 전에는 노출을 안 남겨 이 칸이 비어 있었다" },
+      { "label": "무료로 쓰는 방법에서 Pro 보기", "event": "paywall_view:free_use_guide" },
+      { "label": "복사 기록 한도", "event": "paywall_view:clipboard_history", "note": "무료 기간 뒤 복사 기록이 한도에 닿은 사람이 목록 끝에서 누른 것" },
       { "label": "칸 부족 넛지", "event": "pro_nudge_shown:slots_left" },
       { "label": "아낀 시간 넛지", "event": "pro_nudge_shown:time_saved", "note": "가격을 정당화하는 유일한 숫자" },
       { "label": "페이월 (출처 없음)", "event": "paywall_view", "note": "슬라이스가 안 붙어 온 것까지 합친 전체" }

@@ -18,6 +18,11 @@ enum PushSubscriptions {
         CKContainer(identifier: CloudKitService.containerIdentifier).publicCloudDatabase
     }
 
+    /// 결제는 따로 사는 컨테이너에 — 허브만 쓰니 푸시가 허브에만 온다.
+    private static var purchasesDatabase: CKDatabase {
+        CKContainer(identifier: CloudKitService.purchasesContainerIdentifier).publicCloudDatabase
+    }
+
     private static func subscriptionID(_ kind: AttentionKind) -> String { "hub-new-\(kind.rawValue)" }
 
     /// 푸시로 받을 수 있는 종류. 리뷰는 App Store Connect 에 있어서 CloudKit 이 모른다.
@@ -60,5 +65,55 @@ enum PushSubscriptions {
             }
         }
         return active
+    }
+
+    /// 결제 알림. Apple 이 결제를 알리면 서버(`app-portfolio/services/purchase-notify`)가
+    /// `Purchase` 를 남기고, 이 구독이 그 제목 · 내용을 그대로 띄운다 — 문구는 서버가 만든다.
+    /// 알림을 켜 두면 늘 건다. 결제는 놓치고 싶은 사람이 없다.
+    static let purchaseRecordType = "Purchase"
+    static let purchaseSubscriptionID = "hub-new-purchase"
+
+    /// 걸었으면 nil, 못 걸었으면 그 까닭. 끄면 늘 nil.
+    static func syncPurchases(_ enabled: Bool) async -> String? {
+        // 예전에 FeedbackHub 컨테이너에 건 구독은 치운다(레코드가 더는 거기 오지 않는다).
+        _ = try? await database.deleteSubscription(withID: purchaseSubscriptionID)
+        guard enabled else {
+            _ = try? await purchasesDatabase.deleteSubscription(withID: purchaseSubscriptionID)
+            return nil
+        }
+        // 레코드의 제목 · 내용을 그대로 띄우려면 지역화 키를 거친다(키 "%1$@" 는 Localizable.strings).
+        let detailed = CKSubscription.NotificationInfo()
+        detailed.titleLocalizationKey = "%1$@"
+        detailed.titleLocalizationArgs = ["title"]
+        detailed.alertLocalizationKey = "%1$@"
+        detailed.alertLocalizationArgs = ["message"]
+        detailed.soundName = "default"
+        // 그게 거절되면 고정 문구로라도 — 결제가 들어왔다는 것만은 알아야 한다.
+        let plain = CKSubscription.NotificationInfo()
+        plain.title = "💰 결제가 들어왔습니다"
+        plain.alertBody = "허브에서 자세히 보세요"
+        plain.soundName = "default"
+
+        var reasons: [String] = []
+        for info in [detailed, plain] {
+            let subscription = CKQuerySubscription(recordType: purchaseRecordType,
+                                                   predicate: NSPredicate(value: true),
+                                                   subscriptionID: purchaseSubscriptionID,
+                                                   options: [.firesOnRecordCreation])
+            subscription.notificationInfo = info
+            do {
+                _ = try await purchasesDatabase.save(subscription)
+                // 자세한 쪽이 거절됐으면 왜였는지 남긴다(`defaults read … purchase-push-detail`).
+                UserDefaults.standard.set(reasons.isEmpty ? "detailed" : "plain: " + reasons.joined(separator: " / "),
+                                          forKey: "purchase-push-detail")
+                return nil
+            } catch {
+                let ck = error as NSError
+                let server = ck.userInfo["ServerErrorDescription"] as? String ?? ck.localizedDescription
+                reasons.append(server)
+                print("❌ [PushSubscriptions.syncPurchases] \(error)")
+            }
+        }
+        return reasons.joined(separator: " / ")
     }
 }

@@ -71,6 +71,7 @@ extension AppStoreConnectStore {
     func forgetReviews() {
         reviewFeeds = [:]
         versions = [:]
+        CacheFile.remove(Self.versionsFile)
         priority = nil
         priorityHistory = []
         viewedReviewIDs = [:]
@@ -157,6 +158,8 @@ extension AppStoreConnectStore {
 
     func loadReviews(bundleID: String, force: Bool = false) async {
         guard let client else { return }
+        // 다른 기기가 30분 안에 받은 리뷰면 그것으로 — iCloud 것을 먼저 들인다.
+        if !force { await initialCloudPull?.value }
         let feed = reviewFeeds[bundleID] ?? ReviewFeed()
         guard !feed.isLoading else { return }
         if !force, let fetched = feed.fetchedAt, Date().timeIntervalSince(fetched) < Self.reviewFreshness { return }
@@ -171,7 +174,7 @@ extension AppStoreConnectStore {
             seedViewedReviews(bundleID)
             announceNewReviews(bundleID)
             if let version = try? await client.latestVersion(appID: app.id) {
-                versions[bundleID] = version
+                setVersion(version, for: bundleID)
             }
         } catch {
             // 받아 둔 리뷰는 그대로 두고 왜 못 받았는지만 붙인다.
@@ -193,11 +196,31 @@ extension AppStoreConnectStore {
     }
 
     /// 버전 상태만 — 리뷰가 디스크에서 와서 새로 받을 필요가 없을 때.
+    /// 디스크에 둔 버전 상태를 바로 보이고, 어느 기기든 몇 시간 안에 받지 않았으면 조용히 새로 받는다.
+    /// 예전에는 기억에만 두어 화면에 들어갈 때마다 "판매 중" 꼬리표가 늦게 붙었다.
     func loadVersion(bundleID: String) async {
-        guard let client, versions[bundleID] == nil else { return }
+        guard let client else { return }
+        let key = "version:\(bundleID)"
+        guard await shouldFetch(key, force: false, has: versions[bundleID] != nil) else { return }
         guard let app = try? await resolveApp(bundleID),
-              let version = try? await client.latestVersion(appID: app.id) else { return }
+              let version = try? await client.latestVersion(appID: app.id) else {
+            refreshed.remove(key)
+            return
+        }
+        setVersion(version, for: bundleID)
+        markFetched(key)
+    }
+
+    static var versionsFile: URL? { CacheFile.url("store-versions") }
+
+    func restoreVersions() {
+        versions = CacheFile.read([String: AppVersionStatus].self, at: Self.versionsFile) ?? [:]
+    }
+
+    func setVersion(_ version: AppVersionStatus, for bundleID: String) {
+        guard versions[bundleID] != version else { return }
         versions[bundleID] = version
+        CacheFile.write(versions, to: Self.versionsFile)
     }
 
     // MARK: - 응답

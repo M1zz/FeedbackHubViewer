@@ -25,18 +25,59 @@ extension FeedbackStore {
             return ReleaseHealth.measure(events: events(for: project),
                                          crashes: crashes(for: project),
                                          feedback: feedback(for: project),
-                                         spec: ProjectStatsSpecCatalog.spec(for: project)?.release,
+                                         metrics: allMetrics.filter { $0.projectKey == project },
+                                         spec: releaseSpec(for: project),
                                          everSeenEvents: everSeen,
                                          coverageStart: rawEventCoverageStart)
         }
     }
 
-    /// 원본 이벤트 보관 상한에 걸렸을 때, 남아 있는 가장 오래된 시각. 상한은 앱별이
-    /// 아니라 허브 전체에 걸리므로, 이 시각 앞의 이벤트는 **어느 앱이든** 이 기기에 없다.
-    /// 상한에 안 걸렸으면 nil (보관 기간 90일은 창 14일보다 길다).
+    /// 앱 스펙의 `release` 절. 핵심 행동을 안 적었으면 뷰어 · 스펙에서 고른 가치 행동
+    /// (`ActivityDefinition.valueEvents`)이 핵심 행동이 된다 — "썼다" 의 뜻은 하나다.
+    func releaseSpec(for project: String) -> ReleaseSpec? {
+        let spec = ProjectStatsSpecCatalog.spec(for: project)?.release
+        guard spec?.coreAction == nil else { return spec }
+        let valueEvents = activityDefinition(for: project).valueEvents
+        guard !valueEvents.isEmpty else { return spec }
+        var filled = spec ?? .fallback
+        filled.coreAction = .init(label: "가치 행동을 한 사람", events: valueEvents)
+        return filled
+    }
+
+    /// 품질 탭의 안정성 — 버전별 전 기간 집계에서(`AppQuality.stability`). 안정화 지표와 같은 재료다.
+    func qualityStability(for project: String) -> AppQuality.Stability? {
+        let spec = releaseSpec(for: project) ?? .fallback
+        let everSeen = Set(eventTallies(for: project).keys.map {
+            String($0.split(separator: ":", maxSplits: 1, omittingEmptySubsequences: false)[0])
+        })
+        let diagnostics = crashes(for: project)
+        let sendsDiagnostics = !diagnostics.isEmpty || allMetrics.contains { $0.projectKey == project }
+        var crashReports: [String: Int]?
+        if sendsDiagnostics {
+            let resolve = ReleaseHealth.versionResolver(for: diagnostics)
+            crashReports = Dictionary(grouping: diagnostics.filter { $0.kind == "crash" }, by: resolve).mapValues(\.count)
+        }
+        return AppQuality.stability(tallies: rollups.versionTallies[project] ?? [:],
+                                    minInstalls: spec.thresholds.minInstallsForVerdict,
+                                    stabilityKnown: spec.stabilityEventsDeclared || !everSeen.isDisjoint(with: spec.stabilityEvents),
+                                    crashReports: crashReports)
+    }
+
+    /// 지난 30일 새 설치의 온보딩(품질 탭). 모든 일 버킷을 훑어 처음 온 날을 가리므로 캐시한다.
+    func onboarding(for project: String) -> AppQuality.Onboarding? {
+        memoized(\.onboarding, project) {
+            let now = Date()
+            return AppQuality.onboarding(days(for: project, audience: .all),
+                                         today: UsageRollups.dayKey(now),
+                                         windowStart: UsageRollups.dayKey(now.addingTimeInterval(-30 * 86_400)))
+        }
+    }
+
+    /// 이 기기가 들고 있는 가장 오래된 원본 이벤트 시각. 이 앞의 이벤트는 **어느 앱이든** 없다.
+    /// 릴리즈 창 시작보다 늦으면 창 앞쪽이 빠진 것이라, 판정이 그 사실을 적고
+    /// 다음 숫자 새로고침이 창 시작부터 다시 읽는다(`load(mode:parts:)`).
     var rawEventCoverageStart: Date? {
-        guard fetchedEvents.count >= Self.eventLimit else { return nil }
-        return fetchedEvents.map(\.occurredAt).min()
+        fetchedEvents.map(\.occurredAt).min()
     }
 
     /// 목록 점의 색. 잴 수 없으면 nil 이라 점이 안 뜬다(초록으로 칠하지 않는다).

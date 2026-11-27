@@ -17,30 +17,70 @@ struct ProjectSectionView: View {
     @EnvironmentObject private var design: DesignDocsStore
     @EnvironmentObject private var charts: ChartStore
     @EnvironmentObject private var news: NewsStore
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// 탭 이름 옆 숫자가 알아본 순간 지워지게.
+    @ObservedObject private var changes = SectionChanges.shared
     /// nil == 전체 앱.
     let project: String?
     /// 어느 기능의 화면인가. 아이폰은 탭마다 다른 기능이 열려 있으므로 가게의 "지금 기능"
     /// 이 아니라 이 값을 따른다.
-    let section: FeedbackStore.ProjectSection
+    let requested: FeedbackStore.ProjectSection
+    /// 지금 보이는 탭. 묶인 칸(`ProjectSection.members`)이면 화면 위 탭으로 바꾼다.
+    @State private var section: FeedbackStore.ProjectSection
     /// The Mac's inspector follows this; a phone pushes the detail instead.
     @Binding var selection: Feedback.ID?
     /// 이 화면을 열 때 새것이던 진단 · 리뷰 — "앱|칸" 과 함께. 줄마다 "새" 를 남긴다.
     @State private var fresh: (key: String, ids: Set<String>) = ("", [])
+    /// 그려 둔 화면의 "앱|칸". 다르면 먼저 로딩 표시를 띄우고 다음 순간에 그린다 — 무거운 칸(유입 ·
+    /// 통계)을 누른 순간 사이드바 선택조차 바뀌지 않은 채 멈춰 보이던 것. 누르면 바로 반응한다.
+    @State private var drawnKey: String?
+    /// 이 화면을 열 때 선 뱃지 — "앱|칸" 과 함께. 열자마자 읽음으로 넘어가 뱃지가 사라져도
+    /// 보는 동안은 맨 위에 어디서 온 뱃지였는지 남긴다.
+    @State private var openedBadge: (key: String, badge: SectionMetrics.Badge?) = ("", nil)
 
     init(project: String?, section: FeedbackStore.ProjectSection,
          selection: Binding<Feedback.ID?> = .constant(nil)) {
         self.project = project
-        self.section = section
+        self.requested = section
+        _section = State(initialValue: section)
         _selection = selection
     }
 
     var body: some View {
-        content
+        // 갈아 끼우기는 애니메이션 없이 — `.transition` 을 단 if/else 를 사이드바 크기가 바뀌는
+        // 중에 애니메이션으로 바꾸면 AttributeGraph 가 죽는다(홈 ↔ 앱 전환 때와 같은 크래시).
+        // 번져 들어오는 느낌은 새 화면의 불투명도만 움직여 낸다.
+        Group {
+            if drawnKey == freshKey {
+                content
+                    .modifier(FadeIn(enabled: !reduceMotion, key: freshKey))
+            } else {
+                ProgressView()
+                    .controlSize(.small)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+        }
+            // 로딩 표시가 한 번 그려질 틈을 준 뒤 화면을 그린다.
+            .task(id: freshKey) {
+                guard drawnKey != freshKey else { return }
+                try? await Task.sleep(for: .milliseconds(16))
+                drawnKey = freshKey
+            }
             .environment(\.freshItemIDs, fresh.key == freshKey ? fresh.ids : [])
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             // 뱃지를 눌러 들어왔으면 무엇이 바뀌었는지가 맨 위에.
             .safeAreaInset(edge: .top, spacing: 0) {
-                SectionChangesBanner(section: section, project: project)
+                VStack(spacing: 0) {
+                    memberTabs
+                    loadingNote
+                    badgeTrail
+                    badgeSource
+                    SectionChangesBanner(section: section, project: project)
+                }
+            }
+            .onChange(of: requested) { section = requested }
+            .onChange(of: section) {
+                if !store.usesStackNavigation, store.projectSection != section { store.projectSection = section }
             }
             // 띠를 얹은 화면은 "띠 + 내용" 높이를 우겨 맥 창보다 커졌고, 넘친 만큼 위아래로
             // 삐져 띠 윗부분이 툴바 밑에 깔렸다. 높이는 창이 주는 만큼만 — 띠 아래 내용이 준다.
@@ -56,6 +96,211 @@ struct ProjectSectionView: View {
             .modifier(SectionVisitTracker(section: section, project: project, metrics: metrics))
             .navigationTitle(title)
             .hubNavigationSubtitle(metrics.subtitle(section, project: project))
+    }
+
+    /// 묶인 칸의 탭 — 진단은 릴리즈 안, 스토어 분석은 통계 안 … (`ProjectSection.host`).
+    @ViewBuilder
+    private var memberTabs: some View {
+        let members = section.members
+        if members.count > 1 {
+            // 가게에는 여기서 쓰지 않는다 — 탭 이름의 숫자가 바뀌면 맥의 세그먼트가 다시 만들어지며
+            // 그리는 도중에 선택을 다시 써 넣는데, 그때 `@Published` 를 바꾸면 경고가 난다.
+            // 가게는 `onChange(of: section)` 이 그린 뒤에 맞춘다.
+            // 칸 뱃지는 탭들의 합이라, 어느 탭에서 온 수인지 탭 이름 옆에 사이드바와 같은 빨간
+            // 뱃지로 단다("차트 4" 처럼 이름에 섞으면 탭 이름처럼 읽힌다). 맥의 세그먼트는 글자만
+            // 받으므로 직접 그린다.
+            //
+            // 사이드바와 **같은 범위**로 센다(`sidebarScope`). 모든 앱으로 보는 중이면 사이드바의
+            // 숫자는 모든 앱의 합인데, 여기서 고른 앱 하나로 세면 그 앱에 없을 때 탭에 아무것도
+            // 서지 않아 사이드바의 1 이 어느 탭 것인지 알 수 없었다.
+            HStack(spacing: 2) {
+                ForEach(members) { member in
+                    let count = metrics.countedBadge(member, project: sidebarScope)?.count ?? 0
+                    memberTab(member, count: count)
+                }
+            }
+            .padding(2)
+            .background(RoundedRectangle(cornerRadius: 8).fill(Color.secondary.opacity(0.12)))
+            .accessibilityElement(children: .contain)
+            .accessibilityLabel("보기")
+            .hubHeaderBar(verticalPadding: 8)
+        }
+    }
+
+    /// 이 칸의 숫자를 아직 받는 중이면 한 줄 — 다 받으면 뱃지가 새로 설 수 있다고 미리 말한다.
+    /// 말없이 기다리다 뱃지가 하나 더 생기면 무엇이 바뀐 것인지 알 수 없다.
+    @ViewBuilder
+    private var loadingNote: some View {
+        if let note = loadingText {
+            HStack(spacing: 8) {
+                ProgressView().controlSize(.small)
+                Text(note)
+                    .font(.body)
+                    .foregroundStyle(.secondary)
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+            .background(.bar)
+            .accessibilityElement(children: .combine)
+        }
+    }
+
+    private var loadingText: String? {
+        var parts: [String] = []
+        let members = Set(section.members)
+        if members.contains(.acquisition) {
+            let n = purchases.fetching.filter { $0.hasPrefix("funnel:") || $0.hasPrefix("referral") }.count
+            if n > 0 { parts.append("유입 리포트 \(n)개 앱") }
+        }
+        if members.contains(.keywords), keywords.isChecking { parts.append("키워드 순위") }
+        if members.contains(.charts), charts.isScanning {
+            if let p = charts.progress { parts.append("차트 순위 \(p.done)/\(p.total)") } else { parts.append("차트 순위") }
+        }
+        if members.contains(where: { [.feedback, .crashes, .release, .stats].contains($0) }), store.isRefreshing {
+            parts.append("허브 기록")
+        }
+        if members.contains(where: { [.reviews, .purchases].contains($0) }), purchases.isLoadingSales {
+            parts.append("판매 기록")
+        }
+        guard !parts.isEmpty else { return nil }
+        return "\(parts.joined(separator: " · ")) 불러오는 중 — 다 받으면 숫자와 뱃지가 바뀔 수 있어요"
+    }
+
+    /// 탭 하나 — 이름과, 셀 것이 있으면 빨간 뱃지.
+    private func memberTab(_ member: FeedbackStore.ProjectSection, count: Int) -> some View {
+        let selected = member == section
+        return Button {
+            section = member
+        } label: {
+            HStack(spacing: 6) {
+                Text(member.rawValue)
+                    .font(.body.weight(selected ? .semibold : .regular))
+                if count > 0 {
+                    Text(count > 99 ? "99+" : "\(count)")
+                        .font(.body.monospacedDigit().weight(.semibold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 6)
+                        .frame(minWidth: 22, minHeight: 22)
+                        .background(Capsule().fill(.red))
+                }
+            }
+            .foregroundStyle(selected ? Color.white : Color.primary)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 4)
+            .frame(minHeight: 30)
+            .background(RoundedRectangle(cornerRadius: 6).fill(selected ? Color.accentColor : .clear))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(count > 0 ? "\(member.rawValue), 새 것 \(count)개" : member.rawValue)
+        .accessibilityAddTraits(selected ? .isSelected : [])
+    }
+
+    /// 사이드바가 뱃지를 세는 범위 — 앱 하나로 보는 중이면 그 앱, 모든 앱으로 보는 중이면 nil.
+    /// 아이폰은 밀려 들어온 화면의 앱 그대로.
+    private var sidebarScope: String? {
+        store.usesStackNavigation ? project : store.focusedApp
+    }
+
+    /// 뱃지가 선 곳으로 가는 길 — 사이드바의 숫자가 지금 보는 탭 · 앱이 아닌 곳의 것일 때, 어느
+    /// 탭의 어느 앱인지 적고 누르면 바로 거기로 간다. 지금 화면에 있는 것은 적지 않는다
+    /// (바로 아래 줄과 앱 목록이 이미 말한다).
+    @ViewBuilder
+    private var badgeTrail: some View {
+        if !store.usesStackNavigation {
+            // 옆 탭의 뱃지는 탭 이름 옆 빨간 뱃지가 이미 말한다 — 여기서 또 적으면 같은 수가 세 군데에
+            // 서서 정신없다. 지금 탭 안에서 다른 앱 것만.
+            let hasTabs = section.members.count > 1
+            let elsewhere = metrics.badgeTrail(section.host, scope: sidebarScope).filter { stop in
+                !(hasTabs && stop.section != section)
+                    && !(stop.section == section && (project == nil || stop.project == nil || stop.project == project))
+            }
+            if !elsewhere.isEmpty {
+                let limit = 3
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        Label("뱃지가 선 곳", systemImage: "arrow.turn.down.right")
+                            .font(.body.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                        ForEach(elsewhere.prefix(limit)) { stop in
+                            Button {
+                                go(to: stop)
+                            } label: {
+                                HStack(spacing: 5) {
+                                    Image(systemName: stop.badge.systemImage)
+                                    Text(trailTitle(stop))
+                                    Text(AppFormat.count(stop.badge.count))
+                                        .monospacedDigit()
+                                        .fontWeight(.semibold)
+                                    Image(systemName: "chevron.right")
+                                        .imageScale(.small)
+                                }
+                                .font(.body)
+                                .foregroundStyle(stop.badge.tint)
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 5)
+                                .background(stop.badge.tint.opacity(0.12), in: Capsule())
+                                .contentShape(Capsule())
+                            }
+                            .buttonStyle(.plain)
+                            .help("\(stop.badge.name) — 눌러서 보러 가기")
+                        }
+                        if elsewhere.count > limit {
+                            Text("외 \(elsewhere.count - limit)곳")
+                                .font(.body)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                }
+                .background(.bar)
+            }
+        }
+    }
+
+    /// "키워드 · 모찌모" — 지금 탭의 것이면 앱 이름만, 지금 앱의 것이면 탭 이름만.
+    private func trailTitle(_ stop: SectionMetrics.BadgeStop) -> String {
+        var parts: [String] = []
+        if stop.section != section { parts.append(stop.section.rawValue) }
+        if let app = stop.project, app != project { parts.append(store.displayName(for: app)) }
+        return parts.isEmpty ? stop.badge.name : parts.joined(separator: " · ")
+    }
+
+    /// 그 탭의 그 앱으로. 모든 앱으로 보는 중이면 그 모드 그대로 앱 목록에서 앱만 바꾼다.
+    private func go(to stop: SectionMetrics.BadgeStop) {
+        if let app = stop.project, app != project { store.selectedProject = app }
+        if stop.section != section { section = stop.section }
+    }
+
+    /// 뱃지가 어디서 왔나 — 사이드바 · 앱 목록에서 본 숫자가 이 칸의 무엇인지 맨 위에 한 줄로.
+    /// 본 뒤 바뀐 것은 아래 띠(`SectionChangesBanner`)가 말하므로 여기서는 한 건씩 세는 뱃지만.
+    @ViewBuilder
+    private var badgeSource: some View {
+        let current = metrics.itemBadge(section, project: project)
+        if let badge = current ?? (openedBadge.key == freshKey ? openedBadge.badge : nil) {
+            HStack(spacing: 8) {
+                Image(systemName: badge.systemImage)
+                    .foregroundStyle(badge.tint)
+                Text("뱃지 \(AppFormat.count(badge.count)) · \(badge.name)")
+                    .font(.body.weight(.semibold))
+                    .foregroundStyle(badge.tint)
+                Spacer(minLength: 8)
+                // 누르는 것이 아니라 상태 — "열어서 …" 는 단추 이름처럼 읽혔다.
+                if current == nil {
+                    Label("확인함", systemImage: "checkmark")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background(badge.tint.opacity(0.08), in: RoundedRectangle(cornerRadius: 10))
+            .padding(.horizontal, 12)
+            .padding(.top, 8)
+            .accessibilityElement(children: .combine)
+        }
     }
 
     private func syncStore() {
@@ -77,6 +322,9 @@ struct ProjectSectionView: View {
 
     /// 확인한 것으로 넘기기 전에 새것이던 것을 적어 둔다 — 보고 있는 동안 새로 들어온 것도 더한다.
     private func markViewed() {
+        if openedBadge.key != freshKey {
+            openedBadge = (freshKey, metrics.itemBadge(section, project: project))
+        }
         var ids = fresh.key == freshKey ? fresh.ids : []
         switch section {
         case .crashes:
@@ -125,6 +373,8 @@ struct ProjectSectionView: View {
             InAppPurchasesView(project: project)
         case .giftCodes:
             GiftCodesView(project: project)
+        case .supporters:
+            SupportersView(project: project)
         case .reviews:
             ReviewsView(project: project)
         case .design:
@@ -135,8 +385,28 @@ struct ProjectSectionView: View {
             MarketingView(project: project)
         case .experience:
             ExperienceView(project: project)
-        case .leads:
-            LeadsView(project: project)
         }
+    }
+}
+
+/// 새 화면이 살짝 아래에서 떠오르며 번져 들어온다(불투명도 0 → 1, 6pt 위로). 뷰를 갈아 끼우지 않고
+/// 값만 움직여서 사이드바가 움직이는 중에도 안전하다(`.transition` 크래시 꼴을 피한다).
+/// `key` 가 바뀌면 다시 들어온다 — 칸 탭 · 화면 안 세그먼트가 같이 쓴다.
+struct FadeIn<Key: Hashable>: ViewModifier {
+    let enabled: Bool
+    let key: Key
+    /// 여러 카드를 차례로 띄울 때 — 뒤의 것일수록 조금 늦게.
+    var delay: Double = 0
+    @State private var shown = false
+
+    func body(content: Content) -> some View {
+        content
+            .opacity(enabled && !shown ? 0 : 1)
+            .offset(y: enabled && !shown ? 6 : 0)
+            .task(id: key) {
+                guard enabled else { return }
+                shown = false
+                withAnimation(.snappy(duration: 0.28).delay(delay)) { shown = true }
+            }
     }
 }

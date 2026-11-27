@@ -53,7 +53,7 @@ struct SectionRefresh {
         case .design: "설계 문서 다시 읽기"
         case .marketing: "마케팅 기록 맞추기"
         case .experience: "앱 소개 다시 읽기"
-        case .leads: "레딧 질문 다시 찾기"
+        case .supporters: "후원 건수 새로고침"
         }
     }
 
@@ -67,7 +67,7 @@ struct SectionRefresh {
         case .reviews: "\(scope)App Store 리뷰"
         case .stats: "사용 현황 · 이벤트"
         case .release: project == nil ? "사용 현황 · 이벤트 · 진단 · 모든 앱의 버전 기록 · 성능" : "사용 현황 · 이벤트 · 진단 · 리뷰 · 버전 기록 · 성능"
-        case .acquisition: project == nil ? "모든 앱의 노출 · 전환 · 스토어 문구" : "노출 · 전환 · 스토어 문구 · 링크 출처"
+        case .acquisition: project == nil ? "App Store 에 있는 모든 앱의 노출 · 전환 · 경로" : "노출 · 전환 · 스토어 문구 · 링크 출처"
         case .storeAnalytics: project == nil ? "분석 리포트가 있는 앱 목록" : "스토어 분석 리포트"
         case .crashes: "진단"
         case .keywords: "오늘 아직 확인 안 한 키워드 순위"
@@ -77,7 +77,7 @@ struct SectionRefresh {
         case .design: "리포의 설계 문서 목록"
         case .marketing: "마케팅 자료(iCloud)"
         case .experience: "app-portfolio 의 앱 소개 · vision"
-        case .leads: project == nil ? "모든 앱의 레딧 질문(앱마다 몇십 초)" : "레딧 질문"
+        case .supporters: "App Store Connect 최근 판매(팁 건수) · 상품. 이름은 허브에 적은 것(iCloud)"
         }
     }
 
@@ -95,7 +95,7 @@ struct SectionRefresh {
         case .reviews:
             return (project.map { [$0] } ?? appKeys).contains { connect.reviewFeeds[$0]?.isLoading == true }
         case .acquisition:
-            guard let project else { return false }
+            guard let project else { return connect.funnels.values.contains { $0.isLoading } }
             return connect.funnels[project]?.isLoading == true
                 || connect.metadata[project]?.isLoading == true
                 || connect.referrals[project]?.isLoading == true
@@ -108,10 +108,10 @@ struct SectionRefresh {
             return charts.isScanning
         case .purchases:
             return connect.isLoadingSales || project.map(connect.isCatalogLoading) == true
-        case .leads:
-            return !LeadStore.shared.searching.isEmpty
         case .giftCodes:
             return !GiftCodePool.shared.working.isEmpty
+        case .supporters:
+            return connect.isLoadingSales
         case .design, .marketing, .experience:
             return PortfolioStore.shared.isLoading && section == .experience
         }
@@ -157,9 +157,9 @@ struct SectionRefresh {
                     group.addTask { await connect.loadReferrals(bundleID: project, force: true) }
                 }
             } else {
-                for map in AcquisitionCatalog.all {
-                    await connect.loadFunnel(bundleID: map.appId, force: true)
-                    await connect.loadMetadata(bundleID: map.appId, force: true)
+                // 모든 앱 — 차례로 하나씩. App Store 에 없는 앱은 실패로 남는다.
+                for key in appKeys {
+                    await connect.loadFunnel(bundleID: key, force: true)
                 }
             }
         case .storeAnalytics:
@@ -194,13 +194,15 @@ struct SectionRefresh {
             design.rescan()
         case .experience:
             await PortfolioStore.shared.load(workspace: design.workspace, force: true)
-        case .leads:
-            let keys = project.map { [$0] } ?? appKeys.filter { LeadStore.shared.queries(for: $0) != nil }
-            await LeadStore.shared.searchIfStale(keys, force: true)
         case .marketing:
             MarketingStore.shared.pullFromCloud()
+        case .supporters:
+            await connect.loadSales(force: true)
+            if let project { await connect.loadCatalog(bundleID: project, force: true) }
         case .giftCodes:
-            for key in project.map({ [$0] }) ?? appKeys { await GiftCodePool.shared.refresh(key, connect: connect) }
+            for key in (project.map({ [$0] }) ?? appKeys).flatMap(GiftCodePool.poolKeys(for:)) {
+                await GiftCodePool.shared.refresh(key, connect: connect)
+            }
         }
     }
 }

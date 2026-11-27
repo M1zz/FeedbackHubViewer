@@ -110,6 +110,8 @@ private struct ProjectPurchases: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
         case .loaded(let app, let products)?:
+            // 이번 주에 무엇이 팔렸나가 먼저 — 홈의 구매 뱃지를 누르고 들어온 사람이 찾는 것.
+            ThisWeekPurchasesCard(project: project, app: app, products: products)
             summary(app, products)
             if let totals = purchases.sales?.totals(app: app, products: products) {
                 SalesMapCard(totals: totals, rates: purchases.rates)

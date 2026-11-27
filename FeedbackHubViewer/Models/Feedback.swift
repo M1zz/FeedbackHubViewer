@@ -35,10 +35,56 @@ struct Feedback: HubRecord, Codable {
     let platform: String?
     let createdAt: Date?
     let modifiedAt: Date?
+    /// 보낸 사람의 iCloud 사용자(이 컨테이너 안에서 앱이 달라도 같다). 채택 선물의 등급을 가른다.
+    var creatorID: String?
 
     /// Every field on the record, stringified, for the detail view. Carried to
     /// disk verbatim so a relaunch can paint before CloudKit answers.
     let allFields: [RecordField]
+
+    /// 사람이 읽는 유형 이름. LeeoKit 의 한 문장 의견(`voice.*`)은 무엇을 물었는지로 적는다.
+    var typeLabel: String? {
+        guard let type = feedbackType?.trimmingCharacters(in: .whitespaces), !type.isEmpty else { return nil }
+        switch type.lowercased() {
+        case "voice.useful": return "한 문장 · 쓸모"
+        case "voice.unmet": return "한 문장 · 아쉬움"
+        case "voice.wish": return "한 문장 · 바람"
+        default: return type
+        }
+    }
+
+    // MARK: - 한 문장 의견 (LeeoVoice)
+
+    /// 앱이 먼저 물어 받은 한 문장. 사용자가 스스로 쓴 피드백과 다르게 보인다.
+    var isVoice: Bool { feedbackType?.lowercased().hasPrefix("voice.") == true }
+
+    /// 그 사람이 받은 질문 — 답을 질문과 함께 읽어야 뜻이 선다. LeeoKit `LeeoVoiceQuestion` 과 같은 문장.
+    var voiceQuestion: String? {
+        switch feedbackType?.lowercased() {
+        case "voice.useful": return "이 앱이 어떤 순간에 얼마나 쓸모 있었나요?"
+        case "voice.unmet": return "기대했는데 안 돼서 아쉬웠던 게 있나요?"
+        case "voice.wish": return "딱 하나 더 생긴다면 무엇이면 좋겠어요?"
+        default: return nil
+        }
+    }
+
+    /// 쓸모 질문에서 고른 정도(1 조금 · 2 꽤 · 3 없으면 안 돼요). LeeoKit 이 `쓸모: n/3` 줄로 보낸다.
+    var usefulness: Int? {
+        for line in attachedInfoLines where line.hasPrefix("쓸모:") {
+            let value = line.dropFirst("쓸모:".count).split(separator: "/").first
+            if let n = value.flatMap({ Int($0.trimmingCharacters(in: .whitespaces)) }), (1...3).contains(n) { return n }
+        }
+        return nil
+    }
+
+    var usefulnessLabel: String? {
+        switch usefulness {
+        case 1: return "조금 쓸모"
+        case 2: return "꽤 쓸모"
+        case 3: return "없으면 안 돼요"
+        default: return nil
+        }
+    }
 
     // MARK: - Construction from CKRecord
 
@@ -49,6 +95,7 @@ struct Feedback: HubRecord, Codable {
         recordType = record.recordType
         createdAt = record.creationDate
         modifiedAt = record.modificationDate
+        creatorID = record.creatorUserRecordID?.recordName
         allFields = fields.allFields
 
         appId = fields.string("appId", "appID", "app_id", "bundleID",
@@ -73,6 +120,17 @@ struct Feedback: HubRecord, Codable {
         contactEmail = fields.string("email", "contactEmail", "contact", "userEmail", "mail")
         feedbackType = fields.string("type", "category", "kind", "feedbackType", "topic")
         platform = fields.string("platform", "os", "osName", "deviceOS")
+
+        // 사진은 글자로 남길 수 없어 받는 자리에서 캐시로 옮긴다.
+        FeedbackScreenshots.keep(record)
+    }
+
+    /// 사용자가 붙인 사진이 실린 필드(`screenshot1`~`screenshot3`). 사진 자체는
+    /// `FeedbackScreenshots` 캐시에 있고, 여기는 몇 장이 있는지만 안다.
+    var screenshotKeys: [String] {
+        FeedbackScreenshots.fieldKeys.filter { key in
+            allFields.contains { $0.key == key && !$0.value.isEmpty }
+        }
     }
 
     /// Convenience initializer used only by SwiftUI previews / sample data.
@@ -146,6 +204,24 @@ struct Feedback: HubRecord, Codable {
             // Fall back to the first non-empty field so the row is never blank.
             return allFields.first(where: { !$0.value.isEmpty })?.value ?? "(no text)"
         }
-        return trimmed
+        let answers = Self.answers(in: trimmed)
+        return answers.isEmpty ? trimmed : answers.joined(separator: " · ")
+    }
+
+    /// LeeoKit 양식은 `질문\n답` 덩이를 빈 줄로 이어 보낸다(`LeeoFeedbackPrompt.compose`).
+    /// 몇 줄만 보이는 목록 줄에 질문이 자리를 차지하지 않게, 덩이마다 질문 줄을 떼고 답만 남긴다.
+    /// 양식이 아닌 글은 그대로다.
+    private static func answers(in text: String) -> [String] {
+        let labels: Set<String> = ["문제 종류", "덧붙임"]
+        return text.components(separatedBy: "\n\n").compactMap { block in
+            var lines = block.split(separator: "\n").map { $0.trimmingCharacters(in: .whitespaces) }
+            guard let first = lines.first else { return nil }
+            let question = first.replacingOccurrences(of: #"\s*\([^)]*\)$"#, with: "", options: .regularExpression)
+            if lines.count > 1, question.hasSuffix("?") || question.hasSuffix("？") || labels.contains(first) {
+                lines.removeFirst()
+            }
+            let answer = lines.joined(separator: " ").trimmed
+            return answer.isEmpty ? nil : answer
+        }
     }
 }

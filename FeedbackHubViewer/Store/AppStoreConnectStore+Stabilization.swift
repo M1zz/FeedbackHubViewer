@@ -26,6 +26,7 @@ extension AppStoreConnectStore {
 
     func loadStability(bundleID: String, force: Bool = false) async {
         guard let client else { return }
+        if !force { await initialCloudPull?.value }
         if !force, let fetched = stabilitySources[bundleID]?.fetchedAt,
            Date().timeIntervalSince(fetched) < Self.stabilityFreshness { return }
         do {

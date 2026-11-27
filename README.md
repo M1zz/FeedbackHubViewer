@@ -57,7 +57,7 @@
 - **할 일의 리뷰 완료**: 답할 필요 없는 리뷰는 "완료"로 할 일에서 뺍니다(실수하면 아래 띠의 되돌리기).
   피드백의 읽음 · 처리와 같은 iCloud 키·값 저장소로 같은 계정의 다른 기기에도 반영됩니다.
 - **iPhone**: 하단 탭 네 개 — 할 일(할 일 · 소식) · 목소리(피드백 · 리뷰) · 앱 상태(품질 · 성장 · 수익 · 만들기) ·
-  마케팅(마케팅 · 질문 찾기). 탭마다 맨 앞은 맥 사이드바 같은 기능 목록(줄마다 한마디와 뱃지)이고, 기능을 누르면
+  마케팅(마케팅). 탭마다 맨 앞은 맥 사이드바 같은 기능 목록(줄마다 한마디와 뱃지)이고, 기능을 누르면
   앱 목록 → 앱 화면 → 피드백 상세로 밉니다(할 일 · 소식은 앱 목록 없이 바로). 탭마다 스택이 따로라
   탭을 오가도 보던 자리가 남고, 지금 탭을 한 번 더 누르면 맨 앞으로 돌아갑니다.
   (설계는 맥 전용이라 아이폰에 없습니다)
@@ -530,6 +530,7 @@ CloudKit은 어느 환경을 읽을지 **빌드에 박히는 entitlement**
 |---|---|---|
 | `UsageSnapshot` | 설치 1건(레코드 이름 `usage-<installID>`, upsert) | `appId` `appName` `appVersion` `platform` `osVersion` `locale` `launchCount` `eventCount` `daysSinceInstall` `installDate` `lastActiveAt` `metrics`(JSON `[String: Double]`) |
 | `UsageEvent` | 주요 행동 1건 | `appId` `appName` `event` `appVersion` `platform` `installID` `occurredAt` |
+| `FeedbackReply` | 답장 1건(레코드 이름 `reply-<피드백 recordName>`, 이 앱이 씀) · 읽음 확인 1건(`read-<피드백 recordName>`, 사용자 앱이 씀 — `message` 가 답장 글과 같으면 읽은 것, 고친 답장은 다시 안 읽음) | `feedbackID` `message` `appId` |
 | `CrashReport` | MetricKit 진단 1건 | `appId` `kind`(crash/hang/disk_write) `detail` `appVersion` `osVersion` `deviceType` `stack` · **`occurredAt`**(Date) `buildNumber` `exceptionType` `exceptionCode` `signal` |
 
 - 추이·활성 사용자는 **`occurredAt`** 으로 계산합니다. `creationDate`(서버가 쓴 시각)로 세면

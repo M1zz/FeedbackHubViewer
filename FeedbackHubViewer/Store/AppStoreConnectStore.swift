@@ -29,17 +29,22 @@ final class AppStoreConnectStore: ObservableObject {
     @Published var isShowingSettings = false
     /// 번들 ID → 그 앱의 상품 상태.
     @Published private(set) var catalogs: [String: CatalogState] = [:]
+    /// 최근 7일, Apple 이 결제 순간 알려 준 결제 · 환불(`PurchaseFeed`) — 번들 ID 별, 최근 것부터.
+    @Published private(set) var receipts: [String: [PurchaseReceipt]] = [:]
+    @Published private(set) var receiptsProblem: String?
     /// 최근 30일 판매(계정 전체). nil이면 아직 안 받았다.
     @Published private(set) var sales: SalesWindow?
     /// 수익금을 원화 · 달러로 모으는 환율(`ExchangeRates`). 없으면 통화별로만 보인다.
-    @Published private(set) var rates: ExchangeRates?
+    @Published var rates: ExchangeRates?
     @Published private(set) var isLoadingSales = false
     @Published private(set) var salesError: String?
 
     /// 번들 ID → 스토어 메타데이터(이름 · 부제 · 키워드 · 프로모션 텍스트).
     @Published private(set) var metadata: [String: LoadState<StoreMetadata>] = [:]
     /// 번들 ID → 최근 30일 노출 · 전환.
-    @Published private(set) var funnels: [String: LoadState<FunnelResult>] = [:]
+    @Published var funnels: [String: LoadState<FunnelResult>] = [:]
+    /// 지금 네트워크로 받고 있는 리포트("funnel:번들 ID" 꼴).
+    @Published private(set) var fetching: Set<String> = []
     /// 번들 ID → 누가 링크했나(`AppStoreConnectStore+Referrals.swift`).
     @Published var referrals: [String: LoadState<ReferralResult>] = [:]
     /// 번들 ID → (출처 → 처음 본 날). 디스크에 남는다.
@@ -66,6 +71,16 @@ final class AppStoreConnectStore: ObservableObject {
         current: { [weak self] in self?.viewedReviewIDs },
         adopt: { [weak self] merged in self?.adoptViewedReviews(merged) },
         merge: { local, remote in local.merging(remote) { $0.union($1) } })
+    /// App Store Connect 에서 받은 캐시 파일을 iCloud 로 기기 사이에서 하나로
+    /// (`AppStoreConnectStore+CloudCache.swift`). 한 기기가 받으면 나머지는 다시 받지 않는다.
+    private(set) lazy var cacheCloud = SyncedBlob<CacheFileBundle>(
+        name: "connect-cache",
+        current: { CacheFileBundle.read(Self.syncedCacheFiles) },
+        adopt: { [weak self] merged in self?.adoptSyncedCaches(merged) },
+        merge: { local, remote in CacheFileBundle.merge(local, remote) })
+    /// 켤 때 iCloud 에서 받아 오는 일. 끝날 때까지 네트워크로 새로 받지 않는다(`shouldFetch`).
+    var initialCloudPull: Task<Void, Never>?
+    var cacheWriteObserver: NSObjectProtocol?
     /// 번들 ID → 알림을 이미 보낸(또는 처음 받을 때 있던) 리뷰 id. 확인과 따로 센다 -
     /// 리뷰 탭을 안 열었다고 같은 리뷰로 30분마다 다시 알리면 안 된다.
     var alertedReviewIDs: [String: Set<String>] = [:]
@@ -121,6 +136,8 @@ final class AppStoreConnectStore: ObservableObject {
     private(set) var client: AppStoreConnect?
     /// 날짜 → 그날 판매. 디스크에 남는다.
     private var reportCache: [String: [SalesLine]] = [:]
+    /// 판매 리포트를 마지막으로 물은 때.
+    private var lastSalesFetch: Date?
     /// 이번 실행에서 네트워크로 새로 받았거나 받는 중인 것("funnel:번들 ID" 꼴).
     /// 디스크에서 채운 값은 여기 없어서, 처음 볼 때 한 번 새로 받는다.
     var refreshed: Set<String> = []
@@ -128,12 +145,13 @@ final class AppStoreConnectStore: ObservableObject {
     /// 값이 얼마나 묵었는지를 데이터 상태 칸이 말할 수 있게 디스크에 남는다.
     @Published private(set) var fetchedAt: [String: Date] = [:]
 
-    private static var appsFile: URL? { CacheFile.url("connect-apps") }
-    private static var catalogsFile: URL? { CacheFile.url("store-catalogs") }
+    /// v2 — 번들 ID 가 꼭 같은 앱만 잇도록 고친 뒤(그 전엔 다른 앱으로 잘못 이은 것이 남았다).
+    private static var appsFile: URL? { CacheFile.url("connect-apps-v2") }
+    private static var catalogsFile: URL? { CacheFile.url("store-catalogs-v2") }
     private static var salesFile: URL? { CacheFile.url("sales-days") }
     static var subscriptionEventsFile: URL? { CacheFile.url("subscription-event-days") }
     private static var fetchedAtFile: URL? { CacheFile.url("connect-fetched-at") }
-    private static var ratesFile: URL? { CacheFile.url("exchange-rates") }
+    static var ratesFile: URL? { CacheFile.url("exchange-rates") }
 
     /// 디스크의 상품 목록 한 앱치.
     private struct StoredCatalog: Codable {
@@ -149,9 +167,12 @@ final class AppStoreConnectStore: ObservableObject {
         restoreStability()
         restoreReferralLedger()
         if credentials != nil { restoreStoreCaches() }
+        startCacheSync()
     }
 
-    private func restoreStoreCaches() {
+    func restoreStoreCaches() {
+        CacheFile.remove(CacheFile.url("connect-apps"))
+        CacheFile.remove(CacheFile.url("store-catalogs"))
         apps = CacheFile.read([String: ConnectApp].self, at: Self.appsFile) ?? [:]
         for (bundleID, stored) in CacheFile.read([String: StoredCatalog].self, at: Self.catalogsFile) ?? [:] {
             catalogs[bundleID] = .loaded(stored.app, stored.products)
@@ -160,6 +181,17 @@ final class AppStoreConnectStore: ObservableObject {
         subscriptionReportCache = CacheFile.read([String: [SubscriptionEventLine]].self,
                                                  at: Self.subscriptionEventsFile) ?? [:]
         fetchedAt = CacheFile.read([String: Date].self, at: Self.fetchedAtFile) ?? [:]
+        restoreVersions()
+        restoreAnalyticsResults()
+        for (bundleID, stored) in CacheFile.read([String: StoreMetadata].self, at: Self.metadataFile) ?? [:] {
+            metadata[bundleID] = .loaded(stored)
+        }
+    }
+
+    private static var metadataFile: URL? { CacheFile.url("store-metadata") }
+
+    private func saveMetadataCache() {
+        CacheFile.write(metadata.compactMapValues(\.value), to: Self.metadataFile)
     }
 
     /// 네트워크에서 새로 받아 냈다고 적는다.
@@ -220,10 +252,12 @@ final class AppStoreConnectStore: ObservableObject {
         CacheFile.remove(Self.catalogsFile)
         CacheFile.remove(Self.salesFile)
         AnalyticsCache.forget()
+        forgetAnalyticsResults()
         sales = nil
         salesError = nil
         reportCache = [:]
         metadata = [:]
+        CacheFile.remove(Self.metadataFile)
         funnels = [:]
         apps = [:]
         forgetReviews()
@@ -249,15 +283,21 @@ final class AppStoreConnectStore: ObservableObject {
 
     // MARK: - 메타데이터
 
+    /// 디스크에 둔 것을 바로 보이고, 이번 실행에서 처음 볼 때 한 번 새로 받는다.
     func loadMetadata(bundleID: String, force: Bool = false) async {
         guard let client else { return }
-        if !force, let state = metadata[bundleID], !(state.value == nil && !state.isLoading) { return }
-        metadata[bundleID] = .loading
+        let key = "metadata:\(bundleID)"
+        if metadata[bundleID]?.isLoading == true { return }
+        guard await shouldFetch(key, force: force, has: metadata[bundleID]?.value != nil) else { return }
+        if force || metadata[bundleID]?.value == nil { metadata[bundleID] = .loading }
         do {
             let app = try await resolveApp(bundleID)
             metadata[bundleID] = .loaded(try await client.metadata(appID: app.id))
-            markFetched("metadata:\(bundleID)")
+            saveMetadataCache()
+            markFetched(key)
         } catch {
+            refreshed.remove(key)
+            if !force, metadata[bundleID]?.value != nil { return }
             metadata[bundleID] = .failed(error.localizedDescription)
         }
     }
@@ -282,6 +322,7 @@ final class AppStoreConnectStore: ObservableObject {
             let funnel = try await client.funnel(requestID: requestID, appID: appID, days: Self.salesDays)
             return requestID == nil && funnel.instances == 0 ? nil : .ready(funnel)
         }
+        saveAnalyticsResults()
     }
 
     /// 분석 리포트로 만드는 것(퍼널 · 링크 감지)을 받는 공통 흐름.
@@ -297,14 +338,22 @@ final class AppStoreConnectStore: ObservableObject {
         let key = "\(kind):\(bundleID)"
         if !force, refreshed.contains(key) { return }
         refreshed.insert(key)
+        if !force { await initialCloudPull?.value }
 
         if self[keyPath: state][bundleID]?.value == nil, let app = apps[bundleID],
            let cached = try? await read(client, nil, app.id), self[keyPath: state][bundleID]?.value == nil {
             self[keyPath: state][bundleID] = .loaded(cached)
         }
+        // 몇 시간 안에 받은 것이면 네트워크로 다시 묻지 않는다 — 리포트는 하루 한 번 나온다.
+        if !force, self[keyPath: state][bundleID]?.value != nil, let at = fetchedAt[key],
+           Date().timeIntervalSince(at) < Self.analyticsFreshness { return }
         if force || self[keyPath: state][bundleID]?.value == nil {
             self[keyPath: state][bundleID] = .loading
         }
+        // 디스크에서 그린 값이 있으면 상태는 .loaded 그대로라, 네트워크로 받는 중인지는 따로 센다 —
+        // 받고 나서 숫자 · 뱃지가 바뀔 수 있다고 화면이 미리 말하게.
+        fetching.insert(key)
+        defer { fetching.remove(key) }
         do {
             let app = try await resolveApp(bundleID)
             guard let request = try await client.analyticsRequestID(appID: app.id) else {
@@ -344,10 +393,9 @@ final class AppStoreConnectStore: ObservableObject {
     func loadCatalog(bundleID: String, force: Bool = false) async {
         guard let client else { return }
         let key = "catalog:\(bundleID)"
-        if !force, refreshed.contains(key) { return }
-        refreshed.insert(key)
         let hasStored: Bool
         if case .loaded? = catalogs[bundleID] { hasStored = true } else { hasStored = false }
+        guard await shouldFetch(key, force: force, has: hasStored) else { return }
         if force || !hasStored { catalogs[bundleID] = .loading }
         do {
             let app = try await client.app(bundleID: bundleID)
@@ -402,13 +450,20 @@ final class AppStoreConnectStore: ObservableObject {
     /// "30일 중 30일 못 받음" 이 저장돼 다시 받지도 않았다. 여기서는 부른 쪽이 취소돼도
     /// 받기는 끝까지 간다.
     func loadSales(force: Bool = false) async {
+        // 다른 기기가 받아 둔 날들부터 들인다 — 빠진 날만 받게.
+        if !force { await initialCloudPull?.value }
         Task { await loadRates() }
         if let running = salesTask {
             await running.value
             guard force else { return }
         }
         guard client != nil, credentials?.hasVendorNumber == true else { return }
-        guard force || sales == nil else { return }
+        // 이미 그렸어도 어제 리포트가 아직 없으면 다시 받는다 — Apple 은 어제 것을 늦게 낸다.
+        // 다만 30분에 한 번만(없는 날을 자꾸 물으면 한도만 쓴다).
+        let stale = reportCache[Self.reportWindow().first?.key ?? ""] == nil
+            && Date().timeIntervalSince(lastSalesFetch ?? .distantPast) > 30 * 60
+        guard force || sales == nil || stale else { return }
+        lastSalesFetch = Date()
         let task = Task { await self.fetchSales() }
         salesTask = task
         await task.value
@@ -421,16 +476,9 @@ final class AppStoreConnectStore: ObservableObject {
         salesError = nil
         defer { isLoadingSales = false }
 
-        let calendar = Calendar(identifier: .gregorian)
-        let window = (1...Self.salesDays).compactMap { offset -> (key: String, date: Date)? in
-            guard let date = calendar.date(byAdding: .day, value: -offset, to: Date()) else { return nil }
-            return (AppStoreConnect.day.string(from: date), date)
-        }
+        let window = Self.reportWindow()
         // 디스크에 있던 날들로 먼저 그린다. 빠진 날(대개 어제 하루)만 받고 나서 다시 그린다.
-        if sales == nil {
-            let stored = window.compactMap { day in reportCache[day.key].map { (key: day.key, lines: $0) } }
-            if !stored.isEmpty { sales = SalesWindow(daily: stored, days: Self.salesDays, missingDays: 0) }
-        }
+        if sales == nil { sales = salesFromCache() }
         defer { CacheFile.write(reportCache.filter { Self.keepsDay($0.key, $0.value) }, to: Self.salesFile) }
 
         var days: [(key: String, lines: [SalesLine])] = []
@@ -470,6 +518,64 @@ final class AppStoreConnectStore: ObservableObject {
         }
         sales = SalesWindow(daily: days, days: Self.salesDays, missingDays: missingDays)
         markFetched("sales")
+    }
+
+    /// 판매 창의 날짜들 — 어제부터 거꾸로.
+    /// 결제 서버가 남긴 이번 주 결제를 다시 읽는다. 홈의 "이번 주 구매" 가 이것을 센다.
+    func loadReceipts() async {
+        do {
+            receipts = Dictionary(grouping: try await PurchaseFeed.recent(), by: \.bundleID)
+            receiptsProblem = nil
+        } catch {
+            receiptsProblem = error.localizedDescription
+            print("❌ [AppStoreConnectStore.loadReceipts] \(error)")
+        }
+    }
+
+    /// 모든 앱의 최근 결제 · 환불, 최근 것부터 — 종(새 소식)과 할 일의 "결제" 칸이 쓴다.
+    var recentReceipts: [PurchaseReceipt] {
+        receipts.values.flatMap { $0 }.sorted { $0.occurredAt > $1.occurredAt }
+    }
+
+    /// 마지막으로 할 일을 연 뒤에 들어온 결제 수. 한 번도 안 열었으면 0(처음부터 쌓인 것을 새것으로 치지 않는다).
+    func newReceiptCount(seenAt: Double) -> Int {
+        guard seenAt > 0 else { return 0 }
+        return recentReceipts.filter { $0.occurredAt.timeIntervalSince1970 > seenAt }.count
+    }
+
+    /// 최근 `days` 일(어제까지)의 돈을 낸 인앱 결제 줄 — 날짜("yyyy-MM-dd")와 함께, 최근 날부터.
+    /// 디스크에 받아 둔 리포트만 읽는다(새로 받지 않는다).
+    func recentPurchaseLines(appleIDs: Set<String>, days: Int = 7) -> [(day: String, line: SalesLine)] {
+        Self.reportWindow().prefix(days).flatMap { day in
+            (reportCache[day.key] ?? [])
+                .filter { $0.isPurchase && appleIDs.contains($0.appleID) }
+                .map { (day: day.key, line: $0) }
+        }
+    }
+
+    static func reportWindow() -> [(key: String, date: Date)] {
+        let calendar = Calendar(identifier: .gregorian)
+        return (1...salesDays).compactMap { offset in
+            guard let date = calendar.date(byAdding: .day, value: -offset, to: Date()) else { return nil }
+            return (AppStoreConnect.day.string(from: date), date)
+        }
+    }
+
+    /// 디스크에 있는 날들로 그린 판매. 하루도 없으면 nil.
+    func salesFromCache() -> SalesWindow? {
+        let stored = Self.reportWindow().compactMap { day in reportCache[day.key].map { (key: day.key, lines: $0) } }
+        return stored.isEmpty ? nil : SalesWindow(daily: stored, days: Self.salesDays, missingDays: 0)
+    }
+
+    /// 다른 기기에서 받은 날들까지 들인 뒤 판매 · 구독 이벤트를 다시 그린다. 받는 중이면 그쪽이 그린다.
+    func redrawReportsFromCache() {
+        if !isLoadingSales, let fresh = salesFromCache() { sales = fresh }
+        if !isLoadingSubscriptionEvents, subscriptionEvents != nil {
+            let stored = Self.reportWindow().compactMap { subscriptionReportCache[$0.key] }
+            if !stored.isEmpty {
+                subscriptionEvents = SubscriptionEventWindow(lines: stored.flatMap { $0 }, days: Self.salesDays, missingDays: 0)
+            }
+        }
     }
 
     /// 최근 30일 판매를 Apple Identifier별로 접은 것.

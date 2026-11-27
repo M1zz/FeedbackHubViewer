@@ -19,22 +19,83 @@ struct SplitRootView: View {
     @State private var selection: Feedback.ID?
     /// 고른 피드백은 그대로 두고 오른쪽 상세 칸만 접은 상태. 다른 행을 고르면 다시 연다.
     @State private var isDetailCollapsed = false
+    /// 피드백 상세가 없을 때 오른쪽에 고른 앱의 대시보드(`AppDashboardPanel`)를 둘까.
+    @AppStorage("app-dashboard-shown") private var showsDashboard = true
     /// 동작 줄이기를 켠 사람에게는 상세가 미끄러지지 않고 바로 나타난다.
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// 홈(`AppGridHome`)에서는 사이드바를 걷는다 — 어딘가로 들어가면 편다. 그 사이에 손으로
+    /// 접고 편 것은 다음에 홈을 드나들 때까지 그대로 둔다.
+    @State private var columnVisibility: NavigationSplitViewVisibility = .detailOnly
+    /// 홈에서 누른 카드의 자리 — 홈과 앱 화면이 이 점을 축으로 커지고 줄어든다.
+    @State private var zoomAnchor: UnitPoint = .center
+    /// 다가오기가 끝난 화면이 홈인가. `store.showsHome` 과 다른 동안이 "막 바뀐 순간" 이다 —
+    /// 그때 새 화면은 살짝 작게(홈으로 올 때는 살짝 크게) · 투명하게 서 있다가 제자리로 온다.
+    @State private var arrivedHome = true
 
     var body: some View {
-        NavigationSplitView {
+        NavigationSplitView(columnVisibility: $columnVisibility) {
             FeatureListView()
                 .navigationSplitViewColumnWidth(min: 190, ideal: 210, max: Self.sidebarMaxWidth)
         } detail: {
-            contentColumn
+            // 홈 ↔ 앱 화면은 **그 자리에서 바로** 바뀌고, 새로 선 화면만 누른 카드 자리에서 다가온다.
+            //
+            // 예전에는 둘을 `.transition` 으로 바꿨다 — 나가는 화면을 애니메이션이 끝날 때까지
+            // 살려 두는 방식이다. 그 화면 안에는 `NavigationStack` · 툴바 · AppKit 컨트롤
+            // (세그먼트 · 진행 표시 · 글 상자)이 있고, 같은 순간 분할 칸은 사이드바를 펴느라 너비를
+            // 다시 셈한다. 그 둘이 겹치면 AttributeGraph 가 "precondition failure: invalid type
+            // ID: 0" 으로 앱을 죽였다. 지금은 화면을 넣고 빼는 데에는 애니메이션이 없고, 이미 선
+            // 화면의 크기 · 투명도만 움직인다 — 그래프에서 빠지는 중인 것을 건드릴 일이 없다.
+            Group {
+                if store.showsHome {
+                    home
+                } else {
+                    contentColumn
+                }
+            }
+            .scaleEffect(arrivalScale, anchor: zoomAnchor)
+            .opacity(hasArrived ? 1 : 0)
         }
+        .onChange(of: store.showsHome) { _, isHome in
+            // 사이드바는 애니메이션 없이 — 분할 칸의 너비 셈과 화면 바꾸기가 한 박자에 끝나게.
+            columnVisibility = isHome ? .detailOnly : .all
+            withAnimation(reduceMotion ? .easeOut(duration: 0.15) : .snappy(duration: 0.34)) {
+                arrivedHome = isHome
+            }
+        }
+        // 사이드바에서 칸이나 앱을 고르면 홈에서 나간다. 같은 칸을 다시 누른 것은 줄의 단추가
+        // 직접 끈다(`FeatureListView`).
+        .onChange(of: store.projectSection) { store.showsHome = false }
+        // 앱을 고를 때만 — 고름을 푸는 것은 홈으로 가는 길이기도 하다(`goHome`).
+        .onChange(of: store.focusedApp) { _, app in if app != nil { store.showsHome = false } }
         // The app screen sits beside the app list here rather than on top of
         // it, so cross-screen links re-scope the column instead of pushing
         // (see `FeedbackStore.open(project:section:)`).
         .task { store.usesStackNavigation = false }
+        .task(id: store.focusedApp) {
+            if let app = store.focusedApp { store.selectedProject = app }
+        }
         #if os(macOS)
         .toolbar { macToolbarContent }
+        #endif
+    }
+
+    private var hasArrived: Bool { arrivedHome == store.showsHome }
+
+    private var arrivalScale: CGFloat {
+        guard !hasArrived, !reduceMotion else { return 1 }
+        return store.showsHome ? 1.05 : 0.94
+    }
+
+    /// 첫 화면 — 모든 앱의 카드. 아이패드는 칸마다 제 툴바가 있어야 사이드바 단추가 선다.
+    private var home: some View {
+        #if os(macOS)
+        AppGridHome(zoomAnchor: $zoomAnchor)
+        #else
+        NavigationStack {
+            AppGridHome(zoomAnchor: $zoomAnchor)
+                .navigationBarTitleDisplayMode(.inline)
+                .hubToolbar()
+        }
         #endif
     }
 
@@ -42,7 +103,8 @@ struct SplitRootView: View {
     /// 둘 다 가게(`store`)에 적힌다.
     private var contentColumn: some View {
         HStack(spacing: 0) {
-            if store.projectSection.usesAppList {
+            // 앱 하나로 보는 중이면 앱 목록 칸은 걷는다 — 앱은 사이드바 맨 위에서 이미 골랐다.
+            if store.projectSection.usesAppList && store.focusedApp == nil {
                 AppListView(section: store.projectSection)
                     .frame(width: Self.appListWidth)
                 Divider()
@@ -65,7 +127,7 @@ struct SplitRootView: View {
             // 뺀 자리보다 넓어질 때 분할 칸이 사이드바를 줄여 주지 않고, 칸 전체가 창보다
             // 넓어져 가운데 정렬된 채 **양옆이 잘린다**(사이드바 왼쪽 · 상세 오른쪽).
             // 줄어드는 몫은 목록이 받는다. 얼마까지 줄지는 창의 최소 너비가 정한다.
-            projectStack
+            mainContent
                 .frame(maxWidth: .infinity)
             if isShowingDetail.wrappedValue, let feedback = selectedFeedback {
                 // 열고 닫을 때만 오른쪽에서 밀려 들어오고 나간다. 다른 행을 고를 때는
@@ -75,6 +137,26 @@ struct SplitRootView: View {
                     FeedbackDetailView(feedback: feedback,
                                        projectLabel: store.displayName(for: feedback.projectKey))
                         .id(feedback.id)
+                        .overlay(alignment: .topTrailing) {
+                            Button {
+                                isDetailCollapsed = true
+                            } label: {
+                                Image(systemName: "xmark.circle.fill")
+                                    .font(.title3)
+                                    .foregroundStyle(.secondary)
+                            }
+                            .buttonStyle(.plain)
+                            .padding(10)
+                            .help("상세 칸 닫기 (⌥⌘I)")
+                            .keyboardShortcut("i", modifiers: [.command, .option])
+                        }
+                }
+                .frame(width: Self.detailWidth)
+                .transition(.move(edge: .trailing).combined(with: .opacity))
+            } else if showsDashboardPanel {
+                HStack(spacing: 0) {
+                    Divider()
+                    AppDashboardPanel(project: dashboardProject) { showsDashboard = false }
                 }
                 .frame(width: Self.detailWidth)
                 .transition(.move(edge: .trailing).combined(with: .opacity))
@@ -83,10 +165,39 @@ struct SplitRootView: View {
         // 미끄러지는 동안 상세가 목록 위로 삐져나오지 않게.
         .clipped()
         .animation(reduceMotion ? nil : .snappy(duration: 0.28), value: isShowingDetail.wrappedValue)
+        .animation(reduceMotion ? nil : .snappy(duration: 0.28), value: showsDashboardPanel)
         .onChange(of: selection) { isDetailCollapsed = false }
         #else
-        projectStack
+        mainContent
         #endif
+    }
+
+    /// "전체 앱"이면 가운데에 모든 앱 대시보드, 아니면 고른 앱의 칸. 전체 앱일 때만 맨 위에
+    /// 대시보드 · 모아보기 전환이 선다.
+    private var mainContent: some View {
+        Group {
+            if isAllAppsDashboard {
+                AppDashboardPanel(project: nil)
+            } else {
+                projectStack
+            }
+        }
+        .safeAreaInset(edge: .top, spacing: 0) {
+            if isAllApps {
+                Picker("전체 앱 보기", selection: $store.showsAllAppsDashboard) {
+                    Text("대시보드").tag(true)
+                    Text("\(store.projectSection.rawValue) 모아보기").tag(false)
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+                .fixedSize()
+                .padding(.vertical, 8)
+                .frame(maxWidth: .infinity)
+                .background(.bar)
+            }
+        }
+        // 사이드바에서 칸을 고르면 그 칸을 보러 온 것 — 대시보드는 칸과 상관없이 같으니 모아보기로.
+        .onChange(of: store.projectSection) { store.showsAllAppsDashboard = false }
     }
 
     private var projectStack: some View {
@@ -120,10 +231,32 @@ struct SplitRootView: View {
         return store.allFeedback.first(where: { $0.id == id })
     }
 
+    /// 앱을 고르는 칸에서 "전체 앱"을 골랐나.
+    private var isAllApps: Bool {
+        store.projectSection.usesAppList && store.focusedApp == nil && store.selectedProject == nil
+    }
+
+    /// 가운데에 전체 대시보드를 세울까.
+    private var isAllAppsDashboard: Bool {
+        isAllApps && store.showsAllAppsDashboard
+    }
+
+    /// 오른쪽 대시보드를 둘까 — 앱 하나를 골랐고 접지 않았을 때. 전체 앱은 가운데가 대시보드다.
+    private var showsDashboardPanel: Bool {
+        showsDashboard && store.projectSection.usesAppList && dashboardProject != nil
+    }
+
+    /// 오른쪽 대시보드가 볼 앱. nil 이면 세우지 않는다.
+    private var dashboardProject: String? {
+        guard let project = store.selectedProject, project != Feedback.unclassifiedProject else { return nil }
+        return project
+    }
+
     /// Open while a row is selected, 피드백 is showing, and the user hasn't
     /// folded it away.
     private var isShowingDetail: Binding<Bool> {
-        Binding(get: { selectedFeedback != nil && store.projectSection.showsFeedbackDetail && !isDetailCollapsed },
+        Binding(get: { selectedFeedback != nil && store.projectSection.showsFeedbackDetail
+                        && !isDetailCollapsed && !isAllAppsDashboard },
                 set: { isDetailCollapsed = !$0 })
     }
 
@@ -135,6 +268,28 @@ struct SplitRootView: View {
         // 어느 환경의 데이터인가 — 창이 몇 개든 늘 같은 자리에.
         ToolbarItem(placement: .navigation) {
             EnvironmentBadge()
+        }
+
+        // 모든 앱을 카드로 편 첫 화면으로 — 앱 화면에서는 "‹ 모든 앱" 으로 글자까지 세운다.
+        // 기호(▦)만 있을 때는 카드 · 좋은 소식을 눌러 들어온 뒤 돌아갈 길로 읽히지 않았다.
+        // 맥의 뒤로 가기 키(⌘[)도 같은 일을 한다.
+        // 늘 같은 자리 · 같은 모양의 단추 — 홈에 있으면 뒤로 가기처럼 꺼질 뿐 모양이 바뀌어 툴바가 흔들리지 않는다.
+        ToolbarItem(placement: .navigation) {
+            Button {
+                store.goHome()
+            } label: {
+                Label("모든 앱", systemImage: "chevron.backward")
+                    .labelStyle(.titleAndIcon)
+            }
+            .disabled(store.showsHome)
+            .help("모든 앱 한눈에로 돌아가기 (⌘[ · ⇧⌘H)")
+            .keyboardShortcut("[", modifiers: .command)
+            .background {
+                // 예전 단축키도 그대로 — 단추 하나에 키는 하나라 숨은 단추로 받는다.
+                Button("") { store.goHome() }
+                    .keyboardShortcut("h", modifiers: [.command, .shift])
+                    .hidden()
+            }
         }
 
         // 누르면 무엇을 언제 받았는지가 열린다.
@@ -156,36 +311,17 @@ struct SplitRootView: View {
             IdentityMenu()
         }
 
-        // 상세 칸을 접고 펴는 스위치. 고른 피드백이 있을 때만 뜻이 있다.
+        // 오른쪽 앱 대시보드를 접고 편다. 접은 채로는 단추로만 다시 연다.
         ToolbarItem(placement: .primaryAction) {
-            Button {
-                isDetailCollapsed.toggle()
-            } label: {
-                Label(isDetailCollapsed ? "상세 펴기" : "상세 접기", systemImage: "sidebar.right")
+            Toggle(isOn: $showsDashboard) {
+                Label("앱 대시보드", systemImage: "rectangle.righthalf.inset.filled")
             }
-            .help("오른쪽 피드백 상세 칸을 접거나 폅니다")
-            .disabled(selectedFeedback == nil || !store.projectSection.showsFeedbackDetail)
-            .keyboardShortcut("i", modifiers: [.command, .option])
+            .help(showsDashboard ? "오른쪽 앱 대시보드 접기" : "오른쪽 앱 대시보드 펴기")
         }
 
+        // 알림 · 자동 갱신 스위치는 설정(⌘,)으로, 상세 접기는 상세 칸 머리로 옮겼다 —
+        // 툴바에는 날마다 누르는 것만.
         ToolbarItemGroup(placement: .primaryAction) {
-            Toggle(isOn: $store.notificationsEnabled) {
-                Label("알림", systemImage: "bell.badge")
-            }
-            .help("새것이 들어오면 알립니다. 무엇을 알리고 뱃지로 셀지는 설정(⌘,) → 알림에서 고릅니다")
-            .toggleStyle(.button)
-
-            // A stopwatch, not a second round arrow: beside the refresh
-            // button the old icon was the same glyph twice, and nothing said
-            // which one ran now and which one only scheduled. Spelling the
-            // title out would say it plainer still, but it widens the group
-            // enough to push the toolbar into its overflow menu.
-            Toggle(isOn: $store.autoRefresh) {
-                Label("자동 갱신", systemImage: "timer")
-            }
-            .help("1분마다 자동으로 새로고침합니다")
-            .toggleStyle(.button)
-
             // 이름까지 보인다 — 화면마다 받는 것이 달라서 "리뷰 새로고침" · "차트 순위 새로고침"
             // 처럼 무엇을 받는지가 단추에 적혀 있어야 한다. 전부는 ⇧⌘R · 데이터 상태 칸.
             RefreshButton()

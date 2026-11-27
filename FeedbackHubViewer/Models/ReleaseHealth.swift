@@ -143,17 +143,22 @@ enum ReleaseHealth {
     static let adoptionDays = 7
     /// 이보다 작은 차이(%p)는 흔들림으로 보고 퇴행이라 부르지 않는다.
     static let crashFreeWobble = 0.005
+    /// 카드에 나란히 보일 최근 버전 수(최신 포함).
+    static let recentVersions = 4
 
     // MARK: 결과 모양
 
     enum Level: Int, Comparable {
-        case green = 0, yellow = 1, red = 2
+        /// 근거가 모자라 좋다고도 나쁘다고도 못 한다(설치가 적음 · 견줄 앞 버전 없음 · 흔들림 안).
+        /// 곤란을 겪는 사람이 없는데 노랑으로 칠하지 않으려고 따로 둔다.
+        case green = 0, unknown = 1, yellow = 2, red = 3
 
         static func < (lhs: Level, rhs: Level) -> Bool { lhs.rawValue < rhs.rawValue }
 
         var label: String {
             switch self {
             case .green: return "초록"
+            case .unknown: return "판단할 수 없음"
             case .yellow: return "노랑"
             case .red: return "빨강"
             }
@@ -217,6 +222,10 @@ enum ReleaseHealth {
         let bugFeedback: Int?
         /// 이 버전을 쓴 플랫폼(iOS · macCatalyst …).
         let platforms: Set<String>
+        /// 설치를 겹치지 않게 셋으로 가른 것. 불안정도 핵심 행동도 모르면 nil.
+        var people: People? = nil
+        /// 이 버전의 성능(LeeoKit 성능 한 줄). 한 장도 안 왔으면 nil.
+        var performance: Performance? = nil
 
         var coreActionRate: Double? {
             guard let coreActionInstalls, activeInstalls > 0 else { return nil }
@@ -234,6 +243,43 @@ enum ReleaseHealth {
         }
     }
 
+    /// 이 버전을 쓴 설치를 겹치지 않게 가른 것 — 곤란을 겪음 · 핵심 행동까지 못 감 · 문제없이 씀.
+    /// 한 설치는 한 칸에만 들어간다. 불안정 이벤트를 보냈으면 핵심 행동을 했어도 곤란 쪽이다.
+    struct People: Equatable {
+        /// 크래시 · 실행 실패 같은 불안정 이벤트를 보낸 설치. 모르면 nil.
+        let troubled: Int?
+        /// 불안정은 없지만 핵심 행동을 한 번도 안 한 설치. 스펙에 핵심 행동이 없으면 nil.
+        let stuck: Int?
+        let fine: Int
+        var total: Int { (troubled ?? 0) + (stuck ?? 0) + fine }
+    }
+
+    /// 버전 하나의 성능 — 설치마다 한 장씩 온 값의 가운데.
+    struct Performance: Equatable {
+        let samples: Int
+        /// 첫 화면까지(ms).
+        let launchMs: Double?
+        /// 앞에 떠 있던 한 시간에 멈춘 초.
+        let hangPerHour: Double?
+        let peakMB: Double?
+
+        init?(_ reports: [CrashReport]) {
+            let values = reports.map(\.metricValues)
+            guard !values.isEmpty else { return nil }
+            func median(_ key: String) -> Double? {
+                let sorted = values.compactMap { $0[key] }.sorted()
+                return sorted.isEmpty ? nil : sorted[sorted.count / 2]
+            }
+            samples = values.count
+            launchMs = median("launch_ms")
+            hangPerHour = median("hang_s_per_h")
+            peakMB = median("peak_mb")
+        }
+    }
+
+    /// 성능을 견주려면 두 버전 모두 이만큼은 와야 한다. 한두 대의 값은 기기 차이일 뿐이다.
+    static let performanceMinSamples = 5
+
     struct Adoption: Equatable {
         /// 최근 `adoptionDays` 일 활성 설치 중 최신 버전을 쓴 설치.
         let onLatest: Int
@@ -245,6 +291,9 @@ enum ReleaseHealth {
     struct Report: Equatable {
         let latest: VersionMetrics
         let previous: VersionMetrics?
+        /// 같은 플랫폼 줄기의 최근 버전들, 새것부터(첫째가 `latest`). 최신 버전 설치가 적어도
+        /// 앞 버전들에서 사람들이 어땠는지 보이려고 둔다.
+        var recent: [VersionMetrics] = []
         let adoption: Adoption
         let verdict: Verdict
         let spec: ReleaseSpec
@@ -301,16 +350,20 @@ enum ReleaseHealth {
     /// 보고는 죽은 그 버전에서 배달되므로 다수결이 맞고, 업데이트 뒤에 배달된 몇 건만
     /// 제자리로 돌아온다. 빌드 번호가 없는 옛 보고는 `appVersion` 그대로다.
     static func versionResolver(for crashes: [CrashReport]) -> (CrashReport) -> String {
+        // 빌드 번호는 앱마다 따로 센다 — 모든 앱을 한 목록에 모으면 번호가 겹친다.
+        func key(_ report: CrashReport) -> String? {
+            normalizedBuild(report.buildNumber).map { "\(report.appId ?? "")|\($0)" }
+        }
         var votes: [String: [String: Int]] = [:]
         for report in crashes {
-            guard let build = normalizedBuild(report.buildNumber), isRealVersion(report.appVersion) else { continue }
+            guard let build = key(report), isRealVersion(report.appVersion) else { continue }
             votes[build, default: [:]][report.appVersion, default: 0] += 1
         }
         let byBuild = votes.compactMapValues { tally in
             tally.max { $0.value == $1.value ? isOlder($1.key, than: $0.key) : $0.value < $1.value }?.key
         }
         return { report in
-            guard let build = normalizedBuild(report.buildNumber), let version = byBuild[build] else {
+            guard let build = key(report), let version = byBuild[build] else {
                 return report.appVersion
             }
             return version
@@ -338,6 +391,7 @@ enum ReleaseHealth {
     static func measure(events: [UsageEvent],
                         crashes: [CrashReport],
                         feedback: [Feedback],
+                        metrics performanceReports: [CrashReport] = [],
                         spec releaseSpec: ReleaseSpec?,
                         everSeenEvents: Set<String>,
                         coverageStart: Date? = nil,
@@ -354,9 +408,10 @@ enum ReleaseHealth {
         let latestPlatforms = Set(byVersion[latestVersion, default: []].map(\.platform))
         // 앞 버전은 **같은 플랫폼 줄기**에서 고른다. 맥 앱이 따로 번호를 매기면
         // iOS 5.1 의 앞 버전으로 맥 1.2 를 고르는 일이 생긴다.
-        let previousVersion = versions.dropFirst().first { version in
+        let line = versions.filter { version in
             !Set(byVersion[version, default: []].map(\.platform)).isDisjoint(with: latestPlatforms)
         }
+        let previousVersion = line.dropFirst().first
 
         let stabilityNames = Set(spec.stabilityEvents)
         let stabilityKnown = spec.stabilityEventsDeclared || !everSeenEvents.isDisjoint(with: stabilityNames)
@@ -412,7 +467,7 @@ enum ReleaseHealth {
             let typed = notes.filter { !($0.feedbackType?.trimmingCharacters(in: .whitespaces).isEmpty ?? true) }
             let bugs = typed.filter { $0.feedbackType?.trimmingCharacters(in: .whitespaces).lowercased() == "bug" }.count
 
-            return VersionMetrics(
+            var result = VersionMetrics(
                 version: version,
                 activeInstalls: installs.count,
                 coreActionInstalls: coreNames == nil ? nil : core.count,
@@ -422,12 +477,20 @@ enum ReleaseHealth {
                 newSignatures: fresh,
                 feedback: notes.count,
                 bugFeedback: typed.isEmpty ? nil : bugs,
-                platforms: Set(group.map(\.platform))
+                platforms: Set(group.map(\.platform)),
+                people: Self.people(installs: installs, unstable: stabilityKnown ? unstable : nil,
+                               core: coreNames == nil ? nil : core)
             )
+            result.performance = Performance(performanceReports.filter {
+                $0.appVersion.trimmingCharacters(in: .whitespaces) == version
+            })
+            return result
         }
 
         let latest = metrics(for: latestVersion, includeNewSignatures: true)
         let previous = previousVersion.map { metrics(for: $0, includeNewSignatures: false) }
+        let older = line.dropFirst(2).prefix(recentVersions - 2).map { metrics(for: $0, includeNewSignatures: false) }
+        let recentMetrics = [latest] + (previous.map { [$0] } ?? []) + older
 
         // 채택: 최근 7일 활성 설치마다 그 창에서 본 가장 높은 버전.
         var newestByInstall: [String: String] = [:]
@@ -442,6 +505,7 @@ enum ReleaseHealth {
 
         return Report(latest: latest,
                       previous: previous,
+                      recent: recentMetrics,
                       adoption: adoption,
                       verdict: verdict(latest: latest, previous: previous, thresholds: spec.thresholds),
                       spec: spec,
@@ -451,18 +515,30 @@ enum ReleaseHealth {
                       coverageStart: coverageStart.flatMap { $0 > windowStart ? $0 : nil })
     }
 
+    /// 설치를 곤란 · 막힘 · 괜찮음으로 겹치지 않게 가른다.
+    static func people(installs: Set<String>, unstable: Set<String>?, core: Set<String>?) -> People? {
+        guard unstable != nil || core != nil, !installs.isEmpty else { return nil }
+        let troubled = unstable.map { $0.intersection(installs) } ?? []
+        let stuck = core.map { installs.subtracting($0).subtracting(troubled) }
+        return People(troubled: unstable == nil ? nil : troubled.count,
+                      stuck: stuck?.count,
+                      fine: installs.count - troubled.count - (stuck?.count ?? 0))
+    }
+
     // MARK: 판정
 
-    /// 최신 버전과 앞 버전의 숫자로 초록 · 노랑 · 빨강을 정한다. 순수 함수다.
+    /// 최신 버전과 앞 버전의 숫자로 초록 · 판단할 수 없음 · 노랑 · 빨강을 정한다. 순수 함수다.
     ///
     /// 빨강
     ///  - 최신 버전에서 처음 본 크래시 지문이 보고 2건 이상 (설치 수와 무관하다. 크래시는 크래시다)
-    ///  - 크래시 없는 설치 비율이 문턱 아래
+    ///  - 크래시 없는 설치 비율이 문턱 아래 — 앞 버전도 그만큼 낮았으면 노랑이다(이번 버전 탓이 아니다)
     ///  - 핵심 행동률이 앞 버전보다 `coreActionDropMax` 넘게(상대값) 떨어졌고, 그 차이가 우연으로
-    ///    설명되지 않음 (`dropIsSignificant`). 문턱만 넘고 표본이 작으면 노랑이다
-    /// 노랑
+    ///    설명되지 않음 (`dropIsSignificant`). 문턱만 넘고 표본이 작으면 판단할 수 없음이다
+    /// 판단할 수 없음 (빨강 · 노랑 이유가 하나도 없을 때만)
     ///  - 최신 버전 활성 설치가 `minInstallsForVerdict` 미만 (비율 판정은 건너뛴다)
     ///  - 견줄 앞 버전이 없음
+    ///  - 핵심 행동률이 문턱 넘게 떨어졌지만 표본이 작아 흔들림 안
+    /// 노랑
     ///  - 작은 퇴행: 새 지문 1건 또는 크래시가 아닌 새 지문, 크래시 없는 비율이 앞보다 낮아짐,
     ///    핵심 행동률이 문턱의 절반을 넘게 떨어짐, 설치당 크래시 보고가 늘어남, 버그 피드백이 늘어남
     /// 초록
@@ -475,6 +551,8 @@ enum ReleaseHealth {
                         thresholds: ReleaseSpec.Thresholds) -> Verdict {
         var red: [String] = []
         var yellow: [String] = []
+        /// 나쁜 것이 아니라 아직 모르는 것. 이것만 있으면 노랑이 아니라 판단할 수 없음이다.
+        var unsure: [String] = []
         var green: [String] = []
         var steps: [Step] = []
         func fix(_ text: String) { steps.append(Step(kind: .fix, text: text)) }
@@ -502,12 +580,18 @@ enum ReleaseHealth {
         let previousEnough = (previous?.activeInstalls ?? 0) >= thresholds.minInstallsForVerdict
 
         if !enough {
-            yellow.insert("아직 판단하기 이르다 (최신 버전 활성 설치 \(latest.activeInstalls)대, 판단에 \(thresholds.minInstallsForVerdict)대 필요)", at: 0)
+            unsure.insert("아직 판단하기 이르다 (최신 버전 활성 설치 \(latest.activeInstalls)대, 판단에 \(thresholds.minInstallsForVerdict)대 필요)", at: 0)
             wait("최신 버전 활성 설치가 \(thresholds.minInstallsForVerdict - latest.activeInstalls)대 더 생기면 판정한다 (지금 \(latest.activeInstalls)/\(thresholds.minInstallsForVerdict)대). 사용자가 원래 적은 앱이면 앱 리포 docs/usage-spec.json 의 release.thresholds.minInstallsForVerdict 를 낮춘다")
         } else {
             // 안정성
             if let rate = latest.crashFreeRate {
-                if rate < thresholds.crashFreeInstallsMin {
+                if rate < thresholds.crashFreeInstallsMin, let before = previous?.crashFreeRate, previousEnough,
+                   rate >= before - crashFreeWobble {
+                    // 문턱 아래지만 앞 버전도 그만큼이었다 — 이번 버전이 나빠진 것이 아니라 원래 그렇다.
+                    // 릴리즈 판정은 "이번 버전이 나빠졌나"라 빨강이 아니다. 고칠 것으로는 남긴다.
+                    yellow.append("크래시 없는 설치 \(percent(rate)), 문턱 \(percent(thresholds.crashFreeInstallsMin)) 아래지만 앞 버전(\(percent(before)))부터 그랬다")
+                    fix("불안정 갈래 중 많은 것부터 본다. 이번 버전 탓은 아니라, 다음 버전에서 줄이면 풀린다")
+                } else if rate < thresholds.crashFreeInstallsMin {
                     red.append("크래시 없는 설치 \(percent(rate)), 문턱 \(percent(thresholds.crashFreeInstallsMin)) 아래")
                     fix("불안정 설치를 줄여 크래시 없는 설치를 \(percent(thresholds.crashFreeInstallsMin)) 위로 올린다. 아래 표의 불안정 갈래 중 많은 것부터 본다")
                 } else if let before = previous?.crashFreeRate, previousEnough, rate < before - crashFreeWobble {
@@ -529,7 +613,7 @@ enum ReleaseHealth {
                         red.append("핵심 행동률 \(percent(before)) → \(percent(now)) (\(percent(drop)) 떨어짐, 허용 \(percent(thresholds.coreActionDropMax)))")
                         fix("이번 버전에서 핵심 행동까지 가는 길이 바뀌었거나 막혔는지 확인해 고친다")
                     } else if drop > thresholds.coreActionDropMax {
-                        yellow.append("핵심 행동률 \(percent(before)) → \(percent(now)) (\(percent(drop)) 떨어짐, 표본이 작아 흔들림 안)")
+                        unsure.append("핵심 행동률 \(percent(before)) → \(percent(now)) (\(percent(drop)) 떨어짐, 표본이 작아 흔들림 안)")
                         wait("설치가 더 쌓이면 진짜 떨어진 것인지 가려진다. 그동안 핵심 행동까지 가는 길이 바뀌었는지 한 번 확인한다")
                     } else if drop > thresholds.coreActionDropMax / 2 {
                         yellow.append("핵심 행동률 \(percent(before)) → \(percent(now)) (\(percent(drop)) 떨어짐)")
@@ -551,8 +635,21 @@ enum ReleaseHealth {
             }
         }
 
+        // 성능 — 설치 수 문턱과 따로, 두 버전 모두 성능 한 줄이 충분히 왔을 때만 견준다.
+        if let now = latest.performance, let before = previous?.performance,
+           now.samples >= performanceMinSamples, before.samples >= performanceMinSamples {
+            if let was = before.launchMs, let isNow = now.launchMs, isNow > was * 1.2, isNow - was >= 100 {
+                yellow.append("켜서 첫 화면까지 \(Int(was))ms → \(Int(isNow))ms 로 느려졌다")
+                fix("이번 버전에서 켤 때 하는 일(초기화 · 첫 화면을 그리기 전에 읽는 것)이 늘었는지 확인한다")
+            }
+            if let was = before.hangPerHour, let isNow = now.hangPerHour, isNow > was * 1.5, isNow - was >= 0.5 {
+                yellow.append("멈춤이 한 시간에 \(String(format: "%.1f", was))초 → \(String(format: "%.1f", isNow))초로 늘었다")
+                fix("진단 칸에서 이번 버전의 멈춤부터 본다")
+            }
+        }
+
         if previous == nil {
-            yellow.append("견줄 앞 버전이 최근 \(windowDays)일에 없다")
+            unsure.append("견줄 앞 버전이 최근 \(windowDays)일에 없다")
             wait("다음 버전을 내면 지금 버전이 견줄 앞 버전이 된다")
         } else if let previous, let bugsNow = latest.bugFeedback, bugsNow >= 2, bugsNow > (previous.bugFeedback ?? 0) {
             yellow.append("버그 피드백 \(previous.bugFeedback ?? 0)건 → \(bugsNow)건")
@@ -561,8 +658,9 @@ enum ReleaseHealth {
 
         // 고칠 것이 먼저. 같은 종류 안에서는 이유가 나온 차례를 지킨다.
         let ordered = steps.enumerated().sorted { ($0.element.kind, $0.offset) < ($1.element.kind, $1.offset) }.map(\.element)
-        if !red.isEmpty { return Verdict(level: .red, reasons: red + yellow, steps: ordered) }
-        if !yellow.isEmpty { return Verdict(level: .yellow, reasons: yellow, steps: ordered) }
+        if !red.isEmpty { return Verdict(level: .red, reasons: red + yellow + unsure, steps: ordered) }
+        if !yellow.isEmpty { return Verdict(level: .yellow, reasons: yellow + unsure, steps: ordered) }
+        if !unsure.isEmpty { return Verdict(level: .unknown, reasons: unsure, steps: ordered) }
         return Verdict(level: .green, reasons: [green.joined(separator: " · ")])
     }
 
