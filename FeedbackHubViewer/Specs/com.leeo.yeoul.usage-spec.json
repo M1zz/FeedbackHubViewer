@@ -1,0 +1,21 @@
+{
+  "$comment": [
+    "FeedbackHubViewer 가 이 앱의 통계를 읽는 스펙. 원본은 이 파일이고, 허브는 scripts/sync-stats-specs.sh 로 복사해 간다.",
+    "release.coreAction 은 품질 탭의 '핵심 기능' 칸과 릴리즈 건강 카드가 읽는다. 이벤트 이름을 바꾸면 여기도 같이 바꿀 것."
+  ],
+  "specVersion": 1,
+  "appId": "com.leeo.yeoul",
+  "appName": "여울",
+  "eventLabels": {
+    "moment_saved": "순간 남기기",
+    "onboarding_completed": "온보딩 마침",
+    "onboarding_skipped": "온보딩 건너뜀"
+  },
+  "release": {
+    "coreAction": {
+      "label": "타임라인에 순간을 남긴 사람",
+      "events": ["moment_saved"],
+      "note": "순간을 남겨야 흐른 시간만큼 벌어지는 타임라인이 생기므로, 새 순간 저장이 이 앱의 가치 순간이다."
+    }
+  }
+}

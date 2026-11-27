@@ -124,6 +124,8 @@ def mentioned_strings(repo: str) -> set:
     지표만큼 위험하지 않다.
     """
     tokens = set()
+    prefixes = set()      # 보간 바로 앞 글자: "funnel_\\(rawValue)" 의 "funnel_"
+    raw_values = set()    # enum 원시값: case firstTodo = "first_todo"
     for _, src in _swift_sources(repo):
         for literal in re.findall(r'"([^"\n]*?)(?:\\\(|")', src):
             tokens.add(literal)
@@ -131,7 +133,11 @@ def mentioned_strings(repo: str) -> set:
             #   "paywall_converted:\\(trigger.rawValue)"
             tokens.add(literal.rstrip(':').rstrip('.'))
             tokens.add(literal.split(':', 1)[0])
+        prefixes.update(p for p in re.findall(r'"([A-Za-z_][\w:.]*)\\\(', src))
+        raw_values.update(re.findall(r'\bcase\s+\w+\s*=\s*"([^"\n]+)"', src))
         tokens.update(re.findall(r'\bcase\s+([A-Za-z_]\w*)', src))
+    # 앞부분과 원시값을 이어 만드는 이름 — `var eventName { "funnel_\\(rawValue)" }`.
+    tokens.update(p + r for p in prefixes for r in raw_values)
     tokens.discard('')
     return tokens
 

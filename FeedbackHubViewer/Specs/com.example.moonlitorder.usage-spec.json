@@ -1,0 +1,19 @@
+{
+  "$comment": [
+    "FeedbackHubViewer 가 이 앱의 통계를 읽는 스펙. 원본은 이 파일이고, 허브는 scripts/sync-stats-specs.sh 로 복사해 간다.",
+    "release.coreAction 은 품질 탭의 '핵심 기능' 칸과 릴리즈 건강 카드가 읽는다. 이벤트 이름을 바꾸면 여기도 같이 바꿀 것."
+  ],
+  "specVersion": 1,
+  "appId": "com.example.MoonlitOrder",
+  "appName": "달빛 오락실",
+  "eventLabels": {
+    "game_finished": "게임 한 판 끝냄"
+  },
+  "release": {
+    "coreAction": {
+      "label": "친구들과 게임 한 판을 끝까지 한 사람",
+      "events": ["game_finished"],
+      "note": "모여서 한 판을 끝까지 해야 이 앱이 파티 게임으로서 제 몫을 한 것이다."
+    }
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "$comment": [
+    "FeedbackHubViewer 가 이 앱의 통계를 읽는 스펙. 원본은 이 파일이고, 허브는 scripts/sync-stats-specs.sh 로 복사해 간다.",
+    "release.coreAction 은 품질 탭의 '핵심 기능' 칸과 릴리즈 건강 카드가 읽는다. 이벤트 이름을 바꾸면 여기도 같이 바꿀 것."
+  ],
+  "specVersion": 1,
+  "appId": "com.leeo.SkyDex",
+  "appName": "하늘색",
+  "eventLabels": {
+    "sky_saved": "하늘 한 장 담음"
+  },
+  "release": {
+    "coreAction": {
+      "label": "하늘을 찍어 색을 모은 사람",
+      "events": ["sky_saved"],
+      "note": "하늘 한 장을 찍어 그 색이 보드에 들어가야 이 앱의 수집이 시작된다."
+    }
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "$comment": [
+    "FeedbackHubViewer 가 이 앱의 통계를 읽는 스펙. 원본은 이 파일이고, 허브는 scripts/sync-stats-specs.sh 로 복사해 간다.",
+    "release.coreAction 은 품질 탭의 '핵심 기능' 칸과 릴리즈 건강 카드가 읽는다. 이벤트 이름을 바꾸면 여기도 같이 바꿀 것."
+  ],
+  "specVersion": 1,
+  "appId": "com.kora.leeo",
+  "appName": "한국길찾기",
+  "eventLabels": {
+    "guided_ride_started": "안내 받으며 첫 열차 탑승"
+  },
+  "release": {
+    "coreAction": {
+      "label": "길 안내를 받으며 지하철에 탄 사람",
+      "events": ["guided_ride_started"],
+      "note": "경로를 고른 뒤 실제 열차에 올라 안내를 받기 시작하는 순간이 이 앱이 길을 대신 잡아 주는 가치를 받는 때다."
+    }
+  }
+}

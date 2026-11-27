@@ -1,0 +1,21 @@
+{
+  "$comment": [
+    "FeedbackHubViewer 가 이 앱의 통계를 읽는 스펙. 원본은 이 파일이고, 허브는 scripts/sync-stats-specs.sh 로 복사해 간다.",
+    "release.coreAction 은 품질 탭의 '핵심 기능' 칸과 릴리즈 건강 카드가 읽는다. 이벤트 이름을 바꾸면 여기도 같이 바꿀 것."
+  ],
+  "specVersion": 1,
+  "appId": "com.family.familycourt",
+  "appName": "우리집 가정법원",
+  "eventLabels": {
+    "verdict_delivered": "판결 선고",
+    "onboarding_completed": "온보딩 마침",
+    "onboarding_skipped": "온보딩 건너뜀"
+  },
+  "release": {
+    "coreAction": {
+      "label": "재판을 열어 판결까지 낸 사람",
+      "events": ["verdict_delivered"],
+      "note": "가족 다툼을 재판으로 풀어 판결을 내리는 순간이 이 앱이 존재하는 이유다."
+    }
+  }
+}

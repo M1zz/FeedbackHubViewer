@@ -1,0 +1,19 @@
+{
+  "$comment": [
+    "FeedbackHubViewer 가 이 앱의 통계를 읽는 스펙. 원본은 이 파일이고, 허브는 scripts/sync-stats-specs.sh 로 복사해 간다.",
+    "release.coreAction 은 품질 탭의 '핵심 기능' 칸과 릴리즈 건강 카드가 읽는다. 이벤트 이름을 바꾸면 여기도 같이 바꿀 것."
+  ],
+  "specVersion": 1,
+  "appId": "com.leeo.sunflower",
+  "appName": "햇빛바라기",
+  "eventLabels": {
+    "sunlight_logged": "햇빛 쬔 시간 기록"
+  },
+  "release": {
+    "coreAction": {
+      "label": "밖에서 햇빛을 쬐고 기록을 남긴 사람",
+      "events": ["sunlight_logged"],
+      "note": "밖에서 햇빛을 1분 넘게 쬐어 해바라기가 충전돼야 이 앱이 하루 햇빛을 챙겨 준 것이다."
+    }
+  }
+}
