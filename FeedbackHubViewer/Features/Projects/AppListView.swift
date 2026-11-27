@@ -76,6 +76,9 @@ struct AppListView: View {
             if !store.hiddenProjectEntries.isEmpty {
                 hiddenSection
             }
+            if !store.untrackedEntries.isEmpty {
+                untrackedSection
+            }
         }
         .animation(.default, value: entries.map(\.key))
         // 칸을 바꾸면 목록을 새로 — 같은 목록이 새 칸의 차례로 줄을 섞으며 날아다니지 않게.
@@ -156,6 +159,33 @@ struct AppListView: View {
             store.hideProject(project)
         } label: {
             Label("이 앱 숨기기", systemImage: "eye.slash")
+        }
+    }
+
+    /// App Store 에 없어 추적하지 않는 앱(배포 전 · 내림). 잘못 빠졌으면 "다시 추적".
+    private var untrackedSection: some View {
+        Section {
+            ForEach(store.untrackedEntries, id: \.key) { entry in
+                HStack(spacing: 8) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(entry.displayName)
+                            .lineLimit(2)
+                            .foregroundStyle(.secondary)
+                        Text(entry.reason)
+                            .foregroundStyle(.tertiary)
+                            .lineLimit(2)
+                    }
+                    Spacer()
+                    Button("다시 추적") { store.trackAnyway(entry.key) }
+                        .buttonStyle(.borderless)
+                        .font(.hubCaption)
+                }
+                .font(.hubCallout)
+            }
+        } header: {
+            Text("App Store 에 없어 추적 안 함 \(store.untrackedEntries.count)개")
+        } footer: {
+            Text("배포 전이거나 App Store 에서 내린 앱입니다. 스토어에 나오면 저절로 다시 추적합니다.")
         }
     }
 

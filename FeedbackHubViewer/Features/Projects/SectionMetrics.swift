@@ -31,7 +31,7 @@ struct SectionMetrics {
 
     /// 키워드 뱃지가 보는 앱 — 뱃지 · 열어 봄 · 모두 읽기가 같은 앱들을 봐야 센 것이 지워진다.
     static func keywordProjects(_ store: FeedbackStore) -> [String] {
-        store.allProjectKeys.filter { $0 != Feedback.unclassifiedProject && !store.hiddenProjects.contains($0) }
+        store.allProjectKeys.filter { $0 != Feedback.unclassifiedProject && !store.isExcluded($0) }
     }
 
     static func memoKey(_ section: FeedbackStore.ProjectSection, _ project: String?) -> String {
@@ -438,7 +438,7 @@ struct SectionMetrics {
         case .reviews:
             guard purchases.isConfigured else { return "App Store Connect 키를 넣으면 리뷰를 읽고 답할 수 있습니다" }
             guard let project else {
-                let feeds = purchases.reviewFeeds.filter { !store.hiddenProjects.contains($0.key) }.values
+                let feeds = purchases.reviewFeeds.filter { !store.isExcluded($0.key) }.values
                 let total = feeds.reduce(0) { $0 + $1.reviews.count }
                 guard total > 0 else { return "모든 앱의 App Store 리뷰" }
                 let unanswered = feeds.reduce(0) { $0 + $1.unanswered }
@@ -491,7 +491,7 @@ struct SectionMetrics {
     /// `InboxView` 가 보여 주는 행과 같은 기준이어야 뱃지와 목록이 같은 수를 말한다.
     private var inboxCount: Int {
         let reviews = purchases.reviewFeeds
-            .filter { !store.hiddenProjects.contains($0.key) }
+            .filter { !store.isExcluded($0.key) }
             .values.reduce(0) { total, feed in
                 total + feed.reviews.filter { $0.response == nil && !store.isReviewDone($0.id) }.count
             }

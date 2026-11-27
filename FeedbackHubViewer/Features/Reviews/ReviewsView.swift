@@ -341,7 +341,7 @@ private struct AllReviewsView: View {
 
     private var feeds: [(key: String, feed: ReviewFeed)] {
         purchases.reviewFeeds
-            .filter { !store.hiddenProjects.contains($0.key) }
+            .filter { !store.isExcluded($0.key) }
             .map { ($0.key, $0.value) }
     }
 

@@ -120,6 +120,11 @@ struct FeedbackHubViewerApp: App {
                 //
                 // 넘겨받은 값에서 읽는다 - `$history`는 값이 바뀌기 **전에** 울려서,
                 // 그 순간 `keywords.history`를 읽으면 한 박자 늦은 이름이 된다.
+                // App Store 에 없는 앱(배포 전 · 내림)은 추적하지 않는다(`StoreTracking`).
+                // 넘겨받은 값으로 — `$` 는 바뀌기 전에 울린다.
+                .onReceive(keywords.$storeAbsent.combineLatest(purchases.$versions)) { absent, versions in
+                    store.updateStoreTracking(absent: absent, versions: versions)
+                }
                 .onReceive(keywords.$history) { history in
                     store.storeAppNames = history.storeNames
                     startChartsIfDue(links: history.links)

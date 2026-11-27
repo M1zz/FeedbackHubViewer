@@ -419,7 +419,7 @@ extension FeedbackStore {
             // From the rollups, not the raw events: an app whose events have all
             // aged out of the retained window is still an app of yours, and its
             // history is still on file.
-            keys.formUnion(rollups.projectKeys.subtracting(hiddenProjects))
+            keys.formUnion(rollups.projectKeys.subtracting(excludedProjects))
             keys.formUnion(allCrashes.map(\.projectKey))
             let installs = snapshotsByProject.mapValues(\.count)
             return keys.sorted { lhs, rhs in

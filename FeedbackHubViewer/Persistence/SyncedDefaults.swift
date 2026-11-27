@@ -51,6 +51,8 @@ enum SyncedDefaults {
         "home-voices-seen": nil,
         // 스토어 문구 후보로 별을 단 의견 — 뗄 수 있어 마지막 쓰기가 이긴다.
         "voice-store-copy": nil,
+        // App Store 에 없어도 추적하라고 한 앱 — 마지막 쓰기.
+        FeedbackStore.trackedAnywayKey: nil,
     ]
 
     /// `@AppStorage` 로 바로 쓰는 키 — 화면이 `SyncedDefaults.set` 을 부르지 않으니

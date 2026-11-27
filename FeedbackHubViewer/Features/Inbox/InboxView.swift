@@ -50,7 +50,7 @@ struct InboxView: View {
 
     private var unansweredReviews: [ReviewItem] {
         purchases.reviewFeeds
-            .filter { !store.hiddenProjects.contains($0.key) }
+            .filter { !store.isExcluded($0.key) }
             .flatMap { key, feed in
                 // 답장을 달았거나, 답할 필요가 없어 완료로 둔 것(어느 기기에서든)은 빠진다.
                 feed.reviews.filter { $0.response == nil && !store.isReviewDone($0.id) }
@@ -163,7 +163,7 @@ struct InboxView: View {
     /// 최근 7일 결제 · 환불(모든 앱). 결제 알림을 놓쳐도 종을 누르면 여기서 본다.
     @ViewBuilder
     private var purchaseSection: some View {
-        let receipts = purchases.recentReceipts.filter { !store.hiddenProjects.contains($0.bundleID) }
+        let receipts = purchases.recentReceipts.filter { !store.isExcluded($0.bundleID) }
         if !receipts.isEmpty {
             Section {
                 ForEach(receipts.prefix(10)) { receipt in

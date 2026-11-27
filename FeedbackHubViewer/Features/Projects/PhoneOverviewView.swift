@@ -160,7 +160,7 @@ struct PhoneOverviewView: View {
         if let badge = metrics.badge(.reviews, project: nil) {
             let fresh: Set<String> = store.showsBadge(.review) ? purchases.newReviewIDs(for: nil) : []
             var reviews: [(project: String, review: CustomerReview)] = []
-            for (project, feed) in purchases.reviewFeeds where !store.hiddenProjects.contains(project) {
+            for (project, feed) in purchases.reviewFeeds where !store.isExcluded(project) {
                 for review in feed.reviews {
                     let wanted = fresh.isEmpty ? review.response == nil : fresh.contains(review.id)
                     if wanted { reviews.append((project, review)) }

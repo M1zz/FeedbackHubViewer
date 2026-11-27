@@ -41,7 +41,7 @@ struct GiftCodePoolCard: View {
 
     /// 묶음 열쇠들. 앱마다 Pro 묶음과, 등급 선물을 파는 앱이면 그 등급 묶음(`GiftCodePool.tierPools`).
     private var appKeys: [String] {
-        store.projectCounts.map(\.key).filter { $0 != Feedback.unclassifiedProject && !store.hiddenProjects.contains($0) }
+        store.projectCounts.map(\.key).filter { $0 != Feedback.unclassifiedProject && !store.isExcluded($0) }
             .flatMap(GiftCodePool.poolKeys(for:))
     }
 
