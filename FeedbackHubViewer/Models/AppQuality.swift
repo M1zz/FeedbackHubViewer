@@ -323,6 +323,9 @@ struct AppQuality: Identifiable {
     /// 그 앞 버전과 견준다 — 문턱 넘게 줄면 주의. 비율의 높낮이는 묻지 않는다(쓰임새는 앱마다 다르다).
     private static func coreScore(_ core: Core) -> Score {
         let versions = core.versions.filter { $0.coreActionInstalls != nil }
+        if versions.isEmpty {
+            return unknown(.core, hint: "\(core.label) 기록이 아직 한 번도 안 옴 — 기록을 실은 버전이 나가면 잽니다")
+        }
         if let newest = versions.first, newest.coreActionInstalls == 0, newest.activeInstalls > 0,
            let before = versions.dropFirst().first(where: { ($0.coreActionRate ?? 0) > 0 }),
            let rate = before.coreActionRate,

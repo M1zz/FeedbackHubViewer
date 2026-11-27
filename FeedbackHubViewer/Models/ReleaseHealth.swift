@@ -415,7 +415,10 @@ enum ReleaseHealth {
 
         let stabilityNames = Set(spec.stabilityEvents)
         let stabilityKnown = spec.stabilityEventsDeclared || !everSeenEvents.isDisjoint(with: stabilityNames)
+        // 핵심 행동도 한 번이라도 온 적이 있어야 센다. 스펙에 먼저 적고 앱은 다음 버전에 싣는 일이 흔한데,
+        // 그사이 모든 사용자를 "핵심 행동까지 못 감"으로 칠하면 릴리즈 탭이 온통 주황이 된다(2026-11-27).
         let coreNames = spec.coreAction.map { Set($0.events) }
+            .flatMap { everSeenEvents.isDisjoint(with: $0) ? nil : $0 }
 
         // 크래시: 버전을 제자리에 붙이고, 지문별로 "어느 버전에서 봤나"를 모은다.
         let resolve = versionResolver(for: crashes)
