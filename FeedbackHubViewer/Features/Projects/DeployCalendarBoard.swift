@@ -93,7 +93,10 @@ struct DeployCalendarBoard: View {
 
     /// 오늘 할 일 — 테스트할 앱 · 배포할 앱.
     private func todayCards(todaySlot: Int, today: Date, on: (Int) -> [AppGridHome.Row]) -> some View {
+        let start = DeployCalendar.cycleStart(containing: today)
+        let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: Calendar.current.startOfDay(for: today))!
         let tests = on(DeployCalendar.deploySlot(forQA: todaySlot))
+            .filter { !qaDone(deployState($0, on: tomorrow, start: start, today: today)) }
         let deploys = on(todaySlot).filter {
             DeployCalendar.state(slot: todaySlot, cadence: $0.cadence, today: today) == .today
         }
@@ -130,11 +133,7 @@ struct DeployCalendarBoard: View {
         let slot = DeployCalendar.slot(of: date)
         let isToday = Calendar.current.isDate(date, inSameDayAs: today)
         let isPast = date < Calendar.current.startOfDay(for: today)
-        let end = Calendar.current.date(byAdding: .day, value: DeployCalendar.slotCount, to: start)!
-        // 이번 주기 안이면 배포 기록으로 판정, 지난 주기는 기록이 없어 흐리게, 다음 주기는 예정.
-        let stateOf = { (row: AppGridHome.Row) -> DeployCalendar.State? in
-            date < start ? nil : date >= end ? .upcoming : DeployCalendar.state(slot: slot, cadence: row.cadence, today: today)
-        }
+        let qaFor = Calendar.current.date(byAdding: .day, value: 1, to: date)!
 
         let layout = horizontalOnMac(spacing: 14)
         return layout {
@@ -146,11 +145,11 @@ struct DeployCalendarBoard: View {
                 #endif
             column("배포", tint: .orange) {
                 ForEach(deploys) { row in
-                    deployChip(row, state: stateOf(row))
+                    deployChip(row, state: deployState(row, on: date, start: start, today: today))
                 }
             }
             column("QA", tint: .purple) {
-                ForEach(tests) { row in testChip(row) }
+                ForEach(tests) { row in testChip(row, deploy: deployState(row, on: qaFor, start: start, today: today)) }
             }
         }
         .padding(12)
@@ -195,9 +194,22 @@ struct DeployCalendarBoard: View {
         .accessibilityLabel("\(row.name) 배포, \(label), \(detail(row))")
     }
 
-    /// QA 앱 — 사람이 기기에서 시험할 것. 다음 버전이 이미 심사 중이면 끝난 것으로 흐리게.
-    private func testChip(_ row: AppGridHome.Row) -> some View {
-        let done = row.cadence?.status == .inFlight
+    /// 그날 배포 판정 — 이번 주기 안이면 배포 기록으로, 지난 주기는 기록이 없어 nil(흐리게), 다음 주기는 예정.
+    private func deployState(_ row: AppGridHome.Row, on date: Date, start: Date, today: Date) -> DeployCalendar.State? {
+        let end = Calendar.current.date(byAdding: .day, value: DeployCalendar.slotCount, to: start)!
+        if date < start { return nil }
+        if date >= end { return .upcoming }
+        return DeployCalendar.state(slot: DeployCalendar.slot(of: date), cadence: row.cadence, today: today)
+    }
+
+    /// QA 할 필요가 없는가 — 그 배포가 이미 나갔거나 심사 중이거나 지난 주기.
+    private func qaDone(_ deploy: DeployCalendar.State?) -> Bool {
+        deploy == nil || deploy == .shipped || deploy == .inFlight
+    }
+
+    /// QA 앱 — 사람이 기기에서 시험할 것. 다음 날 배포가 이미 끝났으면 흐리게.
+    private func testChip(_ row: AppGridHome.Row, deploy: DeployCalendar.State?) -> some View {
+        let done = qaDone(deploy)
         return Button {
             store.open(project: row.project, section: .release)
         } label: {
