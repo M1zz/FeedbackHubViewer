@@ -61,7 +61,7 @@ SPECS=(
   "$WORKSPACE/Auto/한땀|docs/usage-spec.json|com.leeo.pixelme.usage-spec.json"
   "$WORKSPACE/Auto/햇빛바라기|docs/usage-spec.json|com.leeo.sunflower.usage-spec.json"
   "$WORKSPACE/Auto/모찌모|docs/usage-spec.json|com.leeo.reboundjournal.usage-spec.json"
-  "$WORKSPACE/Auto/탭클립키보드|docs/usage-spec.json|com.ysoup.tokenmemo-tap.usage-spec.json"
+  "$WORKSPACE/유산/탭클립키보드|docs/usage-spec.json|com.ysoup.tokenmemo-tap.usage-spec.json"
   "$WORKSPACE/개발중/조주기능사실기|docs/usage-spec.json|com.leeo.bartenderpractice.usage-spec.json"
 )
 
