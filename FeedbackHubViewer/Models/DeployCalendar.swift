@@ -2,9 +2,9 @@
 //  DeployCalendar.swift
 //  FeedbackHubViewer
 //
-//  배포 캘린더 — 2주에 한 번 배포(`ReleaseCadence.goalDays`)를 앱마다 **정해진 평일 하나**로 나눈다.
+//  배포 캘린더 — 2주에 한 번 배포(`ReleaseCadence.goalDays`)를 앱마다 **정해진 날 하나**로 나눈다(주말 포함).
 //
-//  2주는 평일 열 날(월~금 × 2)이다. 앱마다 그중 하루를 갖고, 그날이 2주마다 돌아온다.
+//  2주는 열나흘(월~일 × 2)이다. 앱마다 그중 하루를 갖고, 그날이 2주마다 돌아온다.
 //  한 날에 몰리면 이 Mac 이 무거워지니(배포는 한 번에 하나) 하루에 너덧 개씩 고르게 나눈다.
 //
 //  자리는 한 번 정하면 그대로 둔다 — 사용자 수가 바뀔 때마다 날이 바뀌면 캘린더가 아니다.
@@ -24,18 +24,17 @@ enum DeployCalendar {
         parts.year = 2026; parts.month = 11; parts.day = 16
         return Calendar.current.date(from: parts)!
     }()
-    static let slotCount = 10
+    static let slotCount = 14
 
     private static var calendar: Calendar { Calendar.current }
 
     // MARK: 날짜 ↔ 자리
 
-    /// 이 날이 주기의 몇 번째 평일인가(0~9). 주말이면 nil.
-    static func slot(of date: Date) -> Int? {
+    /// 이 날이 주기의 몇 번째 날인가(0~13).
+    static func slot(of date: Date) -> Int {
         let days = calendar.dateComponents([.day], from: anchor, to: calendar.startOfDay(for: date)).day ?? 0
         let inCycle = ((days % 14) + 14) % 14
-        let week = inCycle / 7, weekday = inCycle % 7
-        return weekday < 5 ? week * 5 + weekday : nil
+        return inCycle
     }
 
     /// `date` 가 든 주기의 첫 월요일.
@@ -47,8 +46,19 @@ enum DeployCalendar {
 
     /// 주기 안 자리의 날짜.
     static func date(slot: Int, cycleStart: Date) -> Date {
-        calendar.date(byAdding: .day, value: (slot / 5) * 7 + slot % 5, to: cycleStart)!
+        calendar.date(byAdding: .day, value: slot, to: cycleStart)!
     }
+
+    // MARK: 스프린트 · QA
+    //
+    // 한 주기(2주)가 한 스프린트다. 앱마다 배포 바로 전날이 QA 날 — 그날 사람이 기기에서 시험하고,
+    // 다음 날 DeployBar 로 낸다. 첫날(월) 내는 앱의 QA 는 앞 스프린트의 마지막 일요일이다.
+
+    /// 이 자리(QA 날)에 시험할 앱들의 배포 자리.
+    static func deploySlot(forQA slot: Int) -> Int { (slot + 1) % slotCount }
+
+    /// 스프린트의 마지막 날(둘째 주 일요일).
+    static func sprintEnd(cycleStart: Date) -> Date { date(slot: slotCount - 1, cycleStart: cycleStart) }
 
     // MARK: 자리 나누기
 
