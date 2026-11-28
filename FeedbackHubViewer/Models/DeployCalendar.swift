@@ -45,6 +45,13 @@ enum DeployCalendar {
         return calendar.date(byAdding: .day, value: -back, to: calendar.startOfDay(for: date))!
     }
 
+    /// 캘린더가 보여 줄 주기의 첫 월요일. 주말이면 다가오는 평일의 주기 — 끝난 주기를 보여 줄 까닭이 없다.
+    static func shownCycleStart(today: Date) -> Date {
+        var day = calendar.startOfDay(for: today)
+        while slot(of: day) == nil { day = calendar.date(byAdding: .day, value: 1, to: day)! }
+        return cycleStart(containing: day)
+    }
+
     /// 주기 안 자리의 날짜.
     static func date(slot: Int, cycleStart: Date) -> Date {
         calendar.date(byAdding: .day, value: (slot / 5) * 7 + slot % 5, to: cycleStart)!
@@ -133,7 +140,7 @@ enum DeployCalendar {
 
     /// 이번 주기에 이 앱은 어디쯤인가. 배포일을 모르면(스토어에 없음) 날짜로만 본다.
     static func state(slot: Int, cadence: ReleaseCadence?, today: Date) -> State {
-        let start = cycleStart(containing: today)
+        let start = shownCycleStart(today: today)
         let due = date(slot: slot, cycleStart: start)
         let startOfToday = calendar.startOfDay(for: today)
         switch cadence?.status {

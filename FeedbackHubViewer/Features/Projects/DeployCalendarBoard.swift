@@ -28,7 +28,7 @@ struct DeployCalendarBoard: View {
         let apps = apps
         let slots = DeployCalendar.assign(apps.map(\.project), keeping: DeployCalendar.decode(savedRaw))
         let today = Date()
-        let start = DeployCalendar.cycleStart(containing: today)
+        let start = DeployCalendar.shownCycleStart(today: today)
         let byProject = Dictionary(uniqueKeysWithValues: apps.map { ($0.project, $0) })
 
         VStack(alignment: .leading, spacing: 16) {
@@ -71,10 +71,20 @@ struct DeployCalendarBoard: View {
         let done = states.filter { $0.state == .shipped || $0.state == .inFlight }.count
 
         return VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 8) {
+                Text("오늘")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(Capsule().fill(.orange))
+                Text(today, format: .dateTime.month().day().weekday(.wide))
+                    .font(.title3.weight(.semibold))
+            }
             Text(todays.isEmpty
-                 ? (DeployCalendar.slot(of: today) == nil ? "주말 — 배포 없는 날" : "오늘 낼 앱은 다 냈어요")
+                 ? (DeployCalendar.slot(of: today) == nil ? "주말이라 배포 없는 날 — 아래는 다음 주기" : "오늘 낼 앱은 다 냈어요")
                  : "오늘 배포 · \(todays.joined(separator: " · "))")
-                .font(.title3.weight(.semibold))
+                .font(.headline)
             HStack(spacing: 14) {
                 Label("이번 주기 \(done)/\(states.count) 냄", systemImage: "checkmark.circle")
                     .foregroundStyle(.green)
@@ -94,9 +104,20 @@ struct DeployCalendarBoard: View {
         let isToday = Calendar.current.isDate(date, inSameDayAs: today)
 
         return VStack(alignment: .leading, spacing: 6) {
-            Text(date, format: .dateTime.month(.defaultDigits).day().weekday(.abbreviated))
-                .font(.hubCaption.weight(isToday ? .bold : .regular))
-                .foregroundStyle(isToday ? AnyShapeStyle(.orange) : AnyShapeStyle(.secondary))
+            HStack(spacing: 6) {
+                Text(date, format: .dateTime.month(.defaultDigits).day().weekday(.abbreviated))
+                    .font(.hubCaption.weight(isToday ? .bold : .regular))
+                    .foregroundStyle(isToday ? AnyShapeStyle(.primary) : AnyShapeStyle(.secondary))
+                if isToday {
+                    // 열 칸 가운데 오늘을 한눈에 — 날짜 옆 주황 꼬리표.
+                    Text("오늘")
+                        .font(.caption2.weight(.bold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(Capsule().fill(.orange))
+                }
+            }
             ForEach(apps) { row in
                 chip(row, state: DeployCalendar.state(slot: slot, cadence: row.cadence, today: today))
             }
@@ -111,9 +132,11 @@ struct DeployCalendarBoard: View {
         .frame(maxWidth: .infinity, minHeight: 140, alignment: .topLeading)
         #endif
         .background(RoundedRectangle(cornerRadius: 12)
-            .fill(dropTarget == slot ? Color.accentColor.opacity(0.15) : Color.primary.opacity(isToday ? 0.07 : 0.03)))
+            .fill(dropTarget == slot ? Color.accentColor.opacity(0.15)
+                  : isToday ? Color.orange.opacity(0.14) : Color.primary.opacity(0.03)))
         .overlay(RoundedRectangle(cornerRadius: 12)
-            .strokeBorder(isToday ? Color.orange.opacity(0.6) : .clear, lineWidth: 1.5))
+            .strokeBorder(isToday ? Color.orange : .clear, lineWidth: 2.5))
+        .accessibilityAddTraits(isToday ? .isSelected : [])
         .dropDestination(for: String.self) { projects, _ in
             guard let project = projects.first else { return false }
             var moved = slots
