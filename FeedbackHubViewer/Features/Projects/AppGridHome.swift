@@ -288,6 +288,8 @@ struct AppGridHome: View {
                     AppChartsBoard(rows: all)
                 } else if modeRaw == HomeMode.calendar.rawValue {
                     DeployCalendarBoard(rows: all)
+                } else if modeRaw == HomeMode.purchases.rawValue {
+                    PurchaseHistoryBoard()
                 } else {
                 summary(all)
                 urgent(all)
@@ -1456,6 +1458,8 @@ enum HomeMode: String, CaseIterable, Identifiable {
     case charts = "차트"
     /// 2주에 한 번, 앱마다 정해진 평일에 낸다(`DeployCalendarBoard`).
     case calendar = "배포"
+    /// 들어온 결제 · 환불 전부를 날짜 순으로(`PurchaseHistoryBoard`).
+    case purchases = "결제"
     var id: String { rawValue }
 }
 
