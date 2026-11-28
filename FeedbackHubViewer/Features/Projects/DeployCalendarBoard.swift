@@ -28,23 +28,27 @@ struct DeployCalendarBoard: View {
         let apps = apps
         let slots = DeployCalendar.assign(apps.map(\.project), keeping: DeployCalendar.decode(savedRaw))
         let today = Date()
-        let start = DeployCalendar.shownCycleStart(today: today)
+        let start = DeployCalendar.cycleStart(containing: today)
         let byProject = Dictionary(uniqueKeysWithValues: apps.map { ($0.project, $0) })
 
         VStack(alignment: .leading, spacing: 16) {
             summary(slots: slots, byProject: byProject, today: today)
             ForEach(0..<2, id: \.self) { week in
-                // 맥은 한 주를 한 줄에(월~금), 아이폰은 폭이 모자라 날마다 한 줄씩.
+                // 맥은 한 주를 한 줄에(월~일, 주말은 좁게), 아이폰은 폭이 모자라 날마다 한 줄씩.
                 #if os(iOS)
                 let layout = AnyLayout(VStackLayout(alignment: .leading, spacing: 8))
                 #else
                 let layout = AnyLayout(HStackLayout(alignment: .top, spacing: 10))
                 #endif
                 layout {
-                    ForEach(0..<5, id: \.self) { weekday in
-                        let slot = week * 5 + weekday
-                        day(slot: slot, start: start, today: today,
-                            apps: apps.filter { slots[$0.project] == slot }, slots: slots)
+                    ForEach(0..<7, id: \.self) { weekday in
+                        if weekday < 5 {
+                            let slot = week * 5 + weekday
+                            day(slot: slot, start: start, today: today,
+                                apps: apps.filter { slots[$0.project] == slot }, slots: slots)
+                        } else {
+                            weekend(Calendar.current.date(byAdding: .day, value: week * 7 + weekday, to: start)!, today: today)
+                        }
                     }
                 }
             }
@@ -71,18 +75,10 @@ struct DeployCalendarBoard: View {
         let done = states.filter { $0.state == .shipped || $0.state == .inFlight }.count
 
         return VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: 8) {
-                Text("오늘")
-                    .font(.caption.weight(.bold))
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 3)
-                    .background(Capsule().fill(.orange))
-                Text(today, format: .dateTime.month().day().weekday(.wide))
-                    .font(.title3.weight(.semibold))
-            }
+            Text("오늘 \(today.formatted(.dateTime.month().day().weekday(.wide)))")
+                .font(.title3.weight(.semibold))
             Text(todays.isEmpty
-                 ? (DeployCalendar.slot(of: today) == nil ? "주말이라 배포 없는 날 — 아래는 다음 주기" : "오늘 낼 앱은 다 냈어요")
+                 ? (DeployCalendar.slot(of: today) == nil ? "주말이라 배포 없는 날" : "오늘 낼 앱은 다 냈어요")
                  : "오늘 배포 · \(todays.joined(separator: " · "))")
                 .font(.headline)
             HStack(spacing: 14) {
@@ -104,20 +100,9 @@ struct DeployCalendarBoard: View {
         let isToday = Calendar.current.isDate(date, inSameDayAs: today)
 
         return VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: 6) {
-                Text(date, format: .dateTime.month(.defaultDigits).day().weekday(.abbreviated))
-                    .font(.hubCaption.weight(isToday ? .bold : .regular))
-                    .foregroundStyle(isToday ? AnyShapeStyle(.primary) : AnyShapeStyle(.secondary))
-                if isToday {
-                    // 열 칸 가운데 오늘을 한눈에 — 날짜 옆 주황 꼬리표.
-                    Text("오늘")
-                        .font(.caption2.weight(.bold))
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2)
-                        .background(Capsule().fill(.orange))
-                }
-            }
+            Text(date, format: .dateTime.month(.defaultDigits).day().weekday(.abbreviated))
+                .font(.hubCaption.weight(isToday ? .bold : .regular))
+                .foregroundStyle(isToday ? AnyShapeStyle(.primary) : AnyShapeStyle(.secondary))
             ForEach(apps) { row in
                 chip(row, state: DeployCalendar.state(slot: slot, cadence: row.cadence, today: today))
             }
@@ -132,11 +117,8 @@ struct DeployCalendarBoard: View {
         .frame(maxWidth: .infinity, minHeight: 140, alignment: .topLeading)
         #endif
         .background(RoundedRectangle(cornerRadius: 12)
-            .fill(dropTarget == slot ? Color.accentColor.opacity(0.15)
-                  : isToday ? Color.orange.opacity(0.14) : Color.primary.opacity(0.03)))
-        .overlay(RoundedRectangle(cornerRadius: 12)
-            .strokeBorder(isToday ? Color.orange : .clear, lineWidth: 2.5))
-        .accessibilityAddTraits(isToday ? .isSelected : [])
+            .fill(dropTarget == slot ? Color.accentColor.opacity(0.15) : Color.primary.opacity(0.03)))
+        .modifier(TodayBorder(isToday: isToday))
         .dropDestination(for: String.self) { projects, _ in
             guard let project = projects.first else { return false }
             var moved = slots
@@ -144,6 +126,30 @@ struct DeployCalendarBoard: View {
             savedRaw = DeployCalendar.encode(moved)
             return true
         } isTargeted: { dropTarget = $0 ? slot : (dropTarget == slot ? nil : dropTarget) }
+    }
+
+    /// 주말 — 배포하지 않는 날. 오늘이 주말이어도 테두리로 어디쯤인지 보이게 좁은 칸으로 둔다.
+    /// 아이폰은 세로로 늘어놓으니 오늘인 주말만 한 줄로.
+    @ViewBuilder
+    private func weekend(_ date: Date, today: Date) -> some View {
+        let isToday = Calendar.current.isDate(date, inSameDayAs: today)
+        #if os(iOS)
+        if isToday {
+            Text("\(date.formatted(.dateTime.month(.defaultDigits).day().weekday(.abbreviated))) · 배포 없는 날")
+                .font(.hubCaption.weight(.bold))
+                .padding(10)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .modifier(TodayBorder(isToday: true))
+        }
+        #else
+        Text(date, format: .dateTime.day().weekday(.narrow))
+            .font(.hubCaption.weight(isToday ? .bold : .regular))
+            .foregroundStyle(isToday ? AnyShapeStyle(.primary) : AnyShapeStyle(.tertiary))
+            .padding(.vertical, 10)
+            .frame(width: 44)
+            .frame(minHeight: 140, alignment: .top)
+            .modifier(TodayBorder(isToday: isToday))
+        #endif
     }
 
     private func chip(_ row: AppGridHome.Row, state: DeployCalendar.State) -> some View {
@@ -179,5 +185,15 @@ struct DeployCalendarBoard: View {
         let platforms = Set(store.snapshots(for: row.project).compactMap { AppQuality.Platform.normalize($0.platform) })
         let names = AppQuality.Platform.order.filter(platforms.contains)
         return ([version] + (names.isEmpty ? ["iOS"] : names)).filter { !$0.isEmpty }.joined(separator: " · ")
+    }
+}
+
+/// 오늘 칸 — 주황 테두리 하나로 표시한다.
+private struct TodayBorder: ViewModifier {
+    let isToday: Bool
+    func body(content: Content) -> some View {
+        content
+            .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(isToday ? Color.orange : .clear, lineWidth: 2.5))
+            .accessibilityAddTraits(isToday ? .isSelected : [])
     }
 }

@@ -18,10 +18,10 @@ import SwiftUI
 
 enum DeployCalendar {
 
-    /// 첫 주기의 월요일(2026-11-30). 여기서 2주씩 돈다.
+    /// 주기의 기준 월요일(2026-11-16). 여기서 2주씩 돈다 — 2주 배포를 정한 뒤 첫 주기가 11-30 에 시작한다.
     static let anchor: Date = {
         var parts = DateComponents()
-        parts.year = 2026; parts.month = 11; parts.day = 30
+        parts.year = 2026; parts.month = 11; parts.day = 16
         return Calendar.current.date(from: parts)!
     }()
     static let slotCount = 10
@@ -43,13 +43,6 @@ enum DeployCalendar {
         let days = calendar.dateComponents([.day], from: anchor, to: calendar.startOfDay(for: date)).day ?? 0
         let back = ((days % 14) + 14) % 14
         return calendar.date(byAdding: .day, value: -back, to: calendar.startOfDay(for: date))!
-    }
-
-    /// 캘린더가 보여 줄 주기의 첫 월요일. 주말이면 다가오는 평일의 주기 — 끝난 주기를 보여 줄 까닭이 없다.
-    static func shownCycleStart(today: Date) -> Date {
-        var day = calendar.startOfDay(for: today)
-        while slot(of: day) == nil { day = calendar.date(byAdding: .day, value: 1, to: day)! }
-        return cycleStart(containing: day)
     }
 
     /// 주기 안 자리의 날짜.
@@ -140,7 +133,7 @@ enum DeployCalendar {
 
     /// 이번 주기에 이 앱은 어디쯤인가. 배포일을 모르면(스토어에 없음) 날짜로만 본다.
     static func state(slot: Int, cadence: ReleaseCadence?, today: Date) -> State {
-        let start = shownCycleStart(today: today)
+        let start = cycleStart(containing: today)
         let due = date(slot: slot, cycleStart: start)
         let startOfToday = calendar.startOfDay(for: today)
         switch cadence?.status {
