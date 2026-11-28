@@ -13,6 +13,10 @@
 //
 //  처리하면(반영함 · 반영 안 함, 답장 보내기) 그 자리에서 빠진다.
 //
+//  할 일 말고는 두지 않는다 — 소식은 소식 칸, 다른 칸의 바뀐 것은 기능 목록의 뱃지, 앱마다의 지금은 홈.
+//  예전 "알아 둘 것"(브리핑 · 칸 뱃지 모음)이 위를 차지해 할 일이 아래로 밀렸다(2026-11-28).
+//  남은 일이 없으면 없다고 한 줄만.
+//
 
 import SwiftUI
 
@@ -39,6 +43,8 @@ struct InboxView: View {
     /// 결제를 언제까지 봤는지 — 종의 수가 이것을 기준으로 센다.
     static let purchasesSeenKey = "inboxPurchasesSeenAt"
     @AppStorage(InboxView.purchasesSeenKey) private var purchasesSeenAt: Double = 0
+    /// 이 화면을 열기 전에 어디까지 봤는지 — 연 순간 `purchasesSeenAt` 이 지금으로 바뀌어도 새 결제가 남게.
+    @State private var purchasesSeenBefore: Double = .greatestFiniteMagnitude
 
     struct ReviewItem: Identifiable {
         let project: String
@@ -78,6 +84,7 @@ struct InboxView: View {
             .safeAreaInset(edge: .bottom, spacing: 0) { undoBar }
             .task(id: store.projectCounts.count) { await loadReviews() }
             .task {
+                purchasesSeenBefore = purchasesSeenAt
                 await purchases.loadReceipts()
                 purchasesSeenAt = Date().timeIntervalSince1970
             }
@@ -125,13 +132,6 @@ struct InboxView: View {
 
         #if os(macOS)
         List(selection: $selection) {
-            Section {
-                TodayDigest()
-                    .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))
-                    .listRowBackground(Color.clear)
-            } header: {
-                Text("알아 둘 것")
-            }
             purchaseSection
             sections(reviews: showsReviews ? reviews : nil,
                      bugs: showsBugs ? bugs : nil,
@@ -142,13 +142,6 @@ struct InboxView: View {
         .id(rowsKey)
         #else
         List {
-            Section {
-                TodayDigest()
-                    .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))
-                    .listRowBackground(Color.clear)
-            } header: {
-                Text("알아 둘 것")
-            }
             purchaseSection
             sections(reviews: showsReviews ? reviews : nil,
                      bugs: showsBugs ? bugs : nil,
@@ -160,10 +153,13 @@ struct InboxView: View {
         #endif
     }
 
-    /// 최근 7일 결제 · 환불(모든 앱). 결제 알림을 놓쳐도 종을 누르면 여기서 본다.
+    /// 지난번에 본 뒤 새로 들어온 결제 · 환불(모든 앱). 결제 알림을 놓쳐도 종을 누르면 여기서 본다.
+    /// 본 것은 다음에 열 때 빠진다 — 할 일에는 지금 볼 것만 남는다.
     @ViewBuilder
     private var purchaseSection: some View {
-        let receipts = purchases.recentReceipts.filter { !store.isExcluded($0.bundleID) }
+        let receipts = purchases.recentReceipts.filter {
+            !store.isExcluded($0.bundleID) && $0.occurredAt.timeIntervalSince1970 > purchasesSeenBefore
+        }
         if !receipts.isEmpty {
             Section {
                 ForEach(receipts.prefix(10)) { receipt in
@@ -186,7 +182,7 @@ struct InboxView: View {
                     .buttonStyle(.plain)
                 }
             } header: {
-                Text("결제 · 최근 7일")
+                Text("새 결제")
             }
         }
     }

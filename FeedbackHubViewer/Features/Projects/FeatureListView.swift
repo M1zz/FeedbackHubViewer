@@ -124,8 +124,7 @@ struct FeatureListView: View {
         }
     }
 
-    /// 무리별로 목록에 선 칸만(`Group.hosts`). 볼 것을 모아 보여 주던 "확인할 것" 은 할 일 맨 위
-    /// "알아 둘 것"(`TodayDigest`)으로 옮겼다 — 뱃지는 줄마다 그대로 선다.
+    /// 무리별로 목록에 선 칸만(`Group.hosts`). 칸마다 볼 것은 줄의 뱃지로 선다.
     @ViewBuilder
     private func allSections(_ metrics: SectionMetrics) -> some View {
         ForEach(FeedbackStore.ProjectSection.Group.allCases) { group in
