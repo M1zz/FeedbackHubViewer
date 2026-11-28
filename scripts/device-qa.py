@@ -327,7 +327,7 @@ def test_app(folder, device, packages, platform="iOS", scheme=None, project=None
     shutil.rmtree(dd, ignore_errors=True)
     common = ["xcodebuild", "-project", project, "-scheme", scheme, "-destination", destination,
               "-derivedDataPath", dd, "-clonedSourcePackagesDirPath", packages,
-              "-allowProvisioningUpdates", "-skipMacroValidation", "-skipPackagePluginValidation"]
+              "-allowProvisioningUpdates", "-jobs", "1", "-skipMacroValidation", "-skipPackagePluginValidation"]
 
     log("   빌드 (테스트 포함)")
     # 커버리지를 켜고 빌드 · 실행한다 — 같은 xcresult 를 test-coverage.py 가 읽어 품질 탭 커버리지가 된다.

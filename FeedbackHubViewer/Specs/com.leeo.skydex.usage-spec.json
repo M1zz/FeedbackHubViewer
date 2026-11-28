@@ -12,8 +12,11 @@
   "release": {
     "coreAction": {
       "label": "하늘을 찍어 색을 모은 사람",
-      "events": ["sky_saved"],
+      "events": [
+        "sky_saved"
+      ],
       "note": "하늘 한 장을 찍어 그 색이 보드에 들어가야 이 앱의 수집이 시작된다."
-    }
+    },
+    "onboarding": false
   }
 }

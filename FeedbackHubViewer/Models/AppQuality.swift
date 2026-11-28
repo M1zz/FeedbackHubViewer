@@ -130,6 +130,8 @@ struct AppQuality: Identifiable {
         var core: Core?
         /// 지난 30일 새 설치의 온보딩. 앱이 온보딩 이벤트를 안 보내면 nil.
         var onboarding: Onboarding?
+        /// 스펙이 첫 실행 안내가 없다고 적은 앱(`"onboarding": false`).
+        var hasOnboarding = true
         /// `scripts/test-coverage.py` 가 모은 커버리지. 안 돌렸으면 nil.
         var coverage: TestCoverage?
     }
@@ -262,13 +264,25 @@ struct AppQuality: Identifiable {
             return Score(dimension: dimension, grade: grade, value: String(format: "시간당 %.1f초", hang),
                          basis: input.performanceVersion)
         case .rating:
-            guard let rating = input.rating, input.ratingCount >= Standard.minRatings else { return unknown(dimension) }
+            guard let rating = input.rating, input.ratingCount > 0 else {
+                return pending(dimension, value: "별점 없음", hint: "아직 매긴 사람이 없습니다")
+            }
+            guard input.ratingCount >= Standard.minRatings else {
+                return pending(dimension, value: String(format: "★ %.1f", rating),
+                               hint: "별점 \(input.ratingCount)개 — \(Standard.minRatings)개부터 판정")
+            }
             return Score(dimension: dimension,
                          grade: higherIsBetter(rating, good: Standard.ratingGood, bad: Standard.ratingBad),
                          value: String(format: "★ %.1f", rating),
                          basis: "별점 \(input.ratingCount)개" + (input.ratingCountries > 1 ? " · \(input.ratingCountries)개 나라" : ""))
         case .support:
-            guard input.supportTotal >= Standard.minFeedback else { return unknown(dimension) }
+            guard input.supportTotal > 0 else {
+                return pending(dimension, value: "피드백 없음", hint: "최근 90일 받은 피드백이 없습니다")
+            }
+            guard input.supportTotal >= Standard.minFeedback else {
+                return pending(dimension, value: "\(input.supportTotal)건 중 \(input.supportHandled)건",
+                               hint: "\(Standard.minFeedback)건부터 판정")
+            }
             let share = Double(input.supportHandled) / Double(input.supportTotal)
             return Score(dimension: dimension,
                          grade: higherIsBetter(share, good: Standard.supportGood, bad: Standard.supportBad),
@@ -286,10 +300,14 @@ struct AppQuality: Identifiable {
             return coreScore(core)
         case .onboarding:
             guard let onboarding = input.onboarding else {
+                if !input.hasOnboarding {
+                    return pending(dimension, value: "온보딩 없음", hint: "첫 실행 안내 없이 바로 쓰는 앱")
+                }
                 return unknown(dimension, hint: "onboarding_completed · onboarding_skipped 이벤트를 보내면 잽니다")
             }
             guard onboarding.newInstalls >= Standard.minNewInstalls else {
-                return unknown(dimension, hint: "새 설치 \(onboarding.newInstalls)대 — \(Standard.minNewInstalls)대부터 판정")
+                return pending(dimension, value: "새 설치 \(onboarding.newInstalls)대 중 \(onboarding.passed)대",
+                               hint: "\(Standard.minNewInstalls)대부터 판정")
             }
             let share = Double(onboarding.passed) / Double(onboarding.newInstalls)
             let skipped = onboarding.skipped > 0 ? " · 건너뜀 \(onboarding.skipped)" : ""
@@ -436,6 +454,11 @@ struct AppQuality: Identifiable {
     }
 
     /// 모름. `hint` 는 무엇을 하면 잴 수 있는지 한 줄.
+    /// 판정은 못 하지만 아는 것은 있다 — "데이터 없음" 대신 실제 수를 보인다. 등급은 모름으로 둔다.
+    private static func pending(_ dimension: Dimension, value: String, hint: String) -> Score {
+        Score(dimension: dimension, grade: .unknown, value: value, basis: hint)
+    }
+
     private static func unknown(_ dimension: Dimension, hint: String? = nil) -> Score {
         Score(dimension: dimension, grade: .unknown, value: "데이터 없음", basis: hint)
     }

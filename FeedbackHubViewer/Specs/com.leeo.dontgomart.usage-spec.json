@@ -16,6 +16,7 @@
         "mart_changed"
       ],
       "note": "자기가 가는 마트를 골라야 그 마트의 휴무일을 제대로 알려 줄 수 있다."
-    }
+    },
+    "onboarding": false
   }
 }

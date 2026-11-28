@@ -12,8 +12,11 @@
   "release": {
     "coreAction": {
       "label": "밖에서 햇빛을 쬐고 기록을 남긴 사람",
-      "events": ["sunlight_logged"],
+      "events": [
+        "sunlight_logged"
+      ],
       "note": "밖에서 햇빛을 1분 넘게 쬐어 해바라기가 충전돼야 이 앱이 하루 햇빛을 챙겨 준 것이다."
-    }
+    },
+    "onboarding": false
   }
 }

@@ -16,6 +16,7 @@
         "scan_events_saved"
       ],
       "note": "찍은 알림장에서 뽑은 일정을 저장해야 알림과 달력으로 아이 일정을 챙겨 받는다."
-    }
+    },
+    "onboarding": false
   }
 }

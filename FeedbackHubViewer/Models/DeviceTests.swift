@@ -63,6 +63,17 @@ struct DeviceTestResult: Decodable, Equatable {
     var ui: Counts?
     /// 실패한 테스트 · 실행 실패 이유, 사람이 읽을 한 줄씩.
     var failures: [String] = []
+    /// 기기에서 잰 실행 속도 · 멈춤(`scripts/device-perf.py`). MetricKit 값이 없을 때 품질 탭이 쓴다.
+    var perf: Perf?
+
+    struct Perf: Decodable, Equatable {
+        /// 켜기 시작부터 첫 화면까지, 여러 번 켠 것의 가운데 값.
+        var launchMs: Double
+        /// 기록한 시간 동안 멈춘 초를 한 시간으로 늘린 값.
+        var hangPerHour: Double?
+        var samples: Int
+        var measuredAt: Date?
+    }
 
     var platformName: String { platform ?? "iOS" }
     var failedCount: Int { (unit?.failed ?? 0) + (ui?.failed ?? 0) }

@@ -12,8 +12,11 @@
   "release": {
     "coreAction": {
       "label": "책 페이지를 찍어 문장을 저장한 사람",
-      "events": ["quote_saved"],
+      "events": [
+        "quote_saved"
+      ],
       "note": "찍은 페이지에서 밑줄 문장을 꺼내 서재에 남겨야 이 앱의 가치가 생긴다."
-    }
+    },
+    "onboarding": false
   }
 }

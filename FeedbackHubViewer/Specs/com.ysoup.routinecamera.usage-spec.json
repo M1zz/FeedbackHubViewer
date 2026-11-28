@@ -12,8 +12,11 @@
   "release": {
     "coreAction": {
       "label": "끼니를 사진으로 기록한 사람",
-      "events": ["meal_photo_saved"],
+      "events": [
+        "meal_photo_saved"
+      ],
       "note": "먹은 끼니를 사진으로 남겨야 하루 세끼 기록이 쌓이기 시작한다."
-    }
+    },
+    "onboarding": false
   }
 }

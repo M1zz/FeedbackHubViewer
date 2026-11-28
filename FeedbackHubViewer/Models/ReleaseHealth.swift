@@ -33,7 +33,8 @@ import Foundation
 ///       "coreAction": { "label": "키보드로 넣은 사람", "events": ["keyboard_used"], "note": "..." },
 ///       "stabilityEvents": ["launch_incomplete"],
 ///       "thresholds": { "crashFreeInstallsMin": 0.99, "coreActionDropMax": 0.2, "minInstallsForVerdict": 20 },
-///       "promises": [ { "id": "...", "title": "...", "guard": "..." } ]
+///       "promises": [ { "id": "...", "title": "...", "guard": "..." } ],
+///       "onboarding": false
 ///     }
 struct ReleaseSpec: Decodable, Equatable {
 
@@ -48,6 +49,8 @@ struct ReleaseSpec: Decodable, Equatable {
     var thresholds: Thresholds
     /// 이 앱이 릴리즈마다 지키기로 한 약속. 화면에 그대로 적는다.
     var promises: [Promise]
+    /// 첫 실행 안내가 있는 앱인가. `"onboarding": false` 면 품질 탭 온보딩 줄이 "온보딩 없음" 이다.
+    var hasOnboarding = true
 
     struct CoreAction: Decodable, Equatable {
         let label: String
@@ -119,7 +122,7 @@ struct ReleaseSpec: Decodable, Equatable {
     }
 
     enum CodingKeys: String, CodingKey {
-        case coreAction, stabilityEvents, thresholds, promises
+        case coreAction, stabilityEvents, thresholds, promises, onboarding
     }
 
     init(from decoder: Decoder) throws {
@@ -130,6 +133,7 @@ struct ReleaseSpec: Decodable, Equatable {
         stabilityEventsDeclared = declared != nil
         thresholds = try c.decodeIfPresent(Thresholds.self, forKey: .thresholds) ?? .fallback
         promises = try c.decodeIfPresent([Promise].self, forKey: .promises) ?? []
+        hasOnboarding = try c.decodeIfPresent(Bool.self, forKey: .onboarding) ?? true
     }
 }
 

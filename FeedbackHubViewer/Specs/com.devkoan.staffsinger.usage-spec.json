@@ -16,6 +16,7 @@
         "score_played"
       ],
       "note": "악보를 재생해 박자와 음높이를 귀로 확인하는 순간이 이 앱이 있는 이유다."
-    }
+    },
+    "onboarding": false
   }
 }

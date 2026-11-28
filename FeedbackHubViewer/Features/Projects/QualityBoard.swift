@@ -93,6 +93,11 @@ struct QualityBoard: View {
             input.launchMs = pooled.launchMs
             input.hangPerHour = pooled.hangPerHour
             input.performanceVersion = "최근 30일 \(pooled.samples)대"
+        } else if let perf = keywords.deviceTests[DeviceTestReport.key(project, platform)]?.perf {
+            // 사용자 기기 값이 아직 없다 — 연결한 기기에서 여러 번 켜 잰 실험실 값(개발 빌드라 실제보다 느릴 수 있다).
+            input.launchMs = perf.launchMs
+            input.hangPerHour = perf.hangPerHour
+            input.performanceVersion = "기기에서 잼 · \(perf.samples)번"
         }
 
         if let report = store.releaseHealth(for: project) {
@@ -105,6 +110,7 @@ struct QualityBoard: View {
         }
 
         input.onboarding = store.onboarding(for: project)
+        input.hasOnboarding = store.releaseSpec(for: project)?.hasOnboarding ?? true
         input.coverage = keywords.testCoverage[project.lowercased()]?.on(platform)
 
         input.deviceTest = keywords.deviceTests[DeviceTestReport.key(project, platform)]

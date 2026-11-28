@@ -12,8 +12,11 @@
   "release": {
     "coreAction": {
       "label": "끊어 둔 생각에 이어서 글을 쓴 사람",
-      "events": ["thought_continued"],
+      "events": [
+        "thought_continued"
+      ],
       "note": "지난번에 끊어 둔 생각으로 돌아와 이어 써야 이 앱이 생각을 이어 준 것이다."
-    }
+    },
+    "onboarding": false
   }
 }

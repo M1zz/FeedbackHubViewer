@@ -16,6 +16,7 @@
         "sticker_punched"
       ],
       "note": "꾹 눌러 찍은 순간이 스티커로 수집함에 담길 때가 이 앱의 가치 순간이다."
-    }
+    },
+    "onboarding": false
   }
 }
