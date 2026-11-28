@@ -18,7 +18,7 @@ struct DeployCalendarBoard: View {
     @EnvironmentObject private var store: FeedbackStore
     @EnvironmentObject private var keywords: KeywordStore
     @ObservedObject private var icons = StoreIcons.shared
-    @AppStorage("deploy-calendar-days") private var savedRaw = ""
+    @AppStorage("deploy-calendar-daily") private var savedRaw = ""
     @State private var dropTarget: Date?
     /// 지난 2주를 펼쳐 보는가 — 처음엔 오늘부터 보인다.
     @State private var showPast = false
@@ -56,7 +56,8 @@ struct DeployCalendarBoard: View {
                            deploys: on(slot), tests: on(DeployCalendar.deploySlot(forQA: slot)), slots: slots)
                 }
             }
-            Text("앱마다 2주에 한 번, 정해진 날에 냅니다(주말 포함). 그 전날이 QA 날입니다. 앱을 다른 날 줄에 끌어 놓으면 그날 배포로 옮겨집니다.")
+            resting(apps.filter { slots[$0.project] == nil })
+            Text("QA 는 하루에 한 앱 — 그래서 2주에 14개 앱이 하루씩 돌고(전날 QA, 다음 날 배포), 나머지는 쉽니다. 앱을 다른 날 줄에 끌어 놓으면 그날 앱과 자리를 바꿉니다.")
                 .font(.hubCaption)
                 .foregroundStyle(.secondary)
         }
@@ -161,11 +162,32 @@ struct DeployCalendarBoard: View {
         .accessibilityAddTraits(isToday ? .isSelected : [])
         .dropDestination(for: String.self) { projects, _ in
             guard let project = projects.first else { return false }
-            var moved = slots
-            moved[project] = slot
-            savedRaw = DeployCalendar.encode(moved)
+            savedRaw = DeployCalendar.encode(DeployCalendar.move(project, to: slot, in: slots))
             return true
         } isTargeted: { dropTarget = $0 ? date : (dropTarget == date ? nil : dropTarget) }
+    }
+
+    /// 쉬는 앱 — 하루 한 자리가 다 차서 이번 2주에 안 도는 앱. 날 줄에 끌어 놓으면 그날 앱과 바꾼다.
+    @ViewBuilder
+    private func resting(_ rows: [AppGridHome.Row]) -> some View {
+        if !rows.isEmpty {
+            VStack(alignment: .leading, spacing: 6) {
+                Text("쉬는 앱 \(rows.count)").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+                FlowLayout(spacing: 6) {
+                    ForEach(rows) { row in
+                        Button {
+                            store.open(project: row.project, section: .release)
+                        } label: {
+                            chipLabel(row, systemImage: "moon.zzz", tint: .secondary, faded: true, border: .clear)
+                        }
+                        .buttonStyle(.plain)
+                        .draggable(row.project)
+                        .accessibilityLabel("\(row.name) 쉬는 앱, \(detail(row))")
+                    }
+                }
+            }
+            .padding(.top, 6)
+        }
     }
 
     /// 배포 · QA 칸 — 제목 아래 앱들이 줄바꿈하며 늘어선다.

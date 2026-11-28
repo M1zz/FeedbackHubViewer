@@ -2,7 +2,7 @@
 //  DeployCalendar.swift
 //  FeedbackHubViewer
 //
-//  배포 캘린더 — 2주에 한 번 배포(`ReleaseCadence.goalDays`)를 앱마다 **정해진 날 하나**로 나눈다(주말 포함).
+//  배포 캘린더 — 2주에 한 번 배포(`ReleaseCadence.goalDays`)를 앱마다 **정해진 날 하나**로 나눈다(주말 포함). 하루에 한 앱(QA 는 하루 하나).
 //
 //  2주는 열나흘(월~일 × 2)이다. 앱마다 그중 하루를 갖고, 그날이 2주마다 돌아온다.
 //  한 날에 몰리면 이 Mac 이 무거워지니(배포는 한 번에 하나) 하루에 너덧 개씩 고르게 나눈다.
@@ -62,19 +62,30 @@ enum DeployCalendar {
 
     // MARK: 자리 나누기
 
-    /// 있던 자리는 그대로 두고, 없는 앱만 가장 한가한 날(같으면 앞 날)에 넣는다.
-    /// `projects` 는 먼저 자리를 고를 앱부터(사용자 많은 순).
+    /// 하루에 한 앱 — QA 를 사람이 하루에 하나밖에 못 한다. 그래서 2주에 도는 앱은 14개뿐이고, 나머지는 쉰다.
+    /// 있던 자리는 그대로 두고(한 날에 둘이면 앞 앱만), 빈 날은 아직 자리 없는 앱이 `projects` 순서(사용자 많은 순)로 채운다.
     static func assign(_ projects: [String], keeping saved: [String: Int]) -> [String: Int] {
-        let wanted = Set(projects)
-        var slots = saved.filter { wanted.contains($0.key) && (0..<slotCount).contains($0.value) }
-        var load = Array(repeating: 0, count: slotCount)
-        for slot in slots.values { load[slot] += 1 }
-        for project in projects where slots[project] == nil {
-            let lightest = load.indices.min { load[$0] < load[$1] }!
-            slots[project] = lightest
-            load[lightest] += 1
+        var slots: [String: Int] = [:]
+        var taken = Set<Int>()
+        for project in projects {
+            if let slot = saved[project], (0..<slotCount).contains(slot), taken.insert(slot).inserted { slots[project] = slot }
+        }
+        var free = (0..<slotCount).filter { !taken.contains($0) }
+        for project in projects where slots[project] == nil && !free.isEmpty {
+            slots[project] = free.removeFirst()
         }
         return slots
+    }
+
+    /// `project` 를 `slot` 날로 — 그날 있던 앱은 `project` 가 있던 자리로(쉬던 앱이면 그 앱이 쉰다).
+    static func move(_ project: String, to slot: Int, in slots: [String: Int]) -> [String: Int] {
+        var moved = slots
+        let from = slots[project]
+        if let occupant = slots.first(where: { $0.value == slot && $0.key != project })?.key {
+            moved[occupant] = from
+        }
+        moved[project] = slot
+        return moved
     }
 
     /// 저장 형식 — "앱\t자리" 줄들. `@AppStorage` 에 그대로 둔다.
