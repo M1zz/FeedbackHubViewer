@@ -35,7 +35,7 @@ SPECS=(
   "$WORKSPACE/Auto/디자인실습|docs/usage-spec.json|com.leeo.higgym.usage-spec.json"
   "$WORKSPACE/Auto/마이파이|docs/usage-spec.json|com.leeo.wifisnap.usage-spec.json"
   "$WORKSPACE/Auto/말문|docs/usage-spec.json|com.devkoan.indonesiansmalltalk.usage-spec.json"
-  "$WORKSPACE/Auto/무지개 공방|docs/usage-spec.json|com.devkoan.scheduledensityapp.usage-spec.json"
+  "$WORKSPACE/유산/무지개 공방|docs/usage-spec.json|com.devkoan.scheduledensityapp.usage-spec.json"
   "$WORKSPACE/Auto/밑줄|docs/usage-spec.json|com.leeo.bookmarkshot.usage-spec.json"
   "$WORKSPACE/Auto/벅뚜벅뚜|docs/usage-spec.json|com.leeo.footprintdiary.usage-spec.json"
   "$WORKSPACE/Auto/보태줘|docs/usage-spec.json|com.leeo.moa.usage-spec.json"
